@@ -1,0 +1,34 @@
+<div style="text-align:center">
+  <h1>Ilutulestikud!</h1>
+</div>
+<div *ngIf="informationText">{{informationText}}</div>
+
+<hr>
+<hr>
+  {{playerPanelText}}
+<hr>
+<div>
+  {{availablePlayerText()}}
+</div>
+<hr>
+<button *ngIf="!isAddPlayerDialogueVisible" (click)="showAddPlayerDialogue()">Register new player?</button>
+<div *ngIf="isAddPlayerDialogueVisible">
+  <p>Enter the name of the new player:</p>
+  <input id="input" type="text" size="30" pInputText [(ngModel)]="newPlayerName"> 
+    <button (click)="addPlayerFromDialogue()">Add new player</button>
+    <button (click)="cancelAddPlayerInDialogue()">Cancel</button>
+</div>
+<hr>
+<hr>
+<br>
+<hr>
+<hr>
+<div>
+  The game should be displayed here.
+</div>
+<hr>
+<hr>
+
+<div style="text-align:center">
+This is just a private demonstration of code and not a commercial venture.
+</div>
