@@ -1,11 +1,10 @@
-package main
+package server
 
 import (
 	"fmt"
 	"github.com/benoleary/ilutulestikud/lobby"
 	"github.com/benoleary/ilutulestikud/parseuri"
 	"net/http"
-	"os"
 )
 
 type State struct {
@@ -43,15 +42,9 @@ func (state *State) handleGame(httpResponseWriter http.ResponseWriter, httpReque
 	fmt.Fprintf(httpResponseWriter, returnHtml)
 }
 
-func main() {
-	if len(os.Args) != 2 {
-		fmt.Printf("This program needs exactly one argument, which is the directory to serve for the Angular code")
-		os.Exit(1)
-	}
-
+func Serve(angularDirectory string) {
 	serverState := State{lobby.CreateEmpty()}
 
-	angularDirectory := os.Args[1]
 	httpFileServer := http.FileServer(http.Dir(angularDirectory))
 	http.Handle("/client/", http.StripPrefix("/client", httpFileServer))
 	http.HandleFunc("/backend/", serverState.handleBackend)
