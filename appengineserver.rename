@@ -1,19 +1,10 @@
 package main
-
 import (
-	"fmt"
-	"github.com/benoleary/ilutulestikud/server"
-	"google.golang.org/appengine"
-	"os"
+        "github.com/benoleary/ilutulestikud/server"
+        "google.golang.org/appengine"
 )
-
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Printf("This program needs exactly one argument, which is the directory to serve for the Angular code")
-		os.Exit(1)
-	}
-
-	angularDirectory := os.Args[1]
-	server.Serve(angularDirectory)
-	appengine.Main()
+        angularDirectory := "~/gopath/src/github.com/benoleary/ilutulestikud/angular/dist"
+        server.Serve(angularDirectory)
+        appengine.Main()
 }
