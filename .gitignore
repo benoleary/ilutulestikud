@@ -1,4 +1,6 @@
 .project
 .settings/com.googlecode.goclipse.core.prefs
 angular/dist
+angular/node_modules
+
 

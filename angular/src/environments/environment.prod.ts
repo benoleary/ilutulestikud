@@ -1,4 +1,4 @@
 export const environment = {
   production: true,
-  restRoot: "http://localhost:8080/backend/"
+  restRoot: "https://ilutulestikud-191419.appspot.com/backend/"
 };

@@ -21,13 +21,6 @@ func CreateEmpty() State {
 // handleHttpRequest parses an HTTP request and responds with the appropriate function.
 func (state *State) HandleHttpRequest(
 	httpResponseWriter http.ResponseWriter, httpRequest *http.Request, relevantUriSegments []string) {
-	// While developing locally, we allow any request from the local Angular server
-	/*
-		httpResponseWriter.Header().Set("Access-Control-Allow-Origin", "http://localhost:4233")
-		httpResponseWriter.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-		httpResponseWriter.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-	*/
-
 	switch httpRequest.Method {
 	case http.MethodOptions:
 		return

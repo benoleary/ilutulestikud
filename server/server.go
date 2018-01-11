@@ -8,12 +8,24 @@ import (
 )
 
 type State struct {
-	lobbyState lobby.State
+	accessControlAllowedOrigin string
+	lobbyState                 lobby.State
+}
+
+func CreateNew(accessControlAllowedOrigin string) State {
+	return State{accessControlAllowedOrigin, lobby.CreateEmpty()}
 }
 
 // rootHandler calls functions according to the second segment of the URI, assuming that the first
 // segment is "backend".
-func (state *State) handleBackend(httpResponseWriter http.ResponseWriter, httpRequest *http.Request) {
+func (state *State) HandleBackend(httpResponseWriter http.ResponseWriter, httpRequest *http.Request) {
+	// If an allowed origin for access control has been set, we set all the headers to allow it.
+	if state.accessControlAllowedOrigin != "" {
+		httpResponseWriter.Header().Set("Access-Control-Allow-Origin", state.accessControlAllowedOrigin)
+		httpResponseWriter.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		httpResponseWriter.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+	}
+
 	if httpRequest.URL.Path == "" || httpRequest.URL.Path == "/" {
 		http.Redirect(httpResponseWriter, httpRequest, "/client", http.StatusFound)
 		return
@@ -40,13 +52,4 @@ func (state *State) handleLobby(httpResponseWriter http.ResponseWriter, httpRequ
 func (state *State) handleGame(httpResponseWriter http.ResponseWriter, httpRequest *http.Request, uriSegments []string) {
 	returnHtml := `<h1>You tried to do something for a game. Well done!</h1>`
 	fmt.Fprintf(httpResponseWriter, returnHtml)
-}
-
-func Serve(angularDirectory string) {
-	serverState := State{lobby.CreateEmpty()}
-
-	httpFileServer := http.FileServer(http.Dir(angularDirectory))
-	http.Handle("/client/", http.StripPrefix("/client", httpFileServer))
-	http.HandleFunc("/backend/", serverState.handleBackend)
-	http.ListenAndServe(":8080", nil)
 }

@@ -1,10 +1,13 @@
 package main
 import (
-        "github.com/benoleary/ilutulestikud/server"
-        "google.golang.org/appengine"
+	"github.com/benoleary/ilutulestikud/server"
+	"google.golang.org/appengine"
+	"net/http"
 )
 func main() {
-        angularDirectory := "~/gopath/src/github.com/benoleary/ilutulestikud/angular/dist"
-        server.Serve(angularDirectory)
-        appengine.Main()
+	// We could load the allowed origin from a file, but this app is very specific to a set of fixed addresses.
+	serverState := server.CreateNew("https://storage.googleapis.com/ilutulestikud-191419.appspot.com")
+	http.HandleFunc("/backend/", serverState.HandleBackend)
+	http.ListenAndServe(":8080", nil)
+	appengine.Main()
 }
