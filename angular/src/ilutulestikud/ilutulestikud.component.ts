@@ -1,7 +1,6 @@
 import { Component } from '@angular/core';
 import { OnInit } from '@angular/core/src/metadata/lifecycle_hooks';
 import { IlutulestikudService } from './ilutulestikud.service';
-import { Player } from './models/player.model';
 
 @Component({
   selector: 'app-ilutulestikud',
