@@ -5,11 +5,19 @@
 
 <hr>
 <hr>
-  {{playerPanelText}}
+  {{selectedPlayerText()}}
 <hr>
+
 <div>
-  {{availablePlayerText()}}
+  <mat-form-field>
+    <mat-select placeholder="Select a player" [(ngModel)]="selectedPlayerName">
+      <mat-option *ngFor="let playerName of registeredPlayerNames" [value]="playerName">
+        {{ playerName }}
+      </mat-option>
+    </mat-select>
+  </mat-form-field>
 </div>
+
 <hr>
 <button *ngIf="!isAddPlayerDialogueVisible" (click)="showAddPlayerDialogue()">Register new player?</button>
 <div *ngIf="isAddPlayerDialogueVisible">

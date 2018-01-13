@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { OnInit } from '@angular/core/src/metadata/lifecycle_hooks';
 import { IlutulestikudService } from './ilutulestikud.service';
+import { Player } from './models/player.model';
 
 @Component({
   selector: 'app-ilutulestikud',
@@ -9,37 +10,44 @@ import { IlutulestikudService } from './ilutulestikud.service';
 export class IlutulestikudComponent implements OnInit
 {
   ilutulestikudService: IlutulestikudService;
+  selectedPlayerName: string;
   registeredPlayerNames: string[];
   isAddPlayerDialogueVisible: boolean;
   newPlayerName: string;
   informationText: string;
-  playerPanelText: string;
   
 
   constructor(ilutulestikudService: IlutulestikudService)
   {
     this.ilutulestikudService = ilutulestikudService;
+    this.selectedPlayerName = null;
+    this.registeredPlayerNames = [];
     this.isAddPlayerDialogueVisible = false;
+    this.newPlayerName = null;
     this.informationText = null;
-    this.playerPanelText = null;
   }
 
   ngOnInit(): void
   {
     this.ilutulestikudService.registeredPlayerNames().subscribe(
-      fetchedPlayerNamesObject => this.registeredPlayerNames = fetchedPlayerNamesObject["Names"].slice(),
-      thrownError => this.informationText = "Error! " + thrownError,
+      fetchedPlayerNamesObject => this.parsePlayerNames(fetchedPlayerNamesObject),
+      thrownError => this.handleError(thrownError),
       () => {});
-      this.playerPanelText = "Player: [no player selected]";
   }
 
-  availablePlayerText(): string
+  selectedPlayerText(): string
   {
-    if (!this.registeredPlayerNames || (this.registeredPlayerNames.length == 0)) {
-      return "No player names have been registered yet.";
+    if (!this.selectedPlayerName)
+    {
+      return "No player selected yet";
     }
 
-    return "Registered player names: " + this.registeredPlayerNames;
+    return "Player: " + this.selectedPlayerName;
+  }
+
+  parsePlayerNames(fetchedPlayerNamesObject: Object): void
+  {
+    this.registeredPlayerNames = fetchedPlayerNamesObject["Names"].slice();
   }
 
   showAddPlayerDialogue(): void
@@ -57,16 +65,15 @@ export class IlutulestikudComponent implements OnInit
   {
     this.informationText = null;
     this.ilutulestikudService.newPlayer(this.newPlayerName).subscribe(
-      returnedPlayerNamesObject =>
-      {
-        this.registeredPlayerNames = returnedPlayerNamesObject["Names"].slice()
-      },
-      thrownError =>
-      {
-        console.log("Error! " + JSON.stringify(thrownError));
-        this.informationText = "Error! " + JSON.stringify(thrownError["error"])
-      },
+      returnedPlayerNamesObject => this.parsePlayerNames(returnedPlayerNamesObject),
+      thrownError => this.handleError(thrownError),
       () => {});
     this.isAddPlayerDialogueVisible = false;
+  }
+
+  handleError(thrownError: Error): void
+  {
+    console.log("Error! " + JSON.stringify(thrownError));
+    this.informationText = "Error! " + JSON.stringify(thrownError["error"]);
   }
 }
