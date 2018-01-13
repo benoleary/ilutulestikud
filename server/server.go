@@ -13,7 +13,7 @@ type State struct {
 }
 
 func CreateNew(accessControlAllowedOrigin string) State {
-	return State{accessControlAllowedOrigin, lobby.CreateEmpty()}
+	return State{accessControlAllowedOrigin, lobby.CreateInitial()}
 }
 
 // rootHandler calls functions according to the second segment of the URI, assuming that the first

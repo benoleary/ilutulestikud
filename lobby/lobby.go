@@ -14,8 +14,8 @@ type State struct {
 }
 
 // MakeEmpty constructs a State object with a non-nil (but empty) slice of player.State objects.
-func CreateEmpty() State {
-	return State{make([]player.State, 0, 8), sync.Mutex{}}
+func CreateInitial() State {
+	return State{defaultPlayers(), sync.Mutex{}}
 }
 
 // handleHttpRequest parses an HTTP request and responds with the appropriate function.
@@ -31,6 +31,17 @@ func (state *State) HandleHttpRequest(
 	default:
 		http.Error(httpResponseWriter, "Method not GET or POST: "+httpRequest.Method, http.StatusBadRequest)
 	}
+}
+
+func defaultPlayers() []player.State {
+	return []player.State{
+		player.CreateByNameOnly("Mimi"),
+		player.CreateByNameOnly("Aet"),
+		player.CreateByNameOnly("Martin"),
+		player.CreateByNameOnly("Markus"),
+		player.CreateByNameOnly("Liisbet"),
+		player.CreateByNameOnly("Madli"),
+		player.CreateByNameOnly("Ben")}
 }
 
 // handleGetRequest parses an HTTP GET request and responds with the appropriate function.
@@ -62,6 +73,8 @@ func (state *State) handlePostRequest(
 	switch relevantUriSegments[0] {
 	case "new-player":
 		state.handleNewPlayer(httpResponseWriter, httpRequest)
+	case "reset-players":
+		state.handleResetPlayers(httpResponseWriter, httpRequest)
 	default:
 		http.NotFound(httpResponseWriter, httpRequest)
 	}
@@ -83,8 +96,8 @@ func (state *State) writeRegisteredPlayerListJson(httpResponseWriter http.Respon
 	json.NewEncoder(httpResponseWriter).Encode(struct{ Names []string }{state.playerNames()})
 }
 
-// writeRegisteredPlayerListJson writes a JSON object into the HTTP response which has
-// the list of player names as its "Names" attribute.
+// handleNewPlayer adds the player defined by the JSON of the request's body to the list
+// of registered players, and returns the updated list as writeRegisteredPlayerListJson would.
 func (state *State) handleNewPlayer(httpResponseWriter http.ResponseWriter, httpRequest *http.Request) {
 	if httpRequest.Body == nil {
 		http.Error(httpResponseWriter, "Empty request body", http.StatusBadRequest)
@@ -108,6 +121,16 @@ func (state *State) handleNewPlayer(httpResponseWriter http.ResponseWriter, http
 
 	state.mutualExclusion.Lock()
 	state.registeredPlayers = append(state.registeredPlayers, player.CreateByNameOnly(jsonObject.Name))
+	state.mutualExclusion.Unlock()
+
+	state.writeRegisteredPlayerListJson(httpResponseWriter)
+}
+
+// handleResetPlayers resets the player list to the initial list, and returns the updated list
+// as writeRegisteredPlayerListJson would.
+func (state *State) handleResetPlayers(httpResponseWriter http.ResponseWriter, httpRequest *http.Request) {
+	state.mutualExclusion.Lock()
+	state.registeredPlayers = defaultPlayers()
 	state.mutualExclusion.Unlock()
 
 	state.writeRegisteredPlayerListJson(httpResponseWriter)
