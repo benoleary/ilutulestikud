@@ -86,7 +86,7 @@ func (state *State) handlePostRequest(
 func (state *State) playerNames() []string {
 	nameList := make([]string, 0, len(state.registeredPlayers))
 	for _, registeredPlayer := range state.registeredPlayers {
-		nameList = append(nameList, registeredPlayer.Name())
+		nameList = append(nameList, registeredPlayer.Name)
 	}
 
 	return nameList
@@ -105,7 +105,8 @@ func (state *State) writeRegisteredPlayerListJson(httpResponseWriter http.Respon
 }
 
 // handleNewPlayer adds the player defined by the JSON of the request's body to the list
-// of registered players, and returns the updated list as writeRegisteredPlayerListJson would.
+// of registered players, and returns the updated list as writeRegisteredPlayerNameListJson
+// would.
 func (state *State) handleNewPlayer(httpResponseWriter http.ResponseWriter, httpRequest *http.Request) {
 	if httpRequest.Body == nil {
 		http.Error(httpResponseWriter, "Empty request body", http.StatusBadRequest)
@@ -141,15 +142,15 @@ func (state *State) handleNewPlayer(httpResponseWriter http.ResponseWriter, http
 		player.CreateByNameAndColor(jsonObject.Name, playerColor))
 	state.mutualExclusion.Unlock()
 
-	state.writeRegisteredPlayerListJson(httpResponseWriter)
+	state.writeRegisteredPlayerNameListJson(httpResponseWriter)
 }
 
 // handleResetPlayers resets the player list to the initial list, and returns the updated list
-// as writeRegisteredPlayerListJson would.
+// as writeRegisteredPlayerNameListJson would.
 func (state *State) handleResetPlayers(httpResponseWriter http.ResponseWriter, httpRequest *http.Request) {
 	state.mutualExclusion.Lock()
 	state.registeredPlayers = defaultPlayers()
 	state.mutualExclusion.Unlock()
 
-	state.writeRegisteredPlayerListJson(httpResponseWriter)
+	state.writeRegisteredPlayerNameListJson(httpResponseWriter)
 }

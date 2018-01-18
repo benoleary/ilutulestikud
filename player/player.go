@@ -3,16 +3,8 @@ package player
 import ()
 
 type State struct {
-	name  string
-	color string
-}
-
-func (state *State) Name() string {
-	return state.name
-}
-
-func (state *State) Color() string {
-	return state.color
+	Name  string
+	Color string
 }
 
 // CreateNew with two arguments creates a new State object with name and ID
