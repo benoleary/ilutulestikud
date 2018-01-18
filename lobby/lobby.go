@@ -35,13 +35,13 @@ func (state *State) HandleHttpRequest(
 
 func defaultPlayers() []player.State {
 	return []player.State{
-		player.CreateByNameOnly("Mimi"),
-		player.CreateByNameOnly("Aet"),
-		player.CreateByNameOnly("Martin"),
-		player.CreateByNameOnly("Markus"),
-		player.CreateByNameOnly("Liisbet"),
-		player.CreateByNameOnly("Madli"),
-		player.CreateByNameOnly("Ben")}
+		player.CreateByNameAndColor("Mimi", "red"),
+		player.CreateByNameAndColor("Aet", "white"),
+		player.CreateByNameAndColor("Martin", "green"),
+		player.CreateByNameAndColor("Markus", "blue"),
+		player.CreateByNameAndColor("Liisbet", "yellow"),
+		player.CreateByNameAndColor("Madli", "orange"),
+		player.CreateByNameAndColor("Ben", "purple")}
 }
 
 // handleGetRequest parses an HTTP GET request and responds with the appropriate function.
@@ -54,8 +54,10 @@ func (state *State) handleGetRequest(
 	}
 
 	switch relevantUriSegments[0] {
-	case "registered-player-names":
+	case "registered-players":
 		state.writeRegisteredPlayerListJson(httpResponseWriter)
+	case "registered-player-names":
+		state.writeRegisteredPlayerNameListJson(httpResponseWriter)
 	default:
 		http.NotFound(httpResponseWriter, httpRequest)
 	}
@@ -90,10 +92,16 @@ func (state *State) playerNames() []string {
 	return nameList
 }
 
+// writeRegisteredPlayerNameListJson writes a JSON object into the HTTP response which has
+// the list of player names as its "Names" attribute.
+func (state *State) writeRegisteredPlayerNameListJson(httpResponseWriter http.ResponseWriter) {
+	json.NewEncoder(httpResponseWriter).Encode(struct{ Names []string }{state.playerNames()})
+}
+
 // writeRegisteredPlayerListJson writes a JSON object into the HTTP response which has
 // the list of player names as its "Names" attribute.
 func (state *State) writeRegisteredPlayerListJson(httpResponseWriter http.ResponseWriter) {
-	json.NewEncoder(httpResponseWriter).Encode(struct{ Names []string }{state.playerNames()})
+	json.NewEncoder(httpResponseWriter).Encode(struct{ Players []player.State }{state.registeredPlayers})
 }
 
 // handleNewPlayer adds the player defined by the JSON of the request's body to the list
@@ -104,7 +112,10 @@ func (state *State) handleNewPlayer(httpResponseWriter http.ResponseWriter, http
 		return
 	}
 
-	var jsonObject struct{ Name string }
+	var jsonObject struct {
+		Name  string
+		Color string
+	}
 	parsingError := json.NewDecoder(httpRequest.Body).Decode(&jsonObject)
 	if parsingError != nil {
 		http.Error(httpResponseWriter, "Error parsing JSON: "+parsingError.Error(), http.StatusBadRequest)
@@ -119,8 +130,15 @@ func (state *State) handleNewPlayer(httpResponseWriter http.ResponseWriter, http
 		}
 	}
 
+	playerColor := jsonObject.Color
+	if playerColor == "" {
+		playerColor = "white"
+	}
+
 	state.mutualExclusion.Lock()
-	state.registeredPlayers = append(state.registeredPlayers, player.CreateByNameOnly(jsonObject.Name))
+	state.registeredPlayers = append(
+		state.registeredPlayers,
+		player.CreateByNameAndColor(jsonObject.Name, playerColor))
 	state.mutualExclusion.Unlock()
 
 	state.writeRegisteredPlayerListJson(httpResponseWriter)
