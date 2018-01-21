@@ -93,13 +93,17 @@ func (state *State) playerNames() []string {
 }
 
 // writeRegisteredPlayerNameListJson writes a JSON object into the HTTP response which has
-// the list of player names as its "Names" attribute.
+// the list of player names as its "Names" attribute, and also, for transistional backwards
+// compatibility, it also writes a "Players" attribute as writeRegisteredPlayerListJson would.
 func (state *State) writeRegisteredPlayerNameListJson(httpResponseWriter http.ResponseWriter) {
-	json.NewEncoder(httpResponseWriter).Encode(struct{ Names []string }{state.playerNames()})
+	json.NewEncoder(httpResponseWriter).Encode(struct {
+		Names   []string
+		Players []player.State
+	}{state.playerNames(), state.registeredPlayers})
 }
 
 // writeRegisteredPlayerListJson writes a JSON object into the HTTP response which has
-// the list of player names as its "Names" attribute.
+// the list of player objects as its "Players" attribute.
 func (state *State) writeRegisteredPlayerListJson(httpResponseWriter http.ResponseWriter) {
 	json.NewEncoder(httpResponseWriter).Encode(struct{ Players []player.State }{state.registeredPlayers})
 }

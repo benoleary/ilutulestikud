@@ -10,8 +10,6 @@ import { Player } from './models/player.model'
 export class IlutulestikudComponent implements OnInit
 {
   ilutulestikudService: IlutulestikudService;
-  selectedPlayerName: string;
-  registeredPlayerNames: string[];
   selectedPlayer: Player;
   registeredPlayers: Player[];
   isAddPlayerDialogueVisible: boolean;
@@ -22,8 +20,6 @@ export class IlutulestikudComponent implements OnInit
   constructor(ilutulestikudService: IlutulestikudService)
   {
     this.ilutulestikudService = ilutulestikudService;
-    this.selectedPlayerName = null;
-    this.registeredPlayerNames = [];
     this.selectedPlayer = null;
     this.registeredPlayers = [];
     this.isAddPlayerDialogueVisible = false;
@@ -33,10 +29,6 @@ export class IlutulestikudComponent implements OnInit
 
   ngOnInit(): void
   {
-    this.ilutulestikudService.registeredPlayerNames().subscribe(
-      fetchedPlayerNamesObject => this.parsePlayerNames(fetchedPlayerNamesObject),
-      thrownError => this.handleError(thrownError),
-      () => {});
     this.ilutulestikudService.registeredPlayers().subscribe(
       fetchedPlayersObject => this.parsePlayers(fetchedPlayersObject),
       thrownError => this.handleError(thrownError),
@@ -45,17 +37,16 @@ export class IlutulestikudComponent implements OnInit
 
   selectedPlayerText(): string
   {
-    if (!this.selectedPlayerName)
+    if (!this.selectedPlayer)
     {
       return "No player selected yet";
     }
 
-    return "Player: " + this.selectedPlayerName;
+    return "Player: " + this.selectedPlayer.Name;
   }
 
   parsePlayers(fetchedPlayersObject: Object): void
   {
-    console.log("fetchedPlayersObject = " + JSON.stringify(fetchedPlayersObject));
     this.registeredPlayers.length = 0;
 
     // fetchedPlayersObject["Players"] is only an "array-like object", not an array, so does not have foreach.
@@ -63,13 +54,6 @@ export class IlutulestikudComponent implements OnInit
       console.log("playerObject = " + JSON.stringify(playerObject));
       this.registeredPlayers.push(new Player(playerObject["Name"], playerObject["Color"]));
     }
-
-    console.log("this.registeredPlayers = " + JSON.stringify(this.registeredPlayers));
-  }
-
-  parsePlayerNames(fetchedPlayerNamesObject: Object): void
-  {
-    this.registeredPlayerNames = fetchedPlayerNamesObject["Names"].slice();
   }
 
   showAddPlayerDialogue(): void
@@ -87,7 +71,7 @@ export class IlutulestikudComponent implements OnInit
   {
     this.informationText = null;
     this.ilutulestikudService.newPlayer(this.newPlayerName).subscribe(
-      returnedPlayerNamesObject => this.parsePlayerNames(returnedPlayerNamesObject),
+      returnedPlayersObject => this.parsePlayers(returnedPlayersObject),
       thrownError => this.handleError(thrownError),
       () => {});
     this.isAddPlayerDialogueVisible = false;

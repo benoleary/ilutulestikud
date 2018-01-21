@@ -10,9 +10,9 @@
 
 <div>
   <mat-form-field>
-    <mat-select placeholder="Select a player" [(ngModel)]="selectedPlayerName">
-      <mat-option *ngFor="let playerName of registeredPlayerNames" [value]="playerName">
-        {{ playerName }}
+    <mat-select placeholder="Select a player" [(ngModel)]="selectedPlayer">
+      <mat-option *ngFor="let registeredPlayer of registeredPlayers" [value]="registeredPlayer">
+        {{ registeredPlayer.Name }}
       </mat-option>
     </mat-select>
   </mat-form-field>
