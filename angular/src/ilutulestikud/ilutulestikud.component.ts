@@ -5,7 +5,8 @@ import { Player } from './models/player.model'
 
 @Component({
   selector: 'app-ilutulestikud',
-  templateUrl: './ilutulestikud.component.html'
+  templateUrl: './ilutulestikud.component.html',
+  styleUrls: ['ilutulestikud.component.css']
 })
 export class IlutulestikudComponent implements OnInit
 {
@@ -34,17 +35,7 @@ export class IlutulestikudComponent implements OnInit
       thrownError => this.handleError(thrownError),
       () => {});
   }
-
-  selectedPlayerText(): string
-  {
-    if (!this.selectedPlayer)
-    {
-      return "No player selected yet";
-    }
-
-    return "Player: " + this.selectedPlayer.Name;
-  }
-
+  
   parsePlayers(fetchedPlayersObject: Object): void
   {
     this.registeredPlayers.length = 0;

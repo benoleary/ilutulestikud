@@ -4,28 +4,31 @@
 <div *ngIf="informationText">{{informationText}}</div>
 
 <hr>
-<hr>
-  {{selectedPlayerText()}}
-<hr>
 
-<div>
+<div *ngIf="!selectedPlayer">
   <mat-form-field>
     <mat-select placeholder="Select a player" [(ngModel)]="selectedPlayer">
-      <mat-option *ngFor="let registeredPlayer of registeredPlayers" [value]="registeredPlayer">
+      <mat-option
+        *ngFor="let registeredPlayer of registeredPlayers"
+        [value]="registeredPlayer"
+        [ngStyle]="{'color': registeredPlayer.Color, 'background-color': 'black'}">
         {{ registeredPlayer.Name }}
       </mat-option>
     </mat-select>
   </mat-form-field>
+
+  <button *ngIf="!isAddPlayerDialogueVisible" (click)="showAddPlayerDialogue()">Register new player?</button>
+  <div *ngIf="isAddPlayerDialogueVisible">
+    <p>Enter the name of the new player:</p>
+    <input id="input" type="text" size="30" pInputText [(ngModel)]="newPlayerName"> 
+      <button (click)="addPlayerFromDialogue()">Add new player</button>
+      <button (click)="cancelAddPlayerInDialogue()">Cancel</button>
+  </div>
+</div>
+<div *ngIf="selectedPlayer" [ngStyle]="{'color': selectedPlayer.Color, 'background-color': 'black'}">
+  Player:  {{selectedPlayer.Name}}
 </div>
 
-<hr>
-<button *ngIf="!isAddPlayerDialogueVisible" (click)="showAddPlayerDialogue()">Register new player?</button>
-<div *ngIf="isAddPlayerDialogueVisible">
-  <p>Enter the name of the new player:</p>
-  <input id="input" type="text" size="30" pInputText [(ngModel)]="newPlayerName"> 
-    <button (click)="addPlayerFromDialogue()">Add new player</button>
-    <button (click)="cancelAddPlayerInDialogue()">Cancel</button>
-</div>
 <hr>
 <hr>
 <br>
