@@ -13,6 +13,10 @@ export class IlutulestikudService {
     this.uriRoot = environment.restRoot;
   }
 
+  registeredPlayers(): Observable<any> {
+    return this.httpClient.get(this.uriRoot + "lobby/registered-players")
+  }
+
   registeredPlayerNames(): Observable<any> {
     return this.httpClient.get(this.uriRoot + "lobby/registered-player-names")
   }

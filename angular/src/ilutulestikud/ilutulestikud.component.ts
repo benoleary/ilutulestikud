@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { OnInit } from '@angular/core/src/metadata/lifecycle_hooks';
 import { IlutulestikudService } from './ilutulestikud.service';
+import { Player } from './models/player.model'
 
 @Component({
   selector: 'app-ilutulestikud',
@@ -11,6 +12,8 @@ export class IlutulestikudComponent implements OnInit
   ilutulestikudService: IlutulestikudService;
   selectedPlayerName: string;
   registeredPlayerNames: string[];
+  selectedPlayer: Player;
+  registeredPlayers: Player[];
   isAddPlayerDialogueVisible: boolean;
   newPlayerName: string;
   informationText: string;
@@ -21,6 +24,8 @@ export class IlutulestikudComponent implements OnInit
     this.ilutulestikudService = ilutulestikudService;
     this.selectedPlayerName = null;
     this.registeredPlayerNames = [];
+    this.selectedPlayer = null;
+    this.registeredPlayers = [];
     this.isAddPlayerDialogueVisible = false;
     this.newPlayerName = null;
     this.informationText = null;
@@ -30,6 +35,10 @@ export class IlutulestikudComponent implements OnInit
   {
     this.ilutulestikudService.registeredPlayerNames().subscribe(
       fetchedPlayerNamesObject => this.parsePlayerNames(fetchedPlayerNamesObject),
+      thrownError => this.handleError(thrownError),
+      () => {});
+    this.ilutulestikudService.registeredPlayers().subscribe(
+      fetchedPlayersObject => this.parsePlayers(fetchedPlayersObject),
       thrownError => this.handleError(thrownError),
       () => {});
   }
@@ -42,6 +51,20 @@ export class IlutulestikudComponent implements OnInit
     }
 
     return "Player: " + this.selectedPlayerName;
+  }
+
+  parsePlayers(fetchedPlayersObject: Object): void
+  {
+    console.log("fetchedPlayersObject = " + JSON.stringify(fetchedPlayersObject));
+    this.registeredPlayers.length = 0;
+
+    // fetchedPlayersObject["Players"] is only an "array-like object", not an array, so does not have foreach.
+    for (const playerObject of fetchedPlayersObject["Players"]) {
+      console.log("playerObject = " + JSON.stringify(playerObject));
+      this.registeredPlayers.push(new Player(playerObject["Name"], playerObject["Color"]));
+    }
+
+    console.log("this.registeredPlayers = " + JSON.stringify(this.registeredPlayers));
   }
 
   parsePlayerNames(fetchedPlayerNamesObject: Object): void
