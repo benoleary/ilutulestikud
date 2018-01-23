@@ -42,7 +42,6 @@ export class IlutulestikudComponent implements OnInit
 
     // fetchedPlayersObject["Players"] is only an "array-like object", not an array, so does not have foreach.
     for (const playerObject of fetchedPlayersObject["Players"]) {
-      console.log("playerObject = " + JSON.stringify(playerObject));
       this.registeredPlayers.push(new Player(playerObject["Name"], playerObject["Color"]));
     }
   }
