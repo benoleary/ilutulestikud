@@ -1,9 +1,26 @@
-<div style="text-align:center">
-  <h1>Ilutulestikud!</h1>
-</div>
-<div *ngIf="informationText">{{informationText}}</div>
+<mat-toolbar color="primary">
+  <span>Ilutulestikud!</span>
+</mat-toolbar>
 
-<hr>
+<mat-toolbar *ngIf="selectedPlayer">
+  <span>Player:&nbsp;</span><span [ngStyle]="{'color': selectedPlayer.Color}">{{selectedPlayer.Name}}</span>
+  <span class="ilutulestikud-spacer"></span>
+  <mat-icon class="ilutulestikud-icon">favorite</mat-icon>
+</mat-toolbar>
+
+<mat-card *ngIf="informationText">
+  <mat-card-header>
+    <mat-card-title>Error!</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    <p>
+      {{informationText}}
+    </p>
+  </mat-card-content>
+  <mat-card-actions>
+    <button mat-button>Dismiss message</button>
+  </mat-card-actions>
+</mat-card>
 
 <div *ngIf="!selectedPlayer">
   <mat-form-field>
@@ -17,16 +34,13 @@
     </mat-select>
   </mat-form-field>
 
-  <button *ngIf="!isAddPlayerDialogueVisible" (click)="showAddPlayerDialogue()">Register new player?</button>
+  <button mat-button *ngIf="!isAddPlayerDialogueVisible" (click)="showAddPlayerDialogue()">Register new player?</button>
   <div *ngIf="isAddPlayerDialogueVisible">
     <p>Enter the name of the new player:</p>
     <input id="input" type="text" size="30" pInputText [(ngModel)]="newPlayerName"> 
-      <button (click)="addPlayerFromDialogue()">Add new player</button>
-      <button (click)="cancelAddPlayerInDialogue()">Cancel</button>
+      <button mat-button (click)="addPlayerFromDialogue()">Add new player</button>
+      <button mat-button (click)="cancelAddPlayerInDialogue()">Cancel</button>
   </div>
-</div>
-<div *ngIf="selectedPlayer" [ngStyle]="{'color': selectedPlayer.Color, 'background-color': 'black'}">
-  Player:  {{selectedPlayer.Name}}
 </div>
 
 <hr>
