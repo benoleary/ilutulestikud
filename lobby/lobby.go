@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-// Lobby is a struct meant to encapsulate all the state required for the lobby page to function.
+// State is a struct meant to encapsulate all the state required for the lobby page to function.
 type State struct {
 	registeredPlayers []player.State
 	mutualExclusion   sync.Mutex
@@ -56,8 +56,6 @@ func (state *State) handleGetRequest(
 	switch relevantUriSegments[0] {
 	case "registered-players":
 		state.writeRegisteredPlayerListJson(httpResponseWriter)
-	case "registered-player-names":
-		state.writeRegisteredPlayerNameListJson(httpResponseWriter)
 	default:
 		http.NotFound(httpResponseWriter, httpRequest)
 	}
@@ -90,16 +88,6 @@ func (state *State) playerNames() []string {
 	}
 
 	return nameList
-}
-
-// writeRegisteredPlayerNameListJson writes a JSON object into the HTTP response which has
-// the list of player names as its "Names" attribute, and also, for transistional backwards
-// compatibility, it also writes a "Players" attribute as writeRegisteredPlayerListJson would.
-func (state *State) writeRegisteredPlayerNameListJson(httpResponseWriter http.ResponseWriter) {
-	json.NewEncoder(httpResponseWriter).Encode(struct {
-		Names   []string
-		Players []player.State
-	}{state.playerNames(), state.registeredPlayers})
 }
 
 // writeRegisteredPlayerListJson writes a JSON object into the HTTP response which has
@@ -146,15 +134,15 @@ func (state *State) handleNewPlayer(httpResponseWriter http.ResponseWriter, http
 		player.CreateByNameAndColor(jsonObject.Name, playerColor))
 	state.mutualExclusion.Unlock()
 
-	state.writeRegisteredPlayerNameListJson(httpResponseWriter)
+	state.writeRegisteredPlayerListJson(httpResponseWriter)
 }
 
 // handleResetPlayers resets the player list to the initial list, and returns the updated list
-// as writeRegisteredPlayerNameListJson would.
+// as writeRegisteredPlayerListJson would.
 func (state *State) handleResetPlayers(httpResponseWriter http.ResponseWriter, httpRequest *http.Request) {
 	state.mutualExclusion.Lock()
 	state.registeredPlayers = defaultPlayers()
 	state.mutualExclusion.Unlock()
 
-	state.writeRegisteredPlayerNameListJson(httpResponseWriter)
+	state.writeRegisteredPlayerListJson(httpResponseWriter)
 }
