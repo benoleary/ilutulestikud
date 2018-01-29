@@ -34,14 +34,27 @@ func (state *State) HandleHttpRequest(
 }
 
 func defaultPlayers() []player.State {
+	initialColors := availableColors()
 	return []player.State{
-		player.CreateByNameAndColor("Mimi", "red"),
-		player.CreateByNameAndColor("Aet", "white"),
-		player.CreateByNameAndColor("Martin", "green"),
-		player.CreateByNameAndColor("Markus", "blue"),
-		player.CreateByNameAndColor("Liisbet", "yellow"),
-		player.CreateByNameAndColor("Madli", "orange"),
-		player.CreateByNameAndColor("Ben", "purple")}
+		player.CreateByNameAndColor("Mimi", initialColors[0]),
+		player.CreateByNameAndColor("Aet", initialColors[1]),
+		player.CreateByNameAndColor("Martin", initialColors[2]),
+		player.CreateByNameAndColor("Markus", initialColors[3]),
+		player.CreateByNameAndColor("Liisbet", initialColors[4]),
+		player.CreateByNameAndColor("Madli", initialColors[5]),
+		player.CreateByNameAndColor("Ben", initialColors[6])}
+}
+
+func availableColors() []string {
+	return []string{
+		"pink",
+		"red",
+		"orange",
+		"yellow",
+		"green",
+		"blue",
+		"purple",
+		"white"}
 }
 
 // handleGetRequest parses an HTTP GET request and responds with the appropriate function.
@@ -56,6 +69,8 @@ func (state *State) handleGetRequest(
 	switch relevantUriSegments[0] {
 	case "registered-players":
 		state.writeRegisteredPlayerListJson(httpResponseWriter)
+	case "available-colors":
+		state.writeAvailableColorListJson(httpResponseWriter)
 	default:
 		http.NotFound(httpResponseWriter, httpRequest)
 	}
@@ -73,6 +88,8 @@ func (state *State) handlePostRequest(
 	switch relevantUriSegments[0] {
 	case "new-player":
 		state.handleNewPlayer(httpResponseWriter, httpRequest)
+	case "update-player":
+		state.handleUpdatePlayer(httpResponseWriter, httpRequest)
 	case "reset-players":
 		state.handleResetPlayers(httpResponseWriter, httpRequest)
 	default:
@@ -96,6 +113,12 @@ func (state *State) writeRegisteredPlayerListJson(httpResponseWriter http.Respon
 	json.NewEncoder(httpResponseWriter).Encode(struct{ Players []player.State }{state.registeredPlayers})
 }
 
+// writeAvailableColorListJson writes a JSON object into the HTTP response which has
+// the list of strings as its "Colors" attribute.
+func (state *State) writeAvailableColorListJson(httpResponseWriter http.ResponseWriter) {
+	json.NewEncoder(httpResponseWriter).Encode(struct{ Colors []string }{availableColors()})
+}
+
 // handleNewPlayer adds the player defined by the JSON of the request's body to the list
 // of registered players, and returns the updated list as writeRegisteredPlayerNameListJson
 // would.
@@ -105,11 +128,8 @@ func (state *State) handleNewPlayer(httpResponseWriter http.ResponseWriter, http
 		return
 	}
 
-	var jsonObject struct {
-		Name  string
-		Color string
-	}
-	parsingError := json.NewDecoder(httpRequest.Body).Decode(&jsonObject)
+	var playerFromJson player.State
+	parsingError := json.NewDecoder(httpRequest.Body).Decode(&playerFromJson)
 	if parsingError != nil {
 		http.Error(httpResponseWriter, "Error parsing JSON: "+parsingError.Error(), http.StatusBadRequest)
 		return
@@ -117,13 +137,13 @@ func (state *State) handleNewPlayer(httpResponseWriter http.ResponseWriter, http
 
 	existingNames := state.playerNames()
 	for _, existingName := range existingNames {
-		if existingName == jsonObject.Name {
+		if existingName == playerFromJson.Name {
 			http.Error(httpResponseWriter, "Name "+existingName+" already registered", http.StatusBadRequest)
 			return
 		}
 	}
 
-	playerColor := jsonObject.Color
+	playerColor := playerFromJson.Color
 	if playerColor == "" {
 		playerColor = "white"
 	}
@@ -131,10 +151,40 @@ func (state *State) handleNewPlayer(httpResponseWriter http.ResponseWriter, http
 	state.mutualExclusion.Lock()
 	state.registeredPlayers = append(
 		state.registeredPlayers,
-		player.CreateByNameAndColor(jsonObject.Name, playerColor))
+		player.CreateByNameAndColor(playerFromJson.Name, playerColor))
 	state.mutualExclusion.Unlock()
 
 	state.writeRegisteredPlayerListJson(httpResponseWriter)
+}
+
+// handleNewPlayer updates the player defined by the JSON of the request's body, taking the "Name"
+// attribute as the key, and returns the updated list as writeRegisteredPlayerNameListJson
+// would. Attributes which are present are updated, those which are missing remain unchanged.
+func (state *State) handleUpdatePlayer(httpResponseWriter http.ResponseWriter, httpRequest *http.Request) {
+	if httpRequest.Body == nil {
+		http.Error(httpResponseWriter, "Empty request body", http.StatusBadRequest)
+		return
+	}
+
+	var playerFromJson player.State
+	parsingError := json.NewDecoder(httpRequest.Body).Decode(&playerFromJson)
+	if parsingError != nil {
+		http.Error(httpResponseWriter, "Error parsing JSON: "+parsingError.Error(), http.StatusBadRequest)
+		return
+	}
+
+	for playerIndex := len(state.registeredPlayers) - 1; playerIndex >= 0; playerIndex-- {
+		if state.registeredPlayers[playerIndex].Name == playerFromJson.Name {
+			state.mutualExclusion.Lock()
+			state.registeredPlayers[playerIndex].UpdateNonEmptyStrings(&playerFromJson)
+			state.mutualExclusion.Unlock()
+
+			state.writeRegisteredPlayerListJson(httpResponseWriter)
+			return
+		}
+	}
+
+	http.Error(httpResponseWriter, "Name "+playerFromJson.Name+" not found", http.StatusBadRequest)
 }
 
 // handleResetPlayers resets the player list to the initial list, and returns the updated list
