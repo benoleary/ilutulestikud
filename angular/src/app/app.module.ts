@@ -18,6 +18,8 @@ import { AppComponent } from './app.component';
     IlutulestikudModule
   ],
   providers: [],
-  bootstrap: [AppComponent]
+  bootstrap: [
+    AppComponent
+  ]
 })
 export class AppModule { }

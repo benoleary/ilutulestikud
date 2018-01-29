@@ -1,7 +1,9 @@
 import { Component } from '@angular/core';
 import { OnInit } from '@angular/core/src/metadata/lifecycle_hooks';
+import { MatDialog } from '@angular/material';
 import { IlutulestikudService } from './ilutulestikud.service';
 import { Player } from './models/player.model'
+import { AddPlayerDialogueComponent } from './components/addplayerdialogue.component'
 
 @Component({
   selector: 'app-ilutulestikud',
@@ -10,7 +12,6 @@ import { Player } from './models/player.model'
 })
 export class IlutulestikudComponent implements OnInit
 {
-  ilutulestikudService: IlutulestikudService;
   selectedPlayer: Player;
   registeredPlayers: Player[];
   isAddPlayerDialogueVisible: boolean;
@@ -18,9 +19,8 @@ export class IlutulestikudComponent implements OnInit
   informationText: string;
   
 
-  constructor(ilutulestikudService: IlutulestikudService)
+  constructor(public ilutulestikudService: IlutulestikudService, public materialDialog: MatDialog)
   {
-    this.ilutulestikudService = ilutulestikudService;
     this.selectedPlayer = null;
     this.registeredPlayers = [];
     this.isAddPlayerDialogueVisible = false;
@@ -44,6 +44,17 @@ export class IlutulestikudComponent implements OnInit
     for (const playerObject of fetchedPlayersObject["Players"]) {
       this.registeredPlayers.push(new Player(playerObject["Name"], playerObject["Color"]));
     }
+  }
+
+  openAddPlayerDialog(): void
+  {
+    let dialogRef = this.materialDialog.open(AddPlayerDialogueComponent, {
+      width: '250px'
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      console.log('The dialog was closed, result = ' + result);
+    });
   }
 
   showAddPlayerDialogue(): void
