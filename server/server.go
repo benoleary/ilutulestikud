@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"github.com/benoleary/ilutulestikud/game"
 	"github.com/benoleary/ilutulestikud/lobby"
 	"github.com/benoleary/ilutulestikud/parseuri"
 	"net/http"
@@ -10,10 +11,11 @@ import (
 type State struct {
 	accessControlAllowedOrigin string
 	lobbyState                 lobby.State
+	activeGames                []game.State
 }
 
 func CreateNew(accessControlAllowedOrigin string) State {
-	return State{accessControlAllowedOrigin, lobby.CreateInitial()}
+	return State{accessControlAllowedOrigin, lobby.CreateInitial(), make([]game.State, 0)}
 }
 
 // rootHandler calls functions according to the second segment of the URI, assuming that the first

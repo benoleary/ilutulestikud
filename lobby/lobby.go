@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-// State is a struct meant to encapsulate all the state required for the lobby page to function.
+// State is a struct meant to encapsulate all the state required for the lobby concept to function.
 type State struct {
 	registeredPlayers []player.State
 	mutualExclusion   sync.Mutex
