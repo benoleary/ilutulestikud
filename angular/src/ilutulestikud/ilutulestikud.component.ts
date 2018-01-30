@@ -14,8 +14,6 @@ export class IlutulestikudComponent implements OnInit
 {
   selectedPlayer: Player;
   registeredPlayers: Player[];
-  isAddPlayerDialogueVisible: boolean;
-  newPlayerName: string;
   informationText: string;
   
 
@@ -23,8 +21,6 @@ export class IlutulestikudComponent implements OnInit
   {
     this.selectedPlayer = null;
     this.registeredPlayers = [];
-    this.isAddPlayerDialogueVisible = false;
-    this.newPlayerName = null;
     this.informationText = null;
   }
 
@@ -52,30 +48,16 @@ export class IlutulestikudComponent implements OnInit
       width: '250px'
     });
 
-    dialogRef.afterClosed().subscribe(result => {
-      console.log('The dialog was closed, result = ' + result);
+    dialogRef.afterClosed().subscribe(resultFromClose => {
+      if (resultFromClose)
+      {
+        this.informationText = null;
+        this.ilutulestikudService.newPlayer(resultFromClose).subscribe(
+          returnedPlayersObject => this.parsePlayers(returnedPlayersObject),
+          thrownError => this.handleError(thrownError),
+          () => {});
+      }
     });
-  }
-
-  showAddPlayerDialogue(): void
-  {
-    this.newPlayerName = "";
-    this.isAddPlayerDialogueVisible = true;
-  }
-
-  cancelAddPlayerInDialogue(): void {
-    this.informationText = null;
-    this.isAddPlayerDialogueVisible = false;
-  }
-
-  addPlayerFromDialogue(): void
-  {
-    this.informationText = null;
-    this.ilutulestikudService.newPlayer(this.newPlayerName).subscribe(
-      returnedPlayersObject => this.parsePlayers(returnedPlayersObject),
-      thrownError => this.handleError(thrownError),
-      () => {});
-    this.isAddPlayerDialogueVisible = false;
   }
 
   handleError(thrownError: Error): void

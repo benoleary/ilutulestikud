@@ -45,15 +45,6 @@
     </mat-select>
   </mat-form-field>
 
-  <button mat-button *ngIf="!isAddPlayerDialogueVisible" (click)="showAddPlayerDialogue()">Show register new player stuff?</button>
-  <div *ngIf="isAddPlayerDialogueVisible">
-    <p>Enter the name of the new player:</p>
-    <input id="input" type="text" size="30" pInputText [(ngModel)]="newPlayerName"> 
-      <button mat-button (click)="addPlayerFromDialogue()">Add new player</button>
-      <button mat-button (click)="cancelAddPlayerInDialogue()">Cancel</button>
-  </div>
-
-
   <button mat-raised-button (click)="openAddPlayerDialog()">Register new player?</button>
 </div>
 
