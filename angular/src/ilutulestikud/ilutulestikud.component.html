@@ -5,15 +5,18 @@
 </mat-toolbar>
 
 <mat-toolbar *ngIf="selectedPlayer">
-  <span>Player:&nbsp;</span><span [ngStyle]="{'color': selectedPlayer.Color}">{{selectedPlayer.Name}}</span>
+  <span>Player:&nbsp;</span><span [ngStyle]="{'color': selectedPlayer.Color}">{{ selectedPlayer.Name }}</span>
   <span class="ilutulestikud-spacer"></span>
+  <span>Chat color:&nbsp;</span>
   <mat-form-field>
-    <mat-select placeholder="Select a player" [(ngModel)]="selectedPlayer">
+    <mat-select
+      [ngModel]="selectedPlayer.Color"
+      (ngModelChange)="changeChatColor($event)">
       <mat-option
-        *ngFor="let registeredPlayer of registeredPlayers"
-        [value]="registeredPlayer"
-        [ngStyle]="{'color': registeredPlayer.Color, 'background-color': 'black'}">
-        {{ registeredPlayer.Name }}
+        *ngFor="let availableColor of availableColors"
+        [value]="availableColor"
+        [ngStyle]="{'color': availableColor}">
+        {{ availableColor }}
       </mat-option>
     </mat-select>
   </mat-form-field>
@@ -25,7 +28,7 @@
   </mat-card-header>
   <mat-card-content>
     <p>
-      {{informationText}}
+      {{ informationText }}
     </p>
   </mat-card-content>
   <mat-card-actions>
