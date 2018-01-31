@@ -9,7 +9,7 @@ import (
 
 // State is a struct meant to encapsulate all the state required for the lobby concept to function.
 type State struct {
-	registeredPlayers []player.State
+	registeredPlayers map[string]*player.State
 	mutualExclusion   sync.Mutex
 }
 
@@ -33,18 +33,29 @@ func (state *State) HandleHttpRequest(
 	}
 }
 
-func defaultPlayers() []player.State {
+// defaultPlayers returns a map of players created from default player names with colors
+// according to the available chat colors, where the key is the player name.
+func defaultPlayers() map[string]*player.State {
 	initialColors := availableColors()
-	return []player.State{
-		player.CreateByNameAndColor("Mimi", initialColors[0]),
-		player.CreateByNameAndColor("Aet", initialColors[1]),
-		player.CreateByNameAndColor("Martin", initialColors[2]),
-		player.CreateByNameAndColor("Markus", initialColors[3]),
-		player.CreateByNameAndColor("Liisbet", initialColors[4]),
-		player.CreateByNameAndColor("Madli", initialColors[5]),
-		player.CreateByNameAndColor("Ben", initialColors[6])}
+	numberOfColors := len(initialColors)
+	initialNames := []string{"Mimi", "Aet", "Martin", "Markus", "Liisbet", "Madli", "Ben"}
+	numberOfPlayers := len(initialNames)
+
+	playerMap := make(map[string]*player.State, numberOfPlayers)
+
+	for playerCount := 0; playerCount < numberOfPlayers; playerCount++ {
+		playerName := initialNames[playerCount]
+
+		// We cycle through all the colors again if there are more players than colors.
+		playerColor := initialColors[playerCount%numberOfColors]
+
+		playerMap[playerName] = player.CreateByNameAndColor(playerName, playerColor)
+	}
+
+	return playerMap
 }
 
+// availableColors returns a list of colors which can be selected as chat colors for players.
 func availableColors() []string {
 	return []string{
 		"pink",
@@ -97,20 +108,15 @@ func (state *State) handlePostRequest(
 	}
 }
 
-// playerNames returns an array of all the names of the registered players.
-func (state *State) playerNames() []string {
-	nameList := make([]string, 0, len(state.registeredPlayers))
-	for _, registeredPlayer := range state.registeredPlayers {
-		nameList = append(nameList, registeredPlayer.Name)
-	}
-
-	return nameList
-}
-
 // writeRegisteredPlayerListJson writes a JSON object into the HTTP response which has
 // the list of player objects as its "Players" attribute.
 func (state *State) writeRegisteredPlayerListJson(httpResponseWriter http.ResponseWriter) {
-	json.NewEncoder(httpResponseWriter).Encode(struct{ Players []player.State }{state.registeredPlayers})
+	playerList := make([]player.State, 0, len(state.registeredPlayers))
+	for _, registeredPlayer := range state.registeredPlayers {
+		playerList = append(playerList, *registeredPlayer)
+	}
+
+	json.NewEncoder(httpResponseWriter).Encode(struct{ Players []player.State }{playerList})
 }
 
 // writeAvailableColorListJson writes a JSON object into the HTTP response which has
@@ -135,23 +141,27 @@ func (state *State) handleNewPlayer(httpResponseWriter http.ResponseWriter, http
 		return
 	}
 
-	existingNames := state.playerNames()
-	for _, existingName := range existingNames {
-		if existingName == playerFromJson.Name {
-			http.Error(httpResponseWriter, "Name "+existingName+" already registered", http.StatusBadRequest)
-			return
-		}
+	_, playerExists := state.registeredPlayers[playerFromJson.Name]
+	if playerExists {
+		http.Error(httpResponseWriter, "Name "+playerFromJson.Name+" already registered", http.StatusBadRequest)
+		return
 	}
 
 	playerColor := playerFromJson.Color
 	if playerColor == "" {
-		playerColor = "white"
+		// The new player is assigned the next color in the list, cycling through all the colors
+		// again if there are more players than colors. E.g. if there are already 5 players, the
+		// 6th player gets the 6th color in the list. If there are only 4 colors in the list,
+		// the new player would get the 2nd color. This does not account for players having
+		// changed color, but it doesn't matter, as it is just a fun way of choosing an initial
+		// color.
+		colorList := availableColors()
+		playerColor = colorList[len(state.registeredPlayers)%len(colorList)]
 	}
 
 	state.mutualExclusion.Lock()
-	state.registeredPlayers = append(
-		state.registeredPlayers,
-		player.CreateByNameAndColor(playerFromJson.Name, playerColor))
+	state.registeredPlayers[playerFromJson.Name] =
+		player.CreateByNameAndColor(playerFromJson.Name, playerColor)
 	state.mutualExclusion.Unlock()
 
 	state.writeRegisteredPlayerListJson(httpResponseWriter)
@@ -173,18 +183,17 @@ func (state *State) handleUpdatePlayer(httpResponseWriter http.ResponseWriter, h
 		return
 	}
 
-	for playerIndex := len(state.registeredPlayers) - 1; playerIndex >= 0; playerIndex-- {
-		if state.registeredPlayers[playerIndex].Name == playerFromJson.Name {
-			state.mutualExclusion.Lock()
-			state.registeredPlayers[playerIndex].UpdateNonEmptyStrings(&playerFromJson)
-			state.mutualExclusion.Unlock()
-
-			state.writeRegisteredPlayerListJson(httpResponseWriter)
-			return
-		}
+	existingPlayer, playerExists := state.registeredPlayers[playerFromJson.Name]
+	if !playerExists {
+		http.Error(httpResponseWriter, "Name "+playerFromJson.Name+" not found", http.StatusBadRequest)
+		return
 	}
 
-	http.Error(httpResponseWriter, "Name "+playerFromJson.Name+" not found", http.StatusBadRequest)
+	state.mutualExclusion.Lock()
+	existingPlayer.UpdateNonEmptyStrings(&playerFromJson)
+	state.mutualExclusion.Unlock()
+
+	state.writeRegisteredPlayerListJson(httpResponseWriter)
 }
 
 // handleResetPlayers resets the player list to the initial list, and returns the updated list

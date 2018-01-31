@@ -7,12 +7,10 @@ type State struct {
 	Color string
 }
 
-// CreateNew with two arguments creates a new State object with name and ID
-// from the given arguments in that order. The ID is not a particularly well
-// thought-through notion so far, and is mainly still here to make the State
-// object less trivial.
-func CreateByNameAndColor(nameForNewPlayer string, colorForNewPlayer string) State {
-	return State{nameForNewPlayer, colorForNewPlayer}
+// CreateNew with two arguments creates a new State object with name and color
+// from the given arguments in that order, and returns a pointer to it.
+func CreateByNameAndColor(nameForNewPlayer string, colorForNewPlayer string) *State {
+	return &State{nameForNewPlayer, colorForNewPlayer}
 }
 
 // UpdateNonEmptyStrings over-writes all non-name string attributes of this
