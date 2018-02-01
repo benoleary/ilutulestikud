@@ -1,8 +1,8 @@
 package server
 
 import (
-	"fmt"
 	"github.com/benoleary/ilutulestikud/game"
+	"github.com/benoleary/ilutulestikud/httphandler"
 	"github.com/benoleary/ilutulestikud/lobby"
 	"github.com/benoleary/ilutulestikud/parseuri"
 	"net/http"
@@ -11,11 +11,12 @@ import (
 type State struct {
 	accessControlAllowedOrigin string
 	lobbyState                 lobby.State
-	activeGames                []game.State
+	activeGameCollection       game.CollectionState
 }
 
 func CreateNew(accessControlAllowedOrigin string) State {
-	return State{accessControlAllowedOrigin, lobby.CreateInitial(), make([]game.State, 0)}
+	lobbyState := lobby.CreateInitial()
+	return State{accessControlAllowedOrigin, lobbyState, game.CreateCollectionState(&lobbyState)}
 }
 
 // rootHandler calls functions according to the second segment of the URI, assuming that the first
@@ -34,24 +35,27 @@ func (state *State) HandleBackend(httpResponseWriter http.ResponseWriter, httpRe
 	}
 
 	pathSegments := parseuri.PathSegments(httpRequest)
-	fmt.Printf("handleBackend: pathSegments = %v\n\n", pathSegments)
+
+	// We choose the interface which will handle the GET or POST based on the
+	// first segment of the URI after "backend".
+	var requestHandler httphandler.GetAndPostHandler
 	switch pathSegments[1] {
 	case "lobby":
-		state.handleLobby(httpResponseWriter, httpRequest, pathSegments[2:])
+		requestHandler = &state.lobbyState
 	case "game":
-		state.handleGame(httpResponseWriter, httpRequest, pathSegments[2:])
+		requestHandler = &state.activeGameCollection
 	default:
 		http.NotFound(httpResponseWriter, httpRequest)
 	}
-}
 
-// handleLobby delegates responsibility for handling the HTTP request to the state's lobby state object.
-func (state *State) handleLobby(httpResponseWriter http.ResponseWriter, httpRequest *http.Request, uriSegments []string) {
-	state.lobbyState.HandleHttpRequest(httpResponseWriter, httpRequest, uriSegments)
-}
-
-// handleGame is currently a placeholder.
-func (state *State) handleGame(httpResponseWriter http.ResponseWriter, httpRequest *http.Request, uriSegments []string) {
-	returnHtml := `<h1>You tried to do something for a game. Well done!</h1>`
-	fmt.Fprintf(httpResponseWriter, returnHtml)
+	switch httpRequest.Method {
+	case http.MethodOptions:
+		return
+	case http.MethodGet:
+		requestHandler.HandleGet(httpResponseWriter, httpRequest, pathSegments[2:])
+	case http.MethodPost:
+		requestHandler.HandlePost(httpResponseWriter, httpRequest, pathSegments[2:])
+	default:
+		http.Error(httpResponseWriter, "Method not GET or POST: "+httpRequest.Method, http.StatusBadRequest)
+	}
 }

@@ -8,29 +8,62 @@ import (
 )
 
 // State is a struct meant to encapsulate all the state required for the lobby concept to function.
+// It implements github.com/benoleary/ilutulestikud/http.GetAndPostHandler.
 type State struct {
 	registeredPlayers map[string]*player.State
 	mutualExclusion   sync.Mutex
 }
 
-// MakeEmpty constructs a State object with a non-nil (but empty) slice of player.State objects.
+// MakeEmpty constructs a State object with a non-nil, non-empty slice of player.State objects.
 func CreateInitial() State {
 	return State{defaultPlayers(), sync.Mutex{}}
 }
 
-// handleHttpRequest parses an HTTP request and responds with the appropriate function.
-func (state *State) HandleHttpRequest(
+// HandleGetRequest parses an HTTP GET request and responds with the appropriate function.
+// This implements github.com/benoleary/ilutulestikud/httphandler.GetHandler.
+func (state *State) HandleGet(
 	httpResponseWriter http.ResponseWriter, httpRequest *http.Request, relevantUriSegments []string) {
-	switch httpRequest.Method {
-	case http.MethodOptions:
+	if len(relevantUriSegments) < 1 {
+		httpResponseWriter.WriteHeader(http.StatusBadRequest)
+		httpResponseWriter.Write([]byte("Not enough segments in URI to determine what to do"))
 		return
-	case http.MethodGet:
-		state.handleGetRequest(httpResponseWriter, httpRequest, relevantUriSegments)
-	case http.MethodPost:
-		state.handlePostRequest(httpResponseWriter, httpRequest, relevantUriSegments)
-	default:
-		http.Error(httpResponseWriter, "Method not GET or POST: "+httpRequest.Method, http.StatusBadRequest)
 	}
+
+	switch relevantUriSegments[0] {
+	case "registered-players":
+		state.writeRegisteredPlayerListJson(httpResponseWriter)
+	case "available-colors":
+		state.writeAvailableColorListJson(httpResponseWriter)
+	default:
+		http.NotFound(httpResponseWriter, httpRequest)
+	}
+}
+
+// HandlePost parses an HTTP POST request and responds with the appropriate function.
+// This implements github.com/benoleary/ilutulestikud/httphandler.PostHandler.
+func (state *State) HandlePost(
+	httpResponseWriter http.ResponseWriter, httpRequest *http.Request, relevantUriSegments []string) {
+	if len(relevantUriSegments) < 1 {
+		httpResponseWriter.WriteHeader(http.StatusBadRequest)
+		httpResponseWriter.Write([]byte("Not enough segments in URI to determine what to do"))
+		return
+	}
+
+	switch relevantUriSegments[0] {
+	case "new-player":
+		state.handleNewPlayer(httpResponseWriter, httpRequest)
+	case "update-player":
+		state.handleUpdatePlayer(httpResponseWriter, httpRequest)
+	case "reset-players":
+		state.handleResetPlayers(httpResponseWriter, httpRequest)
+	default:
+		http.NotFound(httpResponseWriter, httpRequest)
+	}
+}
+
+// GetPlayerByName returns a pointer to the player state which has the given name.
+func (state *State) GetPlayerByName(playerName string) *player.State {
+	return state.registeredPlayers[playerName]
 }
 
 // defaultPlayers returns a map of players created from default player names with colors
@@ -66,46 +99,6 @@ func availableColors() []string {
 		"blue",
 		"purple",
 		"white"}
-}
-
-// handleGetRequest parses an HTTP GET request and responds with the appropriate function.
-func (state *State) handleGetRequest(
-	httpResponseWriter http.ResponseWriter, httpRequest *http.Request, relevantUriSegments []string) {
-	if len(relevantUriSegments) < 1 {
-		httpResponseWriter.WriteHeader(http.StatusBadRequest)
-		httpResponseWriter.Write([]byte("Not enough segments in URI to determine what to do"))
-		return
-	}
-
-	switch relevantUriSegments[0] {
-	case "registered-players":
-		state.writeRegisteredPlayerListJson(httpResponseWriter)
-	case "available-colors":
-		state.writeAvailableColorListJson(httpResponseWriter)
-	default:
-		http.NotFound(httpResponseWriter, httpRequest)
-	}
-}
-
-// handlePostRequest parses an HTTP POST request and responds with the appropriate function.
-func (state *State) handlePostRequest(
-	httpResponseWriter http.ResponseWriter, httpRequest *http.Request, relevantUriSegments []string) {
-	if len(relevantUriSegments) < 1 {
-		httpResponseWriter.WriteHeader(http.StatusBadRequest)
-		httpResponseWriter.Write([]byte("Not enough segments in URI to determine what to do"))
-		return
-	}
-
-	switch relevantUriSegments[0] {
-	case "new-player":
-		state.handleNewPlayer(httpResponseWriter, httpRequest)
-	case "update-player":
-		state.handleUpdatePlayer(httpResponseWriter, httpRequest)
-	case "reset-players":
-		state.handleResetPlayers(httpResponseWriter, httpRequest)
-	default:
-		http.NotFound(httpResponseWriter, httpRequest)
-	}
 }
 
 // writeRegisteredPlayerListJson writes a JSON object into the HTTP response which has
@@ -167,7 +160,7 @@ func (state *State) handleNewPlayer(httpResponseWriter http.ResponseWriter, http
 	state.writeRegisteredPlayerListJson(httpResponseWriter)
 }
 
-// handleNewPlayer updates the player defined by the JSON of the request's body, taking the "Name"
+// handleUpdatePlayer updates the player defined by the JSON of the request's body, taking the "Name"
 // attribute as the key, and returns the updated list as writeRegisteredPlayerNameListJson
 // would. Attributes which are present are updated, those which are missing remain unchanged.
 func (state *State) handleUpdatePlayer(httpResponseWriter http.ResponseWriter, httpRequest *http.Request) {
