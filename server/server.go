@@ -49,6 +49,7 @@ func (state *State) HandleBackend(httpResponseWriter http.ResponseWriter, httpRe
 	// first segment of the URI after "backend".
 	var requestHandler httpGetAndPostHandler
 	switch pathSegments[1] {
+	// Deprecated: "lobby" exists for backwards compatibility with the front-end.
 	case "lobby":
 		requestHandler = &state.playerHandler
 	case "player":
