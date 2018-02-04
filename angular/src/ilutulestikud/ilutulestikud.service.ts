@@ -15,18 +15,22 @@ export class IlutulestikudService {
   }
 
   registeredPlayers(): Observable<any> {
-    return this.httpClient.get(this.uriRoot + "lobby/registered-players")
+    return this.httpClient.get(this.uriRoot + "player/registered-players")
   }
 
   availableColors(): Observable<any> {
-    return this.httpClient.get(this.uriRoot + "lobby/available-colors")
+    return this.httpClient.get(this.uriRoot + "player/available-colors")
   }
 
   newPlayer(newPlayerName: string): Observable<any> {
-    return this.httpClient.post(this.uriRoot + "lobby/new-player", {"Name": newPlayerName})
+    return this.httpClient.post(this.uriRoot + "player/new-player", {"Name": newPlayerName})
   }
 
   updatePlayer(playerOverride: Player): Observable<any> {
-    return this.httpClient.post(this.uriRoot + "lobby/update-player", playerOverride)
+    return this.httpClient.post(this.uriRoot + "player/update-player", playerOverride)
+  }
+
+  gamesWithPlayer(playerName: string): Observable<any> {
+    return this.httpClient.get(this.uriRoot + "game/all-games-with-player/" + playerName)
   }
 }

@@ -1,21 +1,25 @@
 import { Component } from '@angular/core';
-import { OnInit } from '@angular/core/src/metadata/lifecycle_hooks';
+import { OnInit, OnDestroy } from '@angular/core/src/metadata/lifecycle_hooks';
 import { MatDialog } from '@angular/material';
+import { Observable } from 'rxjs/Rx';
 import { IlutulestikudService } from './ilutulestikud.service';
 import { Player } from './models/player.model'
 import { AddPlayerDialogueComponent } from './components/addplayerdialogue.component'
+import { Subscription } from 'rxjs/Subscription';
 
 @Component({
   selector: 'app-ilutulestikud',
   templateUrl: './ilutulestikud.component.html',
   styleUrls: ['ilutulestikud.component.css']
 })
-export class IlutulestikudComponent implements OnInit
+export class IlutulestikudComponent implements OnInit, OnDestroy
 {
+  informationText: string;
   selectedPlayer: Player;
   registeredPlayers: Player[];
   availableColors: string[];
-  informationText: string;
+  namesOfGamesWithPlayer: string[];
+  gameNamesSubscription: Subscription;
   
 
   constructor(public ilutulestikudService: IlutulestikudService, public materialDialog: MatDialog)
@@ -24,6 +28,8 @@ export class IlutulestikudComponent implements OnInit
     this.registeredPlayers = [];
     this.availableColors = [];
     this.informationText = null;
+    this.namesOfGamesWithPlayer = [];
+    this.gameNamesSubscription = null;
   }
 
   ngOnInit(): void
@@ -36,16 +42,23 @@ export class IlutulestikudComponent implements OnInit
       fetchedColorsObject => this.parseColors(fetchedColorsObject),
       thrownError => this.handleError(thrownError),
       () => {});
+    this.gameNamesSubscription = Observable.timer(1000).first().subscribe(
+      () => this.refreshGames());
   }
-  
+
+  ngOnDestroy(): void
+  {
+    this.gameNamesSubscription.unsubscribe();
+  }
+
   parsePlayers(fetchedPlayersObject: Object): void
   {
     this.registeredPlayers.length = 0;
 
     // fetchedPlayersObject["Players"] is only an "array-like object", not an array, so does not have foreach.
-    for (const playerObject of fetchedPlayersObject["Players"])
+    for (const fetchedPlayer of fetchedPlayersObject["Players"])
     {
-      this.registeredPlayers.push(new Player(playerObject["Name"], playerObject["Color"]));
+      this.registeredPlayers.push(new Player(fetchedPlayer["Name"], fetchedPlayer["Color"]));
     }
   }
   
@@ -54,9 +67,9 @@ export class IlutulestikudComponent implements OnInit
     this.availableColors.length = 0;
 
     // fetchedColorsObject["Colors"] is only an "array-like object", not an array, so does not have foreach.
-    for (const colorObject of fetchedColorsObject["Colors"])
+    for (const chatColor of fetchedColorsObject["Colors"])
     {
-      this.availableColors.push(colorObject);
+      this.availableColors.push(chatColor);
     }
   }
 
@@ -70,7 +83,6 @@ export class IlutulestikudComponent implements OnInit
       () => {});
   }
   
-
   openAddPlayerDialog(): void
   {
     let dialogRef = this.materialDialog.open(AddPlayerDialogueComponent, {
@@ -88,6 +100,28 @@ export class IlutulestikudComponent implements OnInit
           () => {});
       }
     });
+  }
+
+  refreshGames(): void
+  {
+    if (this.selectedPlayer)
+    {
+      this.ilutulestikudService.gamesWithPlayer(this.selectedPlayer.Name).subscribe(
+        fetchedGamesObject => this.parseGames(fetchedGamesObject),
+        thrownError => this.handleError(thrownError),
+        () => {});
+    }
+  }
+
+  parseGames(fetchedGamesObject: Object): void
+  {
+    this.namesOfGamesWithPlayer.length = 0;
+
+    // fetchedGamesObject["Colors"] is only an "array-like object", not an array, so does not have foreach.
+    for (const gameName of fetchedGamesObject["Games"])
+    {
+      this.namesOfGamesWithPlayer.push(gameName);
+    }
   }
 
   handleError(thrownError: Error): void
