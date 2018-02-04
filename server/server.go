@@ -2,21 +2,28 @@ package server
 
 import (
 	"github.com/benoleary/ilutulestikud/game"
-	"github.com/benoleary/ilutulestikud/httphandler"
-	"github.com/benoleary/ilutulestikud/lobby"
 	"github.com/benoleary/ilutulestikud/parseuri"
+	"github.com/benoleary/ilutulestikud/player"
 	"net/http"
 )
 
+type httpGetAndPostHandler interface {
+	HandleGet(
+		httpResponseWriter http.ResponseWriter, httpRequest *http.Request, relevantUriSegments []string)
+
+	HandlePost(
+		httpResponseWriter http.ResponseWriter, httpRequest *http.Request, relevantUriSegments []string)
+}
+
 type State struct {
 	accessControlAllowedOrigin string
-	lobbyState                 lobby.State
-	activeGameCollection       game.CollectionState
+	playerHandler              player.Handler
+	gameHandler                game.Handler
 }
 
 func CreateNew(accessControlAllowedOrigin string) State {
-	lobbyState := lobby.CreateInitial()
-	return State{accessControlAllowedOrigin, lobbyState, game.CreateCollectionState(&lobbyState)}
+	playerHandler := player.CreateHandler()
+	return State{accessControlAllowedOrigin, playerHandler, game.CreateHandler(&playerHandler)}
 }
 
 // rootHandler calls functions according to the second segment of the URI, assuming that the first
@@ -26,7 +33,9 @@ func (state *State) HandleBackend(httpResponseWriter http.ResponseWriter, httpRe
 	if state.accessControlAllowedOrigin != "" {
 		httpResponseWriter.Header().Set("Access-Control-Allow-Origin", state.accessControlAllowedOrigin)
 		httpResponseWriter.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-		httpResponseWriter.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+		httpResponseWriter.Header().Set(
+			"Access-Control-Allow-Headers",
+			"Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 	}
 
 	if httpRequest.URL.Path == "" || httpRequest.URL.Path == "/" {
@@ -38,12 +47,14 @@ func (state *State) HandleBackend(httpResponseWriter http.ResponseWriter, httpRe
 
 	// We choose the interface which will handle the GET or POST based on the
 	// first segment of the URI after "backend".
-	var requestHandler httphandler.GetAndPostHandler
+	var requestHandler httpGetAndPostHandler
 	switch pathSegments[1] {
 	case "lobby":
-		requestHandler = &state.lobbyState
+		requestHandler = &state.playerHandler
+	case "player":
+		requestHandler = &state.playerHandler
 	case "game":
-		requestHandler = &state.activeGameCollection
+		requestHandler = &state.gameHandler
 	default:
 		http.NotFound(httpResponseWriter, httpRequest)
 	}

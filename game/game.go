@@ -2,47 +2,46 @@ package game
 
 import (
 	"encoding/json"
-	"github.com/benoleary/ilutulestikud/lobby"
 	"github.com/benoleary/ilutulestikud/player"
 	"net/http"
 	"sync"
 )
 
-// SingleState is a struct meant to encapsulate all the state required for a single game to function.
-type SingleState struct {
+// state is a struct meant to encapsulate all the state required for a single game to function.
+type state struct {
 	gameName             string
 	participatingPlayers []*player.State
 	mutualExclusion      sync.Mutex
 }
 
-// CollectionState is a struct meant to encapsulate all the state co-odrinating all the games.
-// It implements github.com/benoleary/ilutulestikud/http.GetAndPostHandler.
-type CollectionState struct {
-	lobbyState      *lobby.State
-	activeGames     map[string]*SingleState
-	mutualExclusion sync.Mutex
-}
-
-// CreateCollectionState constructs a CollectionState object with a pointer to the lobby which
-// contains the players.
-func CreateCollectionState(lobbyState *lobby.State) CollectionState {
-	return CollectionState{lobbyState, make(map[string]*SingleState, 0), sync.Mutex{}}
-}
-
-// CreateSingleState constructs a SingleState object with a non-nil, non-empty slice of player.State objects.
-func createSingleState(gameName string, lobbyState *lobby.State, playerNames []string) *SingleState {
+// createState constructs a state object with a non-nil, non-empty slice of player.State objects.
+func createState(gameName string, playerHandler *player.Handler, playerNames []string) *state {
 	numberOfPlayers := len(playerNames)
 	playerStates := make([]*player.State, numberOfPlayers)
 	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
-		playerStates[playerIndex] = lobbyState.GetPlayerByName(playerNames[playerIndex])
+		playerStates[playerIndex] = playerHandler.GetPlayerByName(playerNames[playerIndex])
 	}
 
-	return &SingleState{gameName, playerStates, sync.Mutex{}}
+	return &state{gameName, playerStates, sync.Mutex{}}
+}
+
+// Handler is a struct meant to encapsulate all the state co-ordinating all the games.
+// It implements github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
+type Handler struct {
+	playerHandler   *player.Handler
+	gameStates      map[string]*state
+	mutualExclusion sync.Mutex
+}
+
+// CreateHandler constructs a Handler object with a pointer to the player.Handler which
+// handles the players.
+func CreateHandler(playerHandler *player.Handler) Handler {
+	return Handler{playerHandler, make(map[string]*state, 0), sync.Mutex{}}
 }
 
 // HandleGetRequest parses an HTTP GET request and responds with the appropriate function.
-// This implements github.com/benoleary/ilutulestikud/http.GetHandler.
-func (collectionState *CollectionState) HandleGet(
+// This implements part of github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
+func (handler *Handler) HandleGet(
 	httpResponseWriter http.ResponseWriter, httpRequest *http.Request, relevantUriSegments []string) {
 	if len(relevantUriSegments) < 1 {
 		httpResponseWriter.WriteHeader(http.StatusBadRequest)
@@ -52,15 +51,15 @@ func (collectionState *CollectionState) HandleGet(
 
 	switch relevantUriSegments[0] {
 	case "all-games-with-player":
-		collectionState.writeGamesWithPlayerListJson(httpResponseWriter, relevantUriSegments[1:])
+		handler.writeGamesWithPlayerListJson(httpResponseWriter, relevantUriSegments[1:])
 	default:
 		http.NotFound(httpResponseWriter, httpRequest)
 	}
 }
 
 // HandlePost parses an HTTP POST request and responds with the appropriate function.
-// This implements github.com/benoleary/ilutulestikud/http.PostHandler.
-func (collectionState *CollectionState) HandlePost(
+// This implements part of github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
+func (handler *Handler) HandlePost(
 	httpResponseWriter http.ResponseWriter, httpRequest *http.Request, relevantUriSegments []string) {
 	if len(relevantUriSegments) < 1 {
 		httpResponseWriter.WriteHeader(http.StatusBadRequest)
@@ -70,7 +69,7 @@ func (collectionState *CollectionState) HandlePost(
 
 	switch relevantUriSegments[0] {
 	case "create-new-game":
-		collectionState.handleNewGame(httpResponseWriter, httpRequest)
+		handler.handleNewGame(httpResponseWriter, httpRequest)
 	default:
 		http.NotFound(httpResponseWriter, httpRequest)
 	}
@@ -78,7 +77,7 @@ func (collectionState *CollectionState) HandlePost(
 
 // writeRegisteredPlayerListJson writes a JSON object into the HTTP response which has
 // the list of player objects as its "Players" attribute.
-func (collectionState *CollectionState) writeGamesWithPlayerListJson(
+func (handler *Handler) writeGamesWithPlayerListJson(
 	httpResponseWriter http.ResponseWriter, relevantUriSegments []string) {
 	if len(relevantUriSegments) < 1 {
 		httpResponseWriter.WriteHeader(http.StatusBadRequest)
@@ -89,10 +88,10 @@ func (collectionState *CollectionState) writeGamesWithPlayerListJson(
 	playerName := relevantUriSegments[0]
 
 	gameList := make([]string, 0)
-	for _, activeGame := range collectionState.activeGames {
-		for _, participatingPlayer := range activeGame.participatingPlayers {
+	for _, gameState := range handler.gameStates {
+		for _, participatingPlayer := range gameState.participatingPlayers {
 			if participatingPlayer.Name == playerName {
-				gameList = append(gameList, activeGame.gameName)
+				gameList = append(gameList, gameState.gameName)
 				break
 			}
 		}
@@ -101,8 +100,8 @@ func (collectionState *CollectionState) writeGamesWithPlayerListJson(
 	json.NewEncoder(httpResponseWriter).Encode(struct{ Games []string }{gameList})
 }
 
-// handleNewGame adds a new game to the map of SingleState objects.
-func (collectionState *CollectionState) handleNewGame(
+// handleNewGame adds a new game to the map of game state objects.
+func (handler *Handler) handleNewGame(
 	httpResponseWriter http.ResponseWriter, httpRequest *http.Request) {
 	if httpRequest.Body == nil {
 		http.Error(httpResponseWriter, "Empty request body", http.StatusBadRequest)
@@ -120,19 +119,19 @@ func (collectionState *CollectionState) handleNewGame(
 		return
 	}
 
-	_, gameExists := collectionState.activeGames[newGameFromJson.Name]
+	_, gameExists := handler.gameStates[newGameFromJson.Name]
 	if gameExists {
 		http.Error(httpResponseWriter, "Name "+newGameFromJson.Name+" already exists", http.StatusBadRequest)
 		return
 	}
 
-	collectionState.mutualExclusion.Lock()
-	collectionState.activeGames[newGameFromJson.Name] =
-		createSingleState(
+	handler.mutualExclusion.Lock()
+	handler.gameStates[newGameFromJson.Name] =
+		createState(
 			newGameFromJson.Name,
-			collectionState.lobbyState,
+			handler.playerHandler,
 			newGameFromJson.Players)
-	collectionState.mutualExclusion.Unlock()
+	handler.mutualExclusion.Unlock()
 
 	httpResponseWriter.WriteHeader(http.StatusOK)
 }
