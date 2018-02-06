@@ -17,13 +17,11 @@ import { MatDialogRef } from '@angular/material';
 
     addPlayer(): void
     {
-        console.log("addPlayer() clicked, this.newPlayerName = " + this.newPlayerName);
         this.dialogReference.close(this.newPlayerName);
     }
 
     cancelDialogue(): void
     {
-        console.log("cancelDialogue() clicked, this.newPlayerName = " + this.newPlayerName);
         this.dialogReference.close(null);
     }
   }
