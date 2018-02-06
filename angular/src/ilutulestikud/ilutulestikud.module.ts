@@ -11,6 +11,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatInputModule } from '@angular/material';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule } from '@angular/material';
+import { MatTabsModule } from '@angular/material/tabs';
 import { IlutulestikudComponent } from './ilutulestikud.component';
 import { IlutulestikudService } from './ilutulestikud.service';
 import { AddPlayerDialogueComponent } from './components/addplayerdialogue.component'
@@ -35,7 +36,8 @@ import { AddPlayerDialogueComponent } from './components/addplayerdialogue.compo
     MatSelectModule,
     MatInputModule,
     MatButtonModule,
-    MatDialogModule
+    MatDialogModule,
+    MatTabsModule
   ],
   exports: [
     BrowserModule,
@@ -50,6 +52,7 @@ import { AddPlayerDialogueComponent } from './components/addplayerdialogue.compo
     MatInputModule,
     MatButtonModule,
     MatDialogModule,
+    MatTabsModule,
     IlutulestikudComponent
   ],
   providers: [IlutulestikudService]
