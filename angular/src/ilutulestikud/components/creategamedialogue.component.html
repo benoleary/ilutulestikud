@@ -1,7 +1,7 @@
 <h1 mat-dialog-title>Create game?</h1>
 <mat-dialog-content>
     <mat-form-field>
-        <input matInput [(ngModel)]="gameName">
+        <input matInput placeholder="Name for the game" [(ngModel)]="gameName">
     </mat-form-field>
     <ul *ngFor="let participatingPlayer of participatingPlayers; let participantIndex = index">
         <li>Player {{participantIndex + 1}}: {{participatingPlayer}}</li>
