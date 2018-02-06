@@ -3,6 +3,20 @@
     <mat-form-field>
         <input matInput [(ngModel)]="gameName">
     </mat-form-field>
+    <ul *ngFor="let participatingPlayer of participatingPlayers; let participantIndex = index">
+        <li>Player {{participantIndex + 1}}: {{participatingPlayer}}</li>
+    </ul>
+    <mat-form-field>
+      <mat-select placeholder="Add Player {{participatingPlayers.length + 1}}?"
+        [ngModel]="selectedParticipant"
+        (ngModelChange)="addParticipant($event)">
+        <mat-option
+          *ngFor="let availablePlayer of availablePlayers"
+          [value]="availablePlayer">
+          {{ availablePlayer }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
 </mat-dialog-content>
 <mat-dialog-actions>
     <button mat-button (click)="createGame()">Create new game</button>

@@ -14,12 +14,12 @@ import { MAT_DIALOG_DATA } from '@angular/material';
     participatingPlayers: string[];
     creatingPlayer: string;
     availablePlayers: string[];
+    selectedParticipant: string;
 
     constructor(
         public dialogReference: MatDialogRef<CreateGameDialogueComponent>,
         @Inject(MAT_DIALOG_DATA) public data: any)
     {
-        console.log("data = " + data);
         this.creatingPlayer = null;
         this.availablePlayers = [];
 
@@ -38,6 +38,17 @@ import { MAT_DIALOG_DATA } from '@angular/material';
 
         this.gameName = null;
         this.participatingPlayers = this.creatingPlayer ? [this.creatingPlayer] : [];
+    }
+
+    addParticipant(participantName: string): void
+    {
+        this.participatingPlayers.push(participantName);
+        const participantIndex = this.availablePlayers.indexOf(participantName);
+
+        if (participantIndex >= 0)
+        {
+            this.availablePlayers.splice(participantIndex, 1);
+        }
     }
 
     createGame(): void
