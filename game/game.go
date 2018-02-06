@@ -4,12 +4,15 @@ import (
 	"encoding/json"
 	"github.com/benoleary/ilutulestikud/player"
 	"net/http"
+	"sort"
 	"sync"
+	"time"
 )
 
 // state is a struct meant to encapsulate all the state required for a single game to function.
 type state struct {
 	gameName             string
+	creationTime         time.Time
 	participatingPlayers []*player.State
 	mutualExclusion      sync.Mutex
 }
@@ -22,7 +25,38 @@ func createState(gameName string, playerHandler *player.Handler, playerNames []s
 		playerStates[playerIndex] = playerHandler.GetPlayerByName(playerNames[playerIndex])
 	}
 
-	return &state{gameName, playerStates, sync.Mutex{}}
+	return &state{gameName, time.Now(), playerStates, sync.Mutex{}}
+}
+
+// hasPlayerAsParticipant returns true if the given player name matches
+// the name of any of the game's participating players.
+func (gameState *state) hasPlayerAsParticipant(playerName string) bool {
+	for _, participatingPlayer := range gameState.participatingPlayers {
+		if participatingPlayer.Name == playerName {
+			return true
+		}
+	}
+	return false
+}
+
+// byCreationTime implements sort.Interface for []*state based on the creationTime field.
+type byCreationTime []*state
+
+// Len implements part of the sort.Interface for byCreationTime.
+func (statePointerArray byCreationTime) Len() int {
+	return len(statePointerArray)
+}
+
+// Swap implements part of the sort.Interface for byCreationTime.
+func (statePointerArray byCreationTime) Swap(firstIndex int, secondIndex int) {
+	statePointerArray[firstIndex], statePointerArray[secondIndex] =
+		statePointerArray[secondIndex], statePointerArray[firstIndex]
+}
+
+// Less implements part of the sort.Interface for byCreationTime.
+func (statePointerArray byCreationTime) Less(firstIndex int, secondIndex int) bool {
+	return statePointerArray[firstIndex].creationTime.Before(
+		statePointerArray[secondIndex].creationTime)
 }
 
 // Handler is a struct meant to encapsulate all the state co-ordinating all the games.
@@ -87,17 +121,21 @@ func (handler *Handler) writeGamesWithPlayerListJson(
 
 	playerName := relevantUriSegments[0]
 
-	gameList := make([]string, 0)
+	gameList := make([]*state, 0)
 	for _, gameState := range handler.gameStates {
-		for _, participatingPlayer := range gameState.participatingPlayers {
-			if participatingPlayer.Name == playerName {
-				gameList = append(gameList, gameState.gameName)
-				break
-			}
+		if gameState.hasPlayerAsParticipant(playerName) {
+			gameList = append(gameList, gameState)
 		}
 	}
 
-	json.NewEncoder(httpResponseWriter).Encode(struct{ Games []string }{gameList})
+	sort.Sort(byCreationTime(gameList))
+	numberOfGamesWithPlayer := len(gameList)
+	gameNames := make([]string, numberOfGamesWithPlayer)
+	for gameIndex := 0; gameIndex < numberOfGamesWithPlayer; gameIndex++ {
+		gameNames[gameIndex] = gameList[gameIndex].gameName
+	}
+
+	json.NewEncoder(httpResponseWriter).Encode(struct{ Games []string }{gameNames})
 }
 
 // handleNewGame adds a new game to the map of game state objects.

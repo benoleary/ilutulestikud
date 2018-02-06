@@ -123,7 +123,9 @@ func availableColors() []string {
 }
 
 // writeRegisteredPlayerListJson writes a JSON object into the HTTP response which has
-// the list of player objects as its "Players" attribute.
+// the list of player objects as its "Players" attribute. The order of the players is not
+// consistent with repeated calls even if the map of players does not change, since the
+// Go compiler actually does randomize the iteration order of the map entries by design.
 func (handler *Handler) writeRegisteredPlayerListJson(httpResponseWriter http.ResponseWriter) {
 	playerList := make([]State, 0, len(handler.registeredPlayers))
 	for _, registeredPlayer := range handler.registeredPlayers {
