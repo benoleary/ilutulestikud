@@ -50,6 +50,11 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
     this.gameNamesTimerSubscription.unsubscribe();
   }
 
+  dismissErrorMessage(): void
+  {
+    this.informationText = null;
+  }
+
   parsePlayers(fetchedPlayersObject: Object): void
   {
     this.registeredPlayers.length = 0;
