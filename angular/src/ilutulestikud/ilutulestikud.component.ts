@@ -34,6 +34,7 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
 
   ngOnInit(): void
   {
+    // We do not start this.refreshGames(); in ngOnInit() as it somehow leads to the display not ever updating.
     this.ilutulestikudService.registeredPlayers().subscribe(
       fetchedPlayersObject => this.parsePlayers(fetchedPlayersObject),
       thrownError => this.handleError(thrownError),
@@ -42,7 +43,6 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
       fetchedColorsObject => this.parseColors(fetchedColorsObject),
       thrownError => this.handleError(thrownError),
       () => {});
-    this.refreshGames();
   }
 
   ngOnDestroy(): void
@@ -59,6 +59,14 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
     {
       this.registeredPlayers.push(new Player(fetchedPlayer["Name"], fetchedPlayer["Color"]));
     }
+  }
+
+  selectPlayer(selectedPlayer: Player): void
+  {
+    this.selectedPlayer = selectedPlayer;
+
+    // Once we know the player, we can start checking for games.
+    this.refreshGames();
   }
   
   parseColors(fetchedColorsObject: Object): void
@@ -128,6 +136,7 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
 
   displayGames(): string
   {
+    // This will ge replaced by a different method and a different way of displaying games.
     return "Games = " + this.namesOfGamesWithPlayer;
   }
 

@@ -38,7 +38,9 @@
 
 <div *ngIf="!selectedPlayer">
   <mat-form-field>
-    <mat-select placeholder="Select a player" [(ngModel)]="selectedPlayer">
+    <mat-select placeholder="Select a player"
+      [ngModel]="selectedPlayer"
+      (ngModelChange)="selectPlayer($event)">>
       <mat-option
         *ngFor="let registeredPlayer of registeredPlayers"
         [value]="registeredPlayer"
