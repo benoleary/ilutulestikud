@@ -80,8 +80,6 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
       returnedPlayersObject => this.parsePlayers(returnedPlayersObject),
       thrownError => this.handleError(thrownError),
       () => {});
-
-      console.log("this.namesOfGamesWithPlayer = " + this.namesOfGamesWithPlayer);
   }
   
   openAddPlayerDialog(): void
@@ -105,7 +103,6 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
 
   refreshGames(): void
   {
-    console.log("refreshGames(): this.namesOfGamesWithPlayer = " + this.namesOfGamesWithPlayer);
     if (this.selectedPlayer)
     {
       this.ilutulestikudService.gamesWithPlayer(this.selectedPlayer.Name).subscribe(
@@ -113,7 +110,7 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
         thrownError => this.handleError(thrownError),
         () => {});
     }
-    console.log("after if: this.namesOfGamesWithPlayer = " + this.namesOfGamesWithPlayer);
+    console.log((new Date()).toUTCString() + " - refreshGames(): this.namesOfGamesWithPlayer = " + this.namesOfGamesWithPlayer);
     this.gameNamesTimerSubscription = Observable.timer(1000).first().subscribe(
       () => this.refreshGames());
   }
@@ -127,6 +124,11 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
     {
       this.namesOfGamesWithPlayer.push(gameName);
     }
+  }
+
+  displayGames(): string
+  {
+    return "Games = " + this.namesOfGamesWithPlayer;
   }
 
   handleError(thrownError: Error): void
