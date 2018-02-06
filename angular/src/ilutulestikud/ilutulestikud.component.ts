@@ -111,19 +111,15 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
 
   refreshGames(): void
   {
-    if (this.selectedPlayer)
-    {
-      this.ilutulestikudService.gamesWithPlayer(this.selectedPlayer.Name).subscribe(
-        fetchedGamesObject => this.parseGames(fetchedGamesObject),
+    // Once the result has been parsed, this.parseGamesAndRefresh(...) will trigger another
+    // call of refreshGames() after a second.
+    this.ilutulestikudService.gamesWithPlayer(this.selectedPlayer.Name).subscribe(
+        fetchedGamesObject => this.parseGamesAndRefresh(fetchedGamesObject),
         thrownError => this.handleError(thrownError),
         () => {});
-    }
-    console.log((new Date()).toUTCString() + " - refreshGames(): this.namesOfGamesWithPlayer = " + this.namesOfGamesWithPlayer);
-    this.gameNamesTimerSubscription = Observable.timer(1000).first().subscribe(
-      () => this.refreshGames());
   }
 
-  parseGames(fetchedGamesObject: Object): void
+  parseGamesAndRefresh(fetchedGamesObject: Object): void
   {
     this.namesOfGamesWithPlayer.length = 0;
 
@@ -132,6 +128,11 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
     {
       this.namesOfGamesWithPlayer.push(gameName);
     }
+
+    // Once the result has been parsed, we wait a second, then trigger another
+    // call of refreshGames().
+    this.gameNamesTimerSubscription = Observable.timer(1000).first().subscribe(
+      () => this.refreshGames());
   }
 
   displayGames(): string
