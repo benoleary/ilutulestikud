@@ -19,7 +19,7 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
   registeredPlayers: Player[];
   availableColors: string[];
   namesOfGamesWithPlayer: string[];
-  gameNamesSubscription: Subscription;
+  gameNamesTimerSubscription: Subscription;
   
 
   constructor(public ilutulestikudService: IlutulestikudService, public materialDialog: MatDialog)
@@ -29,7 +29,7 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
     this.availableColors = [];
     this.informationText = null;
     this.namesOfGamesWithPlayer = [];
-    this.gameNamesSubscription = null;
+    this.gameNamesTimerSubscription = null;
   }
 
   ngOnInit(): void
@@ -42,13 +42,12 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
       fetchedColorsObject => this.parseColors(fetchedColorsObject),
       thrownError => this.handleError(thrownError),
       () => {});
-    this.gameNamesSubscription = Observable.timer(1000).first().subscribe(
-      () => this.refreshGames());
+    this.refreshGames();
   }
 
   ngOnDestroy(): void
   {
-    this.gameNamesSubscription.unsubscribe();
+    this.gameNamesTimerSubscription.unsubscribe();
   }
 
   parsePlayers(fetchedPlayersObject: Object): void
@@ -81,6 +80,8 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
       returnedPlayersObject => this.parsePlayers(returnedPlayersObject),
       thrownError => this.handleError(thrownError),
       () => {});
+
+      console.log("this.namesOfGamesWithPlayer = " + this.namesOfGamesWithPlayer);
   }
   
   openAddPlayerDialog(): void
@@ -104,6 +105,7 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
 
   refreshGames(): void
   {
+    console.log("refreshGames(): this.namesOfGamesWithPlayer = " + this.namesOfGamesWithPlayer);
     if (this.selectedPlayer)
     {
       this.ilutulestikudService.gamesWithPlayer(this.selectedPlayer.Name).subscribe(
@@ -111,13 +113,16 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
         thrownError => this.handleError(thrownError),
         () => {});
     }
+    console.log("after if: this.namesOfGamesWithPlayer = " + this.namesOfGamesWithPlayer);
+    this.gameNamesTimerSubscription = Observable.timer(1000).first().subscribe(
+      () => this.refreshGames());
   }
 
   parseGames(fetchedGamesObject: Object): void
   {
     this.namesOfGamesWithPlayer.length = 0;
 
-    // fetchedGamesObject["Colors"] is only an "array-like object", not an array, so does not have foreach.
+    // fetchedGamesObject["Games"] is only an "array-like object", not an array, so does not have foreach.
     for (const gameName of fetchedGamesObject["Games"])
     {
       this.namesOfGamesWithPlayer.push(gameName);
