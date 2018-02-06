@@ -54,6 +54,8 @@
 </div>
 
 <div *ngIf="selectedPlayer">
+  <button mat-raised-button (click)="openCreateGameDialog()">Create new game?</button>
+
   <div *ngIf="namesOfGamesWithPlayer && namesOfGamesWithPlayer.length > 0">
     <mat-tab-group>
       <mat-tab
@@ -62,19 +64,6 @@
     </mat-tab-group>
   </div>
 </div>
-
-<hr>
-<hr>
-<br>
-{{ displayGames() }}
-<br>
-<hr>
-<hr>
-<div>
-  The game should be displayed here.
-</div>
-<hr>
-<hr>
 
 <div style="text-align:center">
 This is just a private demonstration of code and not a commercial venture.

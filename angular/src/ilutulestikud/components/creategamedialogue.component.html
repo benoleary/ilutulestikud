@@ -1,0 +1,10 @@
+<h1 mat-dialog-title>Create game?</h1>
+<mat-dialog-content>
+    <mat-form-field>
+        <input matInput [(ngModel)]="gameName">
+    </mat-form-field>
+</mat-dialog-content>
+<mat-dialog-actions>
+    <button mat-button (click)="createGame()">Create new game</button>
+    <button mat-button (click)="cancelDialogue()">Cancel</button>
+</mat-dialog-actions>

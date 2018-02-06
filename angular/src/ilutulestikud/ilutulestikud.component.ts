@@ -5,6 +5,7 @@ import { Observable } from 'rxjs/Rx';
 import { IlutulestikudService } from './ilutulestikud.service';
 import { Player } from './models/player.model'
 import { AddPlayerDialogueComponent } from './components/addplayerdialogue.component'
+import { CreateGameDialogueComponent } from './components/creategamedialogue.component'
 import { Subscription } from 'rxjs/Subscription';
 
 @Component({
@@ -114,6 +115,31 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
     });
   }
 
+  openCreateGameDialog(): void
+  {
+    let dialogRef = this.materialDialog.open(CreateGameDialogueComponent, {
+      width: '250px',
+      data: {
+        creatingPlayer: this.selectedPlayer.Name,
+        availablePlayers: this.registeredPlayers.map(registerPlayer => registerPlayer.Name)
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(resultFromClose =>
+    {
+      if (resultFromClose)
+      {
+        this.informationText = null;
+        this.ilutulestikudService
+          .newGame(resultFromClose["Name"], resultFromClose["Players"])
+          .subscribe(
+            () => {},
+            thrownError => this.handleError(thrownError),
+            () => {});
+      }
+    });
+  }
+
   refreshGames(): void
   {
     // Once the result has been parsed, this.parseGamesAndRefresh(...) will trigger another
@@ -138,12 +164,6 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
     // call of refreshGames().
     this.gameNamesTimerSubscription = Observable.timer(1000).first().subscribe(
       () => this.refreshGames());
-  }
-
-  displayGames(): string
-  {
-    // This will ge replaced by a different method and a different way of displaying games.
-    return "Games = " + this.namesOfGamesWithPlayer;
   }
 
   handleError(thrownError: Error): void

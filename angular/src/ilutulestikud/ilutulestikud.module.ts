@@ -15,14 +15,17 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { IlutulestikudComponent } from './ilutulestikud.component';
 import { IlutulestikudService } from './ilutulestikud.service';
 import { AddPlayerDialogueComponent } from './components/addplayerdialogue.component'
+import { CreateGameDialogueComponent } from './components/creategamedialogue.component'
 
 @NgModule({
   declarations: [
     IlutulestikudComponent,
-    AddPlayerDialogueComponent
+    AddPlayerDialogueComponent,
+    CreateGameDialogueComponent
   ],
   entryComponents: [
-    AddPlayerDialogueComponent
+    AddPlayerDialogueComponent,
+    CreateGameDialogueComponent
   ],
   imports: [
     BrowserModule,
