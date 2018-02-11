@@ -38,16 +38,31 @@ import { MAT_DIALOG_DATA } from '@angular/material';
 
         this.gameName = null;
         this.participatingPlayers = this.creatingPlayer ? [this.creatingPlayer] : [];
+        if (this.creatingPlayer)
+        {
+            this.removePlayerFromAvailablePlayerList(this.creatingPlayer);
+        }
     }
 
     addParticipant(participantName: string): void
     {
         this.participatingPlayers.push(participantName);
-        const participantIndex = this.availablePlayers.indexOf(participantName);
+        this.removePlayerFromAvailablePlayerList(participantName);
+    }
 
-        if (participantIndex >= 0)
+    removePlayerFromAvailablePlayerList(playerName: string)
+    {
+        if (!this.availablePlayers)
         {
-            this.availablePlayers.splice(participantIndex, 1);
+            console.log("Asked to remove player " + playerName + " from non-existent available player list.");
+            return;
+        }
+
+        const playerIndex = this.availablePlayers.indexOf(playerName);
+
+        if (playerIndex >= 0)
+        {
+            this.availablePlayers.splice(playerIndex, 1);
         }
     }
 
