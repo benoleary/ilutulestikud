@@ -14,6 +14,7 @@ type state struct {
 	gameName             string
 	creationTime         time.Time
 	participatingPlayers []*player.State
+	turnNumber           int
 	mutualExclusion      sync.Mutex
 }
 
@@ -25,7 +26,7 @@ func createState(gameName string, playerHandler *player.Handler, playerNames []s
 		playerStates[playerIndex] = playerHandler.GetPlayerByName(playerNames[playerIndex])
 	}
 
-	return &state{gameName, time.Now(), playerStates, sync.Mutex{}}
+	return &state{gameName, time.Now(), playerStates, 1, sync.Mutex{}}
 }
 
 // hasPlayerAsParticipant returns true if the given player name matches
@@ -36,6 +37,7 @@ func (gameState *state) hasPlayerAsParticipant(playerName string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -109,6 +111,15 @@ func (handler *Handler) HandlePost(
 	}
 }
 
+// turnSummary contains the information to determine what games involve a player and whose turn it is.
+// All the fields need to be public so that the JSON encoder can see them to serialize them.
+type turnSummary struct {
+	GameName               string
+	TurnNumber             int
+	PlayersInNextTurnOrder []string
+	IsPlayerTurn           bool
+}
+
 // writeRegisteredPlayerListJson writes a JSON object into the HTTP response which has
 // the list of player objects as its "Players" attribute.
 func (handler *Handler) writeGamesWithPlayerListJson(
@@ -129,13 +140,40 @@ func (handler *Handler) writeGamesWithPlayerListJson(
 	}
 
 	sort.Sort(byCreationTime(gameList))
+
 	numberOfGamesWithPlayer := len(gameList)
-	gameNames := make([]string, numberOfGamesWithPlayer)
+	namesOfGamesWithPlayer := make([]string, numberOfGamesWithPlayer)
+	turnSummaries := make([]turnSummary, numberOfGamesWithPlayer)
 	for gameIndex := 0; gameIndex < numberOfGamesWithPlayer; gameIndex++ {
-		gameNames[gameIndex] = gameList[gameIndex].gameName
+		nameOfGame := gameList[gameIndex].gameName
+		gameTurn := gameList[gameIndex].turnNumber
+		namesOfGamesWithPlayer[gameIndex] = nameOfGame
+
+		gameParticipants := gameList[gameIndex].participatingPlayers
+		numberOfParticipants := len(gameParticipants)
+
+		playerNamesInTurnOrder := make([]string, numberOfParticipants)
+
+		for playerIndex := 0; playerIndex < numberOfParticipants; playerIndex++ {
+			// Game turns begin with 1 rather than 0, so this sets the player names in order,
+			// wrapping index back to 0 when at the end of the list.
+			// E.g turn 3, 5 players: playerNamesInTurnOrder will start with
+			// gameParticipants[2], then [3], then [4], then [0], then [1].
+			playerNamesInTurnOrder[playerIndex] =
+				gameParticipants[(playerIndex+gameTurn-1)%numberOfParticipants].Name
+		}
+
+		turnSummaries[gameIndex] = turnSummary{
+			nameOfGame,
+			gameTurn,
+			playerNamesInTurnOrder,
+			playerName == playerNamesInTurnOrder[0]}
 	}
 
-	json.NewEncoder(httpResponseWriter).Encode(struct{ Games []string }{gameNames})
+	json.NewEncoder(httpResponseWriter).Encode(struct {
+		Games         []string
+		TurnSummaries []turnSummary
+	}{namesOfGamesWithPlayer, turnSummaries[:]})
 }
 
 // handleNewGame adds a new game to the map of game state objects.
