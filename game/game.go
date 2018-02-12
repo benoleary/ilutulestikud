@@ -114,10 +114,11 @@ func (handler *Handler) HandlePost(
 // turnSummary contains the information to determine what games involve a player and whose turn it is.
 // All the fields need to be public so that the JSON encoder can see them to serialize them.
 type turnSummary struct {
-	GameName               string
-	TurnNumber             int
-	PlayersInNextTurnOrder []string
-	IsPlayerTurn           bool
+	GameName                   string
+	CreationTimestampInSeconds int64
+	TurnNumber                 int
+	PlayersInNextTurnOrder     []string
+	IsPlayerTurn               bool
 }
 
 // writeRegisteredPlayerListJson writes a JSON object into the HTTP response which has
@@ -165,6 +166,7 @@ func (handler *Handler) writeGamesWithPlayerListJson(
 
 		turnSummaries[gameIndex] = turnSummary{
 			nameOfGame,
+			gameList[gameIndex].creationTime.Unix(),
 			gameTurn,
 			playerNamesInTurnOrder,
 			playerName == playerNamesInTurnOrder[0]}
