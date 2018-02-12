@@ -6,8 +6,9 @@
     <ul *ngFor="let participatingPlayer of participatingPlayers; let participantIndex = index">
         <li>Player {{participantIndex + 1}}: {{participatingPlayer}}</li>
     </ul>
-    <mat-form-field>
-      <mat-select placeholder="Add Player {{participatingPlayers.length + 1}}?"
+    <mat-form-field *ngIf="participatingPlayers && participatingPlayers.length < maximumParticipants">
+      <mat-select
+        placeholder="Add Player {{participatingPlayers.length + 1}}?"
         [ngModel]="selectedParticipant"
         (ngModelChange)="addParticipant($event)">
         <mat-option
@@ -19,6 +20,11 @@
     </mat-form-field>
 </mat-dialog-content>
 <mat-dialog-actions>
-    <button mat-button (click)="createGame()">Confirm create game</button>
+    <button
+        mat-button
+        (click)="createGame()"
+        [disabled]="!participatingPlayers || participatingPlayers.length < 2">
+        Confirm create game
+    </button>
     <button mat-button (click)="cancelDialogue()">Cancel</button>
 </mat-dialog-actions>

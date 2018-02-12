@@ -15,6 +15,7 @@ import { MAT_DIALOG_DATA } from '@angular/material';
     creatingPlayer: string;
     availablePlayers: string[];
     selectedParticipant: string;
+    readonly maximumParticipants = 5;
 
     constructor(
         public dialogReference: MatDialogRef<CreateGameDialogueComponent>,
