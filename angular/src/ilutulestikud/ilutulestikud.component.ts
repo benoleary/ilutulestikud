@@ -4,6 +4,7 @@ import { MatDialog } from '@angular/material';
 import { Observable } from 'rxjs/Rx';
 import { IlutulestikudService } from './ilutulestikud.service';
 import { Player } from './models/player.model'
+import { TurnSummary } from './models/turnsummary.model'
 import { AddPlayerDialogueComponent } from './components/addplayerdialogue.component'
 import { CreateGameDialogueComponent } from './components/creategamedialogue.component'
 import { Subscription } from 'rxjs/Subscription';
@@ -63,7 +64,7 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
     // fetchedPlayersObject["Players"] is only an "array-like object", not an array, so does not have foreach.
     for (const fetchedPlayer of fetchedPlayersObject["Players"])
     {
-      this.registeredPlayers.push(new Player(fetchedPlayer["Name"], fetchedPlayer["Color"]));
+      this.registeredPlayers.push(new Player(fetchedPlayer));
     }
   }
 
