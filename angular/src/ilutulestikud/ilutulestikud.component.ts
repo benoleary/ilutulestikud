@@ -22,6 +22,8 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
   availableColors: string[];
   namesOfGamesWithPlayer: string[];
   gameNamesTimerSubscription: Subscription;
+  gameTurnSummariesSubscription: Subscription;
+  isAwaitingGameTurnSummaries: boolean;
   
 
   constructor(public ilutulestikudService: IlutulestikudService, public materialDialog: MatDialog)
@@ -32,6 +34,8 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
     this.informationText = null;
     this.namesOfGamesWithPlayer = [];
     this.gameNamesTimerSubscription = null;
+    this.gameTurnSummariesSubscription = null;
+    this.isAwaitingGameTurnSummaries = false;
   }
 
   ngOnInit(): void
@@ -49,7 +53,17 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
 
   ngOnDestroy(): void
   {
-    this.gameNamesTimerSubscription.unsubscribe();
+    if (this.gameTurnSummariesSubscription)
+    {
+      this.gameTurnSummariesSubscription.unsubscribe();
+    }
+
+    if (this.gameNamesTimerSubscription)
+    {
+      this.gameNamesTimerSubscription.unsubscribe();
+    }
+
+    this.selectedPlayer = null;
   }
 
   dismissErrorMessage(): void
@@ -74,6 +88,7 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
 
     // Once we know the player, we can start checking for games.
     this.refreshGames();
+    this.startRefreshingGameTurnSummaries();
   }
   
   parseColors(fetchedColorsObject: Object): void
@@ -141,6 +156,36 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
     });
   }
 
+  startRefreshingGameTurnSummaries(): void
+  {
+    this.gameTurnSummariesSubscription =
+      Observable
+        .timer(2000,1000)
+        .takeWhile(() => (this.selectedPlayer != null))
+        .subscribe(
+          () => this.refreshGameTurnSummaries(),
+          thrownError => this.handleError(thrownError),
+          () => {});
+  }
+
+  refreshGameTurnSummaries(): void
+  {
+    // We only request new game turn summaries if we are not waiting for the response to the last request.
+    if (!this.isAwaitingGameTurnSummaries)
+    {
+      // We note that we are now awaiting the HTTP response (this.isAwaitingGameTurnSummaries will be
+      // set back to false by this.parseGameTurnSummaries(fetchedGameTurnSummaries) which will run when
+      // we get the response to the request).
+      this.isAwaitingGameTurnSummaries = true;
+      this.ilutulestikudService
+        .gamesWithPlayer(this.selectedPlayer.Name)
+        .subscribe(
+          fetchedGameTurnSummaries => this.parseGameTurnSummaries(fetchedGameTurnSummaries),
+          thrownError => this.handleError(thrownError),
+          () => {});
+    }
+  }
+
   refreshGames(): void
   {
     // Once the result has been parsed, this.parseGamesAndRefresh(...) will trigger another
@@ -149,6 +194,25 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
         fetchedGamesObject => this.parseGamesAndRefresh(fetchedGamesObject),
         thrownError => this.handleError(thrownError),
         () => {});
+  }
+
+  parseGameTurnSummaries(fetchedGameTurnSummaries: Object): void
+  {
+    // If we have received a game turn summary list to parse, we are no longer waiting for the HTTP request to complete.
+    this.isAwaitingGameTurnSummaries = false;
+
+    // Will re-instate when satisfied that this can replace parseGamesAndRefresh(...) etc.
+    // this.namesOfGamesWithPlayer.length = 0;
+
+    // fetchedGamesObject["Games"] is only an "array-like object", not an array, so does not have foreach.
+    for (const turnSummary of fetchedGameTurnSummaries["TurnSummaries"])
+    {
+      console.log("turnSummary = " + JSON.stringify(turnSummary));
+      // Will re-instate when satisfied that this can replace parseGamesAndRefresh(...) etc.
+      // this.namesOfGamesWithPlayer.push(turnSummary["GameName"]);
+
+      // Plus some more display...
+    }
   }
 
   parseGamesAndRefresh(fetchedGamesObject: Object): void
