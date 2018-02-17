@@ -56,11 +56,11 @@
 <div *ngIf="selectedPlayer">
   <button mat-raised-button (click)="openCreateGameDialog()">Create new game?</button>
 
-  <div *ngIf="namesOfGamesWithPlayer && namesOfGamesWithPlayer.length > 0">
+  <div *ngIf="turnSummariesOfGamesWithPlayer && turnSummariesOfGamesWithPlayer.length > 0">
     <mat-tab-group>
       <mat-tab
-        *ngFor="let gameName of namesOfGamesWithPlayer"
-        label="{{gameName}}">The game with name "{{gameName}}" should be displayed here.</mat-tab>
+        *ngFor="let turnSummary of turnSummariesOfGamesWithPlayer"
+        label="{{ turnSummary.GameName }}">{{ turnSummary.AsText() }}</mat-tab>
     </mat-tab-group>
   </div>
 </div>

@@ -14,4 +14,12 @@ export class TurnSummary
         this.PlayersInNextTurnOrder = turnSummaryObject["PlayersInNextTurnOrder"];
         this.IsPlayerTurn = turnSummaryObject["IsPlayerTurn"];
     }
+
+    AsText(): string
+    {
+        // Date constructors take a timestamp in units of milliseconds.
+        return "Created: " + (new Date(this.CreationTimestampInSeconds * 1000)).toTimeString()
+             + "; turn number: " + this.TurnNumber
+             + "; player order: " + this.PlayersInNextTurnOrder.join(", ");
+    }
 }
