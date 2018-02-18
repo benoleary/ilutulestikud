@@ -185,11 +185,18 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
     // The object fetchedGameTurnSummaries["TurnSummaries"] is only an "array-like object",
     // not an array, so does not have foreach or length.
     const fetchedSummaries: string[] = Array.from(fetchedGameTurnSummaries["TurnSummaries"]);
-    this.turnSummariesOfGamesWithPlayer.length = fetchedSummaries.length;
 
     for (var gameIndex: number = 0; gameIndex < fetchedSummaries.length; ++gameIndex)
     {
-      this.turnSummariesOfGamesWithPlayer[gameIndex] = (new TurnSummary(fetchedSummaries[gameIndex]));
+      const fetchedSummary: Object = fetchedSummaries[gameIndex];
+      if (gameIndex < this.turnSummariesOfGamesWithPlayer.length)
+      {
+        this.turnSummariesOfGamesWithPlayer[gameIndex].refreshFromSource(fetchedSummary)
+      }
+      else
+      {
+        this.turnSummariesOfGamesWithPlayer.push(new TurnSummary(fetchedSummary));
+      }
     }
   }
 

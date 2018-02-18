@@ -8,6 +8,11 @@ export class TurnSummary
 
     constructor(turnSummaryObject: Object)
     {
+        this.refreshFromSource(turnSummaryObject);
+    }
+
+    refreshFromSource(turnSummaryObject: Object)
+    {
         this.GameName = turnSummaryObject["GameName"];
         this.CreationTimestampInSeconds = turnSummaryObject["CreationTimestampInSeconds"];
         this.TurnNumber = turnSummaryObject["TurnNumber"];
@@ -15,7 +20,7 @@ export class TurnSummary
         this.IsPlayerTurn = turnSummaryObject["IsPlayerTurn"];
     }
 
-    AsText(): string
+    asText(): string
     {
         // Date constructors take a timestamp in units of milliseconds.
         return "Created: " + (new Date(this.CreationTimestampInSeconds * 1000)).toTimeString()
