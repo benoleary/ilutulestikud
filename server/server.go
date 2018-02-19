@@ -22,9 +22,9 @@ type State struct {
 	gameHandler                *game.Handler
 }
 
-func CreateNew(accessControlAllowedOrigin string) *State {
-	playerHandler := player.CreateHandler()
-	return &State{accessControlAllowedOrigin, playerHandler, game.CreateHandler(playerHandler)}
+func New(accessControlAllowedOrigin string) *State {
+	playerHandler := player.NewHandler()
+	return &State{accessControlAllowedOrigin, playerHandler, game.NewHandler(playerHandler)}
 }
 
 // HandleBackend calls functions according to the second segment of the URI, assuming that the first
