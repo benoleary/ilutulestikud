@@ -33,9 +33,10 @@ type Handler struct {
 	mutualExclusion   sync.Mutex
 }
 
-// CreateHandler constructs a Handler object with a non-nil, non-empty slice of State objects.
-func CreateHandler() Handler {
-	return Handler{defaultPlayers(), sync.Mutex{}}
+// CreateHandler constructs a Handler object with a non-nil, non-empty slice of State objects,
+// returning a pointer to the newly-created object.
+func CreateHandler() *Handler {
+	return &Handler{defaultPlayers(), sync.Mutex{}}
 }
 
 // HandleGetRequest parses an HTTP GET request and responds with the appropriate function.

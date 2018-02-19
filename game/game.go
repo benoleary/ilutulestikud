@@ -18,7 +18,8 @@ type state struct {
 	mutualExclusion      sync.Mutex
 }
 
-// createState constructs a state object with a non-nil, non-empty slice of player.State objects.
+// createState constructs a state object with a non-nil, non-empty slice of player.State objects,
+// returning a pointer to the newly-created object.
 func createState(gameName string, playerHandler *player.Handler, playerNames []string) *state {
 	numberOfPlayers := len(playerNames)
 	playerStates := make([]*player.State, numberOfPlayers)
@@ -70,9 +71,9 @@ type Handler struct {
 }
 
 // CreateHandler constructs a Handler object with a pointer to the player.Handler which
-// handles the players.
-func CreateHandler(playerHandler *player.Handler) Handler {
-	return Handler{playerHandler, make(map[string]*state, 0), sync.Mutex{}}
+// handles the players, returning a pointer to the newly-created object.
+func CreateHandler(playerHandler *player.Handler) *Handler {
+	return &Handler{playerHandler, make(map[string]*state, 0), sync.Mutex{}}
 }
 
 // HandleGetRequest parses an HTTP GET request and responds with the appropriate function.
@@ -143,12 +144,10 @@ func (handler *Handler) writeGamesWithPlayerListJson(
 	sort.Sort(byCreationTime(gameList))
 
 	numberOfGamesWithPlayer := len(gameList)
-	namesOfGamesWithPlayer := make([]string, numberOfGamesWithPlayer)
 	turnSummaries := make([]turnSummary, numberOfGamesWithPlayer)
 	for gameIndex := 0; gameIndex < numberOfGamesWithPlayer; gameIndex++ {
 		nameOfGame := gameList[gameIndex].gameName
 		gameTurn := gameList[gameIndex].turnNumber
-		namesOfGamesWithPlayer[gameIndex] = nameOfGame
 
 		gameParticipants := gameList[gameIndex].participatingPlayers
 		numberOfParticipants := len(gameParticipants)
@@ -172,10 +171,7 @@ func (handler *Handler) writeGamesWithPlayerListJson(
 			playerName == playerNamesInTurnOrder[0]}
 	}
 
-	json.NewEncoder(httpResponseWriter).Encode(struct {
-		Games         []string
-		TurnSummaries []turnSummary
-	}{namesOfGamesWithPlayer, turnSummaries[:]})
+	json.NewEncoder(httpResponseWriter).Encode(struct { TurnSummaries []turnSummary }{turnSummaries[:]})
 }
 
 // handleNewGame adds a new game to the map of game state objects.
