@@ -1,10 +1,11 @@
 package server
 
 import (
+	"net/http"
+
 	"github.com/benoleary/ilutulestikud/game"
 	"github.com/benoleary/ilutulestikud/parseuri"
 	"github.com/benoleary/ilutulestikud/player"
-	"net/http"
 )
 
 type httpGetAndPostHandler interface {
@@ -17,16 +18,16 @@ type httpGetAndPostHandler interface {
 
 type State struct {
 	accessControlAllowedOrigin string
-	playerHandler              player.Handler
-	gameHandler                game.Handler
+	playerHandler              *player.Handler
+	gameHandler                *game.Handler
 }
 
-func CreateNew(accessControlAllowedOrigin string) State {
+func CreateNew(accessControlAllowedOrigin string) *State {
 	playerHandler := player.CreateHandler()
-	return State{accessControlAllowedOrigin, playerHandler, game.CreateHandler(&playerHandler)}
+	return &State{accessControlAllowedOrigin, playerHandler, game.CreateHandler(playerHandler)}
 }
 
-// rootHandler calls functions according to the second segment of the URI, assuming that the first
+// HandleBackend calls functions according to the second segment of the URI, assuming that the first
 // segment is "backend".
 func (state *State) HandleBackend(httpResponseWriter http.ResponseWriter, httpRequest *http.Request) {
 	// If an allowed origin for access control has been set, we set all the headers to allow it.
@@ -49,13 +50,10 @@ func (state *State) HandleBackend(httpResponseWriter http.ResponseWriter, httpRe
 	// first segment of the URI after "backend".
 	var requestHandler httpGetAndPostHandler
 	switch pathSegments[1] {
-	// Deprecated: "lobby" exists for backwards compatibility with the front-end.
-	case "lobby":
-		requestHandler = &state.playerHandler
 	case "player":
-		requestHandler = &state.playerHandler
+		requestHandler = state.playerHandler
 	case "game":
-		requestHandler = &state.gameHandler
+		requestHandler = state.gameHandler
 	default:
 		http.NotFound(httpResponseWriter, httpRequest)
 	}
