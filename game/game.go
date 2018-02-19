@@ -2,11 +2,12 @@ package game
 
 import (
 	"encoding/json"
-	"github.com/benoleary/ilutulestikud/player"
 	"net/http"
 	"sort"
 	"sync"
 	"time"
+
+	"github.com/benoleary/ilutulestikud/player"
 )
 
 // state is a struct meant to encapsulate all the state required for a single game to function.
@@ -76,19 +77,19 @@ func CreateHandler(playerHandler *player.Handler) *Handler {
 	return &Handler{playerHandler, make(map[string]*state, 0), sync.Mutex{}}
 }
 
-// HandleGetRequest parses an HTTP GET request and responds with the appropriate function.
+// HandleGet parses an HTTP GET request and responds with the appropriate function.
 // This implements part of github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
 func (handler *Handler) HandleGet(
-	httpResponseWriter http.ResponseWriter, httpRequest *http.Request, relevantUriSegments []string) {
-	if len(relevantUriSegments) < 1 {
+	httpResponseWriter http.ResponseWriter, httpRequest *http.Request, relevantSegments []string) {
+	if len(relevantSegments) < 1 {
 		httpResponseWriter.WriteHeader(http.StatusBadRequest)
 		httpResponseWriter.Write([]byte("Not enough segments in URI to determine what to do"))
 		return
 	}
 
-	switch relevantUriSegments[0] {
+	switch relevantSegments[0] {
 	case "all-games-with-player":
-		handler.writeGamesWithPlayerListJson(httpResponseWriter, relevantUriSegments[1:])
+		handler.writeTurnSummariesForPlayer(httpResponseWriter, relevantSegments[1:])
 	default:
 		http.NotFound(httpResponseWriter, httpRequest)
 	}
@@ -97,14 +98,14 @@ func (handler *Handler) HandleGet(
 // HandlePost parses an HTTP POST request and responds with the appropriate function.
 // This implements part of github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
 func (handler *Handler) HandlePost(
-	httpResponseWriter http.ResponseWriter, httpRequest *http.Request, relevantUriSegments []string) {
-	if len(relevantUriSegments) < 1 {
+	httpResponseWriter http.ResponseWriter, httpRequest *http.Request, relevantSegments []string) {
+	if len(relevantSegments) < 1 {
 		httpResponseWriter.WriteHeader(http.StatusBadRequest)
 		httpResponseWriter.Write([]byte("Not enough segments in URI to determine what to do"))
 		return
 	}
 
-	switch relevantUriSegments[0] {
+	switch relevantSegments[0] {
 	case "create-new-game":
 		handler.handleNewGame(httpResponseWriter, httpRequest)
 	default:
@@ -122,17 +123,17 @@ type turnSummary struct {
 	IsPlayerTurn               bool
 }
 
-// writeRegisteredPlayerListJson writes a JSON object into the HTTP response which has
-// the list of player objects as its "Players" attribute.
-func (handler *Handler) writeGamesWithPlayerListJson(
-	httpResponseWriter http.ResponseWriter, relevantUriSegments []string) {
-	if len(relevantUriSegments) < 1 {
+// writeTurnSummariesForPlayer writes a JSON object into the HTTP response which has
+// the list of turn summary objects as its "TurnSummaries" attribute.
+func (handler *Handler) writeTurnSummariesForPlayer(
+	httpResponseWriter http.ResponseWriter, relevantSegments []string) {
+	if len(relevantSegments) < 1 {
 		httpResponseWriter.WriteHeader(http.StatusBadRequest)
 		httpResponseWriter.Write([]byte("Not enough segments in URI to determine player name"))
 		return
 	}
 
-	playerName := relevantUriSegments[0]
+	playerName := relevantSegments[0]
 
 	gameList := make([]*state, 0)
 	for _, gameState := range handler.gameStates {
@@ -157,7 +158,7 @@ func (handler *Handler) writeGamesWithPlayerListJson(
 		for playerIndex := 0; playerIndex < numberOfParticipants; playerIndex++ {
 			// Game turns begin with 1 rather than 0, so this sets the player names in order,
 			// wrapping index back to 0 when at the end of the list.
-			// E.g turn 3, 5 players: playerNamesInTurnOrder will start with
+			// E.g. turn 3, 5 players: playerNamesInTurnOrder will start with
 			// gameParticipants[2], then [3], then [4], then [0], then [1].
 			playerNamesInTurnOrder[playerIndex] =
 				gameParticipants[(playerIndex+gameTurn-1)%numberOfParticipants].Name
@@ -171,7 +172,7 @@ func (handler *Handler) writeGamesWithPlayerListJson(
 			playerName == playerNamesInTurnOrder[0]}
 	}
 
-	json.NewEncoder(httpResponseWriter).Encode(struct { TurnSummaries []turnSummary }{turnSummaries[:]})
+	json.NewEncoder(httpResponseWriter).Encode(struct{ TurnSummaries []turnSummary }{turnSummaries[:]})
 }
 
 // handleNewGame adds a new game to the map of game state objects.
@@ -182,29 +183,29 @@ func (handler *Handler) handleNewGame(
 		return
 	}
 
-	var newGameFromJson struct {
+	var newGame struct {
 		Name    string
 		Players []string
 	}
 
-	parsingError := json.NewDecoder(httpRequest.Body).Decode(&newGameFromJson)
+	parsingError := json.NewDecoder(httpRequest.Body).Decode(&newGame)
 	if parsingError != nil {
 		http.Error(httpResponseWriter, "Error parsing JSON: "+parsingError.Error(), http.StatusBadRequest)
 		return
 	}
 
-	_, gameExists := handler.gameStates[newGameFromJson.Name]
+	_, gameExists := handler.gameStates[newGame.Name]
 	if gameExists {
-		http.Error(httpResponseWriter, "Name "+newGameFromJson.Name+" already exists", http.StatusBadRequest)
+		http.Error(httpResponseWriter, "Name "+newGame.Name+" already exists", http.StatusBadRequest)
 		return
 	}
 
 	handler.mutualExclusion.Lock()
-	handler.gameStates[newGameFromJson.Name] =
+	handler.gameStates[newGame.Name] =
 		createState(
-			newGameFromJson.Name,
+			newGame.Name,
 			handler.playerHandler,
-			newGameFromJson.Players)
+			newGame.Players)
 	handler.mutualExclusion.Unlock()
 
 	httpResponseWriter.WriteHeader(http.StatusOK)
