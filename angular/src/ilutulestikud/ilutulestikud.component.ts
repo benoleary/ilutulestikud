@@ -189,6 +189,15 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
     for (var gameIndex: number = 0; gameIndex < fetchedSummaries.length; ++gameIndex)
     {
       const fetchedSummary: Object = fetchedSummaries[gameIndex];
+
+      // First of all we reduce the number of TurnSummary objects if there were more than the refresh returned.
+      if (this.turnSummariesOfGamesWithPlayer.length > fetchedSummaries.length)
+      {
+        this.turnSummariesOfGamesWithPlayer.length = fetchedSummaries.length;
+      }
+
+      // We could replace each TurnSummary with each refresh, but that leads to an annoying animated screen refresh.
+      // Therefore we update existing TurnSummary objects and only add new ones when necessary.
       if (gameIndex < this.turnSummariesOfGamesWithPlayer.length)
       {
         this.turnSummariesOfGamesWithPlayer[gameIndex].refreshFromSource(fetchedSummary)
