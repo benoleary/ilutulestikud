@@ -7,7 +7,7 @@
 <mat-toolbar *ngIf="selectedPlayer">
   <span>Player:&nbsp;</span><span [ngStyle]="{'color': selectedPlayer.Color}">{{ selectedPlayer.Name }}</span>
   <span class="ilutulestikud-spacer"></span>
-  <span>Chat color:&nbsp;</span>
+  <span>Chat:&nbsp;</span>
   <mat-form-field>
     <mat-select
       [ngModel]="selectedPlayer.Color"
