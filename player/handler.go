@@ -55,9 +55,11 @@ func (handler *Handler) HandlePost(httpBodyDecoder *json.Decoder, relevantSegmen
 	}
 }
 
-// GetPlayerByName returns a pointer to the player state which has the given name.
-func (handler *Handler) GetPlayerByName(playerName string) *State {
-	return handler.registeredPlayers[playerName]
+// GetPlayerByName returns a pointer to the player state which has the given name, with
+// a bool that is true if the player was found, as a map normally returns.
+func (handler *Handler) GetPlayerByName(playerName string) (*State, bool) {
+	foundPlayer, isFound := handler.registeredPlayers[playerName]
+	return foundPlayer, isFound
 }
 
 // defaultPlayers returns a map of players created from default player names with colors

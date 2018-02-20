@@ -145,22 +145,6 @@ func (handler *Handler) handleNewGame(httpBodyDecoder *json.Decoder, relevantSeg
 	return "OK", http.StatusOK
 }
 
-// gameForPlayer returns the State pointer for the game with the given name, unless no game
-// with the given name exists, or no player with the given name is a participant of the game
-// if it does exist, in which cases nil and false are returned.
-func (handler *Handler) gameWithParticipant(gameName string, playerName string) (*State, bool) {
-	gameState := handler.gameStates[gameName]
-	if gameState == nil {
-		return nil, false
-	}
-
-	if !gameState.HasPlayerAsParticipant(playerName) {
-		return nil, false
-	}
-
-	return gameState, true
-}
-
 // writeGameForPlayer writes a JSON representation of the current state of the game
 // with the given name for the player with the given name.
 func (handler *Handler) writeGameForPlayer(relevantSegments []string) (interface{}, int) {
@@ -171,8 +155,12 @@ func (handler *Handler) writeGameForPlayer(relevantSegments []string) (interface
 	gameName := relevantSegments[0]
 	playerName := relevantSegments[1]
 
-	gameState, validParticipant := handler.gameWithParticipant(gameName, playerName)
-	if !validParticipant {
+	gameState, isFound := handler.gameStates[gameName]
+	if !isFound {
+		return " game " + gameName + " does not exist, cannot add chat from player " + playerName, http.StatusBadRequest
+	}
+
+	if !gameState.HasPlayerAsParticipant(playerName) {
 		return "Player " + playerName + " is not a participant in game " + gameName, http.StatusBadRequest
 	}
 
@@ -193,12 +181,21 @@ func (handler *Handler) handleNewChatMessage(httpBodyDecoder *json.Decoder, rele
 		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
 	}
 
-	gameState, validParticipant := handler.gameWithParticipant(chatMessage.Game, chatMessage.Player)
-	if !validParticipant {
+	chattingPlayer, playerFound := handler.playerHandler.GetPlayerByName(chatMessage.Player)
+	if !playerFound {
+		return "Player " + chatMessage.Player + " is not registered, and is not a participant in game " + chatMessage.Game, http.StatusBadRequest
+	}
+
+	gameState, isFound := handler.gameStates[chatMessage.Game]
+	if !isFound {
+		return "Game " + chatMessage.Game + " does not exist, cannot add chat from player " + chatMessage.Player, http.StatusBadRequest
+	}
+
+	if !gameState.HasPlayerAsParticipant(chatMessage.Player) {
 		return "Player " + chatMessage.Player + " is not a participant in game " + chatMessage.Game, http.StatusBadRequest
 	}
 
-	gameState.RecordPlayerChatMessage(chatMessage.Player, chatMessage.Message)
+	gameState.RecordPlayerChatMessage(chattingPlayer, chatMessage.Message)
 
 	return "OK", http.StatusOK
 }

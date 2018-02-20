@@ -14,6 +14,7 @@ const ChatLogSize = 20
 type ChatMessage struct {
 	TimestampInSeconds int64
 	PlayerName         string
+	ChatColor          string
 	MessageText        string
 }
 
@@ -33,7 +34,7 @@ func NewState(gameName string, playerHandler *player.Handler, playerNames []stri
 	numberOfPlayers := len(playerNames)
 	playerStates := make([]*player.State, numberOfPlayers)
 	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
-		playerStates[playerIndex] = playerHandler.GetPlayerByName(playerNames[playerIndex])
+		playerStates[playerIndex], _ = playerHandler.GetPlayerByName(playerNames[playerIndex])
 	}
 
 	return &State{gameName, time.Now(), playerStates, 1, make([]ChatMessage, ChatLogSize), sync.Mutex{}}
@@ -73,7 +74,7 @@ func (statePointerArray byCreationTime) Less(firstIndex int, secondIndex int) bo
 
 // RecordPlayerChatMessage adds the given new message to the end of the chat log
 // and removes the oldest message from the top.
-func (state *State) RecordPlayerChatMessage(playerName string, chatMessage string) {
+func (state *State) RecordPlayerChatMessage(chattingPlayer *player.State, chatMessage string) {
 	state.mutualExclusion.Lock()
 
 	// This could probably be more efficient, but is unlikely to be a performance
@@ -82,7 +83,8 @@ func (state *State) RecordPlayerChatMessage(playerName string, chatMessage strin
 		state.chatLog[messageIndex-1] = state.chatLog[messageIndex]
 	}
 
-	state.chatLog[ChatLogSize-1] = ChatMessage{time.Now().Unix(), playerName, chatMessage}
+	state.chatLog[ChatLogSize-1] =
+		ChatMessage{time.Now().Unix(), chattingPlayer.Name, chattingPlayer.Color, chatMessage}
 	state.mutualExclusion.Unlock()
 }
 
