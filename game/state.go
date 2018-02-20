@@ -74,6 +74,8 @@ func (statePointerArray byCreationTime) Less(firstIndex int, secondIndex int) bo
 // RecordPlayerChatMessage adds the given new message to the end of the chat log
 // and removes the oldest message from the top.
 func (state *State) RecordPlayerChatMessage(playerName string, chatMessage string) {
+	state.mutualExclusion.Lock()
+
 	// This could probably be more efficient, but is unlikely to be a performance
 	// bottleneck...
 	for messageIndex := 1; messageIndex < ChatLogSize; messageIndex++ {
@@ -81,6 +83,7 @@ func (state *State) RecordPlayerChatMessage(playerName string, chatMessage strin
 	}
 
 	state.chatLog[ChatLogSize-1] = ChatMessage{time.Now().Unix(), playerName, chatMessage}
+	state.mutualExclusion.Unlock()
 }
 
 // PlayerKnowledge contains the information of what a player can see about a game.
