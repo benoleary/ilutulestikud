@@ -145,10 +145,15 @@ func (handler *Handler) handleNewGame(httpBodyDecoder *json.Decoder, relevantSeg
 	return "OK", http.StatusOK
 }
 
-// gameForPlayer returns the State pointer for the game with the given name, unless no player
-// with the given name is a participant, in which case nil and false are returned.
+// gameForPlayer returns the State pointer for the game with the given name, unless no game
+// with the given name exists, or no player with the given name is a participant of the game
+// if it does exist, in which cases nil and false are returned.
 func (handler *Handler) gameWithParticipant(gameName string, playerName string) (*State, bool) {
 	gameState := handler.gameStates[gameName]
+	if gameState == nil {
+		return nil, false
+	}
+
 	if !gameState.HasPlayerAsParticipant(playerName) {
 		return nil, false
 	}
