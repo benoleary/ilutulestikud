@@ -1,27 +1,28 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/benoleary/ilutulestikud/game"
-	"github.com/benoleary/ilutulestikud/parseuri"
 	"github.com/benoleary/ilutulestikud/player"
 )
 
 type httpGetAndPostHandler interface {
-	HandleGet(
-		httpResponseWriter http.ResponseWriter, httpRequest *http.Request, relevantUriSegments []string)
+	HandleGet(relevantSegments []string) (interface{}, int)
 
-	HandlePost(
-		httpResponseWriter http.ResponseWriter, httpRequest *http.Request, relevantUriSegments []string)
+	HandlePost(httpBodyDecoder *json.Decoder, relevantSegments []string) (interface{}, int)
 }
 
+// State contains all the state to allow the backend to function.
 type State struct {
 	accessControlAllowedOrigin string
 	playerHandler              *player.Handler
 	gameHandler                *game.Handler
 }
 
+// New creates a new State object and returns a pointer to it.
 func New(accessControlAllowedOrigin string) *State {
 	playerHandler := player.NewHandler()
 	return &State{accessControlAllowedOrigin, playerHandler, game.NewHandler(playerHandler)}
@@ -44,7 +45,7 @@ func (state *State) HandleBackend(httpResponseWriter http.ResponseWriter, httpRe
 		return
 	}
 
-	pathSegments := parseuri.PathSegments(httpRequest)
+	pathSegments := parsePathSegments(httpRequest)
 
 	// We choose the interface which will handle the GET or POST based on the
 	// first segment of the URI after "backend".
@@ -58,14 +59,34 @@ func (state *State) HandleBackend(httpResponseWriter http.ResponseWriter, httpRe
 		http.NotFound(httpResponseWriter, httpRequest)
 	}
 
+	var objectForBody interface{}
+	var httpStatus int
+
 	switch httpRequest.Method {
 	case http.MethodOptions:
 		return
 	case http.MethodGet:
-		requestHandler.HandleGet(httpResponseWriter, httpRequest, pathSegments[2:])
+		objectForBody, httpStatus = requestHandler.HandleGet(pathSegments[2:])
 	case http.MethodPost:
-		requestHandler.HandlePost(httpResponseWriter, httpRequest, pathSegments[2:])
+		{
+			if httpRequest.Body == nil {
+				http.Error(httpResponseWriter, "Empty request body", http.StatusBadRequest)
+				return
+			}
+
+			objectForBody, httpStatus = requestHandler.HandlePost(json.NewDecoder(httpRequest.Body), pathSegments[2:])
+		}
 	default:
 		http.Error(httpResponseWriter, "Method not GET or POST: "+httpRequest.Method, http.StatusBadRequest)
 	}
+
+	// If the status is OK, writing the header with OK won't make any difference.
+	httpResponseWriter.WriteHeader(httpStatus)
+	json.NewEncoder(httpResponseWriter).Encode(objectForBody)
+}
+
+// parsePathSegments returns the segments of the URI path as a slice of a string array.
+func parsePathSegments(httpRequest *http.Request) []string {
+	// The initial character is '/' so we skip it to avoid an empty string as the first element.
+	return strings.Split(httpRequest.URL.Path[1:], "/")
 }

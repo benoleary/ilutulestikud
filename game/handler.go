@@ -25,50 +25,41 @@ func NewHandler(playerHandler *player.Handler) *Handler {
 
 // HandleGet parses an HTTP GET request and responds with the appropriate function.
 // This implements part of github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
-func (handler *Handler) HandleGet(
-	httpResponseWriter http.ResponseWriter,
-	httpRequest *http.Request,
-	relevantSegments []string) {
+func (handler *Handler) HandleGet(relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 1 {
-		httpResponseWriter.WriteHeader(http.StatusBadRequest)
-		httpResponseWriter.Write([]byte("Not enough segments in URI to determine what to do"))
-		return
+		return "Not enough segments in URI to determine what to do", http.StatusBadRequest
 	}
 
 	switch relevantSegments[0] {
 	case "all-games-with-player":
-		handler.writeTurnSummariesForPlayer(httpResponseWriter, relevantSegments[1:])
+		return handler.writeTurnSummariesForPlayer(relevantSegments[1:])
 	case "game-as-seen-by-player":
-		handler.writeGameForPlayer(httpResponseWriter, relevantSegments[1:])
+		return handler.writeGameForPlayer(relevantSegments[1:])
 	default:
-		http.NotFound(httpResponseWriter, httpRequest)
+		return "URI segment " + relevantSegments[0] + " not valid", http.StatusNotFound
 	}
 }
 
 // HandlePost parses an HTTP POST request and responds with the appropriate function.
 // This implements part of github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
-func (handler *Handler) HandlePost(
-	httpResponseWriter http.ResponseWriter,
-	httpRequest *http.Request,
-	relevantSegments []string) {
+func (handler *Handler) HandlePost(httpBodyDecoder *json.Decoder, relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 1 {
-		httpResponseWriter.WriteHeader(http.StatusBadRequest)
-		httpResponseWriter.Write([]byte("Not enough segments in URI to determine what to do"))
-		return
+		return "Not enough segments in URI to determine what to do", http.StatusBadRequest
 	}
 
 	switch relevantSegments[0] {
 	case "create-new-game":
-		handler.handleNewGame(httpResponseWriter, httpRequest)
+		return handler.handleNewGame(httpBodyDecoder, relevantSegments)
 	case "send-chat-message":
-		handler.handleNewChatMessage(httpResponseWriter, httpRequest)
+		return handler.handleNewChatMessage(httpBodyDecoder, relevantSegments)
 	default:
-		http.NotFound(httpResponseWriter, httpRequest)
+		return "URI segment " + relevantSegments[0] + " not valid", http.StatusNotFound
 	}
 }
 
 // turnSummary contains the information to determine what games involve a player and whose turn it is.
 // All the fields need to be public so that the JSON encoder can see them to serialize them.
+// The creation timestamp is int64 because that is what time.Unix() returns.
 type turnSummary struct {
 	GameName                   string
 	CreationTimestampInSeconds int64
@@ -79,12 +70,9 @@ type turnSummary struct {
 
 // writeTurnSummariesForPlayer writes a JSON object into the HTTP response which has
 // the list of turn summary objects as its "TurnSummaries" attribute.
-func (handler *Handler) writeTurnSummariesForPlayer(
-	httpResponseWriter http.ResponseWriter, relevantSegments []string) {
+func (handler *Handler) writeTurnSummariesForPlayer(relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 1 {
-		httpResponseWriter.WriteHeader(http.StatusBadRequest)
-		httpResponseWriter.Write([]byte("Not enough segments in URI to determine player name"))
-		return
+		return "Not enough segments in URI to determine player name", http.StatusBadRequest
 	}
 
 	playerName := relevantSegments[0]
@@ -126,33 +114,24 @@ func (handler *Handler) writeTurnSummariesForPlayer(
 			playerName == playerNamesInTurnOrder[0]}
 	}
 
-	json.NewEncoder(httpResponseWriter).Encode(struct{ TurnSummaries []turnSummary }{turnSummaries[:]})
+	return struct{ TurnSummaries []turnSummary }{turnSummaries[:]}, http.StatusOK
 }
 
 // handleNewGame adds a new game to the map of game state objects.
-func (handler *Handler) handleNewGame(
-	httpResponseWriter http.ResponseWriter,
-	httpRequest *http.Request) {
-	if httpRequest.Body == nil {
-		http.Error(httpResponseWriter, "Empty request body", http.StatusBadRequest)
-		return
-	}
-
+func (handler *Handler) handleNewGame(httpBodyDecoder *json.Decoder, relevantSegments []string) (interface{}, int) {
 	var newGame struct {
 		Name    string
 		Players []string
 	}
 
-	parsingError := json.NewDecoder(httpRequest.Body).Decode(&newGame)
+	parsingError := httpBodyDecoder.Decode(&newGame)
 	if parsingError != nil {
-		http.Error(httpResponseWriter, "Error parsing JSON: "+parsingError.Error(), http.StatusBadRequest)
-		return
+		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
 	}
 
 	_, gameExists := handler.gameStates[newGame.Name]
 	if gameExists {
-		http.Error(httpResponseWriter, "Name "+newGame.Name+" already exists", http.StatusBadRequest)
-		return
+		return "Name " + newGame.Name + " already exists", http.StatusBadRequest
 	}
 
 	handler.mutualExclusion.Lock()
@@ -163,24 +142,14 @@ func (handler *Handler) handleNewGame(
 			newGame.Players)
 	handler.mutualExclusion.Unlock()
 
-	httpResponseWriter.WriteHeader(http.StatusOK)
+	return "OK", http.StatusOK
 }
 
 // gameForPlayer returns the State pointer for the game with the given name, unless no player
-// with the given name is a participant, in which case an error message is written in the
-// provided *http.ResponseWriter ifnot nil, and nil and false are returned.
-func (handler *Handler) gameWithParticipant(
-	gameName string,
-	playerName string,
-	httpResponseWriter http.ResponseWriter) (*State, bool) {
+// with the given name is a participant, in which case nil and false are returned.
+func (handler *Handler) gameWithParticipant(gameName string, playerName string) (*State, bool) {
 	gameState := handler.gameStates[gameName]
 	if !gameState.HasPlayerAsParticipant(playerName) {
-		if httpResponseWriter != nil {
-			httpResponseWriter.WriteHeader(http.StatusBadRequest)
-			httpResponseWriter.Write([]byte(
-				"Player " + playerName + " is not a participant in game " + gameName))
-		}
-
 		return nil, false
 	}
 
@@ -189,55 +158,42 @@ func (handler *Handler) gameWithParticipant(
 
 // writeGameForPlayer writes a JSON representation of the current state of the game
 // with the given name for the player with the given name.
-func (handler *Handler) writeGameForPlayer(
-	httpResponseWriter http.ResponseWriter,
-	relevantSegments []string) {
+func (handler *Handler) writeGameForPlayer(relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 2 {
-		httpResponseWriter.WriteHeader(http.StatusBadRequest)
-		httpResponseWriter.Write([]byte("Not enough segments in URI to determine game name and player name"))
-		return
+		return "Not enough segments in URI to determine game name and player name", http.StatusBadRequest
 	}
 
 	gameName := relevantSegments[0]
 	playerName := relevantSegments[1]
 
-	gameState, validParticipant := handler.gameWithParticipant(
-		gameName, playerName, httpResponseWriter)
+	gameState, validParticipant := handler.gameWithParticipant(gameName, playerName)
 	if !validParticipant {
-		return
+		return "Player " + playerName + " is not a participant in game " + gameName, http.StatusBadRequest
 	}
 
-	json.NewEncoder(httpResponseWriter).Encode(struct{ Knowledge PlayerKnowledge }{gameState.ForPlayer(playerName)})
+	return struct{ Knowledge PlayerKnowledge }{gameState.ForPlayer(playerName)}, http.StatusOK
 }
 
 // handleNewChatMessage adds the given chat message to the relevant game state,
 // as coming from the given player.
-func (handler *Handler) handleNewChatMessage(
-	httpResponseWriter http.ResponseWriter, httpRequest *http.Request) {
-	if httpRequest.Body == nil {
-		http.Error(httpResponseWriter, "Empty request body", http.StatusBadRequest)
-		return
-	}
-
+func (handler *Handler) handleNewChatMessage(httpBodyDecoder *json.Decoder, relevantSegments []string) (interface{}, int) {
 	var chatMessage struct {
 		Player  string
 		Game    string
 		Message string
 	}
 
-	parsingError := json.NewDecoder(httpRequest.Body).Decode(&chatMessage)
+	parsingError := httpBodyDecoder.Decode(&chatMessage)
 	if parsingError != nil {
-		http.Error(httpResponseWriter, "Error parsing JSON: "+parsingError.Error(), http.StatusBadRequest)
-		return
+		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
 	}
 
-	gameState, validParticipant := handler.gameWithParticipant(
-		chatMessage.Game, chatMessage.Player, httpResponseWriter)
+	gameState, validParticipant := handler.gameWithParticipant(chatMessage.Game, chatMessage.Player)
 	if !validParticipant {
-		return
+		return "Player " + chatMessage.Player + " is not a participant in game " + chatMessage.Game, http.StatusBadRequest
 	}
 
 	gameState.RecordPlayerChatMessage(chatMessage.Player, chatMessage.Message)
 
-	httpResponseWriter.WriteHeader(http.StatusOK)
+	return "OK", http.StatusOK
 }
