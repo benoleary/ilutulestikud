@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/benoleary/ilutulestikud/backendjson"
+	"github.com/benoleary/ilutulestikud/game/chat"
 )
 
 // Handler is a struct meant to encapsulate all the state co-ordinating all the players.
@@ -69,8 +70,6 @@ func (handler *Handler) GetPlayerByName(playerName string) (*State, bool) {
 // defaultPlayers returns a map of players created from default player names with colors
 // according to the available chat colors, where the key is the player name.
 func defaultPlayers() map[string]*State {
-	initialColors := availableColors()
-	numberOfColors := len(initialColors)
 	initialNames := []string{"Mimi", "Aet", "Martin", "Markus", "Liisbet", "Madli", "Ben"}
 	numberOfPlayers := len(initialNames)
 
@@ -79,26 +78,10 @@ func defaultPlayers() map[string]*State {
 	for playerCount := 0; playerCount < numberOfPlayers; playerCount++ {
 		playerName := initialNames[playerCount]
 
-		// We cycle through all the colors again if there are more players than colors.
-		playerColor := initialColors[playerCount%numberOfColors]
-
-		playerMap[playerName] = NewState(playerName, playerColor)
+		playerMap[playerName] = NewState(playerName, chat.DefaultColor(playerCount))
 	}
 
 	return playerMap
-}
-
-// availableColors returns a list of colors which can be selected as chat colors for players.
-func availableColors() []string {
-	return []string{
-		"pink",
-		"red",
-		"orange",
-		"yellow",
-		"green",
-		"blue",
-		"purple",
-		"white"}
 }
 
 // writeRegisteredPlayers writes a JSON object into the HTTP response which has
@@ -117,7 +100,7 @@ func (handler *Handler) writeRegisteredPlayers() (interface{}, int) {
 // writeAvailableColors writes a JSON object into the HTTP response which has
 // the list of strings as its "Colors" attribute.
 func (handler *Handler) writeAvailableColors() (interface{}, int) {
-	return struct{ Colors []string }{Colors: availableColors()}, http.StatusOK
+	return backendjson.ChatColorList{Colors: chat.AvailableColors()}, http.StatusOK
 }
 
 // handleNewPlayer adds the player defined by the JSON of the request's body to the list
@@ -143,8 +126,7 @@ func (handler *Handler) handleNewPlayer(httpBodyDecoder *json.Decoder) (interfac
 		// the new player would get the 2nd color. This does not account for players having
 		// changed color, but it doesn't matter, as it is just a fun way of choosing an initial
 		// color.
-		colorList := availableColors()
-		playerColor = colorList[len(handler.registeredPlayers)%len(colorList)]
+		playerColor = chat.DefaultColor(len(handler.registeredPlayers))
 	}
 
 	handler.mutualExclusion.Lock()

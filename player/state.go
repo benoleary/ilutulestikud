@@ -38,7 +38,7 @@ func (state *State) UpdateNonEmptyStrings(updaterReference backendjson.PlayerSta
 	state.mutualExclusion.Unlock()
 }
 
-// ForBackend writes the relevant parts of the state into the JSON object for the front-end
+// ForBackend writes the relevant parts of the state into the JSON object for the front-end.
 func (state *State) ForBackend() backendjson.PlayerState {
 	return backendjson.PlayerState{
 		Name:  state.Name,

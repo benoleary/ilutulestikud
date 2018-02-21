@@ -1,14 +1,15 @@
 package backendjson
 
-import (
-	"github.com/benoleary/ilutulestikud/game/chat"
-)
-
 // Types emitted by player.Handler:
 
 // PlayerStateList ensures that the PlayerState list is encapsulated within a single JSON object.
 type PlayerStateList struct {
 	Players []PlayerState
+}
+
+// ChatColorList ensures that the list of available chat colors is encapsulated within a single JSON object.
+type ChatColorList struct {
+	Colors []string
 }
 
 // Types emitted by game.Handler:
@@ -29,7 +30,15 @@ type TurnSummaryList struct {
 	TurnSummaries []TurnSummary
 }
 
+// ChatLogMessage is a struct to hold the details of a single outgoing chat message.
+type ChatLogMessage struct {
+	TimestampInSeconds int64
+	PlayerName         string
+	ChatColor          string
+	MessageText        string
+}
+
 // PlayerKnowledge contains the information of what a player can see about a game.
 type PlayerKnowledge struct {
-	ChatLog []chat.Message
+	ChatLog []ChatLogMessage
 }

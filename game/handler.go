@@ -161,11 +161,7 @@ func (handler *Handler) writeGameForPlayer(relevantSegments []string) (interface
 // handleNewChatMessage adds the given chat message to the relevant game state,
 // as coming from the given player.
 func (handler *Handler) handleNewChatMessage(httpBodyDecoder *json.Decoder, relevantSegments []string) (interface{}, int) {
-	var chatMessage struct {
-		Player  string
-		Game    string
-		Message string
-	}
+	var chatMessage backendjson.PlayerChatMessage
 
 	parsingError := httpBodyDecoder.Decode(&chatMessage)
 	if parsingError != nil {

@@ -15,7 +15,7 @@ type State struct {
 	creationTime         time.Time
 	participatingPlayers []*player.State
 	turnNumber           int
-	chatLog              []chat.Message
+	chatLog              *chat.Log
 	mutualExclusion      sync.Mutex
 }
 
@@ -33,7 +33,7 @@ func NewState(gameName string, playerHandler *player.Handler, playerNames []stri
 		creationTime:         time.Now(),
 		participatingPlayers: playerStates,
 		turnNumber:           1,
-		chatLog:              make([]chat.Message, chat.LogSize),
+		chatLog:              chat.NewLog(),
 		mutualExclusion:      sync.Mutex{}}
 }
 
@@ -73,24 +73,16 @@ func (statePointerArray byCreationTime) Less(firstIndex int, secondIndex int) bo
 // and removes the oldest message from the top.
 func (state *State) RecordPlayerChatMessage(chattingPlayer *player.State, chatMessage string) {
 	state.mutualExclusion.Lock()
-
-	// This could probably be more efficient, but is unlikely to be a performance
-	// bottleneck...
-	for messageIndex := 1; messageIndex < chat.LogSize; messageIndex++ {
-		state.chatLog[messageIndex-1] = state.chatLog[messageIndex]
-	}
-
-	state.chatLog[chat.LogSize-1] =
-		chat.Message{
-			TimestampInSeconds: time.Now().Unix(),
-			PlayerName:         chattingPlayer.Name,
-			ChatColor:          chattingPlayer.Color,
-			MessageText:        chatMessage}
+	state.chatLog = state.chatLog.Append(chat.Message{
+		CreationTime: time.Now(),
+		PlayerName:   chattingPlayer.Name,
+		ChatColor:    chattingPlayer.Color,
+		MessageText:  chatMessage})
 	state.mutualExclusion.Unlock()
 }
 
 // ForPlayer creates a PlayerKnowledge object encapsulating the knowledge of the
 // given player for the receiver game.
 func (state *State) ForPlayer(playerName string) backendjson.PlayerKnowledge {
-	return backendjson.PlayerKnowledge{ChatLog: state.chatLog}
+	return backendjson.PlayerKnowledge{ChatLog: state.chatLog.ForFrontend()}
 }
