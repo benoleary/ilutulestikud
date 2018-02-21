@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"sync"
+
+	"github.com/benoleary/ilutulestikud/backendjson"
 )
 
 // Handler is a struct meant to encapsulate all the state co-ordinating all the players.
@@ -16,7 +18,9 @@ type Handler struct {
 // NewHandler constructs a Handler object with a non-nil, non-empty slice of State objects,
 // returning a pointer to the newly-created object.
 func NewHandler() *Handler {
-	return &Handler{defaultPlayers(), sync.Mutex{}}
+	return &Handler{
+		registeredPlayers: defaultPlayers(),
+		mutualExclusion:   sync.Mutex{}}
 }
 
 // HandleGet parses an HTTP GET request and responds with the appropriate function.
@@ -102,25 +106,25 @@ func availableColors() []string {
 // consistent with repeated calls even if the map of players does not change, since the
 // Go compiler actually does randomize the iteration order of the map entries by design.
 func (handler *Handler) writeRegisteredPlayers() (interface{}, int) {
-	playerList := make([]State, 0, len(handler.registeredPlayers))
+	playerList := make([]backendjson.PlayerState, 0, len(handler.registeredPlayers))
 	for _, registeredPlayer := range handler.registeredPlayers {
-		playerList = append(playerList, *registeredPlayer)
+		playerList = append(playerList, registeredPlayer.ForBackend())
 	}
 
-	return struct{ Players []State }{playerList}, http.StatusOK
+	return backendjson.PlayerStateList{Players: playerList}, http.StatusOK
 }
 
 // writeAvailableColors writes a JSON object into the HTTP response which has
 // the list of strings as its "Colors" attribute.
 func (handler *Handler) writeAvailableColors() (interface{}, int) {
-	return struct{ Colors []string }{availableColors()}, http.StatusOK
+	return struct{ Colors []string }{Colors: availableColors()}, http.StatusOK
 }
 
 // handleNewPlayer adds the player defined by the JSON of the request's body to the list
 // of registered players, and returns the updated list as writeRegisteredPlayerNameListJson
 // would.
 func (handler *Handler) handleNewPlayer(httpBodyDecoder *json.Decoder) (interface{}, int) {
-	var newPlayer State
+	var newPlayer backendjson.PlayerState
 	parsingError := httpBodyDecoder.Decode(&newPlayer)
 	if parsingError != nil {
 		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
@@ -155,7 +159,7 @@ func (handler *Handler) handleNewPlayer(httpBodyDecoder *json.Decoder) (interfac
 // attribute as the key, and returns the updated list as writeRegisteredPlayers would. Attributes
 // which are present are updated, those which are missing remain unchanged.
 func (handler *Handler) handleUpdatePlayer(httpBodyDecoder *json.Decoder) (interface{}, int) {
-	var newPlayer State
+	var newPlayer backendjson.PlayerState
 	parsingError := httpBodyDecoder.Decode(&newPlayer)
 	if parsingError != nil {
 		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
@@ -167,7 +171,7 @@ func (handler *Handler) handleUpdatePlayer(httpBodyDecoder *json.Decoder) (inter
 	}
 
 	handler.mutualExclusion.Lock()
-	existingPlayer.UpdateNonEmptyStrings(&newPlayer)
+	existingPlayer.UpdateNonEmptyStrings(newPlayer)
 	handler.mutualExclusion.Unlock()
 
 	return handler.writeRegisteredPlayers()

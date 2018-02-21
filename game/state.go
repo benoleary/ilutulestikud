@@ -4,19 +4,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/benoleary/ilutulestikud/backendjson"
+	"github.com/benoleary/ilutulestikud/game/chat"
 	"github.com/benoleary/ilutulestikud/player"
 )
-
-// ChatLogSize gives the size of the list of the last chat messages.
-const ChatLogSize = 20
-
-// ChatMessage is a struct to hold the details of a single chat message.
-type ChatMessage struct {
-	TimestampInSeconds int64
-	PlayerName         string
-	ChatColor          string
-	MessageText        string
-}
 
 // State is a struct meant to encapsulate all the state required for a single game to function.
 type State struct {
@@ -24,7 +15,7 @@ type State struct {
 	creationTime         time.Time
 	participatingPlayers []*player.State
 	turnNumber           int
-	chatLog              []ChatMessage
+	chatLog              []chat.Message
 	mutualExclusion      sync.Mutex
 }
 
@@ -37,7 +28,13 @@ func NewState(gameName string, playerHandler *player.Handler, playerNames []stri
 		playerStates[playerIndex], _ = playerHandler.GetPlayerByName(playerNames[playerIndex])
 	}
 
-	return &State{gameName, time.Now(), playerStates, 1, make([]ChatMessage, ChatLogSize), sync.Mutex{}}
+	return &State{
+		gameName:             gameName,
+		creationTime:         time.Now(),
+		participatingPlayers: playerStates,
+		turnNumber:           1,
+		chatLog:              make([]chat.Message, chat.LogSize),
+		mutualExclusion:      sync.Mutex{}}
 }
 
 // HasPlayerAsParticipant returns true if the given player name matches
@@ -79,22 +76,21 @@ func (state *State) RecordPlayerChatMessage(chattingPlayer *player.State, chatMe
 
 	// This could probably be more efficient, but is unlikely to be a performance
 	// bottleneck...
-	for messageIndex := 1; messageIndex < ChatLogSize; messageIndex++ {
+	for messageIndex := 1; messageIndex < chat.LogSize; messageIndex++ {
 		state.chatLog[messageIndex-1] = state.chatLog[messageIndex]
 	}
 
-	state.chatLog[ChatLogSize-1] =
-		ChatMessage{time.Now().Unix(), chattingPlayer.Name, chattingPlayer.Color, chatMessage}
+	state.chatLog[chat.LogSize-1] =
+		chat.Message{
+			TimestampInSeconds: time.Now().Unix(),
+			PlayerName:         chattingPlayer.Name,
+			ChatColor:          chattingPlayer.Color,
+			MessageText:        chatMessage}
 	state.mutualExclusion.Unlock()
-}
-
-// PlayerKnowledge contains the information of what a player can see about a game.
-type PlayerKnowledge struct {
-	ChatLog []ChatMessage
 }
 
 // ForPlayer creates a PlayerKnowledge object encapsulating the knowledge of the
 // given player for the receiver game.
-func (state *State) ForPlayer(playerName string) PlayerKnowledge {
-	return PlayerKnowledge{state.chatLog}
+func (state *State) ForPlayer(playerName string) backendjson.PlayerKnowledge {
+	return backendjson.PlayerKnowledge{ChatLog: state.chatLog}
 }

@@ -6,6 +6,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/benoleary/ilutulestikud/backendjson"
 	"github.com/benoleary/ilutulestikud/player"
 )
 
@@ -20,7 +21,10 @@ type Handler struct {
 // NewHandler constructs a Handler object with a pointer to the player.Handler which
 // handles the players, returning a pointer to the newly-created object.
 func NewHandler(playerHandler *player.Handler) *Handler {
-	return &Handler{playerHandler, make(map[string]*State, 0), sync.Mutex{}}
+	return &Handler{
+		playerHandler:   playerHandler,
+		gameStates:      make(map[string]*State, 0),
+		mutualExclusion: sync.Mutex{}}
 }
 
 // HandleGet parses an HTTP GET request and responds with the appropriate function.
@@ -57,17 +61,6 @@ func (handler *Handler) HandlePost(httpBodyDecoder *json.Decoder, relevantSegmen
 	}
 }
 
-// turnSummary contains the information to determine what games involve a player and whose turn it is.
-// All the fields need to be public so that the JSON encoder can see them to serialize them.
-// The creation timestamp is int64 because that is what time.Unix() returns.
-type turnSummary struct {
-	GameName                   string
-	CreationTimestampInSeconds int64
-	TurnNumber                 int
-	PlayersInNextTurnOrder     []string
-	IsPlayerTurn               bool
-}
-
 // writeTurnSummariesForPlayer writes a JSON object into the HTTP response which has
 // the list of turn summary objects as its "TurnSummaries" attribute.
 func (handler *Handler) writeTurnSummariesForPlayer(relevantSegments []string) (interface{}, int) {
@@ -87,7 +80,8 @@ func (handler *Handler) writeTurnSummariesForPlayer(relevantSegments []string) (
 	sort.Sort(byCreationTime(gameList))
 
 	numberOfGamesWithPlayer := len(gameList)
-	turnSummaries := make([]turnSummary, numberOfGamesWithPlayer)
+
+	turnSummaries := make([]backendjson.TurnSummary, numberOfGamesWithPlayer)
 	for gameIndex := 0; gameIndex < numberOfGamesWithPlayer; gameIndex++ {
 		nameOfGame := gameList[gameIndex].gameName
 		gameTurn := gameList[gameIndex].turnNumber
@@ -106,23 +100,20 @@ func (handler *Handler) writeTurnSummariesForPlayer(relevantSegments []string) (
 				gameParticipants[(playerIndex+gameTurn-1)%numberOfParticipants].Name
 		}
 
-		turnSummaries[gameIndex] = turnSummary{
-			nameOfGame,
-			gameList[gameIndex].creationTime.Unix(),
-			gameTurn,
-			playerNamesInTurnOrder,
-			playerName == playerNamesInTurnOrder[0]}
+		turnSummaries[gameIndex] = backendjson.TurnSummary{
+			GameName:                   nameOfGame,
+			CreationTimestampInSeconds: gameList[gameIndex].creationTime.Unix(),
+			TurnNumber:                 gameTurn,
+			PlayersInNextTurnOrder:     playerNamesInTurnOrder,
+			IsPlayerTurn:               playerName == playerNamesInTurnOrder[0]}
 	}
 
-	return struct{ TurnSummaries []turnSummary }{turnSummaries[:]}, http.StatusOK
+	return backendjson.TurnSummaryList{TurnSummaries: turnSummaries[:]}, http.StatusOK
 }
 
 // handleNewGame adds a new game to the map of game state objects.
 func (handler *Handler) handleNewGame(httpBodyDecoder *json.Decoder, relevantSegments []string) (interface{}, int) {
-	var newGame struct {
-		Name    string
-		Players []string
-	}
+	var newGame backendjson.GameDefinition
 
 	parsingError := httpBodyDecoder.Decode(&newGame)
 	if parsingError != nil {
@@ -164,7 +155,7 @@ func (handler *Handler) writeGameForPlayer(relevantSegments []string) (interface
 		return "Player " + playerName + " is not a participant in game " + gameName, http.StatusBadRequest
 	}
 
-	return struct{ Knowledge PlayerKnowledge }{gameState.ForPlayer(playerName)}, http.StatusOK
+	return gameState.ForPlayer(playerName), http.StatusOK
 }
 
 // handleNewChatMessage adds the given chat message to the relevant game state,

@@ -25,7 +25,10 @@ type State struct {
 // New creates a new State object and returns a pointer to it.
 func New(accessControlAllowedOrigin string) *State {
 	playerHandler := player.NewHandler()
-	return &State{accessControlAllowedOrigin, playerHandler, game.NewHandler(playerHandler)}
+	return &State{
+		accessControlAllowedOrigin: accessControlAllowedOrigin,
+		playerHandler:              playerHandler,
+		gameHandler:                game.NewHandler(playerHandler)}
 }
 
 // HandleBackend calls functions according to the second segment of the URI, assuming that the first
