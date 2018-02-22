@@ -1,13 +1,14 @@
 package chat
 
 import (
+	"sync"
 	"time"
 
 	"github.com/benoleary/ilutulestikud/backendjson"
 )
 
-// LogSize gives the size of the list of the last chat messages.
-const LogSize = 20
+// logSize gives the size of the list of the last chat messages.
+const logSize = 20
 
 var availableColors = [...]string{
 	"pink",
@@ -21,21 +22,12 @@ var availableColors = [...]string{
 
 var numberOfAvailableColors = len(availableColors)
 
-// Message is a struct to hold the details of a single chat message.
-type Message struct {
+// message is a struct to hold the details of a single chat message.
+type message struct {
 	CreationTime time.Time
 	PlayerName   string
 	ChatColor    string
 	MessageText  string
-}
-
-// ForFrontend creates a JSON object to represent the Message for the front-end.
-func (message *Message) ForFrontend() backendjson.ChatLogMessage {
-	return backendjson.ChatLogMessage{
-		TimestampInSeconds: message.CreationTime.Unix(),
-		PlayerName:         message.PlayerName,
-		ChatColor:          message.ChatColor,
-		MessageText:        message.MessageText}
 }
 
 // DefaultColor provides a default color for a given index, cycling round
@@ -51,35 +43,49 @@ func AvailableColors() []string {
 
 // Log implements sort.Interface for []*State based on the creationTime field.
 type Log struct {
-	Messages []Message
+	messageList     []message
+	indexOfOldest   int
+	mutualExclusion sync.Mutex
 }
 
 // NewLog makes a new Log with a fixed number of messages.
 func NewLog() *Log {
-	return &Log{Messages: make([]Message, LogSize)}
+	return &Log{messageList: make([]message, logSize), indexOfOldest: 0}
 }
 
 // ForFrontend creates a JSON object to represent the Log for the front-end.
 func (log *Log) ForFrontend() []backendjson.ChatLogMessage {
-	messageList := make([]backendjson.ChatLogMessage, LogSize)
-	for messageIndex := 0; messageIndex < LogSize; messageIndex++ {
-		messageList[messageIndex] = log.Messages[messageIndex].ForFrontend()
+	messagesForFrontend := make([]backendjson.ChatLogMessage, logSize)
+	for messageIndex := 0; messageIndex < logSize; messageIndex++ {
+		// We take the relevant message indexed with the oldest message at 0, wrapping
+		// around if newer messages occupy earlier spots in the actual array.
+		logMessage := log.messageList[(messageIndex+log.indexOfOldest)%logSize]
+		messageForFrontend := &messagesForFrontend[messageIndex]
+		messageForFrontend.TimestampInSeconds = logMessage.CreationTime.Unix()
+		messageForFrontend.PlayerName = logMessage.PlayerName
+		messageForFrontend.ChatColor = logMessage.ChatColor
+		messageForFrontend.MessageText = logMessage.MessageText
 	}
 
-	return messageList
+	return messagesForFrontend
 }
 
-// Append makes a new Log with all the messages shifted one back (discarding the
-// oldest), with the given message as the newest.
-func (log *Log) Append(message Message) *Log {
-	messageList := make([]Message, LogSize)
-	// This could probably be more efficient, but is unlikely to be a performance
-	// bottleneck...
-	for messageIndex := 1; messageIndex < LogSize; messageIndex++ {
-		messageList[messageIndex-1] = log.Messages[messageIndex]
-	}
+// AppendNewMessage adds the given message as the newest message, over-writing
+// the oldest message and increasing the offset of the index to the oldest
+// message.
+func (log *Log) AppendNewMessage(playerName string, chatColor string, messageText string) {
+	log.mutualExclusion.Lock()
 
-	messageList[LogSize-1] = message
+	// We over-write the oldest message.
+	logMessage := &log.messageList[log.indexOfOldest]
+	logMessage.CreationTime = time.Now()
+	logMessage.PlayerName = playerName
+	logMessage.ChatColor = chatColor
+	logMessage.MessageText = messageText
 
-	return &Log{Messages: messageList}
+	// Now we mark the next-oldest message as the oldest, thus implicitly
+	// marking the updated message as the newest message.
+	log.indexOfOldest = (log.indexOfOldest + 1) % logSize
+
+	log.mutualExclusion.Unlock()
 }

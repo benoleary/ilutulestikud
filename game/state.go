@@ -1,7 +1,6 @@
 package game
 
 import (
-	"sync"
 	"time"
 
 	"github.com/benoleary/ilutulestikud/backendjson"
@@ -16,7 +15,6 @@ type State struct {
 	participatingPlayers []*player.State
 	turnNumber           int
 	chatLog              *chat.Log
-	mutualExclusion      sync.Mutex
 }
 
 // NewState constructs a State object with a non-nil, non-empty slice of player.State objects,
@@ -33,8 +31,7 @@ func NewState(gameName string, playerHandler *player.Handler, playerNames []stri
 		creationTime:         time.Now(),
 		participatingPlayers: playerStates,
 		turnNumber:           1,
-		chatLog:              chat.NewLog(),
-		mutualExclusion:      sync.Mutex{}}
+		chatLog:              chat.NewLog()}
 }
 
 // HasPlayerAsParticipant returns true if the given player name matches
@@ -72,13 +69,7 @@ func (statePointerArray byCreationTime) Less(firstIndex int, secondIndex int) bo
 // RecordPlayerChatMessage adds the given new message to the end of the chat log
 // and removes the oldest message from the top.
 func (state *State) RecordPlayerChatMessage(chattingPlayer *player.State, chatMessage string) {
-	state.mutualExclusion.Lock()
-	state.chatLog = state.chatLog.Append(chat.Message{
-		CreationTime: time.Now(),
-		PlayerName:   chattingPlayer.Name,
-		ChatColor:    chattingPlayer.Color,
-		MessageText:  chatMessage})
-	state.mutualExclusion.Unlock()
+	state.chatLog.AppendNewMessage(chattingPlayer.Name, chattingPlayer.Color, chatMessage)
 }
 
 // ForPlayer creates a PlayerKnowledge object encapsulating the knowledge of the
