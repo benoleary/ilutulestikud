@@ -2,12 +2,12 @@ import { Component } from '@angular/core';
 import { OnInit, OnDestroy } from '@angular/core/src/metadata/lifecycle_hooks';
 import { MatDialog } from '@angular/material';
 import { Observable } from 'rxjs/Rx';
+import { Subscription } from 'rxjs/Subscription';
 import { IlutulestikudService } from './ilutulestikud.service';
 import { Player } from './models/player.model'
 import { TurnSummary } from './models/turnsummary.model'
 import { AddPlayerDialogueComponent } from './components/addplayerdialogue.component'
 import { CreateGameDialogueComponent } from './components/creategamedialogue.component'
-import { Subscription } from 'rxjs/Subscription';
 
 @Component({
   selector: 'app-ilutulestikud',

@@ -12,16 +12,19 @@ import { MatInputModule } from '@angular/material';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule } from '@angular/material';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatListModule } from '@angular/material/list';
 import { IlutulestikudComponent } from './ilutulestikud.component';
 import { IlutulestikudService } from './ilutulestikud.service';
 import { AddPlayerDialogueComponent } from './components/addplayerdialogue.component'
 import { CreateGameDialogueComponent } from './components/creategamedialogue.component'
+import { GameDisplayComponent } from './components/gamedisplay.component'
 
 @NgModule({
   declarations: [
     IlutulestikudComponent,
     AddPlayerDialogueComponent,
-    CreateGameDialogueComponent
+    CreateGameDialogueComponent,
+    GameDisplayComponent
   ],
   entryComponents: [
     AddPlayerDialogueComponent,
@@ -40,7 +43,8 @@ import { CreateGameDialogueComponent } from './components/creategamedialogue.com
     MatInputModule,
     MatButtonModule,
     MatDialogModule,
-    MatTabsModule
+    MatTabsModule,
+    MatListModule
   ],
   exports: [
     BrowserModule,
@@ -56,7 +60,9 @@ import { CreateGameDialogueComponent } from './components/creategamedialogue.com
     MatButtonModule,
     MatDialogModule,
     MatTabsModule,
-    IlutulestikudComponent
+    MatListModule,
+    IlutulestikudComponent,
+    GameDisplayComponent
   ],
   providers: [IlutulestikudService]
 })

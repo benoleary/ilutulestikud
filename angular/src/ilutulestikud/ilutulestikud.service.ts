@@ -37,4 +37,8 @@ export class IlutulestikudService {
   newGame(newGameName: string, playerNames: string[]): Observable<any> {
     return this.httpClient.post(this.uriRoot + "game/create-new-game", {"Name": newGameName, "Players": playerNames})
   }
+
+  gameAsSeenByPlayer(gameName: string, playerName: string): Observable<any> {
+    return this.httpClient.get(this.uriRoot + "game/game-as-seen-by-player/" + gameName + "/" + playerName)
+  }
 }

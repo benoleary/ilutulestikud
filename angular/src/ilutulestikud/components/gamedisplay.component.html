@@ -1,0 +1,7 @@
+<div>
+    Chat log:<br>
+    <mat-list role="list">
+        <mat-list-item
+        *ngFor="let chatMessage of chatLog">Color: {{ chatMessage.Color }}; text: {{ chatMessage.Text }}</mat-list-item>
+    </mat-list>
+</div>
