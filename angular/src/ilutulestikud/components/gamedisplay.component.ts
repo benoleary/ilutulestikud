@@ -3,8 +3,10 @@ import { OnInit, OnDestroy } from '@angular/core/src/metadata/lifecycle_hooks';
 import { Observable } from 'rxjs/Rx';
 import { Subscription } from 'rxjs/Subscription';
 import { MatListModule } from '@angular/material/list';
+import { MatInputModule } from '@angular/material';
 import { IlutulestikudService } from '../ilutulestikud.service';
 import { ChatMessage } from '../models/chatmessage.model'
+import { nullSafeIsEquivalent } from '@angular/compiler/src/output/output_ast';
 
 
 @Component({
@@ -19,12 +21,14 @@ import { ChatMessage } from '../models/chatmessage.model'
     gameDataSubscription: Subscription;
     isAwaitingGameData: boolean;
     chatLog: ChatMessage[];
+    chatInput: string;
 
     constructor(public ilutulestikudService: IlutulestikudService)
     {
         this.gameName = null;
         this.playerName = null;
         this.chatLog = [];
+        this.chatInput = null;
     }
 
     ngOnInit(): void
@@ -61,13 +65,13 @@ import { ChatMessage } from '../models/chatmessage.model'
         this.ilutulestikudService
           .gameAsSeenByPlayer(this.gameName, this.playerName)
           .subscribe(
-            fetchedGameData => this.displayGameData(fetchedGameData),
+            fetchedGameData => this.parseGameData(fetchedGameData),
             thrownError => this.handleError(thrownError),
             () => {});
       }
     }
 
-    displayGameData(fetchedGameData: Object): void
+    parseGameData(fetchedGameData: Object): void
     {
         // If we have received game data to display, we are no longer waiting for the HTTP request to complete.
         this.isAwaitingGameData = false;
@@ -86,7 +90,6 @@ import { ChatMessage } from '../models/chatmessage.model'
         {
             const fetchedMessage: Object = fetchedChatLog[messageIndex];
 
-
             // We could replace each message with each refresh, but to avoid possible issues (such
             // as happens with the turn summaries), we update existing messages and only add new ones
             // when necessary.
@@ -98,6 +101,20 @@ import { ChatMessage } from '../models/chatmessage.model'
             {
                 this.chatLog.push(new ChatMessage(fetchedMessage));
             }
+        }
+    }
+
+    sendChat(): void
+    {
+        if (this.chatInput)
+        {
+            this.ilutulestikudService
+            .sendChatMessage(this.gameName, this.playerName, this.chatInput)
+            .subscribe(
+                () => {},
+                thrownError => this.handleError(thrownError),
+                () => {});
+            this.chatInput = null;
         }
     }
 

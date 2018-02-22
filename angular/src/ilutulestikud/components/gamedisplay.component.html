@@ -1,7 +1,18 @@
 <div>
+    Sorry, fixed to first game in tab list at the moment - {{ gameName }}<br>
     Chat log:<br>
-    <mat-list role="list">
+    <mat-list dense role="list">
         <mat-list-item
-        *ngFor="let chatMessage of chatLog">Color: {{ chatMessage.Color }}; text: {{ chatMessage.Text }}</mat-list-item>
+            *ngFor="let chatMessage of chatLog"
+            [ngStyle]="{'color': chatMessage.Color, 'background-color': 'black'}">
+            {{ chatMessage.Text }}
+        </mat-list-item>
     </mat-list>
+
+    <mat-form-field>
+        <input matInput [(ngModel)]="chatInput">
+        <button mat-button matSuffix mat-icon-button aria-label="Send" (click)="sendChat()">
+            <mat-icon>send</mat-icon>
+        </button>
+    </mat-form-field>
 </div>

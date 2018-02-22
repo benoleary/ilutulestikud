@@ -23,11 +23,17 @@ export class IlutulestikudService {
   }
 
   newPlayer(newPlayerName: string): Observable<any> {
-    return this.httpClient.post(this.uriRoot + "player/new-player", {"Name": newPlayerName})
+    return this.httpClient.post(
+      this.uriRoot + "player/new-player",
+      {
+        "Name": newPlayerName
+      })
   }
 
   updatePlayer(playerOverride: Player): Observable<any> {
-    return this.httpClient.post(this.uriRoot + "player/update-player", playerOverride)
+    return this.httpClient.post(
+      this.uriRoot + "player/update-player",
+      playerOverride)
   }
 
   gamesWithPlayer(playerName: string): Observable<any> {
@@ -35,10 +41,25 @@ export class IlutulestikudService {
   }
 
   newGame(newGameName: string, playerNames: string[]): Observable<any> {
-    return this.httpClient.post(this.uriRoot + "game/create-new-game", {"Name": newGameName, "Players": playerNames})
+    return this.httpClient.post(
+      this.uriRoot + "game/create-new-game",
+      {
+        "Name": newGameName,
+        "Players": playerNames
+      })
   }
 
   gameAsSeenByPlayer(gameName: string, playerName: string): Observable<any> {
     return this.httpClient.get(this.uriRoot + "game/game-as-seen-by-player/" + gameName + "/" + playerName)
+  }
+
+  sendChatMessage(gameName: string, playerName: string, chatText: string): Observable<any> {
+    return this.httpClient.post(
+      this.uriRoot + "game/send-chat-message",
+      {
+        "Player": playerName,
+        "Game": gameName,
+        "Message": chatText
+      })
   }
 }
