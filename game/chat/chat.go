@@ -8,7 +8,7 @@ import (
 )
 
 // logSize gives the size of the list of the last chat messages.
-const logSize = 20
+const logSize = 8
 
 var availableColors = [...]string{
 	"pink",
