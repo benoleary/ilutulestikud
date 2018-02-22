@@ -1,6 +1,7 @@
 import { Component } from '@angular/core';
 import { OnInit, OnDestroy } from '@angular/core/src/metadata/lifecycle_hooks';
 import { MatDialog } from '@angular/material';
+import { MatTabChangeEvent } from '@angular/material';
 import { Observable } from 'rxjs/Rx';
 import { Subscription } from 'rxjs/Subscription';
 import { IlutulestikudService } from './ilutulestikud.service';
@@ -23,6 +24,8 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
   turnSummariesOfGamesWithPlayer: TurnSummary[];
   gameTurnSummariesSubscription: Subscription;
   isAwaitingGameTurnSummaries: boolean;
+  selectedGameTabIndex: number;
+  selectedGameName: string;
   
 
   constructor(public ilutulestikudService: IlutulestikudService, public materialDialog: MatDialog)
@@ -34,6 +37,8 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
     this.turnSummariesOfGamesWithPlayer = [];
     this.gameTurnSummariesSubscription = null;
     this.isAwaitingGameTurnSummaries = false;
+    this.selectedGameTabIndex = 0;
+    this.selectedGameName = null;
   }
 
   ngOnInit(): void
@@ -207,6 +212,20 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
         this.turnSummariesOfGamesWithPlayer.push(new TurnSummary(fetchedSummary));
       }
     }
+
+    if (this.turnSummariesOfGamesWithPlayer
+      && (this.turnSummariesOfGamesWithPlayer.length > 0)
+      && !this.selectedGameName)
+    {
+      this.selectedGameTabIndex = 0;
+      this.selectedGameName = this.turnSummariesOfGamesWithPlayer[this.selectedGameTabIndex].GameName;
+    }
+  }
+
+  selectGameTab(tabSelection: MatTabChangeEvent): void
+  {
+    this.selectedGameTabIndex = tabSelection.index;
+    this.selectedGameName = this.turnSummariesOfGamesWithPlayer[this.selectedGameTabIndex].GameName;
   }
 
   handleError(thrownError: Error): void
