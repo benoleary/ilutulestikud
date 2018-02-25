@@ -24,7 +24,8 @@ func NewHandler(playerHandler *player.Handler) *Handler {
 	return &Handler{
 		playerHandler:   playerHandler,
 		gameStates:      make(map[string]*State, 0),
-		mutualExclusion: sync.Mutex{}}
+		mutualExclusion: sync.Mutex{},
+	}
 }
 
 // HandleGet parses an HTTP GET request and responds with the appropriate function.
@@ -105,7 +106,8 @@ func (handler *Handler) writeTurnSummariesForPlayer(relevantSegments []string) (
 			CreationTimestampInSeconds: gameList[gameIndex].creationTime.Unix(),
 			TurnNumber:                 gameTurn,
 			PlayersInNextTurnOrder:     playerNamesInTurnOrder,
-			IsPlayerTurn:               playerName == playerNamesInTurnOrder[0]}
+			IsPlayerTurn:               playerName == playerNamesInTurnOrder[0],
+		}
 	}
 
 	return backendjson.TurnSummaryList{TurnSummaries: turnSummaries[:]}, http.StatusOK

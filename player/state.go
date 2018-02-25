@@ -19,7 +19,8 @@ func NewState(nameForNewPlayer string, colorForNewPlayer string) *State {
 	return &State{
 		Name:            nameForNewPlayer,
 		Color:           colorForNewPlayer,
-		mutualExclusion: sync.Mutex{}}
+		mutualExclusion: sync.Mutex{},
+	}
 }
 
 // UpdateNonEmptyStrings over-writes all non-name string attributes of this
@@ -42,5 +43,6 @@ func (state *State) UpdateNonEmptyStrings(updaterReference backendjson.PlayerSta
 func (state *State) ForBackend() backendjson.PlayerState {
 	return backendjson.PlayerState{
 		Name:  state.Name,
-		Color: state.Color}
+		Color: state.Color,
+	}
 }

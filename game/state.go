@@ -31,7 +31,8 @@ func NewState(gameName string, playerHandler *player.Handler, playerNames []stri
 		creationTime:         time.Now(),
 		participatingPlayers: playerStates,
 		turnNumber:           1,
-		chatLog:              chat.NewLog()}
+		chatLog:              chat.NewLog(),
+	}
 }
 
 // HasPlayerAsParticipant returns true if the given player name matches

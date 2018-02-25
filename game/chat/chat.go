@@ -18,7 +18,8 @@ var availableColors = [...]string{
 	"green",
 	"blue",
 	"purple",
-	"white"}
+	"white",
+}
 
 var numberOfAvailableColors = len(availableColors)
 
