@@ -18,17 +18,19 @@ type httpGetAndPostHandler interface {
 // State contains all the state to allow the backend to function.
 type State struct {
 	accessControlAllowedOrigin string
-	playerHandler              *player.Handler
-	gameHandler                *game.Handler
+	playerHandler              httpGetAndPostHandler
+	gameHandler                httpGetAndPostHandler
 }
 
-// New creates a new State object and returns a pointer to it.
+// New creates a new State object and returns a pointer to it, taking care to generate
+// handlers for the player and game segments consistently.
 func New(accessControlAllowedOrigin string) *State {
 	playerHandler := player.NewHandler()
 	return &State{
 		accessControlAllowedOrigin: accessControlAllowedOrigin,
 		playerHandler:              playerHandler,
-		gameHandler:                game.NewHandler(playerHandler)}
+		gameHandler:                game.NewHandler(playerHandler),
+	}
 }
 
 // HandleBackend calls functions according to the second segment of the URI, assuming that the first
@@ -60,6 +62,7 @@ func (state *State) HandleBackend(httpResponseWriter http.ResponseWriter, httpRe
 		requestHandler = state.gameHandler
 	default:
 		http.NotFound(httpResponseWriter, httpRequest)
+		return
 	}
 
 	var objectForBody interface{}
@@ -77,7 +80,8 @@ func (state *State) HandleBackend(httpResponseWriter http.ResponseWriter, httpRe
 				return
 			}
 
-			objectForBody, httpStatus = requestHandler.HandlePost(json.NewDecoder(httpRequest.Body), pathSegments[2:])
+			objectForBody, httpStatus =
+				requestHandler.HandlePost(json.NewDecoder(httpRequest.Body), pathSegments[2:])
 		}
 	default:
 		http.Error(httpResponseWriter, "Method not GET or POST: "+httpRequest.Method, http.StatusBadRequest)
