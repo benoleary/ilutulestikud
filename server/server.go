@@ -54,12 +54,19 @@ func (state *State) HandleBackend(httpResponseWriter http.ResponseWriter, httpRe
 			"Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 	}
 
-	if httpRequest.URL.Path == "" || httpRequest.URL.Path == "/" {
-		http.Redirect(httpResponseWriter, httpRequest, "/client", http.StatusFound)
+	// There is no default if there is no URI segment.
+	if httpRequest.URL.Path == "" {
+		http.NotFound(httpResponseWriter, httpRequest)
 		return
 	}
 
 	pathSegments := parsePathSegments(httpRequest)
+
+	// There is no default if there is no URI segment or not enough segments.
+	if (pathSegments == nil) || len(pathSegments) < 2 {
+		http.NotFound(httpResponseWriter, httpRequest)
+		return
+	}
 
 	// We choose the interface which will handle the GET or POST based on the
 	// first segment of the URI after "backend".
