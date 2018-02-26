@@ -22,14 +22,23 @@ type State struct {
 	gameHandler                httpGetAndPostHandler
 }
 
-// New creates a new State object and returns a pointer to it, taking care to generate
+// NewWithDefaultHandlers creates a new State object and returns a pointer to it, taking care to generate
 // handlers for the player and game segments consistently.
-func New(accessControlAllowedOrigin string) *State {
+func NewWithDefaultHandlers(accessControlAllowedOrigin string) *State {
 	playerHandler := player.NewHandler()
+	return NewWithExplicitHandlers(accessControlAllowedOrigin, playerHandler, game.NewHandler(playerHandler))
+}
+
+// NewWithExplicitHandlers creates a new State object and returns a pointer to it, assuming that the
+// given handlers are consistent.
+func NewWithExplicitHandlers(
+	accessControlAllowedOrigin string,
+	playerHandler httpGetAndPostHandler,
+	gameHandler httpGetAndPostHandler) *State {
 	return &State{
 		accessControlAllowedOrigin: accessControlAllowedOrigin,
 		playerHandler:              playerHandler,
-		gameHandler:                game.NewHandler(playerHandler),
+		gameHandler:                gameHandler,
 	}
 }
 
