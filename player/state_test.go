@@ -9,31 +9,9 @@ import (
 
 // This just tests that the factory method does not cause any panics, and returns a non-nil pointer.
 func TestNewState(unitTest *testing.T) {
-	type testArguments struct {
-		nameForNewPlayer  string
-		colorForNewPlayer string
-	}
-
-	testCases := []struct {
-		name      string
-		arguments testArguments
-	}{
-		{
-			name: "ConstructorDoesNotReturnNil",
-			arguments: testArguments{
-				nameForNewPlayer:  "New Player",
-				colorForNewPlayer: "Chat color",
-			},
-		},
-	}
-
-	for _, testCase := range testCases {
-		unitTest.Run(testCase.name, func(unitTest *testing.T) {
-			actualState := player.NewState(testCase.arguments.nameForNewPlayer, testCase.arguments.colorForNewPlayer)
-			if actualState == nil {
-				unitTest.Errorf("%v: new state was nil.", testCase.name)
-			}
-		})
+	actualState := player.NewState("New Player", "Chat color")
+	if actualState == nil {
+		unitTest.Fatalf("New state was nil.")
 	}
 }
 
@@ -64,24 +42,11 @@ func TestState_UpdateNonEmptyStrings(unitTest *testing.T) {
 }
 
 func TestState_ForBackend(unitTest *testing.T) {
-	testCases := []struct {
-		name     string
-		state    *player.State
-		expected backendjson.PlayerState
-	}{
-		{
-			name:     "OnlyCase",
-			state:    player.NewState("Player Name", "Chat Color"),
-			expected: backendjson.PlayerState{Name: "Player Name", Color: "Chat Color"},
-		},
-	}
-	for _, testCase := range testCases {
-		unitTest.Run(testCase.name, func(unitTest *testing.T) {
-			actualState := testCase.state.ForBackend()
+	playerState := player.NewState("Player Name", "Chat Color")
+	actualState := playerState.ForBackend()
+	expectedState := backendjson.PlayerState{Name: "Player Name", Color: "Chat Color"}
 
-			if actualState != testCase.expected {
-				unitTest.Fatalf("%v: state.ForBackend() = %v, want %v", testCase.name, actualState, testCase.expected)
-			}
-		})
+	if actualState != expectedState {
+		unitTest.Fatalf("player.State.ForBackend(): actual %v; expected %v", actualState, expectedState)
 	}
 }

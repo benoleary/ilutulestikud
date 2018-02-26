@@ -13,27 +13,9 @@ import (
 
 // This just tests that the factory method does not cause any panics, and returns a non-nil pointer.
 func TestState_NewWithDefaultHandlers(unitTest *testing.T) {
-	type testArguments struct {
-		accessControlAllowedOrigin string
-	}
-
-	testCases := []struct {
-		name      string
-		arguments testArguments
-	}{
-		{
-			name: "ConstructorDoesNotReturnNil",
-			arguments: testArguments{
-				accessControlAllowedOrigin: "irrelevant",
-			},
-		},
-	}
-
-	for _, testCase := range testCases {
-		actualState := server.NewWithDefaultHandlers(testCase.arguments.accessControlAllowedOrigin)
-		if actualState == nil {
-			unitTest.Errorf("%v: new state was nil.", testCase.name)
-		}
+	actualState := server.NewWithDefaultHandlers("irrelevant")
+	if actualState == nil {
+		unitTest.Fatalf("New state was nil.")
 	}
 }
 
@@ -72,8 +54,8 @@ func TestState_HandleBackend(unitTest *testing.T) {
 	}
 
 	type expectedReturns struct {
-		returnStruct *mockReturnStruct
-		returnCode   int
+		returnedStruct *mockReturnStruct
+		returnedCode   int
 	}
 
 	testCases := []struct {
@@ -87,8 +69,8 @@ func TestState_HandleBackend(unitTest *testing.T) {
 			state:     prepareState(http.StatusOK, http.StatusOK),
 			arguments: testArguments{method: http.MethodGet, address: "/backend/player/test/get/player"},
 			expected: expectedReturns{
-				returnStruct: &mockReturnStruct{Name: "player", GivenSegments: []string{"test", "get", "player"}},
-				returnCode:   http.StatusOK,
+				returnedStruct: &mockReturnStruct{Name: "player", GivenSegments: []string{"test", "get", "player"}},
+				returnedCode:   http.StatusOK,
 			},
 		},
 		{
@@ -96,8 +78,8 @@ func TestState_HandleBackend(unitTest *testing.T) {
 			state:     prepareState(http.StatusOK, http.StatusOK),
 			arguments: testArguments{method: http.MethodPost, address: "/backend/player/test/post/player"},
 			expected: expectedReturns{
-				returnStruct: &mockReturnStruct{Name: "player", GivenSegments: []string{"test", "post", "player"}},
-				returnCode:   http.StatusOK,
+				returnedStruct: &mockReturnStruct{Name: "player", GivenSegments: []string{"test", "post", "player"}},
+				returnedCode:   http.StatusOK,
 			},
 		},
 		{
@@ -105,8 +87,8 @@ func TestState_HandleBackend(unitTest *testing.T) {
 			state:     prepareState(http.StatusOK, http.StatusOK),
 			arguments: testArguments{method: http.MethodGet, address: "/backend/game/test/get/game"},
 			expected: expectedReturns{
-				returnStruct: &mockReturnStruct{Name: "game", GivenSegments: []string{"test", "get", "game"}},
-				returnCode:   http.StatusOK,
+				returnedStruct: &mockReturnStruct{Name: "game", GivenSegments: []string{"test", "get", "game"}},
+				returnedCode:   http.StatusOK,
 			},
 		},
 		{
@@ -114,8 +96,8 @@ func TestState_HandleBackend(unitTest *testing.T) {
 			state:     prepareState(http.StatusOK, http.StatusOK),
 			arguments: testArguments{method: http.MethodPost, address: "/backend/game/test/post/game"},
 			expected: expectedReturns{
-				returnStruct: &mockReturnStruct{Name: "game", GivenSegments: []string{"test", "post", "game"}},
-				returnCode:   http.StatusOK,
+				returnedStruct: &mockReturnStruct{Name: "game", GivenSegments: []string{"test", "post", "game"}},
+				returnedCode:   http.StatusOK,
 			},
 		},
 		{
@@ -123,8 +105,8 @@ func TestState_HandleBackend(unitTest *testing.T) {
 			state:     prepareState(http.StatusBadRequest, http.StatusOK),
 			arguments: testArguments{method: http.MethodGet, address: "/backend/game/test/get/game"},
 			expected: expectedReturns{
-				returnStruct: nil,
-				returnCode:   http.StatusBadRequest,
+				returnedStruct: nil,
+				returnedCode:   http.StatusBadRequest,
 			},
 		},
 		{
@@ -132,8 +114,8 @@ func TestState_HandleBackend(unitTest *testing.T) {
 			state:     prepareState(http.StatusOK, http.StatusBadRequest),
 			arguments: testArguments{method: http.MethodPost, address: "/backend/game/test/post/game"},
 			expected: expectedReturns{
-				returnStruct: nil,
-				returnCode:   http.StatusBadRequest,
+				returnedStruct: nil,
+				returnedCode:   http.StatusBadRequest,
 			},
 		},
 		{
@@ -141,8 +123,8 @@ func TestState_HandleBackend(unitTest *testing.T) {
 			state:     prepareState(http.StatusOK, http.StatusOK),
 			arguments: testArguments{method: http.MethodGet, address: "/backend/invalid/test/get/invalid"},
 			expected: expectedReturns{
-				returnStruct: nil,
-				returnCode:   http.StatusNotFound,
+				returnedStruct: nil,
+				returnedCode:   http.StatusNotFound,
 			},
 		},
 		{
@@ -150,8 +132,8 @@ func TestState_HandleBackend(unitTest *testing.T) {
 			state:     prepareState(http.StatusOK, http.StatusOK),
 			arguments: testArguments{method: http.MethodPost, address: "/backend/invalid/test/post/invalid"},
 			expected: expectedReturns{
-				returnStruct: nil,
-				returnCode:   http.StatusNotFound,
+				returnedStruct: nil,
+				returnedCode:   http.StatusNotFound,
 			},
 		},
 	}
@@ -163,15 +145,15 @@ func TestState_HandleBackend(unitTest *testing.T) {
 			responseRecorder := httptest.NewRecorder()
 			testCase.state.HandleBackend(responseRecorder, httpRequest)
 
-			if responseRecorder.Code != testCase.expected.returnCode {
+			if responseRecorder.Code != testCase.expected.returnedCode {
 				unitTest.Errorf(
 					"%v: returned wrong status %v instead of expected %v",
 					testCase.name,
 					responseRecorder.Code,
-					testCase.expected.returnCode)
+					testCase.expected.returnedCode)
 			}
 
-			if testCase.expected.returnStruct != nil {
+			if testCase.expected.returnedStruct != nil {
 				var actualStruct mockReturnStruct
 				decodingError := json.NewDecoder(responseRecorder.Body).Decode(&actualStruct)
 
@@ -182,21 +164,21 @@ func TestState_HandleBackend(unitTest *testing.T) {
 						decodingError)
 				}
 
-				if actualStruct.Name != testCase.expected.returnStruct.Name {
+				if actualStruct.Name != testCase.expected.returnedStruct.Name {
 					unitTest.Fatalf(
 						"%v: returned wrong struct %v instead of expected %v",
 						testCase.name,
 						actualStruct,
-						testCase.expected.returnStruct)
+						testCase.expected.returnedStruct)
 				}
 
-				for segmentIndex := 0; segmentIndex < len(testCase.expected.returnStruct.GivenSegments); segmentIndex++ {
-					if actualStruct.GivenSegments[segmentIndex] != testCase.expected.returnStruct.GivenSegments[segmentIndex] {
+				for segmentIndex := 0; segmentIndex < len(testCase.expected.returnedStruct.GivenSegments); segmentIndex++ {
+					if actualStruct.GivenSegments[segmentIndex] != testCase.expected.returnedStruct.GivenSegments[segmentIndex] {
 						unitTest.Fatalf(
 							"%v: returned wrong struct %v instead of expected %v",
 							testCase.name,
 							actualStruct,
-							testCase.expected.returnStruct)
+							testCase.expected.returnedStruct)
 					}
 				}
 			}
