@@ -12,25 +12,27 @@ import (
 )
 
 // This just tests that the factory method does not cause any panics, and returns a non-nil pointer.
-func TestState_NewWithDefaultHandlers(testSet *testing.T) {
+func TestState_NewWithDefaultHandlers(unitTest *testing.T) {
 	type testArguments struct {
 		accessControlAllowedOrigin string
 	}
+
 	testCases := []struct {
 		name      string
 		arguments testArguments
 	}{
 		{
-			name: "constructorDoesNotReturnNil",
+			name: "ConstructorDoesNotReturnNil",
 			arguments: testArguments{
 				accessControlAllowedOrigin: "irrelevant",
 			},
 		},
 	}
+
 	for _, testCase := range testCases {
 		actualState := server.NewWithDefaultHandlers(testCase.arguments.accessControlAllowedOrigin)
 		if actualState == nil {
-			testSet.Errorf("%v. new state was nil.", testCase.name)
+			unitTest.Errorf("%v: new state was nil.", testCase.name)
 		}
 	}
 }
@@ -63,7 +65,7 @@ func prepareState(statusForGet int, statusForPost int) *server.State {
 }
 
 // This tests that the HandleBackend function selects the correct handler and the correct function of the handler.
-func TestState_HandleBackend(testSet *testing.T) {
+func TestState_HandleBackend(unitTest *testing.T) {
 	type testArguments struct {
 		method  string
 		address string
@@ -81,7 +83,7 @@ func TestState_HandleBackend(testSet *testing.T) {
 		expected  expectedReturns
 	}{
 		{
-			name:      "getPlayer",
+			name:      "GetPlayer",
 			state:     prepareState(http.StatusOK, http.StatusOK),
 			arguments: testArguments{method: http.MethodGet, address: "/backend/player/test/get/player"},
 			expected: expectedReturns{
@@ -90,7 +92,7 @@ func TestState_HandleBackend(testSet *testing.T) {
 			},
 		},
 		{
-			name:      "postPlayer",
+			name:      "PostPlayer",
 			state:     prepareState(http.StatusOK, http.StatusOK),
 			arguments: testArguments{method: http.MethodPost, address: "/backend/player/test/post/player"},
 			expected: expectedReturns{
@@ -99,7 +101,7 @@ func TestState_HandleBackend(testSet *testing.T) {
 			},
 		},
 		{
-			name:      "getValidGame",
+			name:      "GetValidGame",
 			state:     prepareState(http.StatusOK, http.StatusOK),
 			arguments: testArguments{method: http.MethodGet, address: "/backend/game/test/get/game"},
 			expected: expectedReturns{
@@ -108,7 +110,7 @@ func TestState_HandleBackend(testSet *testing.T) {
 			},
 		},
 		{
-			name:      "postValidGame",
+			name:      "PostValidGame",
 			state:     prepareState(http.StatusOK, http.StatusOK),
 			arguments: testArguments{method: http.MethodPost, address: "/backend/game/test/post/game"},
 			expected: expectedReturns{
@@ -117,7 +119,7 @@ func TestState_HandleBackend(testSet *testing.T) {
 			},
 		},
 		{
-			name:      "getInvalidGame",
+			name:      "GetInvalidGame",
 			state:     prepareState(http.StatusBadRequest, http.StatusOK),
 			arguments: testArguments{method: http.MethodGet, address: "/backend/game/test/get/game"},
 			expected: expectedReturns{
@@ -126,7 +128,7 @@ func TestState_HandleBackend(testSet *testing.T) {
 			},
 		},
 		{
-			name:      "postInvalidGame",
+			name:      "PostInvalidGame",
 			state:     prepareState(http.StatusOK, http.StatusBadRequest),
 			arguments: testArguments{method: http.MethodPost, address: "/backend/game/test/post/game"},
 			expected: expectedReturns{
@@ -135,7 +137,7 @@ func TestState_HandleBackend(testSet *testing.T) {
 			},
 		},
 		{
-			name:      "getInvalidSegment",
+			name:      "GetInvalidSegment",
 			state:     prepareState(http.StatusOK, http.StatusOK),
 			arguments: testArguments{method: http.MethodGet, address: "/backend/invalid/test/get/invalid"},
 			expected: expectedReturns{
@@ -144,7 +146,7 @@ func TestState_HandleBackend(testSet *testing.T) {
 			},
 		},
 		{
-			name:      "postInvalidSegment",
+			name:      "PostInvalidSegment",
 			state:     prepareState(http.StatusOK, http.StatusOK),
 			arguments: testArguments{method: http.MethodPost, address: "/backend/invalid/test/post/invalid"},
 			expected: expectedReturns{
@@ -155,15 +157,15 @@ func TestState_HandleBackend(testSet *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		testSet.Run(testCase.name, func(testSet *testing.T) {
+		unitTest.Run(testCase.name, func(unitTest *testing.T) {
 			httpRequest := httptest.NewRequest(testCase.arguments.method, testCase.arguments.address, nil)
 			// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 			responseRecorder := httptest.NewRecorder()
 			testCase.state.HandleBackend(responseRecorder, httpRequest)
 
 			if responseRecorder.Code != testCase.expected.returnCode {
-				testSet.Errorf(
-					"%v returned wrong status %v instead of expected %v",
+				unitTest.Errorf(
+					"%v: returned wrong status %v instead of expected %v",
 					testCase.name,
 					responseRecorder.Code,
 					testCase.expected.returnCode)
@@ -174,15 +176,15 @@ func TestState_HandleBackend(testSet *testing.T) {
 				decodingError := json.NewDecoder(responseRecorder.Body).Decode(&actualStruct)
 
 				if decodingError != nil {
-					testSet.Fatalf(
-						"%v wrote undecodable JSON: error = %v",
+					unitTest.Fatalf(
+						"%v: wrote undecodable JSON: error = %v",
 						testCase.name,
 						decodingError)
 				}
 
 				if actualStruct.Name != testCase.expected.returnStruct.Name {
-					testSet.Fatalf(
-						"%v returned wrong struct %v instead of expected %v",
+					unitTest.Fatalf(
+						"%v: returned wrong struct %v instead of expected %v",
 						testCase.name,
 						actualStruct,
 						testCase.expected.returnStruct)
@@ -190,8 +192,8 @@ func TestState_HandleBackend(testSet *testing.T) {
 
 				for segmentIndex := 0; segmentIndex < len(testCase.expected.returnStruct.GivenSegments); segmentIndex++ {
 					if actualStruct.GivenSegments[segmentIndex] != testCase.expected.returnStruct.GivenSegments[segmentIndex] {
-						testSet.Fatalf(
-							"%v returned wrong struct %v instead of expected %v",
+						unitTest.Fatalf(
+							"%v: returned wrong struct %v instead of expected %v",
 							testCase.name,
 							actualStruct,
 							testCase.expected.returnStruct)
@@ -201,5 +203,3 @@ func TestState_HandleBackend(testSet *testing.T) {
 		})
 	}
 }
-
-// We do not bother testing the private method parsePathSegments, which is covered by HandleBackend anyway.
