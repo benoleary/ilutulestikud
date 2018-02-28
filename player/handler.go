@@ -113,6 +113,10 @@ func (handler *Handler) handleNewPlayer(httpBodyDecoder *json.Decoder) (interfac
 		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
 	}
 
+	if newPlayer.Name == "" {
+		return "No name for new player parsed from JSON", http.StatusBadRequest
+	}
+
 	_, playerExists := handler.registeredPlayers[newPlayer.Name]
 	if playerExists {
 		return "Name " + newPlayer.Name + " already registered", http.StatusBadRequest
