@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/benoleary/ilutulestikud/backendjson"
+	"github.com/benoleary/ilutulestikud/game/chat"
 
 	"github.com/benoleary/ilutulestikud/player"
 )
@@ -185,7 +186,9 @@ func TestRejectInvalidNewPlayer(unitTest *testing.T) {
 	for _, testCase := range testCases {
 		unitTest.Run(testCase.name, func(unitTest *testing.T) {
 			bytesBuffer := new(bytes.Buffer)
-			json.NewEncoder(bytesBuffer).Encode(testCase.arguments.bodyObject)
+			if testCase.arguments.bodyObject != nil {
+				json.NewEncoder(bytesBuffer).Encode(testCase.arguments.bodyObject)
+			}
 
 			_, postCode :=
 				testCase.handler.HandlePost(json.NewDecoder(bytesBuffer), []string{"new-player"})
@@ -198,6 +201,50 @@ func TestRejectInvalidNewPlayer(unitTest *testing.T) {
 					postCode)
 			}
 		})
+	}
+}
+
+func TestRejectNewPlayerWithExistingName(unitTest *testing.T) {
+	playerName := "A. Player Name"
+	firstBodyObject := backendjson.PlayerState{
+		Name:  playerName,
+		Color: "First color",
+	}
+
+	firstBytesBuffer := new(bytes.Buffer)
+	json.NewEncoder(firstBytesBuffer).Encode(firstBodyObject)
+
+	playerHandler := player.NewHandler()
+	_, validRegistrationCode :=
+		playerHandler.HandlePost(json.NewDecoder(firstBytesBuffer), []string{"new-player"})
+
+	if validRegistrationCode != http.StatusOK {
+		unitTest.Fatalf(
+			"POST new-player with valid JSON %v did not return expected HTTP code %v, instead was %v.",
+			firstBodyObject,
+			http.StatusOK,
+			validRegistrationCode)
+	}
+
+	secondBodyObject := backendjson.PlayerState{
+		Name:  playerName,
+		Color: "Second color",
+	}
+
+	secondBytesBuffer := new(bytes.Buffer)
+	json.NewEncoder(secondBytesBuffer).Encode(secondBodyObject)
+
+	_, invalidRegistrationCode :=
+		playerHandler.HandlePost(json.NewDecoder(secondBytesBuffer), []string{"new-player"})
+
+	if invalidRegistrationCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			"POST new-player with valid JSON %v but second request for same player name %v"+
+				" did not return expected HTTP code %v, instead was %v.",
+			playerName,
+			secondBodyObject,
+			http.StatusBadRequest,
+			invalidRegistrationCode)
 	}
 }
 
@@ -219,11 +266,22 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 		expected  expectedReturns
 	}{
 		{
-			name:    "Ascii only",
+			name:    "Ascii only, with color",
 			handler: player.NewHandler(),
 			arguments: testArguments{
 				playerName: "Easy Test Name",
 				chatColor:  "Plain color",
+			},
+			expected: expectedReturns{
+				codeFromPost: http.StatusOK,
+				codeFromGet:  http.StatusOK,
+			},
+		},
+		{
+			name:    "Ascii only, no color",
+			handler: player.NewHandler(),
+			arguments: testArguments{
+				playerName: "Easy Test Name",
 			},
 			expected: expectedReturns{
 				codeFromPost: http.StatusOK,
@@ -283,6 +341,34 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 
 			if testCase.arguments.playerName != internalPlayer.Name {
 				unitTest.Fatalf("Player %v was found but had name %v.", testCase.arguments.playerName, internalPlayer.Name)
+			}
+
+			if testCase.arguments.chatColor != internalPlayer.Color {
+				if testCase.arguments.chatColor != "" {
+					unitTest.Fatalf(
+						"Player %v was found but had color %v instead of expected %v.",
+						testCase.arguments.playerName,
+						testCase.arguments.chatColor,
+						internalPlayer.Color)
+				}
+
+				// Otherwise we check that the player was assigned a valid color.
+				isValidColor := false
+				availableColors := chat.AvailableColors()
+				for _, availableColor := range availableColors {
+					if availableColor == internalPlayer.Color {
+						isValidColor = true
+						break
+					}
+				}
+
+				if !isValidColor {
+					unitTest.Fatalf(
+						"Player %v was found but had color %v which is not in list of allowed colors %v.",
+						testCase.arguments.playerName,
+						internalPlayer.Color,
+						availableColors)
+				}
 			}
 
 			// Finally we check that the new player exists in the list of registered players given out by the endpoint.
