@@ -49,8 +49,9 @@ func prepareState(statusForGet int, statusForPost int) *server.State {
 // This tests that the HandleBackend function selects the correct handler and the correct function of the handler.
 func TestState_HandleBackend(unitTest *testing.T) {
 	type testArguments struct {
-		method  string
-		address string
+		method                         string
+		address                        string
+		bodyIsNilRatherThanEmptyObject bool
 	}
 
 	type expectedReturns struct {
@@ -65,72 +66,169 @@ func TestState_HandleBackend(unitTest *testing.T) {
 		expected  expectedReturns
 	}{
 		{
-			name:      "GetPlayer",
-			state:     prepareState(http.StatusOK, http.StatusOK),
-			arguments: testArguments{method: http.MethodGet, address: "/backend/player/test/get/player"},
-			expected: expectedReturns{
-				returnedStruct: &mockReturnStruct{Name: "player", GivenSegments: []string{"test", "get", "player"}},
-				returnedCode:   http.StatusOK,
+			name:  "GetRoot",
+			state: prepareState(http.StatusOK, http.StatusOK),
+			arguments: testArguments{
+				method:  http.MethodGet,
+				address: "/",
+				bodyIsNilRatherThanEmptyObject: false,
 			},
-		},
-		{
-			name:      "PostPlayer",
-			state:     prepareState(http.StatusOK, http.StatusOK),
-			arguments: testArguments{method: http.MethodPost, address: "/backend/player/test/post/player"},
-			expected: expectedReturns{
-				returnedStruct: &mockReturnStruct{Name: "player", GivenSegments: []string{"test", "post", "player"}},
-				returnedCode:   http.StatusOK,
-			},
-		},
-		{
-			name:      "GetValidGame",
-			state:     prepareState(http.StatusOK, http.StatusOK),
-			arguments: testArguments{method: http.MethodGet, address: "/backend/game/test/get/game"},
-			expected: expectedReturns{
-				returnedStruct: &mockReturnStruct{Name: "game", GivenSegments: []string{"test", "get", "game"}},
-				returnedCode:   http.StatusOK,
-			},
-		},
-		{
-			name:      "PostValidGame",
-			state:     prepareState(http.StatusOK, http.StatusOK),
-			arguments: testArguments{method: http.MethodPost, address: "/backend/game/test/post/game"},
-			expected: expectedReturns{
-				returnedStruct: &mockReturnStruct{Name: "game", GivenSegments: []string{"test", "post", "game"}},
-				returnedCode:   http.StatusOK,
-			},
-		},
-		{
-			name:      "GetInvalidGame",
-			state:     prepareState(http.StatusBadRequest, http.StatusOK),
-			arguments: testArguments{method: http.MethodGet, address: "/backend/game/test/get/game"},
-			expected: expectedReturns{
-				returnedStruct: nil,
-				returnedCode:   http.StatusBadRequest,
-			},
-		},
-		{
-			name:      "PostInvalidGame",
-			state:     prepareState(http.StatusOK, http.StatusBadRequest),
-			arguments: testArguments{method: http.MethodPost, address: "/backend/game/test/post/game"},
-			expected: expectedReturns{
-				returnedStruct: nil,
-				returnedCode:   http.StatusBadRequest,
-			},
-		},
-		{
-			name:      "GetInvalidSegment",
-			state:     prepareState(http.StatusOK, http.StatusOK),
-			arguments: testArguments{method: http.MethodGet, address: "/backend/invalid/test/get/invalid"},
 			expected: expectedReturns{
 				returnedStruct: nil,
 				returnedCode:   http.StatusNotFound,
 			},
 		},
 		{
-			name:      "PostInvalidSegment",
-			state:     prepareState(http.StatusOK, http.StatusOK),
-			arguments: testArguments{method: http.MethodPost, address: "/backend/invalid/test/post/invalid"},
+			name:  "GetBackend",
+			state: prepareState(http.StatusOK, http.StatusOK),
+			arguments: testArguments{
+				method:  http.MethodGet,
+				address: "/backend",
+				bodyIsNilRatherThanEmptyObject: false,
+			},
+			expected: expectedReturns{
+				returnedStruct: nil,
+				returnedCode:   http.StatusNotFound,
+			},
+		},
+		{
+			name:  "GetPlayer",
+			state: prepareState(http.StatusOK, http.StatusOK),
+			arguments: testArguments{
+				method:  http.MethodGet,
+				address: "/backend/player/test/get/player",
+				bodyIsNilRatherThanEmptyObject: false,
+			},
+			expected: expectedReturns{
+				returnedStruct: &mockReturnStruct{Name: "player", GivenSegments: []string{"test", "get", "player"}},
+				returnedCode:   http.StatusOK,
+			},
+		},
+		{
+			name:  "PostNonnilPlayer",
+			state: prepareState(http.StatusOK, http.StatusOK),
+			arguments: testArguments{
+				method:  http.MethodPost,
+				address: "/backend/player/test/post/player",
+				bodyIsNilRatherThanEmptyObject: false,
+			},
+			expected: expectedReturns{
+				returnedStruct: &mockReturnStruct{Name: "player", GivenSegments: []string{"test", "post", "player"}},
+				returnedCode:   http.StatusOK,
+			},
+		},
+		{
+			name:  "PostNilPlayer",
+			state: prepareState(http.StatusOK, http.StatusOK),
+			arguments: testArguments{
+				method:  http.MethodPost,
+				address: "/backend/player/test/post/player",
+				bodyIsNilRatherThanEmptyObject: true,
+			},
+			expected: expectedReturns{
+				returnedStruct: nil,
+				returnedCode:   http.StatusBadRequest,
+			},
+		},
+		{
+			name:  "OptionsPlayer",
+			state: prepareState(http.StatusOK, http.StatusOK),
+			arguments: testArguments{
+				method:  http.MethodOptions,
+				address: "/backend/player/test/options/player",
+				bodyIsNilRatherThanEmptyObject: false,
+			},
+			expected: expectedReturns{
+				returnedStruct: nil,
+				returnedCode:   http.StatusOK,
+			},
+		},
+		{
+			name:  "PutPlayer",
+			state: prepareState(http.StatusOK, http.StatusOK),
+			arguments: testArguments{
+				method:  http.MethodPut,
+				address: "/backend/player/test/put/player",
+				bodyIsNilRatherThanEmptyObject: false,
+			},
+			expected: expectedReturns{
+				returnedStruct: nil,
+				returnedCode:   http.StatusBadRequest,
+			},
+		},
+		{
+			name:  "GetValidGame",
+			state: prepareState(http.StatusOK, http.StatusOK),
+			arguments: testArguments{
+				method:  http.MethodGet,
+				address: "/backend/game/test/get/game",
+				bodyIsNilRatherThanEmptyObject: false,
+			},
+			expected: expectedReturns{
+				returnedStruct: &mockReturnStruct{Name: "game", GivenSegments: []string{"test", "get", "game"}},
+				returnedCode:   http.StatusOK,
+			},
+		},
+		{
+			name:  "PostValidGame",
+			state: prepareState(http.StatusOK, http.StatusOK),
+			arguments: testArguments{
+				method:  http.MethodPost,
+				address: "/backend/game/test/post/game",
+				bodyIsNilRatherThanEmptyObject: false,
+			},
+			expected: expectedReturns{
+				returnedStruct: &mockReturnStruct{Name: "game", GivenSegments: []string{"test", "post", "game"}},
+				returnedCode:   http.StatusOK,
+			},
+		},
+		{
+			name:  "GetInvalidGame",
+			state: prepareState(http.StatusBadRequest, http.StatusOK),
+			arguments: testArguments{
+				method:  http.MethodGet,
+				address: "/backend/game/test/get/game",
+				bodyIsNilRatherThanEmptyObject: false,
+			},
+			expected: expectedReturns{
+				returnedStruct: nil,
+				returnedCode:   http.StatusBadRequest,
+			},
+		},
+		{
+			name:  "PostInvalidGame",
+			state: prepareState(http.StatusOK, http.StatusBadRequest),
+			arguments: testArguments{
+				method:  http.MethodPost,
+				address: "/backend/game/test/post/game",
+				bodyIsNilRatherThanEmptyObject: false,
+			},
+			expected: expectedReturns{
+				returnedStruct: nil,
+				returnedCode:   http.StatusBadRequest,
+			},
+		},
+		{
+			name:  "GetInvalidSegment",
+			state: prepareState(http.StatusOK, http.StatusOK),
+			arguments: testArguments{
+				method:  http.MethodGet,
+				address: "/backend/invalid/test/get/invalid",
+				bodyIsNilRatherThanEmptyObject: false,
+			},
+			expected: expectedReturns{
+				returnedStruct: nil,
+				returnedCode:   http.StatusNotFound,
+			},
+		},
+		{
+			name:  "PostInvalidSegment",
+			state: prepareState(http.StatusOK, http.StatusOK),
+			arguments: testArguments{
+				method:  http.MethodPost,
+				address: "/backend/invalid/test/post/invalid",
+				bodyIsNilRatherThanEmptyObject: false,
+			},
 			expected: expectedReturns{
 				returnedStruct: nil,
 				returnedCode:   http.StatusNotFound,
@@ -141,6 +239,10 @@ func TestState_HandleBackend(unitTest *testing.T) {
 	for _, testCase := range testCases {
 		unitTest.Run(testCase.name, func(unitTest *testing.T) {
 			httpRequest := httptest.NewRequest(testCase.arguments.method, testCase.arguments.address, nil)
+			if testCase.arguments.bodyIsNilRatherThanEmptyObject {
+				httpRequest.Body = nil
+			}
+
 			// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 			responseRecorder := httptest.NewRecorder()
 			testCase.state.HandleBackend(responseRecorder, httpRequest)

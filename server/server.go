@@ -54,8 +54,9 @@ func (state *State) HandleBackend(httpResponseWriter http.ResponseWriter, httpRe
 			"Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 	}
 
-	// There is no default if there is no URI segment.
-	if httpRequest.URL.Path == "" {
+	// There should always be an initial "/", but unless it is present, with at least one character
+	// following it as the first URI segment, we do not process the request.
+	if len(httpRequest.URL.Path) < 2 || httpRequest.URL.Path[0] != '/' {
 		http.NotFound(httpResponseWriter, httpRequest)
 		return
 	}
