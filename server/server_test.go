@@ -92,6 +92,19 @@ func TestState_HandleBackend(unitTest *testing.T) {
 			},
 		},
 		{
+			name:  "OptionsPlayer",
+			state: prepareState(http.StatusOK, http.StatusOK),
+			arguments: testArguments{
+				method:  http.MethodOptions,
+				address: "/backend/player/test/options/player",
+				bodyIsNilRatherThanEmptyObject: false,
+			},
+			expected: expectedReturns{
+				returnedStruct: nil,
+				returnedCode:   http.StatusOK,
+			},
+		},
+		{
 			name:  "GetPlayer",
 			state: prepareState(http.StatusOK, http.StatusOK),
 			arguments: testArguments{
@@ -101,19 +114,6 @@ func TestState_HandleBackend(unitTest *testing.T) {
 			},
 			expected: expectedReturns{
 				returnedStruct: &mockReturnStruct{Name: "player", GivenSegments: []string{"test", "get", "player"}},
-				returnedCode:   http.StatusOK,
-			},
-		},
-		{
-			name:  "PostNonnilPlayer",
-			state: prepareState(http.StatusOK, http.StatusOK),
-			arguments: testArguments{
-				method:  http.MethodPost,
-				address: "/backend/player/test/post/player",
-				bodyIsNilRatherThanEmptyObject: false,
-			},
-			expected: expectedReturns{
-				returnedStruct: &mockReturnStruct{Name: "player", GivenSegments: []string{"test", "post", "player"}},
 				returnedCode:   http.StatusOK,
 			},
 		},
@@ -131,15 +131,15 @@ func TestState_HandleBackend(unitTest *testing.T) {
 			},
 		},
 		{
-			name:  "OptionsPlayer",
+			name:  "PostNonnilPlayer",
 			state: prepareState(http.StatusOK, http.StatusOK),
 			arguments: testArguments{
-				method:  http.MethodOptions,
-				address: "/backend/player/test/options/player",
+				method:  http.MethodPost,
+				address: "/backend/player/test/post/player",
 				bodyIsNilRatherThanEmptyObject: false,
 			},
 			expected: expectedReturns{
-				returnedStruct: nil,
+				returnedStruct: &mockReturnStruct{Name: "player", GivenSegments: []string{"test", "post", "player"}},
 				returnedCode:   http.StatusOK,
 			},
 		},
