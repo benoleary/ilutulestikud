@@ -19,26 +19,95 @@ func TestNewHandler(unitTest *testing.T) {
 	}
 }
 
+func TestGetNoSegmentBadRequest(unitTest *testing.T) {
+	playerHandler := player.NewHandler()
+	_, actualCode := playerHandler.HandleGet(make([]string, 0))
+
+	if actualCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			"GET with empty list of relevant segments did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			actualCode)
+	}
+}
+
+func TestGetInvalidSegmentNotFound(unitTest *testing.T) {
+	playerHandler := player.NewHandler()
+	_, actualCode := playerHandler.HandleGet([]string{"invalid-segment"})
+
+	if actualCode != http.StatusNotFound {
+		unitTest.Fatalf(
+			"GET invalid-segment did not return expected HTTP code %v, instead was %v.",
+			http.StatusNotFound,
+			actualCode)
+	}
+}
+
+func TestPostNoSegmentBadRequest(unitTest *testing.T) {
+	bytesBuffer := new(bytes.Buffer)
+	json.NewEncoder(bytesBuffer).Encode(backendjson.PlayerState{
+		Name:  "Player Name",
+		Color: "Chat color",
+	})
+	playerHandler := player.NewHandler()
+
+	_, actualCode := playerHandler.HandlePost(json.NewDecoder(bytesBuffer), make([]string, 0))
+
+	if actualCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			"POST with empty list of relevant segments did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			actualCode)
+	}
+}
+
+func TestPostInvalidSegmentNotFound(unitTest *testing.T) {
+	bytesBuffer := new(bytes.Buffer)
+	json.NewEncoder(bytesBuffer).Encode(backendjson.PlayerState{
+		Name:  "Player Name",
+		Color: "Chat color",
+	})
+	playerHandler := player.NewHandler()
+
+	_, actualCode := playerHandler.HandlePost(json.NewDecoder(bytesBuffer), []string{"invalid-segment"})
+
+	if actualCode != http.StatusNotFound {
+		unitTest.Fatalf(
+			"POST invalid-segment did not return expected HTTP code %v, instead was %v.",
+			http.StatusNotFound,
+			actualCode)
+	}
+}
+
 func TestDefaultPlayerListNotEmpty(unitTest *testing.T) {
 	playerHandler := player.NewHandler()
 	actualInterface, actualCode := playerHandler.HandleGet([]string{"registered-players"})
 
 	if actualCode != http.StatusOK {
-		unitTest.Fatalf("GET registered-players did not return expected HTTP code %v, instead was %v.", http.StatusOK, actualCode)
+		unitTest.Fatalf(
+			"GET registered-players did not return expected HTTP code %v, instead was %v.",
+			http.StatusOK,
+			actualCode)
 	}
 
 	actualPlayerStateList, isTypeCorrect := actualInterface.(backendjson.PlayerStateList)
 
 	if !isTypeCorrect {
-		unitTest.Fatalf("GET registered-players did not return expected backendjson.PlayerStateList, instead was %v.", actualInterface)
+		unitTest.Fatalf(
+			"GET registered-players did not return expected backendjson.PlayerStateList, instead was %v.",
+			actualInterface)
 	}
 
 	if actualPlayerStateList.Players == nil {
-		unitTest.Fatalf("GET registered-players returned %v which has a nil list of players.", actualInterface)
+		unitTest.Fatalf(
+			"GET registered-players returned %v which has a nil list of players.",
+			actualInterface)
 	}
 
 	if len(actualPlayerStateList.Players) <= 0 {
-		unitTest.Fatalf("GET registered-players returned %v which has an empty list of players.", actualPlayerStateList)
+		unitTest.Fatalf(
+			"GET registered-players returned %v which has an empty list of players.",
+			actualPlayerStateList)
 	}
 }
 
@@ -47,21 +116,88 @@ func TestAvailableColorListNotEmpty(unitTest *testing.T) {
 	actualInterface, actualCode := playerHandler.HandleGet([]string{"available-colors"})
 
 	if actualCode != http.StatusOK {
-		unitTest.Fatalf("GET available-colors did not return expected HTTP code %v, instead was %v.", http.StatusOK, actualCode)
+		unitTest.Fatalf(
+			"GET available-colors did not return expected HTTP code %v, instead was %v.",
+			http.StatusOK,
+			actualCode)
 	}
 
-	actualPlayerStateList, isTypeCorrect := actualInterface.(backendjson.ChatColorList)
+	actualAvailableColorList, isTypeCorrect := actualInterface.(backendjson.ChatColorList)
 
 	if !isTypeCorrect {
-		unitTest.Fatalf("GET available-colors did not return expected backendjson.ChatColorList, instead was %v.", actualInterface)
+		unitTest.Fatalf(
+			"GET available-colors did not return expected backendjson.ChatColorList, instead was %v.",
+			actualInterface)
 	}
 
-	if actualPlayerStateList.Colors == nil {
-		unitTest.Fatalf("GET available-colors returned %v which has a nil list of colors.", actualInterface)
+	if actualAvailableColorList.Colors == nil {
+		unitTest.Fatalf(
+			"GET available-colors returned %v which has a nil list of colors.",
+			actualInterface)
 	}
 
-	if len(actualPlayerStateList.Colors) <= 0 {
-		unitTest.Fatalf("GET available-colors returned %v which has an empty list of colors.", actualPlayerStateList)
+	if len(actualAvailableColorList.Colors) <= 0 {
+		unitTest.Fatalf(
+			"GET available-colors returned %v which has an empty list of colors.",
+			actualAvailableColorList)
+	}
+}
+
+func TestRejectInvalidNewPlayer(unitTest *testing.T) {
+	type testArguments struct {
+		bodyObject interface{}
+	}
+
+	type expectedReturns struct {
+		codeFromPost int
+	}
+
+	testCases := []struct {
+		name      string
+		handler   *player.Handler
+		arguments testArguments
+		expected  expectedReturns
+	}{
+		{
+			name:    "Nil object",
+			handler: player.NewHandler(),
+			arguments: testArguments{
+				bodyObject: nil,
+			},
+			expected: expectedReturns{
+				codeFromPost: http.StatusBadRequest,
+			},
+		},
+		{
+			name:    "Wrong object",
+			handler: player.NewHandler(),
+			arguments: testArguments{
+				bodyObject: &backendjson.ChatColorList{
+					Colors: []string{"Player 1", "Player 2"},
+				},
+			},
+			expected: expectedReturns{
+				codeFromPost: http.StatusBadRequest,
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		unitTest.Run(testCase.name, func(unitTest *testing.T) {
+			bytesBuffer := new(bytes.Buffer)
+			json.NewEncoder(bytesBuffer).Encode(testCase.arguments.bodyObject)
+
+			_, postCode :=
+				testCase.handler.HandlePost(json.NewDecoder(bytesBuffer), []string{"new-player"})
+
+			if postCode != http.StatusBadRequest {
+				unitTest.Fatalf(
+					"POST new-player with invalid JSON %v did not return expected HTTP code %v, instead was %v.",
+					testCase.arguments.bodyObject,
+					http.StatusBadRequest,
+					postCode)
+			}
+		})
 	}
 }
 
