@@ -339,24 +339,24 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 				unitTest.Fatalf("Did not find player %v.", testCase.arguments.playerName)
 			}
 
-			if testCase.arguments.playerName != internalPlayer.Name {
-				unitTest.Fatalf("Player %v was found but had name %v.", testCase.arguments.playerName, internalPlayer.Name)
+			if testCase.arguments.playerName != internalPlayer.Name() {
+				unitTest.Fatalf("Player %v was found but had name %v.", testCase.arguments.playerName, internalPlayer.Name())
 			}
 
-			if testCase.arguments.chatColor != internalPlayer.Color {
+			if testCase.arguments.chatColor != internalPlayer.Color() {
 				if testCase.arguments.chatColor != "" {
 					unitTest.Fatalf(
 						"Player %v was found but had color %v instead of expected %v.",
 						testCase.arguments.playerName,
 						testCase.arguments.chatColor,
-						internalPlayer.Color)
+						internalPlayer.Color())
 				}
 
 				// Otherwise we check that the player was assigned a valid color.
 				isValidColor := false
 				availableColors := chat.AvailableColors()
 				for _, availableColor := range availableColors {
-					if availableColor == internalPlayer.Color {
+					if availableColor == internalPlayer.Color() {
 						isValidColor = true
 						break
 					}
@@ -366,7 +366,7 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 					unitTest.Fatalf(
 						"Player %v was found but had color %v which is not in list of allowed colors %v.",
 						testCase.arguments.playerName,
-						internalPlayer.Color,
+						internalPlayer.Color(),
 						availableColors)
 				}
 			}

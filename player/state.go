@@ -13,8 +13,14 @@ type State interface {
 	Color() string
 
 	UpdateNonEmptyStrings(updaterReference backendjson.PlayerState)
+}
 
-	ForBackend() backendjson.PlayerState
+// ForBackend writes the relevant parts of the state into the JSON object for the front-end.
+func ForBackend(state State) backendjson.PlayerState {
+	return backendjson.PlayerState{
+		Name:  state.Name(),
+		Color: state.Color(),
+	}
 }
 
 // OriginalState encapsulates all the state that the back-end needs to know about a player.
@@ -58,12 +64,4 @@ func (state *OriginalState) UpdateNonEmptyStrings(updaterReference backendjson.P
 	}
 
 	state.mutualExclusion.Unlock()
-}
-
-// ForBackend writes the relevant parts of the state into the JSON object for the front-end.
-func (state *OriginalState) ForBackend() backendjson.PlayerState {
-	return backendjson.PlayerState{
-		Name:  state.Name(),
-		Color: state.Color(),
-	}
 }

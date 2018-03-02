@@ -91,7 +91,7 @@ func defaultPlayers() map[string]*OriginalState {
 func (handler *GetAndPostHandler) writeRegisteredPlayers() (interface{}, int) {
 	playerList := make([]backendjson.PlayerState, 0, len(handler.registeredPlayers))
 	for _, registeredPlayer := range handler.registeredPlayers {
-		playerList = append(playerList, registeredPlayer.ForBackend())
+		playerList = append(playerList, ForBackend(registeredPlayer))
 	}
 
 	return backendjson.PlayerStateList{Players: playerList}, http.StatusOK

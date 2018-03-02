@@ -34,16 +34,16 @@ func TestState_UpdateNonEmptyStrings(unitTest *testing.T) {
 	for _, testCase := range testCases {
 		unitTest.Run(testCase.name, func(t *testing.T) {
 			testCase.state.UpdateNonEmptyStrings(testCase.arguments.updaterReference)
-			if testCase.state.Color != testCase.arguments.updaterReference.Color {
-				unitTest.Fatalf("%v: color = %v, want %v", testCase.name, testCase.state.Color, testCase.arguments.updaterReference.Color)
+			if testCase.state.Color() != testCase.arguments.updaterReference.Color {
+				unitTest.Fatalf("%v: color = %v, want %v", testCase.name, testCase.state.Color(), testCase.arguments.updaterReference.Color)
 			}
 		})
 	}
 }
 
-func TestState_ForBackend(unitTest *testing.T) {
+func Test_ForBackend(unitTest *testing.T) {
 	playerState := player.NewState("Player Name", "Chat Color")
-	actualState := playerState.ForBackend()
+	actualState := player.ForBackend(playerState)
 	expectedState := backendjson.PlayerState{Name: "Player Name", Color: "Chat Color"}
 
 	if actualState != expectedState {
