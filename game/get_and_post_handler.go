@@ -10,18 +10,18 @@ import (
 	"github.com/benoleary/ilutulestikud/player"
 )
 
-// Handler is a struct meant to encapsulate all the state co-ordinating all the games.
+// GetAndPostHandler is a struct meant to encapsulate all the state co-ordinating all the games.
 // It implements github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
-type Handler struct {
+type GetAndPostHandler struct {
 	playerHandler   *player.GetAndPostHandler
 	gameStates      map[string]*State
 	mutualExclusion sync.Mutex
 }
 
-// NewHandler constructs a Handler object with a pointer to the player.Handler which
+// NewGetAndPostHandler constructs a Handler object with a pointer to the player.GetAndPostHandler which
 // handles the players, returning a pointer to the newly-created object.
-func NewHandler(playerHandler *player.GetAndPostHandler) *Handler {
-	return &Handler{
+func NewGetAndPostHandler(playerHandler *player.GetAndPostHandler) *GetAndPostHandler {
+	return &GetAndPostHandler{
 		playerHandler:   playerHandler,
 		gameStates:      make(map[string]*State, 0),
 		mutualExclusion: sync.Mutex{},
@@ -30,7 +30,7 @@ func NewHandler(playerHandler *player.GetAndPostHandler) *Handler {
 
 // HandleGet parses an HTTP GET request and responds with the appropriate function.
 // This implements part of github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
-func (handler *Handler) HandleGet(relevantSegments []string) (interface{}, int) {
+func (handler *GetAndPostHandler) HandleGet(relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 1 {
 		return "Not enough segments in URI to determine what to do", http.StatusBadRequest
 	}
@@ -47,7 +47,7 @@ func (handler *Handler) HandleGet(relevantSegments []string) (interface{}, int) 
 
 // HandlePost parses an HTTP POST request and responds with the appropriate function.
 // This implements part of github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
-func (handler *Handler) HandlePost(httpBodyDecoder *json.Decoder, relevantSegments []string) (interface{}, int) {
+func (handler *GetAndPostHandler) HandlePost(httpBodyDecoder *json.Decoder, relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 1 {
 		return "Not enough segments in URI to determine what to do", http.StatusBadRequest
 	}
@@ -64,7 +64,7 @@ func (handler *Handler) HandlePost(httpBodyDecoder *json.Decoder, relevantSegmen
 
 // writeTurnSummariesForPlayer writes a JSON object into the HTTP response which has
 // the list of turn summary objects as its "TurnSummaries" attribute.
-func (handler *Handler) writeTurnSummariesForPlayer(relevantSegments []string) (interface{}, int) {
+func (handler *GetAndPostHandler) writeTurnSummariesForPlayer(relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 1 {
 		return "Not enough segments in URI to determine player name", http.StatusBadRequest
 	}
@@ -114,7 +114,7 @@ func (handler *Handler) writeTurnSummariesForPlayer(relevantSegments []string) (
 }
 
 // handleNewGame adds a new game to the map of game state objects.
-func (handler *Handler) handleNewGame(httpBodyDecoder *json.Decoder, relevantSegments []string) (interface{}, int) {
+func (handler *GetAndPostHandler) handleNewGame(httpBodyDecoder *json.Decoder, relevantSegments []string) (interface{}, int) {
 	var newGame backendjson.GameDefinition
 
 	parsingError := httpBodyDecoder.Decode(&newGame)
@@ -140,7 +140,7 @@ func (handler *Handler) handleNewGame(httpBodyDecoder *json.Decoder, relevantSeg
 
 // writeGameForPlayer writes a JSON representation of the current state of the game
 // with the given name for the player with the given name.
-func (handler *Handler) writeGameForPlayer(relevantSegments []string) (interface{}, int) {
+func (handler *GetAndPostHandler) writeGameForPlayer(relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 2 {
 		return "Not enough segments in URI to determine game name and player name", http.StatusBadRequest
 	}
@@ -162,7 +162,7 @@ func (handler *Handler) writeGameForPlayer(relevantSegments []string) (interface
 
 // handleNewChatMessage adds the given chat message to the relevant game state,
 // as coming from the given player.
-func (handler *Handler) handleNewChatMessage(httpBodyDecoder *json.Decoder, relevantSegments []string) (interface{}, int) {
+func (handler *GetAndPostHandler) handleNewChatMessage(httpBodyDecoder *json.Decoder, relevantSegments []string) (interface{}, int) {
 	var chatMessage backendjson.PlayerChatMessage
 
 	parsingError := httpBodyDecoder.Decode(&chatMessage)

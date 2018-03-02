@@ -24,9 +24,10 @@ type State struct {
 
 // NewWithDefaultHandlers creates a new State object and returns a pointer to it, taking care to generate
 // handlers for the player and game segments consistently.
+// If we move to using a database, we need to re-think this method and the unit test coverage.
 func NewWithDefaultHandlers(accessControlAllowedOrigin string) *State {
 	playerHandler := player.NewGetAndPostHandler()
-	return NewWithExplicitHandlers(accessControlAllowedOrigin, playerHandler, game.NewHandler(playerHandler))
+	return NewWithExplicitHandlers(accessControlAllowedOrigin, playerHandler, game.NewGetAndPostHandler(playerHandler))
 }
 
 // NewWithExplicitHandlers creates a new State object and returns a pointer to it, assuming that the
