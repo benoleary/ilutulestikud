@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/benoleary/ilutulestikud/backendjson"
-	"github.com/benoleary/ilutulestikud/game/chat"
+	"github.com/benoleary/ilutulestikud/chat"
 )
 
 // GetAndPostHandler is a struct meant to encapsulate all the state co-ordinating all the players.

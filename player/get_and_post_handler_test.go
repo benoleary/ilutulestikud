@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/benoleary/ilutulestikud/backendjson"
-	"github.com/benoleary/ilutulestikud/game/chat"
+	"github.com/benoleary/ilutulestikud/chat"
 
 	"github.com/benoleary/ilutulestikud/player"
 )
