@@ -14,14 +14,14 @@ import (
 
 // This just tests that the factory method does not cause any panics, and returns a non-nil pointer.
 func TestNewHandler(unitTest *testing.T) {
-	actualState := player.NewHandler()
+	actualState := player.NewGetAndPostHandler()
 	if actualState == nil {
 		unitTest.Fatalf("New handler was nil.")
 	}
 }
 
 func TestGetNoSegmentBadRequest(unitTest *testing.T) {
-	playerHandler := player.NewHandler()
+	playerHandler := player.NewGetAndPostHandler()
 	_, actualCode := playerHandler.HandleGet(make([]string, 0))
 
 	if actualCode != http.StatusBadRequest {
@@ -33,7 +33,7 @@ func TestGetNoSegmentBadRequest(unitTest *testing.T) {
 }
 
 func TestGetInvalidSegmentNotFound(unitTest *testing.T) {
-	playerHandler := player.NewHandler()
+	playerHandler := player.NewGetAndPostHandler()
 	_, actualCode := playerHandler.HandleGet([]string{"invalid-segment"})
 
 	if actualCode != http.StatusNotFound {
@@ -50,7 +50,7 @@ func TestPostNoSegmentBadRequest(unitTest *testing.T) {
 		Name:  "Player Name",
 		Color: "Chat color",
 	})
-	playerHandler := player.NewHandler()
+	playerHandler := player.NewGetAndPostHandler()
 
 	_, actualCode := playerHandler.HandlePost(json.NewDecoder(bytesBuffer), make([]string, 0))
 
@@ -68,7 +68,7 @@ func TestPostInvalidSegmentNotFound(unitTest *testing.T) {
 		Name:  "Player Name",
 		Color: "Chat color",
 	})
-	playerHandler := player.NewHandler()
+	playerHandler := player.NewGetAndPostHandler()
 
 	_, actualCode := playerHandler.HandlePost(json.NewDecoder(bytesBuffer), []string{"invalid-segment"})
 
@@ -81,7 +81,7 @@ func TestPostInvalidSegmentNotFound(unitTest *testing.T) {
 }
 
 func TestDefaultPlayerListNotEmpty(unitTest *testing.T) {
-	playerHandler := player.NewHandler()
+	playerHandler := player.NewGetAndPostHandler()
 	actualInterface, actualCode := playerHandler.HandleGet([]string{"registered-players"})
 
 	if actualCode != http.StatusOK {
@@ -113,7 +113,7 @@ func TestDefaultPlayerListNotEmpty(unitTest *testing.T) {
 }
 
 func TestAvailableColorListNotEmpty(unitTest *testing.T) {
-	playerHandler := player.NewHandler()
+	playerHandler := player.NewGetAndPostHandler()
 	actualInterface, actualCode := playerHandler.HandleGet([]string{"available-colors"})
 
 	if actualCode != http.StatusOK {
@@ -155,13 +155,13 @@ func TestRejectInvalidNewPlayer(unitTest *testing.T) {
 
 	testCases := []struct {
 		name      string
-		handler   *player.Handler
+		handler   *player.GetAndPostHandler
 		arguments testArguments
 		expected  expectedReturns
 	}{
 		{
 			name:    "Nil object",
-			handler: player.NewHandler(),
+			handler: player.NewGetAndPostHandler(),
 			arguments: testArguments{
 				bodyObject: nil,
 			},
@@ -171,7 +171,7 @@ func TestRejectInvalidNewPlayer(unitTest *testing.T) {
 		},
 		{
 			name:    "Wrong object",
-			handler: player.NewHandler(),
+			handler: player.NewGetAndPostHandler(),
 			arguments: testArguments{
 				bodyObject: &backendjson.ChatColorList{
 					Colors: []string{"Player 1", "Player 2"},
@@ -214,7 +214,7 @@ func TestRejectNewPlayerWithExistingName(unitTest *testing.T) {
 	firstBytesBuffer := new(bytes.Buffer)
 	json.NewEncoder(firstBytesBuffer).Encode(firstBodyObject)
 
-	playerHandler := player.NewHandler()
+	playerHandler := player.NewGetAndPostHandler()
 	_, validRegistrationCode :=
 		playerHandler.HandlePost(json.NewDecoder(firstBytesBuffer), []string{"new-player"})
 
@@ -261,13 +261,13 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 
 	testCases := []struct {
 		name      string
-		handler   *player.Handler
+		handler   *player.GetAndPostHandler
 		arguments testArguments
 		expected  expectedReturns
 	}{
 		{
 			name:    "Ascii only, with color",
-			handler: player.NewHandler(),
+			handler: player.NewGetAndPostHandler(),
 			arguments: testArguments{
 				playerName: "Easy Test Name",
 				chatColor:  "Plain color",
@@ -279,7 +279,7 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 		},
 		{
 			name:    "Ascii only, no color",
-			handler: player.NewHandler(),
+			handler: player.NewGetAndPostHandler(),
 			arguments: testArguments{
 				playerName: "Easy Test Name",
 			},
@@ -290,7 +290,7 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 		},
 		{
 			name:    "Punctuation and non-standard characters",
-			handler: player.NewHandler(),
+			handler: player.NewGetAndPostHandler(),
 			arguments: testArguments{
 				playerName: "?ß@äô#\"'\"",
 				chatColor:  "\\\\\\",

@@ -13,14 +13,14 @@ import (
 // Handler is a struct meant to encapsulate all the state co-ordinating all the games.
 // It implements github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
 type Handler struct {
-	playerHandler   *player.Handler
+	playerHandler   *player.GetAndPostHandler
 	gameStates      map[string]*State
 	mutualExclusion sync.Mutex
 }
 
 // NewHandler constructs a Handler object with a pointer to the player.Handler which
 // handles the players, returning a pointer to the newly-created object.
-func NewHandler(playerHandler *player.Handler) *Handler {
+func NewHandler(playerHandler *player.GetAndPostHandler) *Handler {
 	return &Handler{
 		playerHandler:   playerHandler,
 		gameStates:      make(map[string]*State, 0),

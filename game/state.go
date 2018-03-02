@@ -19,7 +19,7 @@ type State struct {
 
 // NewState constructs a State object with a non-nil, non-empty slice of player.State objects,
 // returning a pointer to the newly-created object.
-func NewState(gameName string, playerHandler *player.Handler, playerNames []string) *State {
+func NewState(gameName string, playerHandler *player.GetAndPostHandler, playerNames []string) *State {
 	numberOfPlayers := len(playerNames)
 	playerStates := make([]*player.State, numberOfPlayers)
 	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
