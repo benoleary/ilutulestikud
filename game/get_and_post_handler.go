@@ -98,7 +98,7 @@ func (handler *GetAndPostHandler) writeTurnSummariesForPlayer(relevantSegments [
 			// E.g. turn 3, 5 players: playerNamesInTurnOrder will start with
 			// gameParticipants[2], then [3], then [4], then [0], then [1].
 			playerNamesInTurnOrder[playerIndex] =
-				gameParticipants[(playerIndex+gameTurn-1)%numberOfParticipants].Name
+				gameParticipants[(playerIndex+gameTurn-1)%numberOfParticipants].Name()
 		}
 
 		turnSummaries[gameIndex] = backendjson.TurnSummary{

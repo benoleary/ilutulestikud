@@ -22,7 +22,7 @@ func TestState_UpdateNonEmptyStrings(unitTest *testing.T) {
 
 	testCases := []struct {
 		name      string
-		state     *player.State
+		state     *player.OriginalState
 		arguments testArguments
 	}{
 		{

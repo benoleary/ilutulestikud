@@ -12,7 +12,7 @@ import (
 type State struct {
 	gameName             string
 	creationTime         time.Time
-	participatingPlayers []*player.State
+	participatingPlayers []*player.OriginalState
 	turnNumber           int
 	chatLog              *chat.Log
 }
@@ -21,7 +21,7 @@ type State struct {
 // returning a pointer to the newly-created object.
 func NewState(gameName string, playerHandler *player.GetAndPostHandler, playerNames []string) *State {
 	numberOfPlayers := len(playerNames)
-	playerStates := make([]*player.State, numberOfPlayers)
+	playerStates := make([]*player.OriginalState, numberOfPlayers)
 	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
 		playerStates[playerIndex], _ = playerHandler.GetPlayerByName(playerNames[playerIndex])
 	}
@@ -39,7 +39,7 @@ func NewState(gameName string, playerHandler *player.GetAndPostHandler, playerNa
 // the name of any of the game's participating players.
 func (state *State) HasPlayerAsParticipant(playerName string) bool {
 	for _, participatingPlayer := range state.participatingPlayers {
-		if participatingPlayer.Name == playerName {
+		if participatingPlayer.Name() == playerName {
 			return true
 		}
 	}
@@ -69,8 +69,8 @@ func (statePointerArray byCreationTime) Less(firstIndex int, secondIndex int) bo
 
 // RecordPlayerChatMessage adds the given new message to the end of the chat log
 // and removes the oldest message from the top.
-func (state *State) RecordPlayerChatMessage(chattingPlayer *player.State, chatMessage string) {
-	state.chatLog.AppendNewMessage(chattingPlayer.Name, chattingPlayer.Color, chatMessage)
+func (state *State) RecordPlayerChatMessage(chattingPlayer *player.OriginalState, chatMessage string) {
+	state.chatLog.AppendNewMessage(chattingPlayer.Name(), chattingPlayer.Color(), chatMessage)
 }
 
 // ForPlayer creates a PlayerKnowledge object encapsulating the knowledge of the

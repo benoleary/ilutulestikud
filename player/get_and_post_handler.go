@@ -12,7 +12,7 @@ import (
 // GetAndPostHandler is a struct meant to encapsulate all the state co-ordinating all the players.
 // It implements github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
 type GetAndPostHandler struct {
-	registeredPlayers map[string]*State
+	registeredPlayers map[string]*OriginalState
 	mutualExclusion   sync.Mutex
 }
 
@@ -62,18 +62,18 @@ func (handler *GetAndPostHandler) HandlePost(httpBodyDecoder *json.Decoder, rele
 
 // GetPlayerByName returns a pointer to the player state which has the given name, with
 // a bool that is true if the player was found, as a map normally returns.
-func (handler *GetAndPostHandler) GetPlayerByName(playerName string) (*State, bool) {
+func (handler *GetAndPostHandler) GetPlayerByName(playerName string) (*OriginalState, bool) {
 	foundPlayer, isFound := handler.registeredPlayers[playerName]
 	return foundPlayer, isFound
 }
 
 // defaultPlayers returns a map of players created from default player names with colors
 // according to the available chat colors, where the key is the player name.
-func defaultPlayers() map[string]*State {
+func defaultPlayers() map[string]*OriginalState {
 	initialNames := []string{"Mimi", "Aet", "Martin", "Markus", "Liisbet", "Madli", "Ben"}
 	numberOfPlayers := len(initialNames)
 
-	playerMap := make(map[string]*State, numberOfPlayers)
+	playerMap := make(map[string]*OriginalState, numberOfPlayers)
 
 	for playerCount := 0; playerCount < numberOfPlayers; playerCount++ {
 		playerName := initialNames[playerCount]
