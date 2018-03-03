@@ -1,6 +1,6 @@
 package backendjson
 
-// Types accepted by game.Handler:
+// Types accepted by game.GetAndPostHandler:
 
 // GameDefinition encapsulates the necessary information to create a new game.
 type GameDefinition struct {

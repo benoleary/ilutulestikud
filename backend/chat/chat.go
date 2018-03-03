@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/benoleary/ilutulestikud/backendjson"
+	"github.com/benoleary/ilutulestikud/backend/backendjson"
 )
 
 // logSize gives the size of the list of the last chat messages.

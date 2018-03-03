@@ -1,6 +1,6 @@
 package backendjson
 
-// Types emitted by player.Handler:
+// Types emitted by player.GetAndPostHandler:
 
 // PlayerStateList ensures that the PlayerState list is encapsulated within a single JSON object.
 type PlayerStateList struct {
@@ -12,7 +12,7 @@ type ChatColorList struct {
 	Colors []string
 }
 
-// Types emitted by game.Handler:
+// Types emitted by game.GetAndPostHandler:
 
 // TurnSummary contains the information to determine what games involve a player and whose turn it is.
 // All the fields need to be public so that the JSON encoder can see them to serialize them.

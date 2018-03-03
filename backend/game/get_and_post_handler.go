@@ -6,8 +6,8 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/benoleary/ilutulestikud/backendjson"
-	"github.com/benoleary/ilutulestikud/player"
+	"github.com/benoleary/ilutulestikud/backend/backendjson"
+	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
 // GetAndPostHandler is a struct meant to encapsulate all the state co-ordinating all the games.

@@ -3,8 +3,8 @@ package player_test
 import (
 	"testing"
 
-	"github.com/benoleary/ilutulestikud/backendjson"
-	"github.com/benoleary/ilutulestikud/player"
+	"github.com/benoleary/ilutulestikud/backend/backendjson"
+	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
 // This just tests that the factory method does not cause any panics, and returns a non-nil pointer.

@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/benoleary/ilutulestikud/server"
+	"github.com/benoleary/ilutulestikud/backend/server"
 )
 
 // This just tests that the factory method does not cause any panics, and returns a non-nil pointer.

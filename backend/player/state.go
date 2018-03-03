@@ -3,7 +3,7 @@ package player
 import (
 	"sync"
 
-	"github.com/benoleary/ilutulestikud/backendjson"
+	"github.com/benoleary/ilutulestikud/backend/backendjson"
 )
 
 // State defines the interface for structs which should encapsulate the state of a player.

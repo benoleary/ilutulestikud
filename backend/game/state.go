@@ -3,9 +3,9 @@ package game
 import (
 	"time"
 
-	"github.com/benoleary/ilutulestikud/backendjson"
-	"github.com/benoleary/ilutulestikud/chat"
-	"github.com/benoleary/ilutulestikud/player"
+	"github.com/benoleary/ilutulestikud/backend/backendjson"
+	"github.com/benoleary/ilutulestikud/backend/chat"
+	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
 // State is a struct meant to encapsulate all the state required for a single game to function.

@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/benoleary/ilutulestikud/game"
-	"github.com/benoleary/ilutulestikud/player"
+	"github.com/benoleary/ilutulestikud/backend/game"
+	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
 type httpGetAndPostHandler interface {
