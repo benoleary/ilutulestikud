@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	"github.com/benoleary/ilutulestikud/server"
+	"github.com/benoleary/ilutulestikud/backend/server"
 )
 
 func main() {

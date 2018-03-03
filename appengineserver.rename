@@ -1,6 +1,6 @@
 package main
 import (
-	"github.com/benoleary/ilutulestikud/server"
+	"github.com/benoleary/ilutulestikud/backend/server"
 	"google.golang.org/appengine"
 	"net/http"
 )

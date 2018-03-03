@@ -1,0 +1,21 @@
+mode: set
+github.com/benoleary/ilutulestikud/server/server.go:27.71,30.2 2 1
+github.com/benoleary/ilutulestikud/server/server.go:37.44,43.2 1 1
+github.com/benoleary/ilutulestikud/server/server.go:47.102,49.44 1 1
+github.com/benoleary/ilutulestikud/server/server.go:57.2,57.63 1 1
+github.com/benoleary/ilutulestikud/server/server.go:62.2,67.25 3 1
+github.com/benoleary/ilutulestikud/server/server.go:77.2,80.28 3 1
+github.com/benoleary/ilutulestikud/server/server.go:100.2,101.59 2 1
+github.com/benoleary/ilutulestikud/server/server.go:49.44,55.3 3 1
+github.com/benoleary/ilutulestikud/server/server.go:57.63,60.3 2 0
+github.com/benoleary/ilutulestikud/server/server.go:68.16,69.39 1 1
+github.com/benoleary/ilutulestikud/server/server.go:70.14,71.37 1 1
+github.com/benoleary/ilutulestikud/server/server.go:72.10,74.9 2 1
+github.com/benoleary/ilutulestikud/server/server.go:81.26,82.9 1 0
+github.com/benoleary/ilutulestikud/server/server.go:83.22,84.73 1 1
+github.com/benoleary/ilutulestikud/server/server.go:85.23,86.3 1 1
+github.com/benoleary/ilutulestikud/server/server.go:95.10,96.103 1 0
+github.com/benoleary/ilutulestikud/server/server.go:86.3,87.31 1 1
+github.com/benoleary/ilutulestikud/server/server.go:92.4,93.83 1 1
+github.com/benoleary/ilutulestikud/server/server.go:87.31,90.5 2 0
+github.com/benoleary/ilutulestikud/server/server.go:105.60,108.2 1 1
