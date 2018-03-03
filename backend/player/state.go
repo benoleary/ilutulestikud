@@ -15,7 +15,7 @@ type State interface {
 	UpdateNonEmptyStrings(updaterReference backendjson.PlayerState)
 }
 
-// ForBackend writes the relevant parts of the state into the JSON object for the front-end.
+// ForBackend writes the relevant parts of the state into the JSON object for the frontend.
 func ForBackend(state State) backendjson.PlayerState {
 	return backendjson.PlayerState{
 		Name:  state.Name(),
@@ -23,7 +23,13 @@ func ForBackend(state State) backendjson.PlayerState {
 	}
 }
 
-// OriginalState encapsulates all the state that the back-end needs to know about a player.
+// Factory defines the interface for structs which should be able to create objects
+// implementing the State interface out of the de-serialized JSON from the frontend.
+type Factory interface {
+	New(backendjson.PlayerState) State
+}
+
+// OriginalState encapsulates all the state that the backend needs to know about a player.
 type OriginalState struct {
 	name            string
 	color           string
