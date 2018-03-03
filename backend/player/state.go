@@ -26,48 +26,53 @@ func ForBackend(state State) endpoint.PlayerState {
 // Factory defines the interface for structs which should be able to create objects
 // implementing the State interface out of the de-serialized JSON from the frontend.
 type Factory interface {
-	New(endpoint.PlayerState) State
+	Create(endpoint.PlayerState) State
 }
 
-// OriginalState encapsulates all the state that the backend needs to know about a player.
-type OriginalState struct {
+// threadsafeState encapsulates all the state that the backend needs to know about a player,
+// using a mutex to ensure that updates are thread-safe.
+type threadsafeState struct {
 	name            string
 	color           string
 	mutualExclusion sync.Mutex
 }
 
-// NewState creates a new State object with name and color from the given arguments
+// ThreadsafeFactory creates threadsafeState objects as State objects.
+type ThreadsafeFactory struct {
+}
+
+// Create creates a new threadsafeState object with name and color from the given arguments
 // in that order, and returns a pointer to it.
-func NewState(nameForNewPlayer string, colorForNewPlayer string) *OriginalState {
-	return &OriginalState{
-		name:            nameForNewPlayer,
-		color:           colorForNewPlayer,
+func (threadsafeFactory *ThreadsafeFactory) Create(endpointPlayer endpoint.PlayerState) State {
+	return &threadsafeState{
+		name:            endpointPlayer.Name,
+		color:           endpointPlayer.Color,
 		mutualExclusion: sync.Mutex{},
 	}
 }
 
 // Name returns the private name field.
-func (state *OriginalState) Name() string {
-	return state.name
+func (playerState *threadsafeState) Name() string {
+	return playerState.name
 }
 
 // Color returns the private color field.
-func (state *OriginalState) Color() string {
-	return state.color
+func (playerState *threadsafeState) Color() string {
+	return playerState.color
 }
 
 // UpdateNonEmptyStrings over-writes all non-name string attributes of this
 // state with those from updaterReference unless the string in updaterReference
 // is empty.
-func (state *OriginalState) UpdateNonEmptyStrings(updaterReference endpoint.PlayerState) {
+func (playerState *threadsafeState) UpdateNonEmptyStrings(updaterReference endpoint.PlayerState) {
 	// It would be more efficient to only lock if we go into an if statement,
 	// but then multiple if statements would be less efficient, and there would
 	// be a mutex in each if statement.
-	state.mutualExclusion.Lock()
+	playerState.mutualExclusion.Lock()
 
 	if updaterReference.Color != "" {
-		state.color = updaterReference.Color
+		playerState.color = updaterReference.Color
 	}
 
-	state.mutualExclusion.Unlock()
+	playerState.mutualExclusion.Unlock()
 }

@@ -12,7 +12,7 @@ import (
 type State struct {
 	gameName             string
 	creationTime         time.Time
-	participatingPlayers []*player.OriginalState
+	participatingPlayers []player.State
 	turnNumber           int
 	chatLog              *chat.Log
 }
@@ -21,7 +21,7 @@ type State struct {
 // returning a pointer to the newly-created object.
 func NewState(gameName string, playerHandler *player.GetAndPostHandler, playerNames []string) *State {
 	numberOfPlayers := len(playerNames)
-	playerStates := make([]*player.OriginalState, numberOfPlayers)
+	playerStates := make([]player.State, numberOfPlayers)
 	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
 		playerStates[playerIndex], _ = playerHandler.GetPlayerByName(playerNames[playerIndex])
 	}
@@ -69,7 +69,7 @@ func (statePointerArray byCreationTime) Less(firstIndex int, secondIndex int) bo
 
 // RecordPlayerChatMessage adds the given new message to the end of the chat log
 // and removes the oldest message from the top.
-func (state *State) RecordPlayerChatMessage(chattingPlayer *player.OriginalState, chatMessage string) {
+func (state *State) RecordPlayerChatMessage(chattingPlayer player.State, chatMessage string) {
 	state.chatLog.AppendNewMessage(chattingPlayer.Name(), chattingPlayer.Color(), chatMessage)
 }
 
