@@ -4,4 +4,4 @@ angular/dist
 angular/node_modules
 .vscode
 angular/package-lock.json
-*/coverage.out
+*/*/coverage.out
