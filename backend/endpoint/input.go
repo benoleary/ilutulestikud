@@ -1,4 +1,4 @@
-package backendjson
+package endpoint
 
 // Types accepted by game.GetAndPostHandler:
 

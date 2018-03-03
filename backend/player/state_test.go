@@ -3,7 +3,7 @@ package player_test
 import (
 	"testing"
 
-	"github.com/benoleary/ilutulestikud/backend/backendjson"
+	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
@@ -17,7 +17,7 @@ func TestNewState(unitTest *testing.T) {
 
 func TestState_UpdateNonEmptyStrings(unitTest *testing.T) {
 	type testArguments struct {
-		updaterReference backendjson.PlayerState
+		updaterReference endpoint.PlayerState
 	}
 
 	testCases := []struct {
@@ -28,7 +28,7 @@ func TestState_UpdateNonEmptyStrings(unitTest *testing.T) {
 		{
 			name:      "OverwriteColor",
 			state:     player.NewState("Player Name", "Original color"),
-			arguments: testArguments{updaterReference: backendjson.PlayerState{Color: "Over-written color"}},
+			arguments: testArguments{updaterReference: endpoint.PlayerState{Color: "Over-written color"}},
 		},
 	}
 	for _, testCase := range testCases {
@@ -44,7 +44,7 @@ func TestState_UpdateNonEmptyStrings(unitTest *testing.T) {
 func Test_ForBackend(unitTest *testing.T) {
 	playerState := player.NewState("Player Name", "Chat Color")
 	actualState := player.ForBackend(playerState)
-	expectedState := backendjson.PlayerState{Name: "Player Name", Color: "Chat Color"}
+	expectedState := endpoint.PlayerState{Name: "Player Name", Color: "Chat Color"}
 
 	if actualState != expectedState {
 		unitTest.Fatalf("player.State.ForBackend(): actual %v; expected %v", actualState, expectedState)

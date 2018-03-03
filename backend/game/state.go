@@ -3,8 +3,8 @@ package game
 import (
 	"time"
 
-	"github.com/benoleary/ilutulestikud/backend/backendjson"
 	"github.com/benoleary/ilutulestikud/backend/chat"
+	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
@@ -75,6 +75,6 @@ func (state *State) RecordPlayerChatMessage(chattingPlayer *player.OriginalState
 
 // ForPlayer creates a PlayerKnowledge object encapsulating the knowledge of the
 // given player for the receiver game.
-func (state *State) ForPlayer(playerName string) backendjson.PlayerKnowledge {
-	return backendjson.PlayerKnowledge{ChatLog: state.chatLog.ForFrontend()}
+func (state *State) ForPlayer(playerName string) endpoint.PlayerKnowledge {
+	return endpoint.PlayerKnowledge{ChatLog: state.chatLog.ForFrontend()}
 }

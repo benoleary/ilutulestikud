@@ -3,7 +3,7 @@ package player
 import (
 	"sync"
 
-	"github.com/benoleary/ilutulestikud/backend/backendjson"
+	"github.com/benoleary/ilutulestikud/backend/endpoint"
 )
 
 // State defines the interface for structs which should encapsulate the state of a player.
@@ -12,12 +12,12 @@ type State interface {
 
 	Color() string
 
-	UpdateNonEmptyStrings(updaterReference backendjson.PlayerState)
+	UpdateNonEmptyStrings(updaterReference endpoint.PlayerState)
 }
 
 // ForBackend writes the relevant parts of the state into the JSON object for the frontend.
-func ForBackend(state State) backendjson.PlayerState {
-	return backendjson.PlayerState{
+func ForBackend(state State) endpoint.PlayerState {
+	return endpoint.PlayerState{
 		Name:  state.Name(),
 		Color: state.Color(),
 	}
@@ -26,7 +26,7 @@ func ForBackend(state State) backendjson.PlayerState {
 // Factory defines the interface for structs which should be able to create objects
 // implementing the State interface out of the de-serialized JSON from the frontend.
 type Factory interface {
-	New(backendjson.PlayerState) State
+	New(endpoint.PlayerState) State
 }
 
 // OriginalState encapsulates all the state that the backend needs to know about a player.
@@ -59,7 +59,7 @@ func (state *OriginalState) Color() string {
 // UpdateNonEmptyStrings over-writes all non-name string attributes of this
 // state with those from updaterReference unless the string in updaterReference
 // is empty.
-func (state *OriginalState) UpdateNonEmptyStrings(updaterReference backendjson.PlayerState) {
+func (state *OriginalState) UpdateNonEmptyStrings(updaterReference endpoint.PlayerState) {
 	// It would be more efficient to only lock if we go into an if statement,
 	// but then multiple if statements would be less efficient, and there would
 	// be a mutex in each if statement.

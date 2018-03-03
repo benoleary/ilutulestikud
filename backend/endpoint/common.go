@@ -1,4 +1,4 @@
-package backendjson
+package endpoint
 
 // Types emitted and accepted by player.GetAndPostHandler:
 

@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/benoleary/ilutulestikud/backend/backendjson"
 	"github.com/benoleary/ilutulestikud/backend/chat"
+	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
@@ -45,7 +45,7 @@ func TestGetInvalidSegmentNotFound(unitTest *testing.T) {
 
 func TestPostNoSegmentBadRequest(unitTest *testing.T) {
 	bytesBuffer := new(bytes.Buffer)
-	json.NewEncoder(bytesBuffer).Encode(backendjson.PlayerState{
+	json.NewEncoder(bytesBuffer).Encode(endpoint.PlayerState{
 		Name:  "Player Name",
 		Color: "Chat color",
 	})
@@ -63,7 +63,7 @@ func TestPostNoSegmentBadRequest(unitTest *testing.T) {
 
 func TestPostInvalidSegmentNotFound(unitTest *testing.T) {
 	bytesBuffer := new(bytes.Buffer)
-	json.NewEncoder(bytesBuffer).Encode(backendjson.PlayerState{
+	json.NewEncoder(bytesBuffer).Encode(endpoint.PlayerState{
 		Name:  "Player Name",
 		Color: "Chat color",
 	})
@@ -90,11 +90,11 @@ func TestDefaultPlayerListNotEmpty(unitTest *testing.T) {
 			actualCode)
 	}
 
-	actualPlayerStateList, isTypeCorrect := actualInterface.(backendjson.PlayerStateList)
+	actualPlayerStateList, isTypeCorrect := actualInterface.(endpoint.PlayerStateList)
 
 	if !isTypeCorrect {
 		unitTest.Fatalf(
-			"GET registered-players did not return expected backendjson.PlayerStateList, instead was %v.",
+			"GET registered-players did not return expected endpoint.PlayerStateList, instead was %v.",
 			actualInterface)
 	}
 
@@ -122,11 +122,11 @@ func TestAvailableColorListNotEmpty(unitTest *testing.T) {
 			actualCode)
 	}
 
-	actualAvailableColorList, isTypeCorrect := actualInterface.(backendjson.ChatColorList)
+	actualAvailableColorList, isTypeCorrect := actualInterface.(endpoint.ChatColorList)
 
 	if !isTypeCorrect {
 		unitTest.Fatalf(
-			"GET available-colors did not return expected backendjson.ChatColorList, instead was %v.",
+			"GET available-colors did not return expected endpoint.ChatColorList, instead was %v.",
 			actualInterface)
 	}
 
@@ -172,7 +172,7 @@ func TestRejectInvalidNewPlayer(unitTest *testing.T) {
 			name:    "Wrong object",
 			handler: player.NewGetAndPostHandler(),
 			arguments: testArguments{
-				bodyObject: &backendjson.ChatColorList{
+				bodyObject: &endpoint.ChatColorList{
 					Colors: []string{"Player 1", "Player 2"},
 				},
 			},
@@ -205,7 +205,7 @@ func TestRejectInvalidNewPlayer(unitTest *testing.T) {
 
 func TestRejectNewPlayerWithExistingName(unitTest *testing.T) {
 	playerName := "A. Player Name"
-	firstBodyObject := backendjson.PlayerState{
+	firstBodyObject := endpoint.PlayerState{
 		Name:  playerName,
 		Color: "First color",
 	}
@@ -225,7 +225,7 @@ func TestRejectNewPlayerWithExistingName(unitTest *testing.T) {
 			validRegistrationCode)
 	}
 
-	secondBodyObject := backendjson.PlayerState{
+	secondBodyObject := endpoint.PlayerState{
 		Name:  playerName,
 		Color: "Second color",
 	}
@@ -304,7 +304,7 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 	for _, testCase := range testCases {
 		unitTest.Run(testCase.name, func(unitTest *testing.T) {
 			bytesBuffer := new(bytes.Buffer)
-			json.NewEncoder(bytesBuffer).Encode(backendjson.PlayerState{
+			json.NewEncoder(bytesBuffer).Encode(endpoint.PlayerState{
 				Name:  testCase.arguments.playerName,
 				Color: testCase.arguments.chatColor,
 			})
@@ -317,10 +317,10 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 				unitTest.Fatalf("POST new-player did not return expected HTTP code %v, instead was %v.", http.StatusOK, postCode)
 			}
 
-			postPlayerStateList, isPostTypeCorrect := postInterface.(backendjson.PlayerStateList)
+			postPlayerStateList, isPostTypeCorrect := postInterface.(endpoint.PlayerStateList)
 
 			if !isPostTypeCorrect {
-				unitTest.Fatalf("POST new-player did not return expected backendjson.PlayerStateList, instead was %v.", postInterface)
+				unitTest.Fatalf("POST new-player did not return expected endpoint.PlayerStateList, instead was %v.", postInterface)
 			}
 
 			if postPlayerStateList.Players == nil {
@@ -378,10 +378,10 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 				unitTest.Fatalf("GET registered-players did not return expected HTTP code %v, instead was %v.", http.StatusOK, getCode)
 			}
 
-			getPlayerStateList, isGetTypeCorrect := getInterface.(backendjson.PlayerStateList)
+			getPlayerStateList, isGetTypeCorrect := getInterface.(endpoint.PlayerStateList)
 
 			if !isGetTypeCorrect {
-				unitTest.Fatalf("GET registered-players did not return expected backendjson.PlayerStateList, instead was %v.", postInterface)
+				unitTest.Fatalf("GET registered-players did not return expected endpoint.PlayerStateList, instead was %v.", postInterface)
 			}
 
 			if getPlayerStateList.Players == nil {

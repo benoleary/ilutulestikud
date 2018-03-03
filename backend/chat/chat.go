@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/benoleary/ilutulestikud/backend/backendjson"
+	"github.com/benoleary/ilutulestikud/backend/endpoint"
 )
 
 // logSize gives the size of the list of the last chat messages.
@@ -55,8 +55,8 @@ func NewLog() *Log {
 }
 
 // ForFrontend creates a JSON object to represent the Log for the front-end.
-func (log *Log) ForFrontend() []backendjson.ChatLogMessage {
-	messagesForFrontend := make([]backendjson.ChatLogMessage, logSize)
+func (log *Log) ForFrontend() []endpoint.ChatLogMessage {
+	messagesForFrontend := make([]endpoint.ChatLogMessage, logSize)
 	for messageIndex := 0; messageIndex < logSize; messageIndex++ {
 		// We take the relevant message indexed with the oldest message at 0, wrapping
 		// around if newer messages occupy earlier spots in the actual array.

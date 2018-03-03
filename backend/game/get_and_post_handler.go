@@ -6,7 +6,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/benoleary/ilutulestikud/backend/backendjson"
+	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
@@ -82,7 +82,7 @@ func (handler *GetAndPostHandler) writeTurnSummariesForPlayer(relevantSegments [
 
 	numberOfGamesWithPlayer := len(gameList)
 
-	turnSummaries := make([]backendjson.TurnSummary, numberOfGamesWithPlayer)
+	turnSummaries := make([]endpoint.TurnSummary, numberOfGamesWithPlayer)
 	for gameIndex := 0; gameIndex < numberOfGamesWithPlayer; gameIndex++ {
 		nameOfGame := gameList[gameIndex].gameName
 		gameTurn := gameList[gameIndex].turnNumber
@@ -101,7 +101,7 @@ func (handler *GetAndPostHandler) writeTurnSummariesForPlayer(relevantSegments [
 				gameParticipants[(playerIndex+gameTurn-1)%numberOfParticipants].Name()
 		}
 
-		turnSummaries[gameIndex] = backendjson.TurnSummary{
+		turnSummaries[gameIndex] = endpoint.TurnSummary{
 			GameName:                   nameOfGame,
 			CreationTimestampInSeconds: gameList[gameIndex].creationTime.Unix(),
 			TurnNumber:                 gameTurn,
@@ -110,12 +110,12 @@ func (handler *GetAndPostHandler) writeTurnSummariesForPlayer(relevantSegments [
 		}
 	}
 
-	return backendjson.TurnSummaryList{TurnSummaries: turnSummaries[:]}, http.StatusOK
+	return endpoint.TurnSummaryList{TurnSummaries: turnSummaries[:]}, http.StatusOK
 }
 
 // handleNewGame adds a new game to the map of game state objects.
 func (handler *GetAndPostHandler) handleNewGame(httpBodyDecoder *json.Decoder, relevantSegments []string) (interface{}, int) {
-	var newGame backendjson.GameDefinition
+	var newGame endpoint.GameDefinition
 
 	parsingError := httpBodyDecoder.Decode(&newGame)
 	if parsingError != nil {
@@ -163,7 +163,7 @@ func (handler *GetAndPostHandler) writeGameForPlayer(relevantSegments []string) 
 // handleNewChatMessage adds the given chat message to the relevant game state,
 // as coming from the given player.
 func (handler *GetAndPostHandler) handleNewChatMessage(httpBodyDecoder *json.Decoder, relevantSegments []string) (interface{}, int) {
-	var chatMessage backendjson.PlayerChatMessage
+	var chatMessage endpoint.PlayerChatMessage
 
 	parsingError := httpBodyDecoder.Decode(&chatMessage)
 	if parsingError != nil {
