@@ -12,7 +12,7 @@ type State interface {
 
 	Color() string
 
-	UpdateNonEmptyStrings(updaterReference endpoint.PlayerState)
+	UpdateFromPresentAttributes(updaterReference endpoint.PlayerState)
 }
 
 // ForBackend writes the relevant parts of the state into the JSON object for the frontend.
@@ -61,10 +61,10 @@ func (playerState *threadsafeState) Color() string {
 	return playerState.color
 }
 
-// UpdateNonEmptyStrings over-writes all non-name string attributes of this
+// UpdateFromPresentAttributes over-writes all non-name string attributes of this
 // state with those from updaterReference unless the string in updaterReference
 // is empty.
-func (playerState *threadsafeState) UpdateNonEmptyStrings(updaterReference endpoint.PlayerState) {
+func (playerState *threadsafeState) UpdateFromPresentAttributes(updaterReference endpoint.PlayerState) {
 	// It would be more efficient to only lock if we go into an if statement,
 	// but then multiple if statements would be less efficient, and there would
 	// be a mutex in each if statement.

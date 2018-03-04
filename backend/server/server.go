@@ -4,9 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
-
-	"github.com/benoleary/ilutulestikud/backend/game"
-	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
 type httpGetAndPostHandler interface {
@@ -22,17 +19,9 @@ type State struct {
 	gameHandler                httpGetAndPostHandler
 }
 
-// NewWithDefaultHandlers creates a new State object and returns a pointer to it, taking care to generate
-// handlers for the player and game segments consistently.
-// If we move to using a database, we need to re-think this method and the unit test coverage.
-func NewWithDefaultHandlers(accessControlAllowedOrigin string) *State {
-	playerHandler := player.NewGetAndPostHandler()
-	return NewWithExplicitHandlers(accessControlAllowedOrigin, playerHandler, game.NewGetAndPostHandler(playerHandler))
-}
-
-// NewWithExplicitHandlers creates a new State object and returns a pointer to it, assuming that the
+// New creates a new State object and returns a pointer to it, assuming that the
 // given handlers are consistent.
-func NewWithExplicitHandlers(
+func New(
 	accessControlAllowedOrigin string,
 	playerHandler httpGetAndPostHandler,
 	gameHandler httpGetAndPostHandler) *State {
@@ -43,9 +32,11 @@ func NewWithExplicitHandlers(
 	}
 }
 
-// HandleBackend calls functions according to the second segment of the URI, assuming that the first
-// segment is "backend".
-func (state *State) HandleBackend(httpResponseWriter http.ResponseWriter, httpRequest *http.Request) {
+// HandleBackend calls functions according to the second segment of the URI, assuming
+// that the first segment is "backend".
+func (state *State) HandleBackend(
+	httpResponseWriter http.ResponseWriter,
+	httpRequest *http.Request) {
 	// If an allowed origin for access control has been set, we set all the headers to allow it.
 	if state.accessControlAllowedOrigin != "" {
 		httpResponseWriter.Header().Set("Access-Control-Allow-Origin", state.accessControlAllowedOrigin)
@@ -57,7 +48,7 @@ func (state *State) HandleBackend(httpResponseWriter http.ResponseWriter, httpRe
 
 	// There should always be an initial "/", but unless it is present, with at least one character
 	// following it as the first URI segment, we do not process the request.
-	if len(httpRequest.URL.Path) < 2 || httpRequest.URL.Path[0] != '/' {
+	if (len(httpRequest.URL.Path) < 2) || (httpRequest.URL.Path[0] != '/') {
 		http.NotFound(httpResponseWriter, httpRequest)
 		return
 	}
@@ -65,7 +56,7 @@ func (state *State) HandleBackend(httpResponseWriter http.ResponseWriter, httpRe
 	pathSegments := parsePathSegments(httpRequest)
 
 	// There is no default if there is no URI segment or not enough segments.
-	if (pathSegments == nil) || len(pathSegments) < 2 {
+	if (pathSegments == nil) || (len(pathSegments) < 2) {
 		http.NotFound(httpResponseWriter, httpRequest)
 		return
 	}

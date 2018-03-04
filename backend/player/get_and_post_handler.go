@@ -19,10 +19,12 @@ type GetAndPostHandler struct {
 
 // NewGetAndPostHandler constructs a GetAndPostHandler object with a non-nil, non-empty slice
 // of State objects, returning a pointer to the newly-created object.
-func NewGetAndPostHandler() *GetAndPostHandler {
+func NewGetAndPostHandler(
+	stateFactory Factory,
+	initialPlayers map[string]State) *GetAndPostHandler {
 	return &GetAndPostHandler{
-		stateFactory:      &ThreadsafeFactory{},
-		registeredPlayers: defaultPlayers(),
+		stateFactory:      stateFactory,
+		registeredPlayers: initialPlayers,
 		mutualExclusion:   sync.Mutex{}}
 }
 
@@ -69,9 +71,9 @@ func (getAndPostHandler *GetAndPostHandler) GetPlayerByName(playerName string) (
 	return foundPlayer, isFound
 }
 
-// defaultPlayers returns a map of players created from default player names with colors
+// DefaultPlayers returns a map of players created from default player names with colors
 // according to the available chat colors, where the key is the player name.
-func defaultPlayers() map[string]State {
+func DefaultPlayers() map[string]State {
 	stateFactory := &ThreadsafeFactory{}
 	initialNames := []string{"Mimi", "Aet", "Martin", "Markus", "Liisbet", "Madli", "Ben"}
 	numberOfPlayers := len(initialNames)
@@ -158,7 +160,7 @@ func (getAndPostHandler *GetAndPostHandler) handleUpdatePlayer(httpBodyDecoder *
 	}
 
 	getAndPostHandler.mutualExclusion.Lock()
-	existingPlayer.UpdateNonEmptyStrings(newPlayer)
+	existingPlayer.UpdateFromPresentAttributes(newPlayer)
 	getAndPostHandler.mutualExclusion.Unlock()
 
 	return getAndPostHandler.writeRegisteredPlayers()
@@ -168,7 +170,7 @@ func (getAndPostHandler *GetAndPostHandler) handleUpdatePlayer(httpBodyDecoder *
 // as writeRegisteredPlayers would.
 func (getAndPostHandler *GetAndPostHandler) handleResetPlayers() (interface{}, int) {
 	getAndPostHandler.mutualExclusion.Lock()
-	getAndPostHandler.registeredPlayers = defaultPlayers()
+	getAndPostHandler.registeredPlayers = DefaultPlayers()
 	getAndPostHandler.mutualExclusion.Unlock()
 
 	return getAndPostHandler.writeRegisteredPlayers()

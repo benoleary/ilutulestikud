@@ -11,14 +11,6 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/server"
 )
 
-// This just tests that the factory method does not cause any panics, and returns a non-nil pointer.
-func TestState_NewWithDefaultHandlers(unitTest *testing.T) {
-	actualState := server.NewWithDefaultHandlers("irrelevant")
-	if actualState == nil {
-		unitTest.Fatalf("New state was nil.")
-	}
-}
-
 // We need a struct to mock the GET and POST handlers.
 type mockGetAndPostHandler struct {
 	name     string
@@ -40,14 +32,14 @@ func (mockHandler *mockGetAndPostHandler) HandlePost(httpBodyDecoder *json.Decod
 }
 
 func prepareState(statusForGet int, statusForPost int) *server.State {
-	return server.NewWithExplicitHandlers(
+	return server.New(
 		"irrelevant",
 		&mockGetAndPostHandler{name: "player", getCode: statusForGet, postCode: statusForPost},
 		&mockGetAndPostHandler{name: "game", getCode: statusForGet, postCode: statusForPost})
 }
 
 // This tests that the HandleBackend function selects the correct handler and the correct function of the handler.
-func TestState_HandleBackend(unitTest *testing.T) {
+func TestHandleBackend(unitTest *testing.T) {
 	type testArguments struct {
 		method                         string
 		address                        string

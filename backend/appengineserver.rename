@@ -5,8 +5,14 @@ import (
 	"net/http"
 )
 func main() {
+	// This main function just injects hard-coded dependencies.
+	playerFactory := &player.ThreadsafeFactory{}
+	initialPlayers := player.DefaultPlayers()
+	playerHandler := player.NewGetAndPostHandler(playerFactory, initialPlayers)
+	gameHandler := game.NewGetAndPostHandler(playerHandler)
+
 	// We could load the allowed origin from a file, but this app is very specific to a set of fixed addresses.
-	serverState := server.NewWithDefaultHandlers("https://storage.googleapis.com")
+	serverState := server.New("https://storage.googleapis.com", playerHandler, gameHandler)
 	http.HandleFunc("/backend/", serverState.HandleBackend)
 	http.ListenAndServe(":8080", nil)
 	appengine.Main()
