@@ -465,7 +465,7 @@ func TestUpdatePlayer(unitTest *testing.T) {
 			if postCode != testCase.expected.codeFromPost {
 				unitTest.Fatalf(
 					"POST update-player did not return expected HTTP code %v, instead was %v.",
-					http.StatusOK,
+					testCase.expected.codeFromPost,
 					postCode)
 			}
 
@@ -487,6 +487,176 @@ func TestUpdatePlayer(unitTest *testing.T) {
 					testCase.expected.playerAfterUpdate.Name,
 					testCase.expected.playerAfterUpdate.Color,
 					"Update valid player")
+			}
+		})
+	}
+}
+
+func TestResetPlayers(unitTest *testing.T) {
+	initialPlayers := []string{"Initial One", "Initial Two"}
+	newPlayer := "New Player"
+	availableColors := []string{"Color one", "Color two"}
+
+	type testArguments struct {
+		shouldUpdate   bool
+		shouldRegister bool
+	}
+
+	testCases := []struct {
+		name      string
+		arguments testArguments
+	}{
+		{
+			name: "Reset on initial",
+			arguments: testArguments{
+				shouldUpdate:   false,
+				shouldRegister: false,
+			},
+		},
+		{
+			name: "Reset after update of initial player",
+			arguments: testArguments{
+				shouldUpdate:   true,
+				shouldRegister: false,
+			},
+		},
+		{
+			name: "Reset after registration of new player",
+			arguments: testArguments{
+				shouldUpdate:   false,
+				shouldRegister: true,
+			},
+		},
+		{
+			name: "Reset after update of initial player and registration of new player",
+			arguments: testArguments{
+				shouldUpdate:   true,
+				shouldRegister: true,
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		unitTest.Run(testCase.name, func(unitTest *testing.T) {
+			playerFactory :=
+				player.NewInMemoryCollection(
+					initialPlayers,
+					availableColors)
+			playerHandler := player.NewGetAndPostHandler(playerFactory)
+
+			// First we have to determine what the expected reset state is, as the colors may have
+			// been randomly assigned.
+			initialOne, existsOne := playerHandler.GetPlayerByName(initialPlayers[0])
+
+			if !existsOne {
+				unitTest.Fatalf(
+					"Initial player %v could not be found internally",
+					initialPlayers[0])
+			}
+
+			expectedOne := endpoint.PlayerState{
+				Name:  initialOne.Name(),
+				Color: initialOne.Color(),
+			}
+
+			initialTwo, existsTwo := playerHandler.GetPlayerByName(initialPlayers[1])
+			expectedTwo := endpoint.PlayerState{
+				Name:  initialTwo.Name(),
+				Color: initialTwo.Color(),
+			}
+
+			expectedPlayerNames := make(map[string]bool, 2)
+			expectedPlayerNames[expectedOne.Name] = true
+			expectedPlayerNames[expectedTwo.Name] = true
+
+			if !existsTwo {
+				unitTest.Fatalf(
+					"Initial player %v could not be found internally",
+					initialPlayers[1])
+			}
+
+			if testCase.arguments.shouldUpdate {
+				// We update expectedOne to have the other color from the list.
+				if expectedOne.Color == availableColors[0] {
+					expectedOne.Color = availableColors[1]
+				} else {
+					expectedOne.Color = availableColors[0]
+				}
+
+				updateBytesBuffer := new(bytes.Buffer)
+				json.NewEncoder(updateBytesBuffer).Encode(expectedOne)
+
+				// Now we update the player.
+				_, postCode :=
+					playerHandler.HandlePost(json.NewDecoder(updateBytesBuffer), []string{"update-player"})
+
+				if postCode != http.StatusOK {
+					unitTest.Fatalf(
+						"POST update-player did not return expected HTTP code %v, instead was %v.",
+						http.StatusOK,
+						postCode)
+				}
+			}
+
+			if testCase.arguments.shouldRegister {
+				registrationBytesBuffer := new(bytes.Buffer)
+				json.NewEncoder(registrationBytesBuffer).Encode(endpoint.PlayerState{
+					Name:  newPlayer,
+					Color: availableColors[0],
+				})
+
+				// Now we add the player.
+				_, postCode :=
+					playerHandler.HandlePost(json.NewDecoder(registrationBytesBuffer), []string{"new-player"})
+
+				if postCode != http.StatusOK {
+					unitTest.Fatalf(
+						"POST new-player did not return expected HTTP code %v, instead was %v.",
+						http.StatusOK,
+						postCode)
+				}
+			}
+
+			// Now that the system has been set up, we reset it.
+			resetInterface, resetCode := playerHandler.HandlePost(nil, []string{"reset-players"})
+
+			// Then we check that the POST returned a valid response.
+			resetResponseList := assertAtLeastOnePlayerReturnedInList(
+				unitTest,
+				resetCode,
+				resetInterface,
+				"POST reset-players")
+
+			// Before we check that only initial players are returned, we check that each
+			// initial player is present and as expected.
+			for _, expectedPlayer := range []endpoint.PlayerState{expectedOne, expectedTwo} {
+				assertPlayerIsCorrectInternallyAndExternally(
+					unitTest,
+					playerHandler,
+					expectedPlayer.Name,
+					expectedPlayer.Color,
+					"Reset player "+expectedPlayer.Name)
+			}
+
+			getInterface, getCode := playerHandler.HandleGet([]string{"registered-players"})
+
+			getListAfterReset := assertAtLeastOnePlayerReturnedInList(
+				unitTest,
+				getCode,
+				getInterface,
+				"GET registered-players after reset")
+
+			// We check that the response to the reset POST and the response to the GET
+			// afterwards contain exclusively the initial players.
+			for _, playerList := range []endpoint.PlayerStateList{resetResponseList, getListAfterReset} {
+				for _, playerState := range playerList.Players {
+					if !expectedPlayerNames[playerState.Name] {
+						unitTest.Fatalf(
+							"Found player %v after reset, when initial players are %v.",
+							playerState.Name,
+							expectedPlayerNames)
+					}
+				}
 			}
 		})
 	}
