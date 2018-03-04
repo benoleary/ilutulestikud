@@ -20,18 +20,11 @@ type State interface {
 	UpdateFromPresentAttributes(updaterReference endpoint.PlayerState)
 }
 
-// ForBackend writes the relevant parts of the state into the JSON object for the frontend.
-func ForBackend(state State) endpoint.PlayerState {
-	return endpoint.PlayerState{
-		Name:  state.Name(),
-		Color: state.Color(),
-	}
-}
-
 // Collection defines the interface for structs which should be able to create objects
 // implementing the State interface out of instances of endpoint.PlayerState, which
-// normally represents de-serialized JSON from the frontend. It is also responsible
-// for maintaining the list of chat colors available for player states.
+// normally represents de-serialized JSON from the frontend, and for tracking the objects
+// by their identifier, which is the player name. It is also responsible for maintaining
+// the list of chat colors available for player states.
 type Collection interface {
 	// Add should add an element to the collection which is a new object implementing
 	// the State interface with information given by the endpoint.PlayerState object.
@@ -54,4 +47,27 @@ type Collection interface {
 
 	// AvailableChatColors should return the chat colors which are allowed for players.
 	AvailableChatColors() []string
+}
+
+// ForEndpoint writes relevant parts of the collection's states into the JSON object for
+// the frontend as a list of player objects as its "Players" attribute. The order of the
+// players may not be consistent with repeated calls, as the order of All is not guaranteed
+// to be consistent
+func ForEndpoint(collection Collection) endpoint.PlayerList {
+	playerStates := collection.All()
+	playerList := make([]endpoint.PlayerState, 0, len(playerStates))
+	for _, playerState := range playerStates {
+		playerList = append(playerList, endpoint.PlayerState{
+			Name:  playerState.Name(),
+			Color: playerState.Color(),
+		})
+	}
+
+	return endpoint.PlayerList{Players: playerList}
+}
+
+// AvailableChatColorsForEndpoint writes the chat colors available to the given collection
+// into the JSON object for the frontend.
+func AvailableChatColorsForEndpoint(collection Collection) endpoint.ChatColorList {
+	return endpoint.ChatColorList{Colors: collection.AvailableChatColors()}
 }

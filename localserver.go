@@ -17,7 +17,8 @@ func main() {
 	playerCollection :=
 		player.NewInMemoryCollection(defaults.InitialPlayerNames(), defaults.AvailableColors())
 	playerHandler := player.NewGetAndPostHandler(playerCollection)
-	gameHandler := game.NewGetAndPostHandler(playerHandler)
+	gameCollection := game.NewInMemoryCollection()
+	gameHandler := game.NewGetAndPostHandler(playerCollection, gameCollection)
 
 	// We could load the allowed origin from a file, but this app is very specific to a set of fixed addresses.
 	serverState := server.New("http://localhost:4233", playerHandler, gameHandler)

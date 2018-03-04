@@ -2,8 +2,8 @@ package endpoint
 
 // Types emitted by player.GetAndPostHandler:
 
-// PlayerStateList ensures that the PlayerState list is encapsulated within a single JSON object.
-type PlayerStateList struct {
+// PlayerList ensures that the PlayerState list is encapsulated within a single JSON object.
+type PlayerList struct {
 	Players []PlayerState
 }
 

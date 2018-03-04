@@ -1,6 +1,7 @@
 package game
 
 import (
+	"sort"
 	"time"
 
 	"github.com/benoleary/ilutulestikud/backend/chat"
@@ -8,73 +9,122 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
-// State is a struct meant to encapsulate all the state required for a single game to function.
-type State struct {
-	gameName             string
-	creationTime         time.Time
-	participatingPlayers []player.State
-	turnNumber           int
-	chatLog              *chat.Log
+// State defines the interface for structs which should encapsulate the state of a single game.
+type State interface {
+	// Name should return the name of the game as known to the players.
+	Name() string
+
+	// Players should return the list of players participating in the game, in the order in
+	// which they have their first turns.
+	Players() []player.State
+
+	// Turn should given the number of the turn (with thfirst turn being 1 rather than 0) which
+	// is the current turn in the game (assuming 1 turn per player, not 1 turn being when all
+	// players have acted and play returns to the first player).
+	Turn() int
+
+	// CreationTime should return the time object describing the time at which the state
+	// was created.
+	CreationTime() time.Time
+
+	// HasPlayerAsParticipant should return true if the given player name matches
+	// the name of any of the game's participating players.
+	HasPlayerAsParticipant(playerName string) bool
+
+	// ChatLog should return the chat log of the game at the current moment.
+	ChatLog() *chat.Log
+
+	// RecordPlayerChatMessage should add the given new message to the newest end of the chat
+	// log, ensuring that the chat log does not become too long to display.
+	RecordPlayerChatMessage(chattingPlayer player.State, chatMessage string)
 }
 
-// NewState constructs a State object with a non-nil, non-empty slice of player.State objects,
-// returning a pointer to the newly-created object.
-func NewState(gameName string, playerHandler *player.GetAndPostHandler, playerNames []string) *State {
-	numberOfPlayers := len(playerNames)
-	playerStates := make([]player.State, numberOfPlayers)
-	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
-		playerStates[playerIndex], _ = playerHandler.GetPlayerByName(playerNames[playerIndex])
-	}
-
-	return &State{
-		gameName:             gameName,
-		creationTime:         time.Now(),
-		participatingPlayers: playerStates,
-		turnNumber:           1,
-		chatLog:              chat.NewLog(),
-	}
+// ForPlayer writes the relevant parts of the state of the game as should be known by the given
+// player into the relevant JSON object for the frontend.
+func ForPlayer(state State, playerName string) endpoint.PlayerKnowledge {
+	return endpoint.PlayerKnowledge{ChatLog: state.ChatLog().ForFrontend()}
 }
 
-// HasPlayerAsParticipant returns true if the given player name matches
-// the name of any of the game's participating players.
-func (state *State) HasPlayerAsParticipant(playerName string) bool {
-	for _, participatingPlayer := range state.participatingPlayers {
-		if participatingPlayer.Name() == playerName {
-			return true
-		}
-	}
+// Collection defines the interface for structs which should be able to create objects
+// implementing the State interface encapsulating the state information for individual
+// games, and for tracking the objects by their identifier, which is the game name.
+type Collection interface {
+	// Add should add an element to the collection which is a new object implementing
+	// the State interface with information given by the endpoint.GameDefinition object.
+	// The given player collection should be used as the source of player states to be
+	// matched to names given in the game definition.
+	Add(gameDefinition endpoint.GameDefinition,
+		playerCollection player.Collection)
 
-	return false
+	// Get should return the State corresponding to the given game name if it exists
+	// already (or else nil) along with whether the State exists, analogously to a
+	// standard Golang map.
+	Get(gameName string) (State, bool)
+
+	// All should return a slice of all the State instances in the collection which
+	// have the given player as a participant. The order is not mandated, and may even
+	// change with repeated calls to the same unchanged Collection (analogously to the
+	// entry set of a standard Golang map, for example), though of course an
+	// implementation may order the slice consistently.
+	All(playerName string) []State
 }
 
-// byCreationTime implements sort.Interface for []*State based on the creationTime field.
-type byCreationTime []*State
+// byCreationTime implements sort interface for []State based on the creationTime field.
+type byCreationTime []State
 
-// Len implements part of the sort.Interface for byCreationTime.
+// Len implements part of the sort interface for byCreationTime.
 func (statePointerArray byCreationTime) Len() int {
 	return len(statePointerArray)
 }
 
-// Swap implements part of the sort.Interface for byCreationTime.
+// Swap implements part of the sort interface for byCreationTime.
 func (statePointerArray byCreationTime) Swap(firstIndex int, secondIndex int) {
 	statePointerArray[firstIndex], statePointerArray[secondIndex] =
 		statePointerArray[secondIndex], statePointerArray[firstIndex]
 }
 
-// Less implements part of the sort.Interface for byCreationTime.
+// Less implements part of the sort interface for byCreationTime.
 func (statePointerArray byCreationTime) Less(firstIndex int, secondIndex int) bool {
-	return statePointerArray[firstIndex].creationTime.Before(
-		statePointerArray[secondIndex].creationTime)
+	return statePointerArray[firstIndex].CreationTime().Before(
+		statePointerArray[secondIndex].CreationTime())
 }
 
-// RecordPlayerChatMessage adds the given new message to the end of the chat log
-// and removes the oldest message from the top.
-func (state *State) RecordPlayerChatMessage(chattingPlayer player.State, chatMessage string) {
-	state.chatLog.AppendNewMessage(chattingPlayer.Name(), chattingPlayer.Color(), chatMessage)
-}
+// TurnSummariesForFrontend writes the turn summary information for each game which has
+// the given player into the relevant JSON object for the frontend.
+func TurnSummariesForFrontend(collection Collection, playerName string) endpoint.TurnSummaryList {
+	gameList := collection.All(playerName)
 
-// ForPlayer creates a PlayerKnowledge object encapsulating the knowledge of the
-// given player for the receiver game.
-func (state *State) ForPlayer(playerName string) endpoint.PlayerKnowledge {
-	return endpoint.PlayerKnowledge{ChatLog: state.chatLog.ForFrontend()}
+	sort.Sort(byCreationTime(gameList))
+
+	numberOfGamesWithPlayer := len(gameList)
+
+	turnSummaries := make([]endpoint.TurnSummary, numberOfGamesWithPlayer)
+	for gameIndex := 0; gameIndex < numberOfGamesWithPlayer; gameIndex++ {
+		nameOfGame := gameList[gameIndex].Name()
+		gameTurn := gameList[gameIndex].Turn()
+
+		gameParticipants := gameList[gameIndex].Players()
+		numberOfParticipants := len(gameParticipants)
+
+		playerNamesInTurnOrder := make([]string, numberOfParticipants)
+
+		for playerIndex := 0; playerIndex < numberOfParticipants; playerIndex++ {
+			// Game turns begin with 1 rather than 0, so this sets the player names in order,
+			// wrapping index back to 0 when at the end of the list.
+			// E.g. turn 3, 5 players: playerNamesInTurnOrder will start with
+			// gameParticipants[2], then [3], then [4], then [0], then [1].
+			playerNamesInTurnOrder[playerIndex] =
+				gameParticipants[(playerIndex+gameTurn-1)%numberOfParticipants].Name()
+		}
+
+		turnSummaries[gameIndex] = endpoint.TurnSummary{
+			GameName:                   nameOfGame,
+			CreationTimestampInSeconds: gameList[gameIndex].CreationTime().Unix(),
+			TurnNumber:                 gameTurn,
+			PlayersInNextTurnOrder:     playerNamesInTurnOrder,
+			IsPlayerTurn:               playerName == playerNamesInTurnOrder[0],
+		}
+	}
+
+	return endpoint.TurnSummaryList{TurnSummaries: turnSummaries}
 }

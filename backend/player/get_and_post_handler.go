@@ -3,6 +3,7 @@ package player
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 )
@@ -55,32 +56,17 @@ func (getAndPostHandler *GetAndPostHandler) HandlePost(httpBodyDecoder *json.Dec
 	}
 }
 
-// GetPlayerByName returns a pointer to the player state which has the given name, with
-// a bool that is true if the player was found, analogously to a normal Golang map.
-func (getAndPostHandler *GetAndPostHandler) GetPlayerByName(playerName string) (State, bool) {
-	return getAndPostHandler.stateCollection.Get(playerName)
-}
-
 // writeRegisteredPlayers writes a JSON object into the HTTP response which has
-// the list of player objects as its "Players" attribute. The order of the players is not
-// consistent with repeated calls even if the map of players does not change, since the
-// Go compiler actually does randomize the iteration order of the map entries by design.
+// the list of player objects as its "Players" attribute. The order of the players
+// may not consistent with repeated calls as ForEndpoint does not guarantee it.
 func (getAndPostHandler *GetAndPostHandler) writeRegisteredPlayers() (interface{}, int) {
-	playerStates := getAndPostHandler.stateCollection.All()
-	playerList := make([]endpoint.PlayerState, 0, len(playerStates))
-	for _, registeredPlayer := range playerStates {
-		playerList = append(playerList, ForBackend(registeredPlayer))
-	}
-
-	return endpoint.PlayerStateList{Players: playerList}, http.StatusOK
+	return ForEndpoint(getAndPostHandler.stateCollection), http.StatusOK
 }
 
 // writeAvailableColors writes a JSON object into the HTTP response which has
 // the list of strings as its "Colors" attribute.
 func (getAndPostHandler *GetAndPostHandler) writeAvailableColors() (interface{}, int) {
-	return endpoint.ChatColorList{
-		Colors: getAndPostHandler.stateCollection.AvailableChatColors(),
-	}, http.StatusOK
+	return AvailableChatColorsForEndpoint(getAndPostHandler.stateCollection), http.StatusOK
 }
 
 // handleNewPlayer adds the player defined by the JSON of the request's body to the list
@@ -95,6 +81,10 @@ func (getAndPostHandler *GetAndPostHandler) handleNewPlayer(httpBodyDecoder *jso
 
 	if endpointPlayer.Name == "" {
 		return "No name for new player parsed from JSON", http.StatusBadRequest
+	}
+
+	if strings.Contains(endpointPlayer.Name, "/") {
+		return "Player names cannot contain the slash character '/', sorry", http.StatusBadRequest
 	}
 
 	_, playerExists := getAndPostHandler.stateCollection.Get(endpointPlayer.Name)
