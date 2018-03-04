@@ -92,6 +92,12 @@ func (getAndPostHandler *GetAndPostHandler) handleNewGame(
 		return "Game names cannot contain the slash character '/', sorry", http.StatusBadRequest
 	}
 
+	for _, playerName := range newGame.Players {
+		if strings.Contains(playerName, "/") {
+			return "Player names cannot contain the slash character '/', sorry", http.StatusBadRequest
+		}
+	}
+
 	_, gameExists := getAndPostHandler.gameCollection.Get(newGame.Name)
 	if gameExists {
 		return "Name " + newGame.Name + " already exists", http.StatusBadRequest
