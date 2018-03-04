@@ -135,13 +135,11 @@ func TestRejectInvalidNewPlayer(unitTest *testing.T) {
 
 	testCases := []struct {
 		name      string
-		handler   *player.GetAndPostHandler
 		arguments testArguments
 		expected  expectedReturns
 	}{
 		{
-			name:    "Nil object",
-			handler: newHandler(),
+			name: "Nil object",
 			arguments: testArguments{
 				bodyObject: nil,
 			},
@@ -150,8 +148,7 @@ func TestRejectInvalidNewPlayer(unitTest *testing.T) {
 			},
 		},
 		{
-			name:    "Wrong object",
-			handler: newHandler(),
+			name: "Wrong object",
 			arguments: testArguments{
 				bodyObject: &endpoint.ChatColorList{
 					Colors: []string{"Player 1", "Player 2"},
@@ -170,8 +167,9 @@ func TestRejectInvalidNewPlayer(unitTest *testing.T) {
 				json.NewEncoder(bytesBuffer).Encode(testCase.arguments.bodyObject)
 			}
 
+			playerHandler := newHandler()
 			_, postCode :=
-				testCase.handler.HandlePost(json.NewDecoder(bytesBuffer), []string{"new-player"})
+				playerHandler.HandlePost(json.NewDecoder(bytesBuffer), []string{"new-player"})
 
 			if postCode != http.StatusBadRequest {
 				unitTest.Fatalf(
@@ -236,27 +234,23 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 
 	testCases := []struct {
 		name      string
-		handler   *player.GetAndPostHandler
 		arguments testArguments
 	}{
 		{
-			name:    "Ascii only, with color",
-			handler: newHandler(),
+			name: "Ascii only, with color",
 			arguments: testArguments{
 				playerName: "Easy Test Name",
 				chatColor:  "Plain color",
 			},
 		},
 		{
-			name:    "Ascii only, no color",
-			handler: newHandler(),
+			name: "Ascii only, no color",
 			arguments: testArguments{
 				playerName: "Easy Test Name",
 			},
 		},
 		{
-			name:    "Punctuation and non-standard characters",
-			handler: newHandler(),
+			name: "Punctuation and non-standard characters",
 			arguments: testArguments{
 				playerName: "?ß@äô#\"'\"",
 				chatColor:  "\\\\\\",
@@ -266,6 +260,8 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 
 	for _, testCase := range testCases {
 		unitTest.Run(testCase.name, func(unitTest *testing.T) {
+			playerHandler := newHandler()
+
 			bytesBuffer := new(bytes.Buffer)
 			json.NewEncoder(bytesBuffer).Encode(endpoint.PlayerState{
 				Name:  testCase.arguments.playerName,
@@ -274,7 +270,7 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 
 			// First we add the new player.
 			postInterface, postCode :=
-				testCase.handler.HandlePost(json.NewDecoder(bytesBuffer), []string{"new-player"})
+				playerHandler.HandlePost(json.NewDecoder(bytesBuffer), []string{"new-player"})
 
 			// Then we check that the POST returned a valid response.
 			assertAtLeastOnePlayerReturnedInList(
@@ -286,7 +282,7 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 			// Finally we check that the player was registered properly.
 			assertPlayerIsCorrectInternallyAndExternally(
 				unitTest,
-				testCase.handler,
+				playerHandler,
 				testCase.arguments.playerName,
 				testCase.arguments.chatColor,
 				"Register new player")
@@ -310,13 +306,11 @@ func TestRejectInvalidUpdatePlayer(unitTest *testing.T) {
 
 	testCases := []struct {
 		name      string
-		handler   *player.GetAndPostHandler
 		arguments testArguments
 		expected  expectedReturns
 	}{
 		{
-			name:    "Nil object",
-			handler: newHandler(),
+			name: "Nil object",
 			arguments: testArguments{
 				bodyObject: nil,
 			},
@@ -325,8 +319,7 @@ func TestRejectInvalidUpdatePlayer(unitTest *testing.T) {
 			},
 		},
 		{
-			name:    "Wrong object",
-			handler: newHandler(),
+			name: "Wrong object",
 			arguments: testArguments{
 				bodyObject: &endpoint.ChatColorList{
 					Colors: []string{"Player 1", "Player 2"},
@@ -340,11 +333,13 @@ func TestRejectInvalidUpdatePlayer(unitTest *testing.T) {
 
 	for _, testCase := range testCases {
 		unitTest.Run(testCase.name, func(unitTest *testing.T) {
+			playerHandler := newHandler()
+
 			registrationBytesBuffer := new(bytes.Buffer)
 			json.NewEncoder(registrationBytesBuffer).Encode(endpointPlayer)
 
 			// First we add the player.
-			testCase.handler.HandlePost(json.NewDecoder(registrationBytesBuffer), []string{"new-player"})
+			playerHandler.HandlePost(json.NewDecoder(registrationBytesBuffer), []string{"new-player"})
 
 			// We do not check that the POST succeeded, nor that return list is correct, nor do we check
 			// that the player was correctly register: these are all covered by another test.
@@ -356,7 +351,7 @@ func TestRejectInvalidUpdatePlayer(unitTest *testing.T) {
 			}
 
 			_, postCode :=
-				testCase.handler.HandlePost(json.NewDecoder(updateBytesBuffer), []string{"update-player"})
+				playerHandler.HandlePost(json.NewDecoder(updateBytesBuffer), []string{"update-player"})
 
 			if postCode != http.StatusBadRequest {
 				unitTest.Fatalf(
@@ -387,13 +382,11 @@ func TestUpdatePlayer(unitTest *testing.T) {
 
 	testCases := []struct {
 		name      string
-		handler   *player.GetAndPostHandler
 		arguments testArguments
 		expected  expectedReturns
 	}{
 		{
-			name:    "Non-existent player",
-			handler: newHandler(),
+			name: "Non-existent player",
 			arguments: testArguments{
 				playerName: "Non-existent player",
 				chatColor:  newColor,
@@ -405,8 +398,7 @@ func TestUpdatePlayer(unitTest *testing.T) {
 			},
 		},
 		{
-			name:    "No-op with empty color",
-			handler: newHandler(),
+			name: "No-op with empty color",
 			arguments: testArguments{
 				playerName: playerName,
 				chatColor:  "",
@@ -421,8 +413,7 @@ func TestUpdatePlayer(unitTest *testing.T) {
 			},
 		},
 		{
-			name:    "Simple color change",
-			handler: newHandler(),
+			name: "Simple color change",
 			arguments: testArguments{
 				playerName: playerName,
 				chatColor:  newColor,
@@ -440,6 +431,8 @@ func TestUpdatePlayer(unitTest *testing.T) {
 
 	for _, testCase := range testCases {
 		unitTest.Run(testCase.name, func(unitTest *testing.T) {
+			playerHandler := newHandler()
+
 			registrationBytesBuffer := new(bytes.Buffer)
 			json.NewEncoder(registrationBytesBuffer).Encode(endpoint.PlayerState{
 				Name:  playerName,
@@ -447,7 +440,7 @@ func TestUpdatePlayer(unitTest *testing.T) {
 			})
 
 			// First we add the player.
-			testCase.handler.HandlePost(json.NewDecoder(registrationBytesBuffer), []string{"new-player"})
+			playerHandler.HandlePost(json.NewDecoder(registrationBytesBuffer), []string{"new-player"})
 
 			// We do not check that the POST succeeded, nor that return list is correct, nor do we check
 			// that the player was correctly register: these are all covered by another test.
@@ -460,7 +453,7 @@ func TestUpdatePlayer(unitTest *testing.T) {
 			})
 
 			postInterface, postCode :=
-				testCase.handler.HandlePost(json.NewDecoder(updateBytesBuffer), []string{"update-player"})
+				playerHandler.HandlePost(json.NewDecoder(updateBytesBuffer), []string{"update-player"})
 
 			if postCode != testCase.expected.codeFromPost {
 				unitTest.Fatalf(
@@ -483,7 +476,7 @@ func TestUpdatePlayer(unitTest *testing.T) {
 			if testCase.expected.playerAfterUpdate != nil {
 				assertPlayerIsCorrectInternallyAndExternally(
 					unitTest,
-					testCase.handler,
+					playerHandler,
 					testCase.expected.playerAfterUpdate.Name,
 					testCase.expected.playerAfterUpdate.Color,
 					"Update valid player")
