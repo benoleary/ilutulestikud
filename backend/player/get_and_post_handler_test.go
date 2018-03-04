@@ -14,16 +14,16 @@ import (
 var colorsAvailableInTest []string = defaults.AvailableColors()
 
 // newHandler prepares a GetAndPostHandler for the tests.
-func newHandler() *player.GetAndPostHandler {
-	playerFactory :=
+func newCollectionAndHandler() (player.Collection, *player.GetAndPostHandler) {
+	playerCollection :=
 		player.NewInMemoryCollection(
 			defaults.InitialPlayerNames(),
 			colorsAvailableInTest)
-	return player.NewGetAndPostHandler(playerFactory)
+	return playerCollection, player.NewGetAndPostHandler(playerCollection)
 }
 
 func TestGetNoSegmentBadRequest(unitTest *testing.T) {
-	playerHandler := newHandler()
+	_, playerHandler := newCollectionAndHandler()
 	_, actualCode := playerHandler.HandleGet(make([]string, 0))
 
 	if actualCode != http.StatusBadRequest {
@@ -35,7 +35,7 @@ func TestGetNoSegmentBadRequest(unitTest *testing.T) {
 }
 
 func TestGetInvalidSegmentNotFound(unitTest *testing.T) {
-	playerHandler := newHandler()
+	_, playerHandler := newCollectionAndHandler()
 	_, actualCode := playerHandler.HandleGet([]string{"invalid-segment"})
 
 	if actualCode != http.StatusNotFound {
@@ -47,7 +47,7 @@ func TestGetInvalidSegmentNotFound(unitTest *testing.T) {
 }
 
 func TestPostNoSegmentBadRequest(unitTest *testing.T) {
-	playerHandler := newHandler()
+	_, playerHandler := newCollectionAndHandler()
 	bytesBuffer := new(bytes.Buffer)
 	json.NewEncoder(bytesBuffer).Encode(endpoint.PlayerState{
 		Name:  "Player Name",
@@ -65,7 +65,7 @@ func TestPostNoSegmentBadRequest(unitTest *testing.T) {
 }
 
 func TestPostInvalidSegmentNotFound(unitTest *testing.T) {
-	playerHandler := newHandler()
+	_, playerHandler := newCollectionAndHandler()
 	bytesBuffer := new(bytes.Buffer)
 	json.NewEncoder(bytesBuffer).Encode(endpoint.PlayerState{
 		Name:  "Player Name",
@@ -83,7 +83,7 @@ func TestPostInvalidSegmentNotFound(unitTest *testing.T) {
 }
 
 func TestDefaultPlayerListNotEmpty(unitTest *testing.T) {
-	playerHandler := newHandler()
+	_, playerHandler := newCollectionAndHandler()
 	actualInterface, actualCode := playerHandler.HandleGet([]string{"registered-players"})
 	assertAtLeastOnePlayerReturnedInList(
 		unitTest,
@@ -93,7 +93,7 @@ func TestDefaultPlayerListNotEmpty(unitTest *testing.T) {
 }
 
 func TestAvailableColorListNotEmpty(unitTest *testing.T) {
-	playerHandler := newHandler()
+	_, playerHandler := newCollectionAndHandler()
 	actualInterface, actualCode := playerHandler.HandleGet([]string{"available-colors"})
 
 	if actualCode != http.StatusOK {
@@ -158,6 +158,18 @@ func TestRejectInvalidNewPlayer(unitTest *testing.T) {
 				codeFromPost: http.StatusBadRequest,
 			},
 		},
+		{
+			name: "Invalid name",
+			arguments: testArguments{
+				bodyObject: &endpoint.PlayerState{
+					Name:  "/Slashes/are/reserved/for/parsing/URI/segments/",
+					Color: "irrelevant",
+				},
+			},
+			expected: expectedReturns{
+				codeFromPost: http.StatusBadRequest,
+			},
+		},
 	}
 
 	for _, testCase := range testCases {
@@ -167,7 +179,7 @@ func TestRejectInvalidNewPlayer(unitTest *testing.T) {
 				json.NewEncoder(bytesBuffer).Encode(testCase.arguments.bodyObject)
 			}
 
-			playerHandler := newHandler()
+			_, playerHandler := newCollectionAndHandler()
 			_, postCode :=
 				playerHandler.HandlePost(json.NewDecoder(bytesBuffer), []string{"new-player"})
 
@@ -192,7 +204,7 @@ func TestRejectNewPlayerWithExistingName(unitTest *testing.T) {
 	firstBytesBuffer := new(bytes.Buffer)
 	json.NewEncoder(firstBytesBuffer).Encode(firstBodyObject)
 
-	playerHandler := newHandler()
+	_, playerHandler := newCollectionAndHandler()
 	_, validRegistrationCode :=
 		playerHandler.HandlePost(json.NewDecoder(firstBytesBuffer), []string{"new-player"})
 
@@ -260,7 +272,7 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 
 	for _, testCase := range testCases {
 		unitTest.Run(testCase.name, func(unitTest *testing.T) {
-			playerHandler := newHandler()
+			playerCollection, playerHandler := newCollectionAndHandler()
 
 			bytesBuffer := new(bytes.Buffer)
 			json.NewEncoder(bytesBuffer).Encode(endpoint.PlayerState{
@@ -282,6 +294,7 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 			// Finally we check that the player was registered properly.
 			assertPlayerIsCorrectInternallyAndExternally(
 				unitTest,
+				playerCollection,
 				playerHandler,
 				testCase.arguments.playerName,
 				testCase.arguments.chatColor,
@@ -333,7 +346,7 @@ func TestRejectInvalidUpdatePlayer(unitTest *testing.T) {
 
 	for _, testCase := range testCases {
 		unitTest.Run(testCase.name, func(unitTest *testing.T) {
-			playerHandler := newHandler()
+			_, playerHandler := newCollectionAndHandler()
 
 			registrationBytesBuffer := new(bytes.Buffer)
 			json.NewEncoder(registrationBytesBuffer).Encode(endpointPlayer)
@@ -431,7 +444,7 @@ func TestUpdatePlayer(unitTest *testing.T) {
 
 	for _, testCase := range testCases {
 		unitTest.Run(testCase.name, func(unitTest *testing.T) {
-			playerHandler := newHandler()
+			playerCollection, playerHandler := newCollectionAndHandler()
 
 			registrationBytesBuffer := new(bytes.Buffer)
 			json.NewEncoder(registrationBytesBuffer).Encode(endpoint.PlayerState{
@@ -476,6 +489,7 @@ func TestUpdatePlayer(unitTest *testing.T) {
 			if testCase.expected.playerAfterUpdate != nil {
 				assertPlayerIsCorrectInternallyAndExternally(
 					unitTest,
+					playerCollection,
 					playerHandler,
 					testCase.expected.playerAfterUpdate.Name,
 					testCase.expected.playerAfterUpdate.Color,
@@ -531,15 +545,15 @@ func TestResetPlayers(unitTest *testing.T) {
 
 	for _, testCase := range testCases {
 		unitTest.Run(testCase.name, func(unitTest *testing.T) {
-			playerFactory :=
+			playerCollection :=
 				player.NewInMemoryCollection(
 					initialPlayers,
 					availableColors)
-			playerHandler := player.NewGetAndPostHandler(playerFactory)
+			playerHandler := player.NewGetAndPostHandler(playerCollection)
 
 			// First we have to determine what the expected reset state is, as the colors may have
 			// been randomly assigned.
-			initialOne, existsOne := playerHandler.GetPlayerByName(initialPlayers[0])
+			initialOne, existsOne := playerCollection.Get(initialPlayers[0])
 
 			if !existsOne {
 				unitTest.Fatalf(
@@ -552,7 +566,7 @@ func TestResetPlayers(unitTest *testing.T) {
 				Color: initialOne.Color(),
 			}
 
-			initialTwo, existsTwo := playerHandler.GetPlayerByName(initialPlayers[1])
+			initialTwo, existsTwo := playerCollection.Get(initialPlayers[1])
 			expectedTwo := endpoint.PlayerState{
 				Name:  initialTwo.Name(),
 				Color: initialTwo.Color(),
@@ -625,6 +639,7 @@ func TestResetPlayers(unitTest *testing.T) {
 			for _, expectedPlayer := range []endpoint.PlayerState{expectedOne, expectedTwo} {
 				assertPlayerIsCorrectInternallyAndExternally(
 					unitTest,
+					playerCollection,
 					playerHandler,
 					expectedPlayer.Name,
 					expectedPlayer.Color,
@@ -641,7 +656,7 @@ func TestResetPlayers(unitTest *testing.T) {
 
 			// We check that the response to the reset POST and the response to the GET
 			// afterwards contain exclusively the initial players.
-			for _, playerList := range []endpoint.PlayerStateList{resetResponseList, getListAfterReset} {
+			for _, playerList := range []endpoint.PlayerList{resetResponseList, getListAfterReset} {
 				for _, playerState := range playerList.Players {
 					if !expectedPlayerNames[playerState.Name] {
 						unitTest.Fatalf(
@@ -659,7 +674,7 @@ func assertAtLeastOnePlayerReturnedInList(
 	unitTest *testing.T,
 	responseCode int,
 	responseInterface interface{},
-	endpointIdentifier string) endpoint.PlayerStateList {
+	endpointIdentifier string) endpoint.PlayerList {
 	if responseCode != http.StatusOK {
 		unitTest.Fatalf(
 			"GET registered-players did not return expected HTTP code %v, instead was %v.",
@@ -667,27 +682,27 @@ func assertAtLeastOnePlayerReturnedInList(
 			responseCode)
 	}
 
-	responsePlayerStateList, isTypeCorrect := responseInterface.(endpoint.PlayerStateList)
+	responsePlayerList, isTypeCorrect := responseInterface.(endpoint.PlayerList)
 
 	if !isTypeCorrect {
 		unitTest.Fatalf(
-			endpointIdentifier+" did not return expected endpoint.PlayerStateList, instead was %v.",
+			endpointIdentifier+" did not return expected endpoint.PlayerList, instead was %v.",
 			responseInterface)
 	}
 
-	if responsePlayerStateList.Players == nil {
+	if responsePlayerList.Players == nil {
 		unitTest.Fatalf(
 			endpointIdentifier+" returned %v which has a nil list of players.",
 			responseInterface)
 	}
 
-	if len(responsePlayerStateList.Players) <= 0 {
+	if len(responsePlayerList.Players) <= 0 {
 		unitTest.Fatalf(
 			endpointIdentifier+" returned %v which has an empty list of players.",
-			responsePlayerStateList)
+			responsePlayerList)
 	}
 
-	return responsePlayerStateList
+	return responsePlayerList
 }
 
 func assertPlayerIsCorrect(
@@ -735,13 +750,14 @@ func assertPlayerIsCorrect(
 
 func assertPlayerIsCorrectInternallyAndExternally(
 	unitTest *testing.T,
+	playerCollection player.Collection,
 	testHandler *player.GetAndPostHandler,
 	expectedPlayerName string,
 	expectedChatColor string,
 	testIdentifier string) {
 	// First we check that we can retrieve the player within the program.
 	internalPlayer, isFoundInternally :=
-		testHandler.GetPlayerByName(expectedPlayerName)
+		playerCollection.Get(expectedPlayerName)
 
 	if !isFoundInternally {
 		unitTest.Fatalf(testIdentifier+"/internal: did not find player %v.", expectedPlayerName)
@@ -763,14 +779,14 @@ func assertPlayerIsCorrectInternallyAndExternally(
 	getInterface, getCode :=
 		testHandler.HandleGet([]string{"registered-players"})
 
-	getPlayerStateList := assertAtLeastOnePlayerReturnedInList(
+	getPlayerList := assertAtLeastOnePlayerReturnedInList(
 		unitTest,
 		getCode,
 		getInterface,
 		testIdentifier+"/GET registered-players")
 
 	hasNewPlayer := false
-	for _, registeredPlayer := range getPlayerStateList.Players {
+	for _, registeredPlayer := range getPlayerList.Players {
 		if expectedPlayerName == registeredPlayer.Name {
 			hasNewPlayer = true
 
@@ -788,6 +804,6 @@ func assertPlayerIsCorrectInternallyAndExternally(
 		unitTest.Fatalf(
 			testIdentifier+"/GET registered-players did not have %v in its list of players %v.",
 			expectedPlayerName,
-			getPlayerStateList.Players)
+			getPlayerList.Players)
 	}
 }
