@@ -16,7 +16,9 @@ var colorsAvailableInTest []string = defaults.AvailableColors()
 // newHandler prepares a GetAndPostHandler for the tests.
 func newHandler() *player.GetAndPostHandler {
 	playerFactory :=
-		player.NewInMemoryCollection(defaults.InitialPlayerNames(), colorsAvailableInTest)
+		player.NewInMemoryCollection(
+			defaults.InitialPlayerNames(),
+			colorsAvailableInTest)
 	return player.NewGetAndPostHandler(playerFactory)
 }
 
@@ -83,33 +85,11 @@ func TestPostInvalidSegmentNotFound(unitTest *testing.T) {
 func TestDefaultPlayerListNotEmpty(unitTest *testing.T) {
 	playerHandler := newHandler()
 	actualInterface, actualCode := playerHandler.HandleGet([]string{"registered-players"})
-
-	if actualCode != http.StatusOK {
-		unitTest.Fatalf(
-			"GET registered-players did not return expected HTTP code %v, instead was %v.",
-			http.StatusOK,
-			actualCode)
-	}
-
-	actualPlayerStateList, isTypeCorrect := actualInterface.(endpoint.PlayerStateList)
-
-	if !isTypeCorrect {
-		unitTest.Fatalf(
-			"GET registered-players did not return expected endpoint.PlayerStateList, instead was %v.",
-			actualInterface)
-	}
-
-	if actualPlayerStateList.Players == nil {
-		unitTest.Fatalf(
-			"GET registered-players returned %v which has a nil list of players.",
-			actualInterface)
-	}
-
-	if len(actualPlayerStateList.Players) <= 0 {
-		unitTest.Fatalf(
-			"GET registered-players returned %v which has an empty list of players.",
-			actualPlayerStateList)
-	}
+	assertAtLeastOnePlayerReturnedInList(
+		unitTest,
+		actualCode,
+		actualInterface,
+		"GET registered-players")
 }
 
 func TestAvailableColorListNotEmpty(unitTest *testing.T) {
@@ -296,89 +276,54 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 			postInterface, postCode :=
 				testCase.handler.HandlePost(json.NewDecoder(bytesBuffer), []string{"new-player"})
 
-			if postCode != http.StatusOK {
-				unitTest.Fatalf("POST new-player did not return expected HTTP code %v, instead was %v.", http.StatusOK, postCode)
-			}
-
-			postPlayerStateList, isPostTypeCorrect := postInterface.(endpoint.PlayerStateList)
-
-			if !isPostTypeCorrect {
-				unitTest.Fatalf("POST new-player did not return expected endpoint.PlayerStateList, instead was %v.", postInterface)
-			}
-
-			if postPlayerStateList.Players == nil {
-				unitTest.Fatalf("POST new-player returned %v which has a nil list of players.", postInterface)
-			}
-
-			if len(postPlayerStateList.Players) <= 0 {
-				unitTest.Fatalf("POST new-player returned %v which has an empty list of players.", postPlayerStateList)
-			}
+			assertAtLeastOnePlayerReturnedInList(
+				unitTest,
+				postCode,
+				postInterface,
+				"POST new-player")
 
 			// First we check that we can retrieve the new player within the program.
-			internalPlayer, isFoundInternally := testCase.handler.GetPlayerByName(testCase.arguments.playerName)
+			internalPlayer, isFoundInternally :=
+				testCase.handler.GetPlayerByName(testCase.arguments.playerName)
 
 			if !isFoundInternally {
 				unitTest.Fatalf("Did not find player %v.", testCase.arguments.playerName)
 			}
 
-			if testCase.arguments.playerName != internalPlayer.Name() {
-				unitTest.Fatalf("Player %v was found but had name %v.", testCase.arguments.playerName, internalPlayer.Name())
+			if internalPlayer == nil {
+				unitTest.Fatalf("Found nil for player %v.", testCase.arguments.playerName)
 			}
 
-			if testCase.arguments.chatColor != internalPlayer.Color() {
-				if testCase.arguments.chatColor != "" {
-					unitTest.Fatalf(
-						"Player %v was found but had color %v instead of expected %v.",
-						testCase.arguments.playerName,
-						testCase.arguments.chatColor,
-						internalPlayer.Color())
-				}
-
-				// Otherwise we check that the player was assigned a valid color.
-				isValidColor := false
-				availableColors := colorsAvailableInTest
-				for _, availableColor := range availableColors {
-					if availableColor == internalPlayer.Color() {
-						isValidColor = true
-						break
-					}
-				}
-
-				if !isValidColor {
-					unitTest.Fatalf(
-						"Player %v was found but had color %v which is not in list of allowed colors %v.",
-						testCase.arguments.playerName,
-						internalPlayer.Color(),
-						availableColors)
-				}
-			}
+			assertPlayerIsCorrect(
+				unitTest,
+				testCase.arguments.playerName,
+				internalPlayer.Name(),
+				testCase.arguments.chatColor,
+				internalPlayer.Color(),
+				"Internal player.GetAndPostHandler.GetPlayerByName")
 
 			// Finally we check that the new player exists in the list of registered players given out by the endpoint.
 			getInterface, getCode :=
 				testCase.handler.HandleGet([]string{"registered-players"})
 
-			if getCode != http.StatusOK {
-				unitTest.Fatalf("GET registered-players did not return expected HTTP code %v, instead was %v.", http.StatusOK, getCode)
-			}
-
-			getPlayerStateList, isGetTypeCorrect := getInterface.(endpoint.PlayerStateList)
-
-			if !isGetTypeCorrect {
-				unitTest.Fatalf("GET registered-players did not return expected endpoint.PlayerStateList, instead was %v.", postInterface)
-			}
-
-			if getPlayerStateList.Players == nil {
-				unitTest.Fatalf("GET registered-players returned %v which has a nil list of players.", postInterface)
-			}
-
-			if len(getPlayerStateList.Players) <= 0 {
-				unitTest.Fatalf("GET registered-players returned %v which has an empty list of players.", postPlayerStateList)
-			}
+			getPlayerStateList := assertAtLeastOnePlayerReturnedInList(
+				unitTest,
+				getCode,
+				getInterface,
+				"GET registered-players")
 
 			hasNewPlayer := false
-			for _, registerPlayer := range getPlayerStateList.Players {
-				if testCase.arguments.playerName == registerPlayer.Name {
+			for _, registeredPlayer := range getPlayerStateList.Players {
+				if testCase.arguments.playerName == registeredPlayer.Name {
 					hasNewPlayer = true
+
+					assertPlayerIsCorrect(
+						unitTest,
+						testCase.arguments.playerName,
+						registeredPlayer.Name,
+						testCase.arguments.chatColor,
+						registeredPlayer.Color,
+						"GET registered-players")
 				}
 			}
 
@@ -389,5 +334,83 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 					getPlayerStateList.Players)
 			}
 		})
+	}
+}
+
+func assertAtLeastOnePlayerReturnedInList(
+	unitTest *testing.T,
+	responseCode int,
+	responseInterface interface{},
+	endpointIdentifier string) endpoint.PlayerStateList {
+	if responseCode != http.StatusOK {
+		unitTest.Fatalf(
+			"GET registered-players did not return expected HTTP code %v, instead was %v.",
+			http.StatusOK,
+			responseCode)
+	}
+
+	responsePlayerStateList, isTypeCorrect := responseInterface.(endpoint.PlayerStateList)
+
+	if !isTypeCorrect {
+		unitTest.Fatalf(
+			endpointIdentifier+" did not return expected endpoint.PlayerStateList, instead was %v.",
+			responseInterface)
+	}
+
+	if responsePlayerStateList.Players == nil {
+		unitTest.Fatalf(
+			endpointIdentifier+" returned %v which has a nil list of players.",
+			responseInterface)
+	}
+
+	if len(responsePlayerStateList.Players) <= 0 {
+		unitTest.Fatalf(
+			endpointIdentifier+" returned %v which has an empty list of players.",
+			responsePlayerStateList)
+	}
+
+	return responsePlayerStateList
+}
+
+func assertPlayerIsCorrect(
+	unitTest *testing.T,
+	expectedPlayerName string,
+	actualPlayerName string,
+	expectedChatColor string,
+	actualChatColor string,
+	testIdentifier string) {
+	if actualPlayerName != expectedPlayerName {
+		unitTest.Fatalf(
+			testIdentifier+": player %v was found but had name %v.",
+			expectedPlayerName,
+			actualPlayerName)
+	}
+
+	if actualChatColor != expectedChatColor {
+		if expectedChatColor != "" {
+			unitTest.Fatalf(
+				testIdentifier+": player %v was found but had color %v instead of expected %v.",
+				expectedPlayerName,
+				actualChatColor,
+				expectedChatColor)
+		}
+
+		// Otherwise we check that the player was assigned a valid color.
+		isValidColor := false
+		availableColors := colorsAvailableInTest
+		for _, availableColor := range availableColors {
+			if availableColor == actualChatColor {
+				isValidColor = true
+				break
+			}
+		}
+
+		if !isValidColor {
+			unitTest.Fatalf(
+				testIdentifier+": player %v was found but had color %v which is not in list of allowed colors %v.",
+				expectedPlayerName,
+				actualChatColor,
+				availableColors)
+		}
 	}
 }
