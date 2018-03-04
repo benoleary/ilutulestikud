@@ -254,16 +254,10 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 		chatColor  string
 	}
 
-	type expectedReturns struct {
-		codeFromPost int
-		codeFromGet  int
-	}
-
 	testCases := []struct {
 		name      string
 		handler   *player.GetAndPostHandler
 		arguments testArguments
-		expected  expectedReturns
 	}{
 		{
 			name:    "Ascii only, with color",
@@ -272,20 +266,12 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 				playerName: "Easy Test Name",
 				chatColor:  "Plain color",
 			},
-			expected: expectedReturns{
-				codeFromPost: http.StatusOK,
-				codeFromGet:  http.StatusOK,
-			},
 		},
 		{
 			name:    "Ascii only, no color",
 			handler: newHandler(),
 			arguments: testArguments{
 				playerName: "Easy Test Name",
-			},
-			expected: expectedReturns{
-				codeFromPost: http.StatusOK,
-				codeFromGet:  http.StatusOK,
 			},
 		},
 		{
@@ -294,10 +280,6 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 			arguments: testArguments{
 				playerName: "?ß@äô#\"'\"",
 				chatColor:  "\\\\\\",
-			},
-			expected: expectedReturns{
-				codeFromPost: http.StatusOK,
-				codeFromGet:  http.StatusOK,
 			},
 		},
 	}
