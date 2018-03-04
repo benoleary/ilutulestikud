@@ -282,7 +282,7 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 				postInterface,
 				"POST new-player")
 
-			// First we check that we can retrieve the new player within the program.
+			// First we check that we can retrieve the player within the program.
 			internalPlayer, isFoundInternally :=
 				testCase.handler.GetPlayerByName(testCase.arguments.playerName)
 
@@ -302,7 +302,7 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 				internalPlayer.Color(),
 				"Internal player.GetAndPostHandler.GetPlayerByName")
 
-			// Finally we check that the new player exists in the list of registered players given out by the endpoint.
+			// Finally we check that the player exists in the list of registered players given out by the endpoint.
 			getInterface, getCode :=
 				testCase.handler.HandleGet([]string{"registered-players"})
 
@@ -332,6 +332,174 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 					"GET registered-players did not have %v in its list of players %v.",
 					testCase.arguments.playerName,
 					getPlayerStateList.Players)
+			}
+		})
+	}
+}
+
+func TestUpdatePlayer(unitTest *testing.T) {
+	playerName := "Test Player"
+	originalColor := "white"
+	newColor := "grey"
+
+	type testArguments struct {
+		playerName string
+		chatColor  string
+	}
+
+	type expectedReturns struct {
+		codeFromPost      int
+		codeFromGet       int
+		playerAfterUpdate *endpoint.PlayerState
+	}
+
+	testCases := []struct {
+		name      string
+		handler   *player.GetAndPostHandler
+		arguments testArguments
+		expected  expectedReturns
+	}{
+		{
+			name:    "Non-existent player",
+			handler: newHandler(),
+			arguments: testArguments{
+				playerName: "Non-existent player",
+				chatColor:  newColor,
+			},
+			expected: expectedReturns{
+				codeFromPost:      http.StatusBadRequest,
+				codeFromGet:       http.StatusNotFound,
+				playerAfterUpdate: nil,
+			},
+		},
+		{
+			name:    "No-op with empty color",
+			handler: newHandler(),
+			arguments: testArguments{
+				playerName: playerName,
+				chatColor:  "",
+			},
+			expected: expectedReturns{
+				codeFromPost: http.StatusOK,
+				codeFromGet:  http.StatusOK,
+				playerAfterUpdate: &endpoint.PlayerState{
+					Name:  playerName,
+					Color: originalColor,
+				},
+			},
+		},
+		{
+			name:    "Simple color change",
+			handler: newHandler(),
+			arguments: testArguments{
+				playerName: playerName,
+				chatColor:  newColor,
+			},
+			expected: expectedReturns{
+				codeFromPost: http.StatusOK,
+				codeFromGet:  http.StatusOK,
+				playerAfterUpdate: &endpoint.PlayerState{
+					Name:  playerName,
+					Color: newColor,
+				},
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		unitTest.Run(testCase.name, func(unitTest *testing.T) {
+			registrationBytesBuffer := new(bytes.Buffer)
+			json.NewEncoder(registrationBytesBuffer).Encode(endpoint.PlayerState{
+				Name:  playerName,
+				Color: originalColor,
+			})
+
+			// First we add the player.
+			testCase.handler.HandlePost(json.NewDecoder(registrationBytesBuffer), []string{"new-player"})
+
+			// We do not check that the POST succeeded, nor that return list is correct, nor do we check
+			// that the player was correctly register: these are all covered by another test.
+
+			// Now we update the player.
+			updateBytesBuffer := new(bytes.Buffer)
+			json.NewEncoder(updateBytesBuffer).Encode(endpoint.PlayerState{
+				Name:  testCase.arguments.playerName,
+				Color: testCase.arguments.chatColor,
+			})
+
+			postInterface, postCode :=
+				testCase.handler.HandlePost(json.NewDecoder(updateBytesBuffer), []string{"update-player"})
+
+			if postCode != testCase.expected.codeFromPost {
+				unitTest.Fatalf(
+					"POST update-player did not return expected HTTP code %v, instead was %v.",
+					http.StatusOK,
+					postCode)
+			}
+
+			// We check that we get a valid response body only when we expect a valid response code.
+			if testCase.expected.codeFromPost == http.StatusOK {
+				assertAtLeastOnePlayerReturnedInList(
+					unitTest,
+					postCode,
+					postInterface,
+					"POST update-player")
+			}
+
+			// If the test expects a valid player to have been updated, we check that it reallyis
+			// there and is as expected.
+			if testCase.expected.playerAfterUpdate != nil {
+				// First we check that we can retrieve the player within the program.
+				internalPlayer, isFoundInternally :=
+					testCase.handler.GetPlayerByName(testCase.arguments.playerName)
+
+				if !isFoundInternally {
+					unitTest.Fatalf("Did not find player %v.", testCase.arguments.playerName)
+				}
+
+				if internalPlayer == nil {
+					unitTest.Fatalf("Found nil for player %v.", testCase.arguments.playerName)
+				}
+
+				assertPlayerIsCorrect(
+					unitTest,
+					testCase.expected.playerAfterUpdate.Name,
+					internalPlayer.Name(),
+					testCase.expected.playerAfterUpdate.Color,
+					internalPlayer.Color(),
+					"Internal player.GetAndPostHandler.GetPlayerByName")
+
+				// Finally we check that the player exists in the list of registered players given out by the endpoint.
+				getInterface, getCode :=
+					testCase.handler.HandleGet([]string{"registered-players"})
+
+				getPlayerStateList := assertAtLeastOnePlayerReturnedInList(
+					unitTest,
+					getCode,
+					getInterface,
+					"GET registered-players")
+
+				hasNewPlayer := false
+				for _, registeredPlayer := range getPlayerStateList.Players {
+					if testCase.arguments.playerName == registeredPlayer.Name {
+						hasNewPlayer = true
+
+						assertPlayerIsCorrect(
+							unitTest,
+							testCase.arguments.playerName,
+							registeredPlayer.Name,
+							testCase.arguments.chatColor,
+							registeredPlayer.Color,
+							"GET registered-players")
+					}
+				}
+
+				if !hasNewPlayer {
+					unitTest.Fatalf(
+						"GET registered-players did not have %v in its list of players %v.",
+						testCase.arguments.playerName,
+						getPlayerStateList.Players)
+				}
 			}
 		})
 	}
