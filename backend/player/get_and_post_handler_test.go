@@ -294,6 +294,81 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 	}
 }
 
+func TestRejectInvalidUpdatePlayer(unitTest *testing.T) {
+	endpointPlayer := endpoint.PlayerState{
+		Name:  "Test Player",
+		Color: "Test color",
+	}
+
+	type testArguments struct {
+		bodyObject interface{}
+	}
+
+	type expectedReturns struct {
+		codeFromPost int
+	}
+
+	testCases := []struct {
+		name      string
+		handler   *player.GetAndPostHandler
+		arguments testArguments
+		expected  expectedReturns
+	}{
+		{
+			name:    "Nil object",
+			handler: newHandler(),
+			arguments: testArguments{
+				bodyObject: nil,
+			},
+			expected: expectedReturns{
+				codeFromPost: http.StatusBadRequest,
+			},
+		},
+		{
+			name:    "Wrong object",
+			handler: newHandler(),
+			arguments: testArguments{
+				bodyObject: &endpoint.ChatColorList{
+					Colors: []string{"Player 1", "Player 2"},
+				},
+			},
+			expected: expectedReturns{
+				codeFromPost: http.StatusBadRequest,
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		unitTest.Run(testCase.name, func(unitTest *testing.T) {
+			registrationBytesBuffer := new(bytes.Buffer)
+			json.NewEncoder(registrationBytesBuffer).Encode(endpointPlayer)
+
+			// First we add the player.
+			testCase.handler.HandlePost(json.NewDecoder(registrationBytesBuffer), []string{"new-player"})
+
+			// We do not check that the POST succeeded, nor that return list is correct, nor do we check
+			// that the player was correctly register: these are all covered by another test.
+
+			// Now we try to update the player.
+			updateBytesBuffer := new(bytes.Buffer)
+			if testCase.arguments.bodyObject != nil {
+				json.NewEncoder(updateBytesBuffer).Encode(testCase.arguments.bodyObject)
+			}
+
+			_, postCode :=
+				testCase.handler.HandlePost(json.NewDecoder(updateBytesBuffer), []string{"update-player"})
+
+			if postCode != http.StatusBadRequest {
+				unitTest.Fatalf(
+					"POST update-player with invalid JSON %v did not return expected HTTP code %v, instead was %v.",
+					testCase.arguments.bodyObject,
+					http.StatusBadRequest,
+					postCode)
+			}
+		})
+	}
+}
+
 func TestUpdatePlayer(unitTest *testing.T) {
 	playerName := "Test Player"
 	originalColor := "white"
