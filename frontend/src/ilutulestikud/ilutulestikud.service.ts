@@ -37,7 +37,8 @@ export class IlutulestikudService {
   }
 
   gamesWithPlayer(playerName: string): Observable<any> {
-    return this.httpClient.get(this.uriRoot + "game/all-games-with-player/" + playerName)
+    return this.httpClient.get(
+      this.uriRoot + "game/all-games-with-player/" + encodeURIComponent(playerName))
   }
 
   newGame(newGameName: string, playerNames: string[]): Observable<any> {
@@ -50,7 +51,8 @@ export class IlutulestikudService {
   }
 
   gameAsSeenByPlayer(gameName: string, playerName: string): Observable<any> {
-    return this.httpClient.get(this.uriRoot + "game/game-as-seen-by-player/" + gameName + "/" + playerName)
+    return this.httpClient.get(
+      this.uriRoot + "game/game-as-seen-by-player/" + encodeURIComponent(gameName) + "/" + encodeURIComponent(playerName))
   }
 
   sendChatMessage(gameName: string, playerName: string, chatText: string): Observable<any> {
