@@ -13,7 +13,8 @@ import (
 
 var colorsAvailableInTest []string = defaults.AvailableColors()
 
-// newHandler prepares a GetAndPostHandler for the tests.
+// newCollectionAndHandler prepares a player.Collection and a player.GetAndPostHandler
+// in a consistent way for the tests.
 func newCollectionAndHandler() (player.Collection, *player.GetAndPostHandler) {
 	playerCollection :=
 		player.NewInMemoryCollection(
