@@ -276,63 +276,20 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 			postInterface, postCode :=
 				testCase.handler.HandlePost(json.NewDecoder(bytesBuffer), []string{"new-player"})
 
+			// Then we check that the POST returned a valid response.
 			assertAtLeastOnePlayerReturnedInList(
 				unitTest,
 				postCode,
 				postInterface,
 				"POST new-player")
 
-			// First we check that we can retrieve the player within the program.
-			internalPlayer, isFoundInternally :=
-				testCase.handler.GetPlayerByName(testCase.arguments.playerName)
-
-			if !isFoundInternally {
-				unitTest.Fatalf("Did not find player %v.", testCase.arguments.playerName)
-			}
-
-			if internalPlayer == nil {
-				unitTest.Fatalf("Found nil for player %v.", testCase.arguments.playerName)
-			}
-
-			assertPlayerIsCorrect(
+			// Finally we check that the player was registered properly.
+			assertPlayerIsCorrectInternallyAndExternally(
 				unitTest,
+				testCase.handler,
 				testCase.arguments.playerName,
-				internalPlayer.Name(),
 				testCase.arguments.chatColor,
-				internalPlayer.Color(),
-				"Internal player.GetAndPostHandler.GetPlayerByName")
-
-			// Finally we check that the player exists in the list of registered players given out by the endpoint.
-			getInterface, getCode :=
-				testCase.handler.HandleGet([]string{"registered-players"})
-
-			getPlayerStateList := assertAtLeastOnePlayerReturnedInList(
-				unitTest,
-				getCode,
-				getInterface,
-				"GET registered-players")
-
-			hasNewPlayer := false
-			for _, registeredPlayer := range getPlayerStateList.Players {
-				if testCase.arguments.playerName == registeredPlayer.Name {
-					hasNewPlayer = true
-
-					assertPlayerIsCorrect(
-						unitTest,
-						testCase.arguments.playerName,
-						registeredPlayer.Name,
-						testCase.arguments.chatColor,
-						registeredPlayer.Color,
-						"GET registered-players")
-				}
-			}
-
-			if !hasNewPlayer {
-				unitTest.Fatalf(
-					"GET registered-players did not have %v in its list of players %v.",
-					testCase.arguments.playerName,
-					getPlayerStateList.Players)
-			}
+				"Register new player")
 		})
 	}
 }
@@ -446,60 +403,15 @@ func TestUpdatePlayer(unitTest *testing.T) {
 					"POST update-player")
 			}
 
-			// If the test expects a valid player to have been updated, we check that it reallyis
+			// If the test expects a valid player to have been updated, we check that it really is
 			// there and is as expected.
 			if testCase.expected.playerAfterUpdate != nil {
-				// First we check that we can retrieve the player within the program.
-				internalPlayer, isFoundInternally :=
-					testCase.handler.GetPlayerByName(testCase.arguments.playerName)
-
-				if !isFoundInternally {
-					unitTest.Fatalf("Did not find player %v.", testCase.arguments.playerName)
-				}
-
-				if internalPlayer == nil {
-					unitTest.Fatalf("Found nil for player %v.", testCase.arguments.playerName)
-				}
-
-				assertPlayerIsCorrect(
+				assertPlayerIsCorrectInternallyAndExternally(
 					unitTest,
+					testCase.handler,
 					testCase.expected.playerAfterUpdate.Name,
-					internalPlayer.Name(),
 					testCase.expected.playerAfterUpdate.Color,
-					internalPlayer.Color(),
-					"Internal player.GetAndPostHandler.GetPlayerByName")
-
-				// Finally we check that the player exists in the list of registered players given out by the endpoint.
-				getInterface, getCode :=
-					testCase.handler.HandleGet([]string{"registered-players"})
-
-				getPlayerStateList := assertAtLeastOnePlayerReturnedInList(
-					unitTest,
-					getCode,
-					getInterface,
-					"GET registered-players")
-
-				hasNewPlayer := false
-				for _, registeredPlayer := range getPlayerStateList.Players {
-					if testCase.arguments.playerName == registeredPlayer.Name {
-						hasNewPlayer = true
-
-						assertPlayerIsCorrect(
-							unitTest,
-							testCase.arguments.playerName,
-							registeredPlayer.Name,
-							testCase.arguments.chatColor,
-							registeredPlayer.Color,
-							"GET registered-players")
-					}
-				}
-
-				if !hasNewPlayer {
-					unitTest.Fatalf(
-						"GET registered-players did not have %v in its list of players %v.",
-						testCase.arguments.playerName,
-						getPlayerStateList.Players)
-				}
+					"Update valid player")
 			}
 		})
 	}
@@ -580,5 +492,64 @@ func assertPlayerIsCorrect(
 				actualChatColor,
 				availableColors)
 		}
+	}
+}
+
+func assertPlayerIsCorrectInternallyAndExternally(
+	unitTest *testing.T,
+	testHandler *player.GetAndPostHandler,
+	expectedPlayerName string,
+	expectedChatColor string,
+	testIdentifier string) {
+	// First we check that we can retrieve the player within the program.
+	internalPlayer, isFoundInternally :=
+		testHandler.GetPlayerByName(expectedPlayerName)
+
+	if !isFoundInternally {
+		unitTest.Fatalf(testIdentifier+"/internal: did not find player %v.", expectedPlayerName)
+	}
+
+	if internalPlayer == nil {
+		unitTest.Fatalf(testIdentifier+"/internal: found nil for player %v.", expectedPlayerName)
+	}
+
+	assertPlayerIsCorrect(
+		unitTest,
+		expectedPlayerName,
+		internalPlayer.Name(),
+		expectedChatColor,
+		internalPlayer.Color(),
+		testIdentifier+"/internal player.GetAndPostHandler.GetPlayerByName")
+
+	// Finally we check that the player exists in the list of registered players given out by the endpoint.
+	getInterface, getCode :=
+		testHandler.HandleGet([]string{"registered-players"})
+
+	getPlayerStateList := assertAtLeastOnePlayerReturnedInList(
+		unitTest,
+		getCode,
+		getInterface,
+		testIdentifier+"/GET registered-players")
+
+	hasNewPlayer := false
+	for _, registeredPlayer := range getPlayerStateList.Players {
+		if expectedPlayerName == registeredPlayer.Name {
+			hasNewPlayer = true
+
+			assertPlayerIsCorrect(
+				unitTest,
+				expectedPlayerName,
+				registeredPlayer.Name,
+				expectedChatColor,
+				registeredPlayer.Color,
+				testIdentifier+"/GET registered-players")
+		}
+	}
+
+	if !hasNewPlayer {
+		unitTest.Fatalf(
+			testIdentifier+"/GET registered-players did not have %v in its list of players %v.",
+			expectedPlayerName,
+			getPlayerStateList.Players)
 	}
 }
