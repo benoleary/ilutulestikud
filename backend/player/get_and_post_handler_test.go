@@ -6,16 +6,18 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/benoleary/ilutulestikud/backend/chat"
+	"github.com/benoleary/ilutulestikud/backend/defaults"
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
+var colorsAvailableInTest []string = defaults.AvailableColors()
+
 // newHandler prepares a GetAndPostHandler for the tests.
 func newHandler() *player.GetAndPostHandler {
-	playerFactory := &player.ThreadsafeFactory{}
-	initialPlayers := player.DefaultPlayers()
-	return player.NewGetAndPostHandler(playerFactory, initialPlayers)
+	playerFactory :=
+		player.NewInMemoryCollection(defaults.InitialPlayerNames(), colorsAvailableInTest)
+	return player.NewGetAndPostHandler(playerFactory)
 }
 
 func TestGetNoSegmentBadRequest(unitTest *testing.T) {
@@ -352,7 +354,7 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 
 				// Otherwise we check that the player was assigned a valid color.
 				isValidColor := false
-				availableColors := chat.AvailableColors()
+				availableColors := colorsAvailableInTest
 				for _, availableColor := range availableColors {
 					if availableColor == internalPlayer.Color() {
 						isValidColor = true

@@ -10,36 +10,12 @@ import (
 // logSize gives the size of the list of the last chat messages.
 const logSize = 8
 
-var availableColors = [...]string{
-	"pink",
-	"red",
-	"orange",
-	"yellow",
-	"green",
-	"blue",
-	"purple",
-	"white",
-}
-
-var numberOfAvailableColors = len(availableColors)
-
 // message is a struct to hold the details of a single chat message.
 type message struct {
 	CreationTime time.Time
 	PlayerName   string
 	ChatColor    string
 	MessageText  string
-}
-
-// DefaultColor provides a default color for a given index, cycling round
-// to the first color again if there are not enough.
-func DefaultColor(playerIndex int) string {
-	return availableColors[playerIndex%numberOfAvailableColors]
-}
-
-// AvailableColors returns a copy of the list of colors available for chat messages.
-func AvailableColors() []string {
-	return availableColors[:]
 }
 
 // Log implements sort.Interface for []*State based on the creationTime field.
