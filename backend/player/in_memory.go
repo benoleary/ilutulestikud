@@ -79,8 +79,9 @@ func (inMemoryCollection *InMemoryCollection) All() []State {
 	return playerList
 }
 
-// Reset removes all players which are not among the initial players, and
-// restores any initial players who have been removed.
+// Reset removes all players which are not among the initial players.
+// It does not restore any initial players who have been removed as
+// there is no possibility to remove them anyway.
 func (inMemoryCollection *InMemoryCollection) Reset() {
 	playersToRemove := make([]string, 0)
 	for _, playerState := range inMemoryCollection.playerStates {
@@ -91,15 +92,6 @@ func (inMemoryCollection *InMemoryCollection) Reset() {
 
 	for _, playerToRemove := range playersToRemove {
 		delete(inMemoryCollection.playerStates, playerToRemove)
-	}
-
-	// We assume that we never change the initial player "set", so we can
-	// ignore the value bool and just use the keys.
-	for initialPlayerName := range inMemoryCollection.initialPlayerNames {
-		_, initialPlayerExists := inMemoryCollection.playerStates[initialPlayerName]
-		if !initialPlayerExists {
-			inMemoryCollection.addWithDefaultColor(initialPlayerName)
-		}
 	}
 }
 
