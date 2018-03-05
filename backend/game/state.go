@@ -41,6 +41,9 @@ type State interface {
 	// RecordPlayerChatMessage should add the given new message to the newest end of the chat
 	// log, ensuring that the chat log does not become too long to display.
 	RecordPlayerChatMessage(chattingPlayer player.State, chatMessage string)
+
+	// PerformAction should perform the given action for its player or return an error.
+	PerformAction(actingPlayer player.State, playerAction endpoint.PlayerAction) error
 }
 
 // ForPlayer writes the relevant parts of the state of the game as should be known by the given

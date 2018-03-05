@@ -1,7 +1,6 @@
 package game
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"net/http"
 
@@ -54,7 +53,11 @@ func (getAndPostHandler *GetAndPostHandler) HandlePost(
 	case "create-new-game":
 		return getAndPostHandler.handleNewGame(httpBodyDecoder, relevantSegments)
 	case "send-chat-message":
+		// This is deprecated in favor of sending a chat message as a player action,
+		// but remains here for backwards compatibility for a while.
 		return getAndPostHandler.handleNewChatMessage(httpBodyDecoder, relevantSegments)
+	case "player-action":
+		return getAndPostHandler.handlePlayerAction(httpBodyDecoder, relevantSegments)
 	default:
 		return "URI segment " + relevantSegments[0] + " not valid", http.StatusNotFound
 	}
@@ -125,6 +128,48 @@ func (getAndPostHandler *GetAndPostHandler) writeGameForPlayer(
 	return ForPlayer(gameState, playerIdentifier), http.StatusOK
 }
 
+// handlePlayerAction passes on the given player action to the relevant game.
+func (getAndPostHandler *GetAndPostHandler) handlePlayerAction(
+	httpBodyDecoder *json.Decoder,
+	relevantSegments []string) (interface{}, int) {
+	var playerAction endpoint.PlayerAction
+
+	parsingError := httpBodyDecoder.Decode(&playerAction)
+	if parsingError != nil {
+		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
+	}
+
+	gameState, isFound := getAndPostHandler.gameCollection.Get(playerAction.Game)
+
+	if !isFound {
+		errorMessage :=
+			"Game " + playerAction.Game + " does not exist, cannot perform action from player " + playerAction.Player
+		return errorMessage, http.StatusBadRequest
+	}
+
+	if !gameState.HasPlayerAsParticipant(playerAction.Player) {
+		errorMessage :=
+			"Player " + playerAction.Player + " is not a participant in game " + playerAction.Game
+		return errorMessage, http.StatusBadRequest
+	}
+
+	actingPlayer, isRegisteredPlayer := getAndPostHandler.playerCollection.Get(playerAction.Player)
+
+	if !isRegisteredPlayer {
+		errorMessage :=
+			"Player " + playerAction.Player + " is not registered, should have no actions for game " + playerAction.Game
+		return errorMessage, http.StatusBadRequest
+	}
+
+	actionError := gameState.PerformAction(actingPlayer, playerAction)
+
+	if actionError != nil {
+		return actionError, http.StatusBadGateway
+	}
+
+	return "OK", http.StatusOK
+}
+
 // handleNewChatMessage adds the given chat message to the relevant game state,
 // as coming from the given player.
 func (getAndPostHandler *GetAndPostHandler) handleNewChatMessage(
@@ -146,14 +191,9 @@ func (getAndPostHandler *GetAndPostHandler) handleNewChatMessage(
 	}
 
 	if !gameState.HasPlayerAsParticipant(chatMessage.Player) {
-		// This is for backwards-compatibility with a frontend which still uses the player
-		// name as the identifier.
-		playerIdentifier := base64.StdEncoding.EncodeToString([]byte(chatMessage.Player))
-		if !gameState.HasPlayerAsParticipant(playerIdentifier) {
-			errorMessage :=
-				"Player " + chatMessage.Player + " is not a participant in game " + chatMessage.Game
-			return errorMessage, http.StatusBadRequest
-		}
+		errorMessage :=
+			"Player " + chatMessage.Player + " is not a participant in game " + chatMessage.Game
+		return errorMessage, http.StatusBadRequest
 	}
 
 	chattingPlayer, isRegisteredPlayer := getAndPostHandler.playerCollection.Get(chatMessage.Player)

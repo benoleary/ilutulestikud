@@ -150,6 +150,26 @@ func (gameState *inMemoryState) ChatLog() *chat.Log {
 
 // RecordPlayerChatMessage adds the given new message to the end of the chat log
 // and removes the oldest message from the top.
-func (gameState *inMemoryState) RecordPlayerChatMessage(chattingPlayer player.State, chatMessage string) {
-	gameState.chatLog.AppendNewMessage(chattingPlayer.Name(), chattingPlayer.Color(), chatMessage)
+func (gameState *inMemoryState) RecordPlayerChatMessage(
+	chattingPlayer player.State,
+	chatMessage string) {
+	gameState.chatLog.AppendNewMessage(
+		chattingPlayer.Name(),
+		chattingPlayer.Color(),
+		chatMessage)
+}
+
+// PerformAction should perform the given action for its player or return an error,
+// but right now it only performs the action to record a chat message.
+func (gameState *inMemoryState) PerformAction(
+	actingPlayer player.State,
+	playerAction endpoint.PlayerAction) error {
+	if playerAction.Action == "chat" {
+		gameState.chatLog.AppendNewMessage(
+			actingPlayer.Name(),
+			actingPlayer.Color(),
+			playerAction.ChatMessage)
+	}
+
+	return nil
 }
