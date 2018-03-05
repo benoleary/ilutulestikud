@@ -18,6 +18,7 @@ type ChatColorList struct {
 // All the fields need to be public so that the JSON encoder can see them to serialize them.
 // The creation timestamp is int64 because that is what time.Unix() returns.
 type TurnSummary struct {
+	GameIdentifier             string
 	GameName                   string
 	CreationTimestampInSeconds int64
 	TurnNumber                 int

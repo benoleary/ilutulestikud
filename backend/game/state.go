@@ -131,6 +131,7 @@ func TurnSummariesForFrontend(collection Collection, playerIdentifier string) en
 		}
 
 		turnSummaries[gameIndex] = endpoint.TurnSummary{
+			GameIdentifier:             gameList[gameIndex].Identifier(),
 			GameName:                   nameOfGame,
 			CreationTimestampInSeconds: gameList[gameIndex].CreationTime().Unix(),
 			TurnNumber:                 gameTurn,
