@@ -34,7 +34,7 @@ import { Player } from '../models/player.model'
             
             if (data.availablePlayers)
             {
-                this.availablePlayers = data["availablePlayers"];
+                this.availablePlayers = data["availablePlayers"].slice();
             }
         }
 
