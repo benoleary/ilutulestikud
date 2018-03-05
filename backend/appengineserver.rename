@@ -1,8 +1,12 @@
 package main
 import (
-	"github.com/benoleary/ilutulestikud/backend/server"
 	"google.golang.org/appengine"
 	"net/http"
+
+	"github.com/benoleary/ilutulestikud/backend/defaults"
+	"github.com/benoleary/ilutulestikud/backend/game"
+	"github.com/benoleary/ilutulestikud/backend/player"
+	"github.com/benoleary/ilutulestikud/backend/server"
 )
 func main() {
 	// This main function just injects hard-coded dependencies.
