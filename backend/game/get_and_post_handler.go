@@ -1,6 +1,7 @@
 package game
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -98,12 +99,11 @@ func (getAndPostHandler *GetAndPostHandler) handleNewGame(
 		}
 	}
 
-	_, gameExists := getAndPostHandler.gameCollection.Get(newGame.Name)
-	if gameExists {
-		return "Name " + newGame.Name + " already exists", http.StatusBadRequest
-	}
+	addError := getAndPostHandler.gameCollection.Add(newGame, getAndPostHandler.playerCollection)
 
-	getAndPostHandler.gameCollection.Add(newGame, getAndPostHandler.playerCollection)
+	if addError != nil {
+		return addError, http.StatusBadRequest
+	}
 
 	return "OK", http.StatusOK
 }
@@ -116,19 +116,36 @@ func (getAndPostHandler *GetAndPostHandler) writeGameForPlayer(
 		return "Not enough segments in URI to determine game name and player name", http.StatusBadRequest
 	}
 
-	gameName := relevantSegments[0]
-	playerName := relevantSegments[1]
+	gameIdentifier := relevantSegments[0]
+	playerIdentifier := relevantSegments[1]
 
-	gameState, isFound := getAndPostHandler.gameCollection.Get(gameName)
+	gameState, isFound := getAndPostHandler.gameCollection.Get(gameIdentifier)
+
+	// This is for backwards-compatibility with a frontend which still uses the game
+	// name as the identifier.
 	if !isFound {
-		return " game " + gameName + " does not exist, cannot add chat from player " + playerName, http.StatusBadRequest
+		gameIdentifier = base64.StdEncoding.EncodeToString([]byte(gameIdentifier))
+		gameState, isFound = getAndPostHandler.gameCollection.Get(gameIdentifier)
 	}
 
-	if !gameState.HasPlayerAsParticipant(playerName) {
-		return "Player " + playerName + " is not a participant in game " + gameName, http.StatusBadRequest
+	if !isFound {
+		errorMessage :=
+			"Game " + gameIdentifier + " does not exist, cannot add chat from player " + playerIdentifier
+		return errorMessage, http.StatusBadRequest
 	}
 
-	return ForPlayer(gameState, playerName), http.StatusOK
+	if !gameState.HasPlayerAsParticipant(playerIdentifier) {
+		// This is for backwards-compatibility with a frontend which still uses the player
+		// name as the identifier.
+		playerIdentifier = base64.StdEncoding.EncodeToString([]byte(playerIdentifier))
+		if !gameState.HasPlayerAsParticipant(playerIdentifier) {
+			errorMessage :=
+				"Player " + playerIdentifier + " is not a participant in game " + gameIdentifier
+			return errorMessage, http.StatusBadRequest
+		}
+	}
+
+	return ForPlayer(gameState, playerIdentifier), http.StatusOK
 }
 
 // handleNewChatMessage adds the given chat message to the relevant game state,
@@ -144,6 +161,14 @@ func (getAndPostHandler *GetAndPostHandler) handleNewChatMessage(
 	}
 
 	gameState, isFound := getAndPostHandler.gameCollection.Get(chatMessage.Game)
+
+	// This is for backwards-compatibility with a frontend which still uses the game
+	// name as the identifier.
+	if !isFound {
+		gameIdentifier := base64.StdEncoding.EncodeToString([]byte(chatMessage.Game))
+		gameState, isFound = getAndPostHandler.gameCollection.Get(gameIdentifier)
+	}
+
 	if !isFound {
 		errorMessage :=
 			"Game " + chatMessage.Game + " does not exist, cannot add chat from player " + chatMessage.Player
@@ -151,12 +176,27 @@ func (getAndPostHandler *GetAndPostHandler) handleNewChatMessage(
 	}
 
 	if !gameState.HasPlayerAsParticipant(chatMessage.Player) {
-		errorMessage :=
-			"Player " + chatMessage.Player + " is not a participant in game " + chatMessage.Game
-		return errorMessage, http.StatusBadRequest
+		// This is for backwards-compatibility with a frontend which still uses the player
+		// name as the identifier.
+		playerIdentifier := base64.StdEncoding.EncodeToString([]byte(chatMessage.Player))
+		if !gameState.HasPlayerAsParticipant(playerIdentifier) {
+			errorMessage :=
+				"Player " + chatMessage.Player + " is not a participant in game " + chatMessage.Game
+			return errorMessage, http.StatusBadRequest
+		}
 	}
 
 	chattingPlayer, isRegisteredPlayer := getAndPostHandler.playerCollection.Get(chatMessage.Player)
+
+	// This is for backwards-compatibility with a frontend which still uses the player
+	// name as the identifier.
+	if !isRegisteredPlayer {
+		playerIdentifier := base64.StdEncoding.EncodeToString([]byte(chatMessage.Player))
+		playerFromEncodedName, encodedNameFound := getAndPostHandler.playerCollection.Get(playerIdentifier)
+		isRegisteredPlayer = encodedNameFound
+		chattingPlayer = playerFromEncodedName
+	}
+
 	if !isRegisteredPlayer {
 		errorMessage :=
 			"Player " + chatMessage.Player + " is not registered, should not chat in game " + chatMessage.Game

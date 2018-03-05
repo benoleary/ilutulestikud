@@ -293,7 +293,7 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 				"POST new-player")
 
 			// Finally we check that the player was registered properly.
-			assertPlayerIsCorrectInternallyAndExternally(
+			assertPlayerIsCorrectExternallyAndInternally(
 				unitTest,
 				playerCollection,
 				playerHandler,
@@ -488,7 +488,7 @@ func TestUpdatePlayer(unitTest *testing.T) {
 			// If the test expects a valid player to have been updated, we check that it really is
 			// there and is as expected.
 			if testCase.expected.playerAfterUpdate != nil {
-				assertPlayerIsCorrectInternallyAndExternally(
+				assertPlayerIsCorrectExternallyAndInternally(
 					unitTest,
 					playerCollection,
 					playerHandler,
@@ -554,34 +554,40 @@ func TestResetPlayers(unitTest *testing.T) {
 
 			// First we have to determine what the expected reset state is, as the colors may have
 			// been randomly assigned.
-			initialOne, existsOne := playerCollection.Get(initialPlayers[0])
+			expectedOne := endpoint.PlayerState{}
+			expectedTwo := endpoint.PlayerState{}
+			initialPlayerStates := playerCollection.All()
+			foundOne := false
+			foundTwo := false
+			for _, initialPlayerState := range initialPlayerStates {
+				if initialPlayerState.Name() == initialPlayers[0] {
+					foundOne = true
+					expectedOne.Identifier = initialPlayerState.Identifier()
+					expectedOne.Name = initialPlayerState.Name()
+					expectedOne.Color = initialPlayerState.Color()
+				} else if initialPlayerState.Name() == initialPlayers[1] {
+					foundTwo = true
+					expectedTwo.Identifier = initialPlayerState.Identifier()
+					expectedTwo.Name = initialPlayerState.Name()
+					expectedTwo.Color = initialPlayerState.Color()
+				}
+			}
 
-			if !existsOne {
+			if !foundOne {
 				unitTest.Fatalf(
 					"Initial player %v could not be found internally",
 					initialPlayers[0])
 			}
 
-			expectedOne := endpoint.PlayerState{
-				Name:  initialOne.Name(),
-				Color: initialOne.Color(),
-			}
-
-			initialTwo, existsTwo := playerCollection.Get(initialPlayers[1])
-			expectedTwo := endpoint.PlayerState{
-				Name:  initialTwo.Name(),
-				Color: initialTwo.Color(),
+			if !foundTwo {
+				unitTest.Fatalf(
+					"Initial player %v could not be found internally",
+					initialPlayers[1])
 			}
 
 			expectedPlayerNames := make(map[string]bool, 2)
 			expectedPlayerNames[expectedOne.Name] = true
 			expectedPlayerNames[expectedTwo.Name] = true
-
-			if !existsTwo {
-				unitTest.Fatalf(
-					"Initial player %v could not be found internally",
-					initialPlayers[1])
-			}
 
 			if testCase.arguments.shouldUpdate {
 				// We update expectedOne to have the other color from the list.
@@ -638,7 +644,7 @@ func TestResetPlayers(unitTest *testing.T) {
 			// Before we check that only initial players are returned, we check that each
 			// initial player is present and as expected.
 			for _, expectedPlayer := range []endpoint.PlayerState{expectedOne, expectedTwo} {
-				assertPlayerIsCorrectInternallyAndExternally(
+				assertPlayerIsCorrectExternallyAndInternally(
 					unitTest,
 					playerCollection,
 					playerHandler,
@@ -708,11 +714,20 @@ func assertAtLeastOnePlayerReturnedInList(
 
 func assertPlayerIsCorrect(
 	unitTest *testing.T,
+	expectedPlayerIdentifier string,
+	actualPlayerIdentifier string,
 	expectedPlayerName string,
 	actualPlayerName string,
 	expectedChatColor string,
 	actualChatColor string,
 	testIdentifier string) {
+	if actualPlayerIdentifier != expectedPlayerIdentifier {
+		unitTest.Fatalf(
+			testIdentifier+": player with identifier %v was found but had identifier %v.",
+			expectedPlayerIdentifier,
+			actualPlayerIdentifier)
+	}
+
 	if actualPlayerName != expectedPlayerName {
 		unitTest.Fatalf(
 			testIdentifier+": player %v was found but had name %v.",
@@ -733,7 +748,7 @@ func assertPlayerIsCorrect(
 		isValidColor := false
 		availableColors := colorsAvailableInTest
 		for _, availableColor := range availableColors {
-			if availableColor == actualChatColor {
+			if actualChatColor == availableColor {
 				isValidColor = true
 				break
 			}
@@ -749,34 +764,14 @@ func assertPlayerIsCorrect(
 	}
 }
 
-func assertPlayerIsCorrectInternallyAndExternally(
+func assertPlayerIsCorrectExternallyAndInternally(
 	unitTest *testing.T,
 	playerCollection player.Collection,
 	testHandler *player.GetAndPostHandler,
 	expectedPlayerName string,
 	expectedChatColor string,
 	testIdentifier string) {
-	// First we check that we can retrieve the player within the program.
-	internalPlayer, isFoundInternally :=
-		playerCollection.Get(expectedPlayerName)
-
-	if !isFoundInternally {
-		unitTest.Fatalf(testIdentifier+"/internal: did not find player %v.", expectedPlayerName)
-	}
-
-	if internalPlayer == nil {
-		unitTest.Fatalf(testIdentifier+"/internal: found nil for player %v.", expectedPlayerName)
-	}
-
-	assertPlayerIsCorrect(
-		unitTest,
-		expectedPlayerName,
-		internalPlayer.Name(),
-		expectedChatColor,
-		internalPlayer.Color(),
-		testIdentifier+"/internal player.GetAndPostHandler.GetPlayerByName")
-
-	// Finally we check that the player exists in the list of registered players given out by the endpoint.
+	// We have to look externally first so that we can find the identifier matching the name.
 	getInterface, getCode :=
 		testHandler.HandleGet([]string{"registered-players"})
 
@@ -786,13 +781,19 @@ func assertPlayerIsCorrectInternallyAndExternally(
 		getInterface,
 		testIdentifier+"/GET registered-players")
 
+	// This should be wrong, but it will be over-written if the player exists anyway.
+	expectedIdentifier := expectedPlayerName
+
 	hasNewPlayer := false
 	for _, registeredPlayer := range getPlayerList.Players {
 		if expectedPlayerName == registeredPlayer.Name {
 			hasNewPlayer = true
+			expectedIdentifier = registeredPlayer.Identifier
 
 			assertPlayerIsCorrect(
 				unitTest,
+				expectedIdentifier,
+				registeredPlayer.Identifier,
 				expectedPlayerName,
 				registeredPlayer.Name,
 				expectedChatColor,
@@ -807,4 +808,26 @@ func assertPlayerIsCorrectInternallyAndExternally(
 			expectedPlayerName,
 			getPlayerList.Players)
 	}
+
+	// We can check the internal function now that we have the identifier.
+	internalPlayer, isFoundInternally :=
+		playerCollection.Get(expectedIdentifier)
+
+	if !isFoundInternally {
+		unitTest.Fatalf(testIdentifier+"/internal: did not find player %v.", expectedPlayerName)
+	}
+
+	if internalPlayer == nil {
+		unitTest.Fatalf(testIdentifier+"/internal: found nil for player %v.", expectedPlayerName)
+	}
+
+	assertPlayerIsCorrect(
+		unitTest,
+		expectedIdentifier,
+		internalPlayer.Identifier(),
+		expectedPlayerName,
+		internalPlayer.Name(),
+		expectedChatColor,
+		internalPlayer.Color(),
+		testIdentifier+"/internal player.GetAndPostHandler.GetPlayerByName")
 }

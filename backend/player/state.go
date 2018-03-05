@@ -6,6 +6,10 @@ import (
 
 // State defines the interface for structs which should encapsulate the state of a player.
 type State interface {
+	// Identifier should return the identifier of the player for interaction between
+	// frontend and backend.
+	Identifier() string
+
 	// Name should return the name of the player as known to the games.
 	Name() string
 
@@ -28,12 +32,13 @@ type State interface {
 type Collection interface {
 	// Add should add an element to the collection which is a new object implementing
 	// the State interface with information given by the endpoint.PlayerState object.
-	Add(playerInformation endpoint.PlayerState)
+	// It should return an error if the player already exists.
+	Add(playerInformation endpoint.PlayerState) error
 
-	// Get should return the State corresponding to the given player name if it exists
-	// already (or else nil) along with whether the State exists, analogously to a
-	// standard Golang map.
-	Get(playerName string) (State, bool)
+	// Get should return the State corresponding to the given player identifier if it
+	// exists already (or else nil) along with whether the State exists, analogously to
+	// a standard Golang map.
+	Get(playerIdentifier string) (State, bool)
 
 	// All should return a slice of all the State instances in the collection. The order
 	// is not mandated, and may even change with repeated calls to the same unchanged
@@ -58,8 +63,9 @@ func ForEndpoint(collection Collection) endpoint.PlayerList {
 	playerList := make([]endpoint.PlayerState, 0, len(playerStates))
 	for _, playerState := range playerStates {
 		playerList = append(playerList, endpoint.PlayerState{
-			Name:  playerState.Name(),
-			Color: playerState.Color(),
+			Identifier: playerState.Identifier(),
+			Name:       playerState.Name(),
+			Color:      playerState.Color(),
 		})
 	}
 

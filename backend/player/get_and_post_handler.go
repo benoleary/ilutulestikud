@@ -1,6 +1,7 @@
 package player
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -11,13 +12,13 @@ import (
 // GetAndPostHandler is a struct meant to encapsulate all the state co-ordinating all the players.
 // It implements github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
 type GetAndPostHandler struct {
-	stateCollection Collection
+	playerCollection Collection
 }
 
 // NewGetAndPostHandler constructs a GetAndPostHandler object with a non-nil, non-empty slice
 // of State objects, returning a pointer to the newly-created object.
 func NewGetAndPostHandler(stateCollection Collection) *GetAndPostHandler {
-	return &GetAndPostHandler{stateCollection: stateCollection}
+	return &GetAndPostHandler{playerCollection: stateCollection}
 }
 
 // HandleGet parses an HTTP GET request and responds with the appropriate function.
@@ -60,13 +61,13 @@ func (getAndPostHandler *GetAndPostHandler) HandlePost(httpBodyDecoder *json.Dec
 // the list of player objects as its "Players" attribute. The order of the players
 // may not consistent with repeated calls as ForEndpoint does not guarantee it.
 func (getAndPostHandler *GetAndPostHandler) writeRegisteredPlayers() (interface{}, int) {
-	return ForEndpoint(getAndPostHandler.stateCollection), http.StatusOK
+	return ForEndpoint(getAndPostHandler.playerCollection), http.StatusOK
 }
 
 // writeAvailableColors writes a JSON object into the HTTP response which has
 // the list of strings as its "Colors" attribute.
 func (getAndPostHandler *GetAndPostHandler) writeAvailableColors() (interface{}, int) {
-	return AvailableChatColorsForEndpoint(getAndPostHandler.stateCollection), http.StatusOK
+	return AvailableChatColorsForEndpoint(getAndPostHandler.playerCollection), http.StatusOK
 }
 
 // handleNewPlayer adds the player defined by the JSON of the request's body to the list
@@ -87,12 +88,11 @@ func (getAndPostHandler *GetAndPostHandler) handleNewPlayer(httpBodyDecoder *jso
 		return "Player names cannot contain the slash character '/', sorry", http.StatusBadRequest
 	}
 
-	_, playerExists := getAndPostHandler.stateCollection.Get(endpointPlayer.Name)
-	if playerExists {
-		return "Name " + endpointPlayer.Name + " already registered", http.StatusBadRequest
-	}
+	addError := getAndPostHandler.playerCollection.Add(endpointPlayer)
 
-	getAndPostHandler.stateCollection.Add(endpointPlayer)
+	if addError != nil {
+		return addError, http.StatusBadRequest
+	}
 
 	return getAndPostHandler.writeRegisteredPlayers()
 }
@@ -107,7 +107,17 @@ func (getAndPostHandler *GetAndPostHandler) handleUpdatePlayer(httpBodyDecoder *
 		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
 	}
 
-	existingPlayer, playerExists := getAndPostHandler.stateCollection.Get(newPlayer.Name)
+	existingPlayer, playerExists := getAndPostHandler.playerCollection.Get(newPlayer.Identifier)
+
+	// This is for backwards-compatibility with a frontend which still uses the player
+	// name as the identifier.
+	if !playerExists {
+		playerIdentifier := base64.StdEncoding.EncodeToString([]byte(newPlayer.Name))
+		playerFromEncodedName, encodedNameFound := getAndPostHandler.playerCollection.Get(playerIdentifier)
+		playerExists = encodedNameFound
+		existingPlayer = playerFromEncodedName
+	}
+
 	if !playerExists {
 		return "Name " + newPlayer.Name + " not found", http.StatusBadRequest
 	}
@@ -120,7 +130,7 @@ func (getAndPostHandler *GetAndPostHandler) handleUpdatePlayer(httpBodyDecoder *
 // handleResetPlayers resets the player list to the initial list, and returns the updated list
 // as writeRegisteredPlayers would.
 func (getAndPostHandler *GetAndPostHandler) handleResetPlayers() (interface{}, int) {
-	getAndPostHandler.stateCollection.Reset()
+	getAndPostHandler.playerCollection.Reset()
 
 	return getAndPostHandler.writeRegisteredPlayers()
 }

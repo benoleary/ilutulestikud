@@ -2,8 +2,9 @@ package endpoint
 
 // Types emitted and accepted by player.GetAndPostHandler:
 
-// PlayerState encapsulates the information from player.State suitable for the front-end.
+// PlayerState encapsulates the information from player.State suitable for the frontend.
 type PlayerState struct {
-	Name  string
-	Color string
+	Identifier string
+	Name       string
+	Color      string
 }

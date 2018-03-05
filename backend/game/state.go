@@ -11,6 +11,10 @@ import (
 
 // State defines the interface for structs which should encapsulate the state of a single game.
 type State interface {
+	// Identifier should return the identifier of the game for interaction between frontend
+	// and backend.
+	Identifier() string
+
 	// Name should return the name of the game as known to the players.
 	Name() string
 
@@ -27,9 +31,9 @@ type State interface {
 	// was created.
 	CreationTime() time.Time
 
-	// HasPlayerAsParticipant should return true if the given player name matches
-	// the name of any of the game's participating players.
-	HasPlayerAsParticipant(playerName string) bool
+	// HasPlayerAsParticipant should return true if the given player identifier matches
+	// the identifier of any of the game's participating players.
+	HasPlayerAsParticipant(playerIdentifier string) bool
 
 	// ChatLog should return the chat log of the game at the current moment.
 	ChatLog() *chat.Log
@@ -41,7 +45,7 @@ type State interface {
 
 // ForPlayer writes the relevant parts of the state of the game as should be known by the given
 // player into the relevant JSON object for the frontend.
-func ForPlayer(state State, playerName string) endpoint.PlayerKnowledge {
+func ForPlayer(state State, playerIdentifier string) endpoint.PlayerKnowledge {
 	return endpoint.PlayerKnowledge{ChatLog: state.ChatLog().ForFrontend()}
 }
 
@@ -52,21 +56,23 @@ type Collection interface {
 	// Add should add an element to the collection which is a new object implementing
 	// the State interface with information given by the endpoint.GameDefinition object.
 	// The given player collection should be used as the source of player states to be
-	// matched to names given in the game definition.
+	// matched to names given in the game definition. It should return an error if a
+	// game with the given name already exists, or if the definition includes invalid
+	// players.
 	Add(gameDefinition endpoint.GameDefinition,
-		playerCollection player.Collection)
+		playerCollection player.Collection) error
 
-	// Get should return the State corresponding to the given game name if it exists
-	// already (or else nil) along with whether the State exists, analogously to a
-	// standard Golang map.
-	Get(gameName string) (State, bool)
+	// Get should return the State corresponding to the given game identifier if it
+	// exists already (or else nil) along with whether the State exists, analogously to
+	// a standard Golang map.
+	Get(gameIdentifier string) (State, bool)
 
 	// All should return a slice of all the State instances in the collection which
 	// have the given player as a participant. The order is not mandated, and may even
 	// change with repeated calls to the same unchanged Collection (analogously to the
 	// entry set of a standard Golang map, for example), though of course an
 	// implementation may order the slice consistently.
-	All(playerName string) []State
+	All(playerIdentifier string) []State
 }
 
 // byCreationTime implements sort interface for []State based on the creationTime field.
@@ -91,8 +97,8 @@ func (statePointerArray byCreationTime) Less(firstIndex int, secondIndex int) bo
 
 // TurnSummariesForFrontend writes the turn summary information for each game which has
 // the given player into the relevant JSON object for the frontend.
-func TurnSummariesForFrontend(collection Collection, playerName string) endpoint.TurnSummaryList {
-	gameList := collection.All(playerName)
+func TurnSummariesForFrontend(collection Collection, playerIdentifier string) endpoint.TurnSummaryList {
+	gameList := collection.All(playerIdentifier)
 
 	sort.Sort(byCreationTime(gameList))
 
@@ -108,13 +114,20 @@ func TurnSummariesForFrontend(collection Collection, playerName string) endpoint
 
 		playerNamesInTurnOrder := make([]string, numberOfParticipants)
 
+		turnsUntilPlayer := 0
 		for playerIndex := 0; playerIndex < numberOfParticipants; playerIndex++ {
 			// Game turns begin with 1 rather than 0, so this sets the player names in order,
 			// wrapping index back to 0 when at the end of the list.
 			// E.g. turn 3, 5 players: playerNamesInTurnOrder will start with
 			// gameParticipants[2], then [3], then [4], then [0], then [1].
+			playerInTurnOrder :=
+				gameParticipants[(playerIndex+gameTurn-1)%numberOfParticipants]
 			playerNamesInTurnOrder[playerIndex] =
-				gameParticipants[(playerIndex+gameTurn-1)%numberOfParticipants].Name()
+				playerInTurnOrder.Name()
+
+			if playerIdentifier == playerInTurnOrder.Identifier() {
+				turnsUntilPlayer = playerIndex
+			}
 		}
 
 		turnSummaries[gameIndex] = endpoint.TurnSummary{
@@ -122,7 +135,7 @@ func TurnSummariesForFrontend(collection Collection, playerName string) endpoint
 			CreationTimestampInSeconds: gameList[gameIndex].CreationTime().Unix(),
 			TurnNumber:                 gameTurn,
 			PlayersInNextTurnOrder:     playerNamesInTurnOrder,
-			IsPlayerTurn:               playerName == playerNamesInTurnOrder[0],
+			IsPlayerTurn:               turnsUntilPlayer == 0,
 		}
 	}
 
