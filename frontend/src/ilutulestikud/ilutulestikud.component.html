@@ -64,9 +64,9 @@
     </mat-tab-group>
   </div>
 
-  <game-display *ngIf="selectedGameName"
-    [playerName]="selectedPlayer.Name"
-    [gameName]="selectedGameName">
+  <game-display *ngIf="selectedGameIdentifier"
+    [playerIdentifier]="selectedPlayer.Identifier"
+    [gameIdentifier]="selectedGameIdentifier">
   </game-display>
 </div>
 

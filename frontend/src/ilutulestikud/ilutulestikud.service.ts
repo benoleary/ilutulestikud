@@ -36,31 +36,31 @@ export class IlutulestikudService {
       playerOverride)
   }
 
-  gamesWithPlayer(playerName: string): Observable<any> {
+  gamesWithPlayer(playerIdentifier: string): Observable<any> {
     return this.httpClient.get(
-      this.uriRoot + "game/all-games-with-player/" + encodeURIComponent(playerName))
+      this.uriRoot + "game/all-games-with-player/" + encodeURIComponent(playerIdentifier))
   }
 
-  newGame(newGameName: string, playerNames: string[]): Observable<any> {
+  newGame(newGameName: string, playerIdentifiers: string[]): Observable<any> {
     return this.httpClient.post(
       this.uriRoot + "game/create-new-game",
       {
         "Name": newGameName,
-        "Players": playerNames
+        "Players": playerIdentifiers
       })
   }
 
-  gameAsSeenByPlayer(gameName: string, playerName: string): Observable<any> {
+  gameAsSeenByPlayer(gameIdentifier: string, playerIdentifier: string): Observable<any> {
     return this.httpClient.get(
-      this.uriRoot + "game/game-as-seen-by-player/" + encodeURIComponent(gameName) + "/" + encodeURIComponent(playerName))
+      this.uriRoot + "game/game-as-seen-by-player/" + encodeURIComponent(gameIdentifier) + "/" + encodeURIComponent(playerIdentifier))
   }
 
-  sendChatMessage(gameName: string, playerName: string, chatText: string): Observable<any> {
+  sendChatMessage(gameIdentifier: string, playerIdentifier: string, chatText: string): Observable<any> {
     return this.httpClient.post(
       this.uriRoot + "game/send-chat-message",
       {
-        "Player": playerName,
-        "Game": gameName,
+        "Player": playerIdentifier,
+        "Game": gameIdentifier,
         "Message": chatText
       })
   }

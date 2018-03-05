@@ -1,5 +1,6 @@
 export class TurnSummary
 {
+    GameIdentifier: string;
     GameName: string;
     CreationTimestampInSeconds: number;
     TurnNumber: number;
@@ -13,6 +14,7 @@ export class TurnSummary
 
     refreshFromSource(turnSummaryObject: Object)
     {
+        this.GameIdentifier = turnSummaryObject["GameIdentifier"];
         this.GameName = turnSummaryObject["GameName"];
         this.CreationTimestampInSeconds = turnSummaryObject["CreationTimestampInSeconds"];
         this.TurnNumber = turnSummaryObject["TurnNumber"];

@@ -3,6 +3,7 @@ import { Inject } from '@angular/core';
 import { MatInputModule } from '@angular/material';
 import { MatDialogRef } from '@angular/material';
 import { MAT_DIALOG_DATA } from '@angular/material';
+import { Player } from '../models/player.model'
 
 @Component({
     selector: 'create-game-dialogue',
@@ -11,10 +12,10 @@ import { MAT_DIALOG_DATA } from '@angular/material';
   export class CreateGameDialogueComponent
   {
     gameName: string;
-    participatingPlayers: string[];
-    creatingPlayer: string;
-    availablePlayers: string[];
-    selectedParticipant: string;
+    participatingPlayers: Player[];
+    creatingPlayer: Player;
+    availablePlayers: Player[];
+    selectedParticipant: Player;
     readonly maximumParticipants = 5;
 
     constructor(
@@ -45,21 +46,21 @@ import { MAT_DIALOG_DATA } from '@angular/material';
         }
     }
 
-    addParticipant(participantName: string): void
+    addParticipant(newParticipant: Player): void
     {
-        this.participatingPlayers.push(participantName);
-        this.removePlayerFromAvailablePlayerList(participantName);
+        this.participatingPlayers.push(newParticipant);
+        this.removePlayerFromAvailablePlayerList(newParticipant);
     }
 
-    removePlayerFromAvailablePlayerList(playerName: string)
+    removePlayerFromAvailablePlayerList(playerToRemove: Player)
     {
         if (!this.availablePlayers)
         {
-            console.log("Asked to remove player " + playerName + " from non-existent available player list.");
+            console.log("Asked to remove player " + playerToRemove.Name + " from non-existent available player list.");
             return;
         }
 
-        const playerIndex = this.availablePlayers.indexOf(playerName);
+        const playerIndex = this.availablePlayers.indexOf(playerToRemove);
 
         if (playerIndex >= 0)
         {
@@ -69,7 +70,11 @@ import { MAT_DIALOG_DATA } from '@angular/material';
 
     createGame(): void
     {
-        this.dialogReference.close({"Name": this.gameName, "Players": this.participatingPlayers});
+        this.dialogReference.close(
+            {
+                "Name": this.gameName,
+                "Players": this.participatingPlayers.map(participatingPlayer => participatingPlayer.Identifier)
+            });
     }
 
     cancelDialogue(): void

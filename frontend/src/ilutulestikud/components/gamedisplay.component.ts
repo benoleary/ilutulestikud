@@ -15,8 +15,8 @@ import { nullSafeIsEquivalent } from '@angular/compiler/src/output/output_ast';
   })
   export class GameDisplayComponent implements OnInit, OnDestroy
   {
-    @Input() gameName: string;
-    @Input() playerName: string;
+    @Input() gameIdentifier: string;
+    @Input() playerIdentifier: string;
     informationText: string;
     gameDataSubscription: Subscription;
     isAwaitingGameData: boolean;
@@ -25,8 +25,8 @@ import { nullSafeIsEquivalent } from '@angular/compiler/src/output/output_ast';
 
     constructor(public ilutulestikudService: IlutulestikudService)
     {
-        this.gameName = null;
-        this.playerName = null;
+        this.gameIdentifier = null;
+        this.playerIdentifier = null;
         this.chatLog = [];
         this.chatInput = null;
     }
@@ -36,7 +36,7 @@ import { nullSafeIsEquivalent } from '@angular/compiler/src/output/output_ast';
         this.gameDataSubscription =
           Observable
             .timer(0, 1000)
-            .takeWhile(() => (this.gameName != null))
+            .takeWhile(() => (this.gameIdentifier != null))
             .subscribe(
               () => this.refreshGameData(),
               thrownError => this.handleError(thrownError),
@@ -50,7 +50,7 @@ import { nullSafeIsEquivalent } from '@angular/compiler/src/output/output_ast';
         this.gameDataSubscription.unsubscribe();
       }
   
-      this.gameName = null;
+      this.gameIdentifier = null;
     }
 
     refreshGameData(): void
@@ -63,7 +63,7 @@ import { nullSafeIsEquivalent } from '@angular/compiler/src/output/output_ast';
         // response to the request).
         this.isAwaitingGameData = true;
         this.ilutulestikudService
-          .gameAsSeenByPlayer(this.gameName, this.playerName)
+          .gameAsSeenByPlayer(this.gameIdentifier, this.playerIdentifier)
           .subscribe(
             fetchedGameData => this.parseGameData(fetchedGameData),
             thrownError => this.handleError(thrownError),
@@ -109,7 +109,7 @@ import { nullSafeIsEquivalent } from '@angular/compiler/src/output/output_ast';
         if (this.chatInput)
         {
             this.ilutulestikudService
-            .sendChatMessage(this.gameName, this.playerName, this.chatInput)
+            .sendChatMessage(this.gameIdentifier, this.playerIdentifier, this.chatInput)
             .subscribe(
                 () => {},
                 thrownError => this.handleError(thrownError),
