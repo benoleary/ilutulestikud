@@ -454,34 +454,49 @@ func TestUpdatePlayer(unitTest *testing.T) {
 			})
 
 			// First we add the player.
-			playerHandler.HandlePost(json.NewDecoder(registrationBytesBuffer), []string{"new-player"})
+			registrationInterface, registratonCode :=
+				playerHandler.HandlePost(json.NewDecoder(registrationBytesBuffer), []string{"new-player"})
 
-			// We do not check that the POST succeeded, nor that return list is correct, nor do we check
-			// that the player was correctly register: these are all covered by another test.
+			// Checks that the POST succeeded and that the return list is correct are covered by other
+			// tests, but we need to parse the response to find the identifier generated for the new
+			// player.
+			playerList := assertAtLeastOnePlayerReturnedInList(
+				unitTest,
+				registratonCode,
+				registrationInterface,
+				"POST to create new player before updating")
+
+			playerIdentifier := testCase.arguments.playerName
+			for _, playerState := range playerList.Players {
+				if playerState.Name == testCase.arguments.playerName {
+					playerIdentifier = playerState.Identifier
+				}
+			}
 
 			// Now we update the player.
 			updateBytesBuffer := new(bytes.Buffer)
 			json.NewEncoder(updateBytesBuffer).Encode(endpoint.PlayerState{
-				Name:  testCase.arguments.playerName,
-				Color: testCase.arguments.chatColor,
+				Identifier: playerIdentifier,
+				Name:       testCase.arguments.playerName,
+				Color:      testCase.arguments.chatColor,
 			})
 
-			postInterface, postCode :=
+			updateInterface, updateCode :=
 				playerHandler.HandlePost(json.NewDecoder(updateBytesBuffer), []string{"update-player"})
 
-			if postCode != testCase.expected.codeFromPost {
+			if updateCode != testCase.expected.codeFromPost {
 				unitTest.Fatalf(
 					"POST update-player did not return expected HTTP code %v, instead was %v.",
 					testCase.expected.codeFromPost,
-					postCode)
+					updateCode)
 			}
 
 			// We check that we get a valid response body only when we expect a valid response code.
 			if testCase.expected.codeFromPost == http.StatusOK {
 				assertAtLeastOnePlayerReturnedInList(
 					unitTest,
-					postCode,
-					postInterface,
+					updateCode,
+					updateInterface,
 					"POST update-player")
 			}
 

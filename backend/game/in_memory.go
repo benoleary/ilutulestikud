@@ -45,13 +45,6 @@ func (inMemoryCollection *InMemoryCollection) Add(
 	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
 		playerState, playerExists := playerCollection.Get(gameDefinition.Players[playerIndex])
 
-		// This is for backwards-compatibility with a frontend which still uses the player
-		// name as the identifier.
-		if !playerExists {
-			playerIdentifier := base64.StdEncoding.EncodeToString([]byte(gameDefinition.Players[playerIndex]))
-			playerState, playerExists = playerCollection.Get(playerIdentifier)
-		}
-
 		if !playerExists {
 			return fmt.Errorf("Player %v is not registered", gameDefinition.Players[playerIndex])
 		}

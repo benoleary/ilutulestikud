@@ -1,7 +1,6 @@
 package player
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -108,15 +107,6 @@ func (getAndPostHandler *GetAndPostHandler) handleUpdatePlayer(httpBodyDecoder *
 	}
 
 	existingPlayer, playerExists := getAndPostHandler.playerCollection.Get(newPlayer.Identifier)
-
-	// This is for backwards-compatibility with a frontend which still uses the player
-	// name as the identifier.
-	if !playerExists {
-		playerIdentifier := base64.StdEncoding.EncodeToString([]byte(newPlayer.Name))
-		playerFromEncodedName, encodedNameFound := getAndPostHandler.playerCollection.Get(playerIdentifier)
-		playerExists = encodedNameFound
-		existingPlayer = playerFromEncodedName
-	}
 
 	if !playerExists {
 		return "Name " + newPlayer.Name + " not found", http.StatusBadRequest

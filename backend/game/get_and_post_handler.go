@@ -121,13 +121,6 @@ func (getAndPostHandler *GetAndPostHandler) writeGameForPlayer(
 
 	gameState, isFound := getAndPostHandler.gameCollection.Get(gameIdentifier)
 
-	// This is for backwards-compatibility with a frontend which still uses the game
-	// name as the identifier.
-	if !isFound {
-		gameIdentifier = base64.StdEncoding.EncodeToString([]byte(gameIdentifier))
-		gameState, isFound = getAndPostHandler.gameCollection.Get(gameIdentifier)
-	}
-
 	if !isFound {
 		errorMessage :=
 			"Game " + gameIdentifier + " does not exist, cannot add chat from player " + playerIdentifier
@@ -135,14 +128,9 @@ func (getAndPostHandler *GetAndPostHandler) writeGameForPlayer(
 	}
 
 	if !gameState.HasPlayerAsParticipant(playerIdentifier) {
-		// This is for backwards-compatibility with a frontend which still uses the player
-		// name as the identifier.
-		playerIdentifier = base64.StdEncoding.EncodeToString([]byte(playerIdentifier))
-		if !gameState.HasPlayerAsParticipant(playerIdentifier) {
-			errorMessage :=
-				"Player " + playerIdentifier + " is not a participant in game " + gameIdentifier
-			return errorMessage, http.StatusBadRequest
-		}
+		errorMessage :=
+			"Player " + playerIdentifier + " is not a participant in game " + gameIdentifier
+		return errorMessage, http.StatusBadRequest
 	}
 
 	return ForPlayer(gameState, playerIdentifier), http.StatusOK
@@ -162,13 +150,6 @@ func (getAndPostHandler *GetAndPostHandler) handleNewChatMessage(
 
 	gameState, isFound := getAndPostHandler.gameCollection.Get(chatMessage.Game)
 
-	// This is for backwards-compatibility with a frontend which still uses the game
-	// name as the identifier.
-	if !isFound {
-		gameIdentifier := base64.StdEncoding.EncodeToString([]byte(chatMessage.Game))
-		gameState, isFound = getAndPostHandler.gameCollection.Get(gameIdentifier)
-	}
-
 	if !isFound {
 		errorMessage :=
 			"Game " + chatMessage.Game + " does not exist, cannot add chat from player " + chatMessage.Player
@@ -187,15 +168,6 @@ func (getAndPostHandler *GetAndPostHandler) handleNewChatMessage(
 	}
 
 	chattingPlayer, isRegisteredPlayer := getAndPostHandler.playerCollection.Get(chatMessage.Player)
-
-	// This is for backwards-compatibility with a frontend which still uses the player
-	// name as the identifier.
-	if !isRegisteredPlayer {
-		playerIdentifier := base64.StdEncoding.EncodeToString([]byte(chatMessage.Player))
-		playerFromEncodedName, encodedNameFound := getAndPostHandler.playerCollection.Get(playerIdentifier)
-		isRegisteredPlayer = encodedNameFound
-		chattingPlayer = playerFromEncodedName
-	}
 
 	if !isRegisteredPlayer {
 		errorMessage :=
