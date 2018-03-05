@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"net/http"
-	"strings"
 
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/player"
@@ -87,16 +86,6 @@ func (getAndPostHandler *GetAndPostHandler) handleNewGame(
 
 	if newGame.Name == "" {
 		return "No name for new game parsed from JSON", http.StatusBadRequest
-	}
-
-	if strings.Contains(newGame.Name, "/") {
-		return "Game names cannot contain the slash character '/', sorry", http.StatusBadRequest
-	}
-
-	for _, playerName := range newGame.Players {
-		if strings.Contains(playerName, "/") {
-			return "Player names cannot contain the slash character '/', sorry", http.StatusBadRequest
-		}
 	}
 
 	addError := getAndPostHandler.gameCollection.Add(newGame, getAndPostHandler.playerCollection)

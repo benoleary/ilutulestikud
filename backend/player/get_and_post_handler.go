@@ -3,7 +3,6 @@ package player
 import (
 	"encoding/json"
 	"net/http"
-	"strings"
 
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 )
@@ -81,10 +80,6 @@ func (getAndPostHandler *GetAndPostHandler) handleNewPlayer(httpBodyDecoder *jso
 
 	if endpointPlayer.Name == "" {
 		return "No name for new player parsed from JSON", http.StatusBadRequest
-	}
-
-	if strings.Contains(endpointPlayer.Name, "/") {
-		return "Player names cannot contain the slash character '/', sorry", http.StatusBadRequest
 	}
 
 	addError := getAndPostHandler.playerCollection.Add(endpointPlayer)

@@ -159,18 +159,6 @@ func TestRejectInvalidNewPlayer(unitTest *testing.T) {
 				codeFromPost: http.StatusBadRequest,
 			},
 		},
-		{
-			name: "Invalid name",
-			arguments: testArguments{
-				bodyObject: &endpoint.PlayerState{
-					Name:  "/Slashes/are/reserved/for/parsing/URI/segments/",
-					Color: "irrelevant",
-				},
-			},
-			expected: expectedReturns{
-				codeFromPost: http.StatusBadRequest,
-			},
-		},
 	}
 
 	for _, testCase := range testCases {
@@ -267,6 +255,13 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 			arguments: testArguments{
 				playerName: "?ß@äô#\"'\"",
 				chatColor:  "\\\\\\",
+			},
+		},
+		{
+			name: "URI segment delimiter",
+			arguments: testArguments{
+				playerName: "/Slashes/are/reserved/for/parsing/URI/segments/",
+				chatColor:  "irrelevant",
 			},
 		},
 	}
