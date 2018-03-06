@@ -1,7 +1,6 @@
 package player
 
 import (
-	"encoding/base64"
 	"fmt"
 	"sync"
 
@@ -13,6 +12,7 @@ import (
 type InMemoryCollection struct {
 	mutualExclusion     sync.Mutex
 	playerStates        map[string]State
+	nameToIdentifier    endpoint.NameToIdentifier
 	initialPlayerNames  map[string]bool
 	availableChatColors []string
 	numberOfChatColors  int
@@ -22,6 +22,7 @@ type InMemoryCollection struct {
 // from the given initial player names, with colors according to the available
 // chat colors.
 func NewInMemoryCollection(
+	nameToIdentifier endpoint.NameToIdentifier,
 	initialPlayerNames []string,
 	availableChatColors []string) *InMemoryCollection {
 	numberOfPlayers := len(initialPlayerNames)
@@ -37,6 +38,7 @@ func NewInMemoryCollection(
 	newCollection := &InMemoryCollection{
 		mutualExclusion:     sync.Mutex{},
 		playerStates:        make(map[string]State, numberOfPlayers),
+		nameToIdentifier:    nameToIdentifier,
 		initialPlayerNames:  initialPlayerNameSet,
 		availableChatColors: deepCopyOfChatColors,
 		numberOfChatColors:  numberOfColors,
@@ -111,7 +113,7 @@ func (inMemoryCollection *InMemoryCollection) AvailableChatColors() []string {
 func (inMemoryCollection *InMemoryCollection) addWithGivenColor(
 	playerName string,
 	chatColor string) error {
-	playerIdentifier := base64.StdEncoding.EncodeToString([]byte(playerName))
+	playerIdentifier := inMemoryCollection.nameToIdentifier.Identifier(playerName)
 
 	_, playerExists := inMemoryCollection.playerStates[playerIdentifier]
 

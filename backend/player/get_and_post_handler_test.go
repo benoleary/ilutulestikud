@@ -18,6 +18,7 @@ var colorsAvailableInTest []string = defaults.AvailableColors()
 func newCollectionAndHandler() (player.Collection, *player.GetAndPostHandler) {
 	playerCollection :=
 		player.NewInMemoryCollection(
+			&endpoint.Base64NameEncoder{},
 			defaults.InitialPlayerNames(),
 			colorsAvailableInTest)
 	return playerCollection, player.NewGetAndPostHandler(playerCollection)
@@ -558,6 +559,7 @@ func TestResetPlayers(unitTest *testing.T) {
 		unitTest.Run(testCase.name, func(unitTest *testing.T) {
 			playerCollection :=
 				player.NewInMemoryCollection(
+					&endpoint.Base64NameEncoder{},
 					initialPlayers,
 					availableColors)
 			playerHandler := player.NewGetAndPostHandler(playerCollection)

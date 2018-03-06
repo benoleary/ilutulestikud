@@ -38,10 +38,6 @@ type State interface {
 	// ChatLog should return the chat log of the game at the current moment.
 	ChatLog() *chat.Log
 
-	// RecordPlayerChatMessage should add the given new message to the newest end of the chat
-	// log, ensuring that the chat log does not become too long to display.
-	RecordPlayerChatMessage(chattingPlayer player.State, chatMessage string)
-
 	// PerformAction should perform the given action for its player or return an error.
 	PerformAction(actingPlayer player.State, playerAction endpoint.PlayerAction) error
 }

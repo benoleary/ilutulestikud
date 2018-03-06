@@ -1,7 +1,6 @@
 package game
 
 import (
-	"encoding/base64"
 	"fmt"
 	"sync"
 	"time"
@@ -16,14 +15,16 @@ import (
 type InMemoryCollection struct {
 	mutualExclusion  sync.Mutex
 	gameStates       map[string]State
+	nameToIdentifier endpoint.NameToIdentifier
 	gamesWithPlayers map[string][]State
 }
 
 // NewInMemoryCollection creates a Collection around a map of games.
-func NewInMemoryCollection() *InMemoryCollection {
+func NewInMemoryCollection(nameToIdentifier endpoint.NameToIdentifier) *InMemoryCollection {
 	return &InMemoryCollection{
 		mutualExclusion:  sync.Mutex{},
 		gameStates:       make(map[string]State, 1),
+		nameToIdentifier: nameToIdentifier,
 		gamesWithPlayers: make(map[string][]State, 0),
 	}
 }
@@ -33,7 +34,7 @@ func NewInMemoryCollection() *InMemoryCollection {
 func (inMemoryCollection *InMemoryCollection) Add(
 	gameDefinition endpoint.GameDefinition,
 	playerCollection player.Collection) error {
-	gameIdentifier := base64.StdEncoding.EncodeToString([]byte(gameDefinition.Name))
+	gameIdentifier := inMemoryCollection.nameToIdentifier.Identifier(gameDefinition.Name)
 	_, gameExists := inMemoryCollection.gameStates[gameIdentifier]
 
 	if gameExists {
@@ -146,17 +147,6 @@ func (gameState *inMemoryState) HasPlayerAsParticipant(playerIdentifier string) 
 // ChatLog returns the chat log of the game at the current moment.
 func (gameState *inMemoryState) ChatLog() *chat.Log {
 	return gameState.chatLog
-}
-
-// RecordPlayerChatMessage adds the given new message to the end of the chat log
-// and removes the oldest message from the top.
-func (gameState *inMemoryState) RecordPlayerChatMessage(
-	chattingPlayer player.State,
-	chatMessage string) {
-	gameState.chatLog.AppendNewMessage(
-		chattingPlayer.Name(),
-		chattingPlayer.Color(),
-		chatMessage)
 }
 
 // PerformAction should perform the given action for its player or return an error,
