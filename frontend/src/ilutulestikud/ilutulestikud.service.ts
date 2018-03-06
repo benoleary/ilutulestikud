@@ -57,11 +57,12 @@ export class IlutulestikudService {
 
   sendChatMessage(gameIdentifier: string, playerIdentifier: string, chatText: string): Observable<any> {
     return this.httpClient.post(
-      this.uriRoot + "game/send-chat-message",
+      this.uriRoot + "game/player-action",
       {
         "Player": playerIdentifier,
         "Game": gameIdentifier,
-        "Message": chatText
+        "Action": "chat",
+        "ChatMessage": chatText
       })
   }
 }
