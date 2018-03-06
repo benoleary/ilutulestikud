@@ -8,13 +8,6 @@ type GameDefinition struct {
 	Players []string
 }
 
-// PlayerChatMessage is a struct to hold the details of a single incoming chat message.
-type PlayerChatMessage struct {
-	Player  string
-	Game    string
-	Message string
-}
-
 // PlayerAction is a struct to hold the details of an action performed by a player in a game.
 type PlayerAction struct {
 	Player        string

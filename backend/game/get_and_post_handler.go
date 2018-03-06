@@ -52,10 +52,6 @@ func (getAndPostHandler *GetAndPostHandler) HandlePost(
 	switch relevantSegments[0] {
 	case "create-new-game":
 		return getAndPostHandler.handleNewGame(httpBodyDecoder, relevantSegments)
-	case "send-chat-message":
-		// This is deprecated in favor of sending a chat message as a player action,
-		// but remains here for backwards compatibility for a while.
-		return getAndPostHandler.handleNewChatMessage(httpBodyDecoder, relevantSegments)
 	case "player-action":
 		return getAndPostHandler.handlePlayerAction(httpBodyDecoder, relevantSegments)
 	default:
@@ -166,45 +162,6 @@ func (getAndPostHandler *GetAndPostHandler) handlePlayerAction(
 	if actionError != nil {
 		return actionError, http.StatusBadGateway
 	}
-
-	return "OK", http.StatusOK
-}
-
-// handleNewChatMessage adds the given chat message to the relevant game state,
-// as coming from the given player.
-func (getAndPostHandler *GetAndPostHandler) handleNewChatMessage(
-	httpBodyDecoder *json.Decoder,
-	relevantSegments []string) (interface{}, int) {
-	var chatMessage endpoint.PlayerChatMessage
-
-	parsingError := httpBodyDecoder.Decode(&chatMessage)
-	if parsingError != nil {
-		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
-	}
-
-	gameState, isFound := getAndPostHandler.gameCollection.Get(chatMessage.Game)
-
-	if !isFound {
-		errorMessage :=
-			"Game " + chatMessage.Game + " does not exist, cannot add chat from player " + chatMessage.Player
-		return errorMessage, http.StatusBadRequest
-	}
-
-	if !gameState.HasPlayerAsParticipant(chatMessage.Player) {
-		errorMessage :=
-			"Player " + chatMessage.Player + " is not a participant in game " + chatMessage.Game
-		return errorMessage, http.StatusBadRequest
-	}
-
-	chattingPlayer, isRegisteredPlayer := getAndPostHandler.playerCollection.Get(chatMessage.Player)
-
-	if !isRegisteredPlayer {
-		errorMessage :=
-			"Player " + chatMessage.Player + " is not registered, should not chat in game " + chatMessage.Game
-		return errorMessage, http.StatusBadRequest
-	}
-
-	gameState.RecordPlayerChatMessage(chattingPlayer, chatMessage.Message)
 
 	return "OK", http.StatusOK
 }
