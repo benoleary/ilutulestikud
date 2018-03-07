@@ -15,28 +15,34 @@ import (
 type nameToName struct {
 }
 
-// Identifier encodes the name as itself.
-func (nameToIdentifier *nameToName) Identifier(name string) string {
-	return name
+func testPlayerNames() []string {
+	return []string{"a", "b", "c", "d", "e", "f", "g"}
+}
+
+func testPlayerIdentifier(playerIndex int) string {
+	// Terribly inefficient, but it is the easiest way to be consistent in the tests.
+	nameToIdentifier := &endpoint.Base64NameEncoder{}
+	return nameToIdentifier.Identifier(testPlayerNames()[playerIndex])
 }
 
 // newCollectionAndHandler prepares a game.Collection and a game.GetAndPostHandler
 // in a consistent way for the tests. The player.Collection is created with a simple
 // name-to-indentifier encoder which just uses the name as its identifier.
-func newCollectionAndHandlerWithIdentifier() (game.Collection, *game.GetAndPostHandler, endpoint.NameToIdentifier) {
-	nameToIdentifier := &nameToName{}
+func setUpHandlerAndRequirements(registeredPlayers []string) (
+	endpoint.NameToIdentifier, game.Collection, *game.GetAndPostHandler) {
+	nameToIdentifier := &endpoint.Base64NameEncoder{}
 	playerCollection :=
 		player.NewInMemoryCollection(
 			nameToIdentifier,
-			defaults.InitialPlayerNames(),
+			registeredPlayers,
 			defaults.AvailableColors())
-	gameCollection := game.NewInMemoryCollection(&endpoint.Base64NameEncoder{})
+	gameCollection := game.NewInMemoryCollection(nameToIdentifier)
 	gameHandler := game.NewGetAndPostHandler(playerCollection, gameCollection)
-	return gameCollection, gameHandler, nameToIdentifier
+	return nameToIdentifier, gameCollection, gameHandler
 }
 
 func TestGetNoSegmentBadRequest(unitTest *testing.T) {
-	_, gameHandler, _ := newCollectionAndHandlerWithIdentifier()
+	_, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
 	_, actualCode := gameHandler.HandleGet(make([]string, 0))
 
 	if actualCode != http.StatusBadRequest {
@@ -48,7 +54,7 @@ func TestGetNoSegmentBadRequest(unitTest *testing.T) {
 }
 
 func TestGetInvalidSegmentNotFound(unitTest *testing.T) {
-	_, gameHandler, _ := newCollectionAndHandlerWithIdentifier()
+	_, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
 	_, actualCode := gameHandler.HandleGet([]string{"invalid-segment"})
 
 	if actualCode != http.StatusNotFound {
@@ -60,7 +66,7 @@ func TestGetInvalidSegmentNotFound(unitTest *testing.T) {
 }
 
 func TestPostNoSegmentBadRequest(unitTest *testing.T) {
-	_, gameHandler, _ := newCollectionAndHandlerWithIdentifier()
+	_, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
 	bytesBuffer := new(bytes.Buffer)
 	json.NewEncoder(bytesBuffer).Encode(endpoint.GameDefinition{
 		Name:    "Game name",
@@ -78,7 +84,7 @@ func TestPostNoSegmentBadRequest(unitTest *testing.T) {
 }
 
 func TestPostInvalidSegmentNotFound(unitTest *testing.T) {
-	_, gameHandler, _ := newCollectionAndHandlerWithIdentifier()
+	_, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
 	bytesBuffer := new(bytes.Buffer)
 	json.NewEncoder(bytesBuffer).Encode(endpoint.GameDefinition{
 		Name:    "Game name",
@@ -122,7 +128,7 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 			name: "Wrong object",
 			arguments: testArguments{
 				bodyObject: &endpoint.ChatColorList{
-					Colors: []string{"Player 1", "Player 2"},
+					Colors: []string{"x", "y"},
 				},
 			},
 			expected: expectedReturns{
@@ -156,8 +162,10 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 			name: "Too few players",
 			arguments: testArguments{
 				bodyObject: &endpoint.GameDefinition{
-					Name:    "Test game",
-					Players: []string{"identifier_one"},
+					Name: "Test game",
+					// We use the same set of player names here as used to set up the game.Collection
+					// as well as the name encoding.
+					Players: []string{testPlayerIdentifier(1)},
 				},
 			},
 			expected: expectedReturns{
@@ -168,8 +176,17 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 			name: "Too many players",
 			arguments: testArguments{
 				bodyObject: &endpoint.GameDefinition{
-					Name:    "Test game",
-					Players: []string{"1", "2", "3", "4", "5", "6"},
+					Name: "Test game",
+					// We use the same set of player names here as used to set up the game.Collection
+					// as well as the name encoding.
+					Players: []string{
+						testPlayerIdentifier(0),
+						testPlayerIdentifier(1),
+						testPlayerIdentifier(2),
+						testPlayerIdentifier(3),
+						testPlayerIdentifier(4),
+						testPlayerIdentifier(5),
+					},
 				},
 			},
 			expected: expectedReturns{
@@ -180,8 +197,33 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 			name: "Repeated player",
 			arguments: testArguments{
 				bodyObject: &endpoint.GameDefinition{
-					Name:    "Test game",
-					Players: []string{"1", "2", "2", "3"},
+					Name: "Test game",
+					Players: []string{
+						// We use the same set of player names here as used to set up the game.Collection
+						// as well as the name encoding.
+						testPlayerIdentifier(0),
+						testPlayerIdentifier(1),
+						testPlayerIdentifier(1),
+						testPlayerIdentifier(2),
+					},
+				},
+			},
+			expected: expectedReturns{
+				codeFromPost: http.StatusBadRequest,
+			},
+		},
+		{
+			name: "Unregistered player",
+			arguments: testArguments{
+				bodyObject: &endpoint.GameDefinition{
+					Name: "Test game",
+					Players: []string{
+						// We use the same set of player names here as used to set up the game.Collection.
+						testPlayerIdentifier(0),
+						testPlayerIdentifier(1),
+						"I am not registered!",
+						testPlayerIdentifier(2),
+					},
 				},
 			},
 			expected: expectedReturns{
@@ -197,7 +239,7 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 				json.NewEncoder(bytesBuffer).Encode(testCase.arguments.bodyObject)
 			}
 
-			_, gameHandler, _ := newCollectionAndHandlerWithIdentifier()
+			_, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
 			_, postCode :=
 				gameHandler.HandlePost(json.NewDecoder(bytesBuffer), []string{"create-new-game"})
 
@@ -213,16 +255,22 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 }
 
 func TestRejectNewGameWithExistingName(unitTest *testing.T) {
+	playerNames := testPlayerNames()
+	nameToIdentifier, _, gameHandler := setUpHandlerAndRequirements(playerNames)
+
 	gameName := "Test game"
 	firstBodyObject := &endpoint.GameDefinition{
-		Name:    gameName,
-		Players: []string{"1", "2", "3"},
+		Name: gameName,
+		Players: []string{
+			nameToIdentifier.Identifier(playerNames[1]),
+			nameToIdentifier.Identifier(playerNames[2]),
+			nameToIdentifier.Identifier(playerNames[3]),
+		},
 	}
 
 	firstBytesBuffer := new(bytes.Buffer)
 	json.NewEncoder(firstBytesBuffer).Encode(firstBodyObject)
 
-	_, gameHandler, _ := newCollectionAndHandlerWithIdentifier()
 	_, validRegistrationCode :=
 		gameHandler.HandlePost(json.NewDecoder(firstBytesBuffer), []string{"create-new-game"})
 
@@ -235,8 +283,12 @@ func TestRejectNewGameWithExistingName(unitTest *testing.T) {
 	}
 
 	secondBodyObject := endpoint.GameDefinition{
-		Name:    gameName,
-		Players: []string{"1", "10", "100"},
+		Name: gameName,
+		Players: []string{
+			nameToIdentifier.Identifier(playerNames[1]),
+			nameToIdentifier.Identifier(playerNames[3]),
+			nameToIdentifier.Identifier(playerNames[4]),
+		},
 	}
 
 	secondBytesBuffer := new(bytes.Buffer)
@@ -289,12 +341,17 @@ func TestRegisterAndRetrieveNewGame(unitTest *testing.T) {
 
 	for _, testCase := range testCases {
 		unitTest.Run(testCase.name, func(unitTest *testing.T) {
-			gameCollection, gameHandler, nameToIdentifier := newCollectionAndHandlerWithIdentifier()
+			nameToIdentifier, gameCollection, gameHandler := setUpHandlerAndRequirements(playerList)
+
+			playerIdentifiers := make([]string, len(playerList))
+			for playerIndex, playerName := range playerList {
+				playerIdentifiers[playerIndex] = nameToIdentifier.Identifier(playerName)
+			}
 
 			bytesBuffer := new(bytes.Buffer)
 			json.NewEncoder(bytesBuffer).Encode(endpoint.GameDefinition{
 				Name:    testCase.arguments.gameName,
-				Players: playerList,
+				Players: playerIdentifiers,
 			})
 
 			// First we add the new game.
@@ -322,7 +379,7 @@ func TestRegisterAndRetrieveNewGame(unitTest *testing.T) {
 			assertGameIsCorrect(
 				unitTest,
 				testCase.arguments.gameName,
-				playerList,
+				playerIdentifiers,
 				actualGame,
 				"Register new player")
 		})
@@ -347,10 +404,8 @@ func assertGameIsCorrect(
 
 	if playerSlicesMatch {
 		for playerIndex := 0; playerIndex < len(actualPlayers); playerIndex++ {
-			// We can just compare names as the player name encoding in the test uses the
-			// original player names as identifiers for players.
 			playerSlicesMatch =
-				(actualPlayers[playerIndex].Name() == expectedPlayers[playerIndex])
+				(actualPlayers[playerIndex].Identifier() == expectedPlayers[playerIndex])
 			if !playerSlicesMatch {
 				break
 			}
