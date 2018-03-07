@@ -41,14 +41,33 @@ func (inMemoryCollection *InMemoryCollection) Add(
 		return fmt.Errorf("Game %v already exists", gameDefinition.Name)
 	}
 
+	// A nil slice still has a length of 0, so this is OK.
 	numberOfPlayers := len(gameDefinition.Players)
+
+	if numberOfPlayers < MinimumNumberOfPlayers {
+		return fmt.Errorf("Game must have at least %v players", MinimumNumberOfPlayers)
+	}
+
+	if numberOfPlayers > MaximumNumberOfPlayers {
+		return fmt.Errorf("Game must have no more than %v players", MaximumNumberOfPlayers)
+	}
+
+	playerIdentifiers := make(map[string]bool, 0)
+
 	playerStates := make([]player.State, numberOfPlayers)
 	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
-		playerState, playerExists := playerCollection.Get(gameDefinition.Players[playerIndex])
+		playerIdentifier := gameDefinition.Players[playerIndex]
+		playerState, playerExists := playerCollection.Get(playerIdentifier)
 
 		if !playerExists {
-			return fmt.Errorf("Player %v is not registered", gameDefinition.Players[playerIndex])
+			return fmt.Errorf("Player with identifier %v is not registered", playerIdentifier)
 		}
+
+		if playerIdentifiers[playerIdentifier] {
+			return fmt.Errorf("Player with identifier %v appears more than once in the list of players", playerIdentifier)
+		}
+
+		playerIdentifiers[playerIdentifier] = true
 
 		playerStates[playerIndex] = playerState
 	}
