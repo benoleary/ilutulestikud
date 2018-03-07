@@ -19,6 +19,10 @@ func testPlayerNames() []string {
 	return []string{"a", "b", "c", "d", "e", "f", "g"}
 }
 
+func testNameToIdentifier() endpoint.NameToIdentifier {
+	return &endpoint.Base64NameEncoder{}
+}
+
 func testPlayerIdentifier(playerIndex int) string {
 	// Terribly inefficient, but it is the easiest way to be consistent in the tests.
 	nameToIdentifier := &endpoint.Base64NameEncoder{}
@@ -30,7 +34,7 @@ func testPlayerIdentifier(playerIndex int) string {
 // name-to-indentifier encoder which just uses the name as its identifier.
 func setUpHandlerAndRequirements(registeredPlayers []string) (
 	endpoint.NameToIdentifier, game.Collection, *game.GetAndPostHandler) {
-	nameToIdentifier := &endpoint.Base64NameEncoder{}
+	nameToIdentifier := testNameToIdentifier()
 	playerCollection :=
 		player.NewInMemoryCollection(
 			nameToIdentifier,
@@ -382,6 +386,367 @@ func TestRegisterAndRetrieveNewGame(unitTest *testing.T) {
 				playerIdentifiers,
 				actualGame,
 				"Register new player")
+		})
+	}
+}
+
+func TestRejectGetTurnSummariesWithoutPlayer(unitTest *testing.T) {
+	_, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
+	_, actualCode := gameHandler.HandleGet([]string{"all-games-with-player"})
+
+	if actualCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			"GET all-games-with-player without player did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			actualCode)
+	}
+}
+
+func TestRejectGetTurnSummariesWithInvalidPlayer(unitTest *testing.T) {
+	nameToIdentifier, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
+	playerIdentifier := nameToIdentifier.Identifier("Unregistered Player")
+	_, actualCode :=
+		gameHandler.HandleGet([]string{"all-games-with-player", playerIdentifier})
+
+	if actualCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			"GET all-games-with-player with invalid player did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			actualCode)
+	}
+}
+
+func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
+	nameToIdentifier := testNameToIdentifier()
+	playerNames := []string{"a", "b", "c", "d", "e"}
+	playerIdentifiers := make([]string, len(playerNames))
+	for playerIndex, playerName := range playerNames {
+		playerIdentifiers[playerIndex] = nameToIdentifier.Identifier(playerName)
+	}
+
+	gameNames := []string{"1", "2", "3", "4"}
+	gameIdentifiers := make([]string, len(gameNames))
+	for gameIndex, gameName := range gameNames {
+		gameIdentifiers[gameIndex] = nameToIdentifier.Identifier(gameName)
+	}
+
+	type testArguments struct {
+		gameDefinitions []endpoint.GameDefinition
+	}
+
+	type expectedReturns struct {
+		turnSummaries []endpoint.TurnSummary
+	}
+
+	testCases := []struct {
+		name      string
+		arguments testArguments
+		expected  expectedReturns
+	}{
+		{
+			name: "No games at all",
+			arguments: testArguments{
+				gameDefinitions: []endpoint.GameDefinition{},
+			},
+			expected: expectedReturns{
+				turnSummaries: []endpoint.TurnSummary{},
+			},
+		},
+		{
+			name: "No games for player out of several",
+			arguments: testArguments{
+				gameDefinitions: []endpoint.GameDefinition{
+					endpoint.GameDefinition{
+						Name: gameNames[0],
+						Players: []string{
+							playerIdentifiers[1],
+							playerIdentifiers[2],
+							playerIdentifiers[3],
+						},
+					},
+					endpoint.GameDefinition{
+						Name: gameNames[1],
+						Players: []string{
+							playerIdentifiers[2],
+							playerIdentifiers[3],
+							playerIdentifiers[4],
+						},
+					},
+					endpoint.GameDefinition{
+						Name: gameNames[2],
+						Players: []string{
+							playerIdentifiers[4],
+							playerIdentifiers[3],
+						},
+					},
+				},
+			},
+			expected: expectedReturns{
+				turnSummaries: []endpoint.TurnSummary{},
+			},
+		},
+		{
+			name: "One game for player out of several",
+			arguments: testArguments{
+				gameDefinitions: []endpoint.GameDefinition{
+					endpoint.GameDefinition{
+						Name: gameNames[0],
+						Players: []string{
+							playerIdentifiers[1],
+							playerIdentifiers[2],
+							playerIdentifiers[0],
+						},
+					},
+					endpoint.GameDefinition{
+						Name: gameNames[1],
+						Players: []string{
+							playerIdentifiers[2],
+							playerIdentifiers[3],
+							playerIdentifiers[4],
+						},
+					},
+					endpoint.GameDefinition{
+						Name: gameNames[2],
+						Players: []string{
+							playerIdentifiers[4],
+							playerIdentifiers[3],
+						},
+					},
+				},
+			},
+			expected: expectedReturns{
+				turnSummaries: []endpoint.TurnSummary{
+					endpoint.TurnSummary{
+						GameIdentifier: gameIdentifiers[0],
+						GameName:       gameNames[0],
+						TurnNumber:     1,
+						PlayersInNextTurnOrder: []string{
+							playerNames[1],
+							playerNames[2],
+							playerNames[0],
+						},
+						IsPlayerTurn: false,
+					},
+				},
+			},
+		},
+		{
+			name: "Several games for player out of many",
+			arguments: testArguments{
+				gameDefinitions: []endpoint.GameDefinition{
+					endpoint.GameDefinition{
+						Name: gameNames[0],
+						Players: []string{
+							playerIdentifiers[1],
+							playerIdentifiers[2],
+							playerIdentifiers[0],
+						},
+					},
+					endpoint.GameDefinition{
+						Name: gameNames[1],
+						Players: []string{
+							playerIdentifiers[2],
+							playerIdentifiers[3],
+							playerIdentifiers[4],
+						},
+					},
+					endpoint.GameDefinition{
+						Name: gameNames[2],
+						Players: []string{
+							playerIdentifiers[4],
+							playerIdentifiers[3],
+						},
+					},
+					endpoint.GameDefinition{
+						Name: gameNames[3],
+						Players: []string{
+							playerIdentifiers[0],
+							playerIdentifiers[4],
+							playerIdentifiers[3],
+						},
+					},
+				},
+			},
+			expected: expectedReturns{
+				turnSummaries: []endpoint.TurnSummary{
+					endpoint.TurnSummary{
+						GameIdentifier: gameIdentifiers[0],
+						GameName:       gameNames[0],
+						TurnNumber:     1,
+						PlayersInNextTurnOrder: []string{
+							playerNames[1],
+							playerNames[2],
+							playerNames[0],
+						},
+						IsPlayerTurn: false,
+					},
+					endpoint.TurnSummary{
+						GameIdentifier: gameIdentifiers[3],
+						GameName:       gameNames[3],
+						TurnNumber:     1,
+						PlayersInNextTurnOrder: []string{
+							playerIdentifiers[0],
+							playerIdentifiers[4],
+							playerIdentifiers[3],
+						},
+						IsPlayerTurn: true,
+					},
+				},
+			},
+		},
+		{
+			name: "All games for player out of several",
+			arguments: testArguments{
+				gameDefinitions: []endpoint.GameDefinition{
+					endpoint.GameDefinition{
+						Name: gameNames[0],
+						Players: []string{
+							playerIdentifiers[1],
+							playerIdentifiers[2],
+							playerIdentifiers[0],
+						},
+					},
+					endpoint.GameDefinition{
+						Name: gameNames[1],
+						Players: []string{
+							playerIdentifiers[4],
+							playerIdentifiers[0],
+						},
+					},
+					endpoint.GameDefinition{
+						Name: gameNames[2],
+						Players: []string{
+							playerIdentifiers[0],
+							playerIdentifiers[4],
+							playerIdentifiers[3],
+						},
+					},
+				},
+			},
+			expected: expectedReturns{
+				turnSummaries: []endpoint.TurnSummary{
+					endpoint.TurnSummary{
+						GameIdentifier: gameIdentifiers[0],
+						GameName:       gameNames[0],
+						TurnNumber:     1,
+						PlayersInNextTurnOrder: []string{
+							playerNames[1],
+							playerNames[2],
+							playerNames[0],
+						},
+						IsPlayerTurn: false,
+					},
+					endpoint.TurnSummary{
+						GameIdentifier: gameIdentifiers[1],
+						GameName:       gameNames[1],
+						TurnNumber:     1,
+						PlayersInNextTurnOrder: []string{
+							playerIdentifiers[4],
+							playerIdentifiers[0],
+						},
+						IsPlayerTurn: false,
+					},
+					endpoint.TurnSummary{
+						GameIdentifier: gameIdentifiers[2],
+						GameName:       gameNames[2],
+						TurnNumber:     1,
+						PlayersInNextTurnOrder: []string{
+							playerIdentifiers[0],
+							playerIdentifiers[4],
+							playerIdentifiers[3],
+						},
+						IsPlayerTurn: true,
+					},
+				},
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		unitTest.Run(testCase.name, func(unitTest *testing.T) {
+			_, _, gameHandler := setUpHandlerAndRequirements(playerNames)
+
+			// First we add every required game.
+			for _, gameDefinition := range testCase.arguments.gameDefinitions {
+				bytesBuffer := new(bytes.Buffer)
+				json.NewEncoder(bytesBuffer).Encode(gameDefinition)
+				_, postCode :=
+					gameHandler.HandlePost(json.NewDecoder(bytesBuffer), []string{"create-new-game"})
+
+				// We only check that the POST returned a valid response.
+				if postCode != http.StatusOK {
+					unitTest.Fatalf(
+						"In set-up of %v: POST create-new-game did not return expected HTTP code %v, instead was %v.",
+						testCase.name,
+						http.StatusOK,
+						postCode)
+				}
+			}
+
+			getInterface, getCode :=
+				gameHandler.HandleGet([]string{"all-games-with-player", playerIdentifiers[0]})
+
+			if getCode != http.StatusOK {
+				unitTest.Fatalf(
+					"GET all-games-with-player/%v did not return expected HTTP code %v, instead was %v.",
+					playerIdentifiers[0],
+					http.StatusOK,
+					getCode)
+			}
+
+			actualTurnSummaryList, isTypeCorrect := getInterface.(endpoint.TurnSummaryList)
+
+			if !isTypeCorrect {
+				unitTest.Fatalf(
+					"GET all-games-with-player/%v did not return expected endpoint.TurnSummaryList, instead was %v.",
+					playerIdentifiers[0],
+					getInterface)
+			}
+
+			if actualTurnSummaryList.TurnSummaries == nil {
+				unitTest.Fatalf(
+					"GET all-games-with-player/%v returned %v which has a nil list of turn summaries.",
+					playerIdentifiers[0],
+					getInterface)
+			}
+
+			if len(actualTurnSummaryList.TurnSummaries) != len(testCase.expected.turnSummaries) {
+				unitTest.Fatalf(
+					"GET all-games-with-player/%v returned %v which did not match expected %v.",
+					playerIdentifiers[0],
+					actualTurnSummaryList.TurnSummaries,
+					testCase.expected.turnSummaries)
+			}
+
+			for summaryIndex := 0; summaryIndex < len(actualTurnSummaryList.TurnSummaries); summaryIndex++ {
+				actualSummary := actualTurnSummaryList.TurnSummaries[summaryIndex]
+				expectedSummary := testCase.expected.turnSummaries[summaryIndex]
+				actualPlayerOrder := actualSummary.PlayersInNextTurnOrder
+				expectedPlayerOrder := actualSummary.PlayersInNextTurnOrder
+
+				// We do not bother checking the timestamps as that would be too much effort.
+				if (actualSummary.GameIdentifier != expectedSummary.GameIdentifier) ||
+					(actualSummary.GameName != expectedSummary.GameName) ||
+					(actualSummary.TurnNumber != expectedSummary.TurnNumber) ||
+					(actualSummary.IsPlayerTurn != expectedSummary.IsPlayerTurn) ||
+					(len(actualPlayerOrder) != len(expectedPlayerOrder)) {
+					unitTest.Fatalf(
+						"GET all-games-with-player/%v returned %v which did not match expected %v.",
+						playerIdentifiers[0],
+						actualTurnSummaryList.TurnSummaries,
+						testCase.expected.turnSummaries)
+				}
+
+				for playerIndex := 0; playerIndex < len(actualPlayerOrder); playerIndex++ {
+					if actualPlayerOrder[playerIndex] != expectedPlayerOrder[playerIndex] {
+						unitTest.Fatalf(
+							"GET all-games-with-player/%v returned %v which did not match expected %v.",
+							playerIdentifiers[0],
+							actualTurnSummaryList.TurnSummaries,
+							testCase.expected.turnSummaries)
+					}
+				}
+			}
 		})
 	}
 }
