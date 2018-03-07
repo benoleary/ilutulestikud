@@ -64,12 +64,18 @@ func (getAndPostHandler *GetAndPostHandler) HandlePost(
 func (getAndPostHandler *GetAndPostHandler) writeTurnSummariesForPlayer(
 	relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 1 {
-		return "Not enough segments in URI to determine player name", http.StatusBadRequest
+		return "Not enough segments in URI to determine player", http.StatusBadRequest
 	}
 
-	playerName := relevantSegments[0]
+	playerIdentifier := relevantSegments[0]
 
-	return TurnSummariesForFrontend(getAndPostHandler.gameCollection, playerName), http.StatusOK
+	_, playerExists := getAndPostHandler.playerCollection.Get(playerIdentifier)
+
+	if !playerExists {
+		return "Player with identifier %v is not registered, cannot participate in games", http.StatusBadRequest
+	}
+
+	return TurnSummariesForFrontend(getAndPostHandler.gameCollection, playerIdentifier), http.StatusOK
 }
 
 // handleNewGame adds a new game to the map of game state objects.
