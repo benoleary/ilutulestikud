@@ -33,7 +33,7 @@ func testPlayerIdentifier(playerIndex int) string {
 // in a consistent way for the tests. The player.Collection is created with a simple
 // name-to-indentifier encoder which just uses the name as its identifier.
 func setUpHandlerAndRequirements(registeredPlayers []string) (
-	endpoint.NameToIdentifier, game.Collection, *game.GetAndPostHandler) {
+	endpoint.NameToIdentifier, player.Collection, game.Collection, *game.GetAndPostHandler) {
 	nameToIdentifier := testNameToIdentifier()
 	playerCollection :=
 		player.NewInMemoryCollection(
@@ -42,11 +42,11 @@ func setUpHandlerAndRequirements(registeredPlayers []string) (
 			defaults.AvailableColors())
 	gameCollection := game.NewInMemoryCollection(nameToIdentifier)
 	gameHandler := game.NewGetAndPostHandler(playerCollection, gameCollection)
-	return nameToIdentifier, gameCollection, gameHandler
+	return nameToIdentifier, playerCollection, gameCollection, gameHandler
 }
 
 func TestGetNoSegmentBadRequest(unitTest *testing.T) {
-	_, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
+	_, _, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
 	_, actualCode := gameHandler.HandleGet(make([]string, 0))
 
 	if actualCode != http.StatusBadRequest {
@@ -58,7 +58,7 @@ func TestGetNoSegmentBadRequest(unitTest *testing.T) {
 }
 
 func TestGetInvalidSegmentNotFound(unitTest *testing.T) {
-	_, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
+	_, _, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
 	_, actualCode := gameHandler.HandleGet([]string{"invalid-segment"})
 
 	if actualCode != http.StatusNotFound {
@@ -70,7 +70,7 @@ func TestGetInvalidSegmentNotFound(unitTest *testing.T) {
 }
 
 func TestPostNoSegmentBadRequest(unitTest *testing.T) {
-	_, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
+	_, _, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
 	bytesBuffer := new(bytes.Buffer)
 	json.NewEncoder(bytesBuffer).Encode(endpoint.GameDefinition{
 		Name:    "Game name",
@@ -88,7 +88,7 @@ func TestPostNoSegmentBadRequest(unitTest *testing.T) {
 }
 
 func TestPostInvalidSegmentNotFound(unitTest *testing.T) {
-	_, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
+	_, _, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
 	bytesBuffer := new(bytes.Buffer)
 	json.NewEncoder(bytesBuffer).Encode(endpoint.GameDefinition{
 		Name:    "Game name",
@@ -243,7 +243,7 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 				json.NewEncoder(bytesBuffer).Encode(testCase.arguments.bodyObject)
 			}
 
-			_, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
+			_, _, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
 			_, postCode :=
 				gameHandler.HandlePost(json.NewDecoder(bytesBuffer), []string{"create-new-game"})
 
@@ -260,7 +260,7 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 
 func TestRejectNewGameWithExistingName(unitTest *testing.T) {
 	playerNames := testPlayerNames()
-	nameToIdentifier, _, gameHandler := setUpHandlerAndRequirements(playerNames)
+	nameToIdentifier, _, _, gameHandler := setUpHandlerAndRequirements(playerNames)
 
 	gameName := "Test game"
 	firstBodyObject := &endpoint.GameDefinition{
@@ -345,7 +345,7 @@ func TestRegisterAndRetrieveNewGame(unitTest *testing.T) {
 
 	for _, testCase := range testCases {
 		unitTest.Run(testCase.name, func(unitTest *testing.T) {
-			nameToIdentifier, gameCollection, gameHandler := setUpHandlerAndRequirements(playerList)
+			nameToIdentifier, _, gameCollection, gameHandler := setUpHandlerAndRequirements(playerList)
 
 			playerIdentifiers := make([]string, len(playerList))
 			for playerIndex, playerName := range playerList {
@@ -391,7 +391,7 @@ func TestRegisterAndRetrieveNewGame(unitTest *testing.T) {
 }
 
 func TestRejectGetTurnSummariesWithoutPlayer(unitTest *testing.T) {
-	_, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
+	_, _, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
 	_, actualCode := gameHandler.HandleGet([]string{"all-games-with-player"})
 
 	if actualCode != http.StatusBadRequest {
@@ -403,7 +403,7 @@ func TestRejectGetTurnSummariesWithoutPlayer(unitTest *testing.T) {
 }
 
 func TestRejectGetTurnSummariesWithInvalidPlayer(unitTest *testing.T) {
-	nameToIdentifier, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
+	nameToIdentifier, _, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
 	playerIdentifier := nameToIdentifier.Identifier("Unregistered Player")
 	_, actualCode :=
 		gameHandler.HandleGet([]string{"all-games-with-player", playerIdentifier})
@@ -664,7 +664,7 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 
 	for _, testCase := range testCases {
 		unitTest.Run(testCase.name, func(unitTest *testing.T) {
-			_, _, gameHandler := setUpHandlerAndRequirements(playerNames)
+			_, _, _, gameHandler := setUpHandlerAndRequirements(playerNames)
 
 			// First we add every required game.
 			for _, gameDefinition := range testCase.arguments.gameDefinitions {
@@ -877,7 +877,7 @@ func TestRejectInvalidPlayerAction(unitTest *testing.T) {
 					},
 				})
 
-			_, _, gameHandler := setUpHandlerAndRequirements(playerNames)
+			_, _, _, gameHandler := setUpHandlerAndRequirements(playerNames)
 			creationResponse, creationCode :=
 				gameHandler.HandlePost(json.NewDecoder(creationBytesBuffer), []string{"create-new-game"})
 
@@ -909,6 +909,120 @@ func TestRejectInvalidPlayerAction(unitTest *testing.T) {
 					actionCode)
 			}
 		})
+	}
+}
+
+func TestThreePlayersChatting(unitTest *testing.T) {
+	playerNames := []string{"a", "b", "c", "d", "e"}
+
+	nameToIdentifier, playerCollection, _, gameHandler := setUpHandlerAndRequirements(playerNames)
+	playerIdentifiers := make([]string, len(playerNames))
+	for playerIndex, playerName := range playerNames {
+		playerIdentifiers[playerIndex] = nameToIdentifier.Identifier(playerName)
+	}
+
+	viewingPlayerName := playerNames[1]
+	viewingPlayerIdentifier := playerIdentifiers[1]
+
+	gameName := "test game"
+	creationBytesBuffer := new(bytes.Buffer)
+	json.NewEncoder(creationBytesBuffer).Encode(
+		endpoint.GameDefinition{
+			Name: gameName,
+			Players: []string{
+				playerIdentifiers[2],
+				playerIdentifiers[3],
+				viewingPlayerIdentifier,
+			},
+		})
+
+	creationResponse, creationCode :=
+		gameHandler.HandlePost(json.NewDecoder(creationBytesBuffer), []string{"create-new-game"})
+	unitTest.Logf("Response to POST create-new-game: %v", creationResponse)
+
+	// We only check that the response code was OK, as other tests check that the game is correctly created.
+	if creationCode != http.StatusOK {
+		unitTest.Fatalf(
+			"POST create-new-game setting up test game did not return expected HTTP code %v, instead was %v.",
+			http.StatusOK,
+			creationCode)
+	}
+
+	gameIdentifier := nameToIdentifier.Identifier(gameName)
+
+	chatMessages := []endpoint.ChatLogMessage{
+		endpoint.ChatLogMessage{
+			PlayerName:  viewingPlayerName,
+			ChatColor:   "red",
+			MessageText: "hello",
+		},
+		endpoint.ChatLogMessage{
+			PlayerName:  playerNames[2],
+			ChatColor:   "green",
+			MessageText: "Hi!",
+		},
+		endpoint.ChatLogMessage{
+			PlayerName:  playerNames[3],
+			ChatColor:   "blue",
+			MessageText: "o/",
+		},
+		endpoint.ChatLogMessage{
+			PlayerName:  viewingPlayerName,
+			ChatColor:   "white",
+			MessageText: ":)",
+		},
+	}
+
+	// At first, there should be no chat.
+	assertGetChatLogIsCorrect(
+		unitTest,
+		"Three players chatting test",
+		gameHandler,
+		gameIdentifier,
+		viewingPlayerIdentifier,
+		[]endpoint.ChatLogMessage{})
+
+	for messageCount := 0; messageCount < len(chatMessages); messageCount++ {
+		chatMessage := chatMessages[messageCount]
+		playerIdentifier := nameToIdentifier.Identifier(chatMessage.PlayerName)
+
+		playerState, playerExists := playerCollection.Get(playerIdentifier)
+		if !playerExists {
+			unitTest.Fatalf(
+				"Internal get could not find player %v.",
+				playerIdentifier)
+		}
+
+		playerState.UpdateFromPresentAttributes(endpoint.PlayerState{Color: chatMessage.ChatColor})
+
+		actionBytesBuffer := new(bytes.Buffer)
+		json.NewEncoder(actionBytesBuffer).Encode(endpoint.PlayerAction{
+			Player:      playerIdentifier,
+			Game:        gameIdentifier,
+			Action:      "chat",
+			ChatMessage: chatMessage.MessageText,
+		})
+
+		actionResponse, actionCode :=
+			gameHandler.HandlePost(json.NewDecoder(actionBytesBuffer), []string{"player-action"})
+
+		unitTest.Logf("Response to POST player-action: %v", actionResponse)
+
+		if actionCode != http.StatusOK {
+			unitTest.Fatalf(
+				"POST player-action with body %v did not return expected HTTP code %v, instead was %v.",
+				chatMessages[messageCount],
+				http.StatusOK,
+				actionCode)
+		}
+
+		assertGetChatLogIsCorrect(
+			unitTest,
+			"Three players chatting test",
+			gameHandler,
+			gameIdentifier,
+			viewingPlayerIdentifier,
+			chatMessages[:messageCount+1])
 	}
 }
 
@@ -944,5 +1058,60 @@ func assertGameIsCorrect(
 			expectedGameName,
 			actualPlayers,
 			expectedPlayers)
+	}
+}
+
+func assertGetChatLogIsCorrect(
+	unitTest *testing.T,
+	testIdentifier string,
+	gameHandler *game.GetAndPostHandler,
+	gameIdentifier string,
+	playerIdentifier string,
+	expectedMessages []endpoint.ChatLogMessage) {
+	getInterface, getCode :=
+		gameHandler.HandleGet([]string{"game-as-seen-by-player", gameIdentifier, playerIdentifier})
+	if getCode != http.StatusOK {
+		unitTest.Fatalf(
+			testIdentifier+": GET game-as-seen-by-player/%v/%v did not return expected HTTP code %v, instead was %v.",
+			gameIdentifier,
+			playerIdentifier,
+			http.StatusOK,
+			getCode)
+	}
+
+	playerKnowledge, isTypeCorrect := getInterface.(endpoint.PlayerKnowledge)
+	if !isTypeCorrect {
+		unitTest.Fatalf(
+			testIdentifier+": GET game-as-seen-by-player/%v/%v did not return expected endpoint.PlayerKnowledge, instead was %v.",
+			gameIdentifier,
+			playerIdentifier,
+			getInterface)
+	}
+
+	expectedLogLength := len(expectedMessages)
+	actualLogLength := len(playerKnowledge.ChatLog)
+	unitTest.Logf(
+		"Comparing %v expected chat messages to last %v of log of length %v",
+		expectedLogLength,
+		expectedLogLength,
+		actualLogLength)
+	for indexFromEnd := expectedLogLength; indexFromEnd > 0; indexFromEnd-- {
+		expectedMessage := expectedMessages[expectedLogLength-indexFromEnd]
+		actualMessage := playerKnowledge.ChatLog[actualLogLength-indexFromEnd]
+
+		if (actualMessage.PlayerName != expectedMessage.PlayerName) ||
+			(actualMessage.ChatColor != expectedMessage.ChatColor) ||
+			(actualMessage.MessageText != expectedMessage.MessageText) {
+			unitTest.Fatalf(
+				testIdentifier+": GET game-as-seen-by-player/%v/%v did not return expected chat messages %v,"+
+					" instead got %v (problem index %v, expected %v, actual %v).",
+				gameIdentifier,
+				playerIdentifier,
+				expectedMessages,
+				playerKnowledge.ChatLog,
+				expectedLogLength-indexFromEnd,
+				expectedMessage,
+				actualMessage)
+		}
 	}
 }
