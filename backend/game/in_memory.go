@@ -178,6 +178,7 @@ func (gameState *inMemoryState) PerformAction(
 			actingPlayer.Name(),
 			actingPlayer.Color(),
 			playerAction.ChatMessage)
+		return nil
 	}
 
 	return fmt.Errorf("Unknown action: %v", playerAction.Action)
