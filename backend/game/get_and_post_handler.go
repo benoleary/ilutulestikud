@@ -149,12 +149,6 @@ func (getAndPostHandler *GetAndPostHandler) handlePlayerAction(
 		return errorMessage, http.StatusBadRequest
 	}
 
-	if !gameState.HasPlayerAsParticipant(playerAction.Player) {
-		errorMessage :=
-			"Player " + playerAction.Player + " is not a participant in game " + playerAction.Game
-		return errorMessage, http.StatusBadRequest
-	}
-
 	actingPlayer, isRegisteredPlayer := getAndPostHandler.playerCollection.Get(playerAction.Player)
 
 	if !isRegisteredPlayer {
@@ -163,10 +157,16 @@ func (getAndPostHandler *GetAndPostHandler) handlePlayerAction(
 		return errorMessage, http.StatusBadRequest
 	}
 
+	if !gameState.HasPlayerAsParticipant(playerAction.Player) {
+		errorMessage :=
+			"Player " + playerAction.Player + " is not a participant in game " + playerAction.Game
+		return errorMessage, http.StatusBadRequest
+	}
+
 	actionError := gameState.PerformAction(actingPlayer, playerAction)
 
 	if actionError != nil {
-		return actionError, http.StatusBadGateway
+		return actionError, http.StatusBadRequest
 	}
 
 	return "OK", http.StatusOK
