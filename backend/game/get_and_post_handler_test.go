@@ -751,6 +751,167 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 	}
 }
 
+func TestRejectInvalidPlayerAction(unitTest *testing.T) {
+	nameToIdentifier := testNameToIdentifier()
+	gameName := "test game"
+	gameIdentifier := nameToIdentifier.Identifier(gameName)
+	playerNames := []string{"a", "b", "c", "d", "e"}
+	playerIdentifiers := make([]string, len(playerNames))
+	for playerIndex, playerName := range playerNames {
+		playerIdentifiers[playerIndex] = nameToIdentifier.Identifier(playerName)
+	}
+
+	type testArguments struct {
+		bodyObject interface{}
+	}
+
+	type expectedReturns struct {
+		codeFromPost int
+	}
+
+	testCases := []struct {
+		name      string
+		arguments testArguments
+		expected  expectedReturns
+	}{
+		{
+			name: "Nil object",
+			arguments: testArguments{
+				bodyObject: nil,
+			},
+			expected: expectedReturns{
+				codeFromPost: http.StatusBadRequest,
+			},
+		},
+		{
+			name: "Wrong object",
+			arguments: testArguments{
+				bodyObject: &endpoint.ChatColorList{
+					Colors: []string{"x", "y"},
+				},
+			},
+			expected: expectedReturns{
+				codeFromPost: http.StatusBadRequest,
+			},
+		},
+		{
+			name: "Non-existent game",
+			arguments: testArguments{
+				bodyObject: &endpoint.PlayerAction{
+					Player:      nameToIdentifier.Identifier(playerNames[0]),
+					Game:        nameToIdentifier.Identifier("Non-existent game"),
+					Action:      "chat",
+					ChatMessage: "test message",
+				},
+			},
+			expected: expectedReturns{
+				codeFromPost: http.StatusBadRequest,
+			},
+		},
+		{
+			name: "Non-existent player",
+			arguments: testArguments{
+				bodyObject: &endpoint.PlayerAction{
+					Player:      nameToIdentifier.Identifier("Non-Existent Player"),
+					Game:        gameIdentifier,
+					Action:      "chat",
+					ChatMessage: "test message",
+				},
+			},
+			expected: expectedReturns{
+				codeFromPost: http.StatusBadRequest,
+			},
+		},
+		{
+			name: "Non-participant player",
+			arguments: testArguments{
+				bodyObject: &endpoint.PlayerAction{
+					Player:      nameToIdentifier.Identifier(playerNames[4]),
+					Game:        gameIdentifier,
+					Action:      "chat",
+					ChatMessage: "test message",
+				},
+			},
+			expected: expectedReturns{
+				codeFromPost: http.StatusBadRequest,
+			},
+		},
+		{
+			name: "Nil action",
+			arguments: testArguments{
+				bodyObject: &endpoint.PlayerAction{
+					Player:      nameToIdentifier.Identifier(playerNames[0]),
+					Game:        gameIdentifier,
+					ChatMessage: "test message",
+				},
+			},
+			expected: expectedReturns{
+				codeFromPost: http.StatusBadRequest,
+			},
+		},
+		{
+			name: "Invalid action",
+			arguments: testArguments{
+				bodyObject: &endpoint.PlayerAction{
+					Player: nameToIdentifier.Identifier(playerNames[0]),
+					Game:   gameIdentifier,
+					Action: "invalid_action",
+				},
+			},
+			expected: expectedReturns{
+				codeFromPost: http.StatusBadRequest,
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		unitTest.Run(testCase.name, func(unitTest *testing.T) {
+			creationBytesBuffer := new(bytes.Buffer)
+			json.NewEncoder(creationBytesBuffer).Encode(
+				endpoint.GameDefinition{
+					Name: gameName,
+					Players: []string{
+						playerIdentifiers[1],
+						playerIdentifiers[2],
+						playerIdentifiers[0],
+					},
+				})
+
+			_, _, gameHandler := setUpHandlerAndRequirements(playerNames)
+			creationResponse, creationCode :=
+				gameHandler.HandlePost(json.NewDecoder(creationBytesBuffer), []string{"create-new-game"})
+
+			unitTest.Logf("Response to POST create-new-game: %v", creationResponse)
+
+			// We only check that the response code was OK, as other tests check that the game is correctly created.
+			if creationCode != http.StatusOK {
+				unitTest.Fatalf(
+					"POST create-new-game setting up test game did not return expected HTTP code %v, instead was %v.",
+					http.StatusOK,
+					creationCode)
+			}
+
+			actionBytesBuffer := new(bytes.Buffer)
+			if testCase.arguments.bodyObject != nil {
+				json.NewEncoder(actionBytesBuffer).Encode(testCase.arguments.bodyObject)
+			}
+
+			actionResponse, actionCode :=
+				gameHandler.HandlePost(json.NewDecoder(actionBytesBuffer), []string{"player-action"})
+
+			unitTest.Logf("Response to POST player-action: %v", actionResponse)
+
+			if actionCode != http.StatusBadRequest {
+				unitTest.Fatalf(
+					"POST player-action with body %v did not return expected HTTP code %v, instead was %v.",
+					testCase.arguments.bodyObject,
+					http.StatusBadRequest,
+					actionCode)
+			}
+		})
+	}
+}
+
 func assertGameIsCorrect(
 	unitTest *testing.T,
 	expectedGameName string,
