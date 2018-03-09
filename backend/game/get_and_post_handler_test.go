@@ -416,6 +416,134 @@ func TestRejectGetTurnSummariesWithInvalidPlayer(unitTest *testing.T) {
 	}
 }
 
+func TestRejectGetGameForPlayerWithInvalidGame(unitTest *testing.T) {
+	playerNames := testPlayerNames()
+	nameToIdentifier, _, _, gameHandler := setUpHandlerAndRequirements(playerNames)
+	gameName := "Test game"
+	correctGameIdentifier := nameToIdentifier.Identifier(gameName)
+	incorrectGameIdentifier := nameToIdentifier.Identifier("Invalid game")
+
+	if incorrectGameIdentifier == correctGameIdentifier {
+		unitTest.Fatalf(
+			"Incorrect identifier %v should not have matched correct identifier %v.",
+			incorrectGameIdentifier,
+			correctGameIdentifier)
+	}
+
+	playerIdentifier := nameToIdentifier.Identifier(playerNames[1])
+
+	bytesBuffer := new(bytes.Buffer)
+	json.NewEncoder(bytesBuffer).Encode(endpoint.GameDefinition{
+		Name: gameName,
+		Players: []string{
+			playerIdentifier,
+			nameToIdentifier.Identifier(playerNames[2]),
+			nameToIdentifier.Identifier(playerNames[3]),
+		},
+	})
+
+	_, postCode :=
+		gameHandler.HandlePost(json.NewDecoder(bytesBuffer), []string{"create-new-game"})
+
+	// We only check that the POST returned a valid response.
+	if postCode != http.StatusOK {
+		unitTest.Fatalf(
+			"POST create-new-game did not return expected HTTP code %v, instead was %v.",
+			http.StatusOK,
+			postCode)
+	}
+
+	_, getCode := gameHandler.HandleGet([]string{"game-as-seen-by-player", incorrectGameIdentifier, playerIdentifier})
+
+	if getCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			"GET game-as-seen-by-player/%v/%v without player did not return expected HTTP code %v, instead was %v.",
+			incorrectGameIdentifier,
+			playerIdentifier,
+			http.StatusBadRequest,
+			getCode)
+	}
+}
+
+func TestRejectGetGameForPlayerWithoutPlayer(unitTest *testing.T) {
+	playerNames := testPlayerNames()
+	nameToIdentifier, _, _, gameHandler := setUpHandlerAndRequirements(playerNames)
+	gameName := "Test game"
+	gameIdentifier := nameToIdentifier.Identifier(gameName)
+
+	bytesBuffer := new(bytes.Buffer)
+	json.NewEncoder(bytesBuffer).Encode(endpoint.GameDefinition{
+		Name: gameName,
+		Players: []string{
+			nameToIdentifier.Identifier(playerNames[1]),
+			nameToIdentifier.Identifier(playerNames[2]),
+			nameToIdentifier.Identifier(playerNames[3]),
+		},
+	})
+
+	_, postCode :=
+		gameHandler.HandlePost(json.NewDecoder(bytesBuffer), []string{"create-new-game"})
+
+	// We only check that the POST returned a valid response.
+	if postCode != http.StatusOK {
+		unitTest.Fatalf(
+			"POST create-new-game did not return expected HTTP code %v, instead was %v.",
+			http.StatusOK,
+			postCode)
+	}
+
+	_, getCode := gameHandler.HandleGet([]string{"game-as-seen-by-player", gameIdentifier})
+
+	if getCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			"GET game-as-seen-by-player/%v without player did not return expected HTTP code %v, instead was %v.",
+			gameIdentifier,
+			http.StatusBadRequest,
+			getCode)
+	}
+}
+
+func TestRejectGetGameForPlayerWithNonparticipantPlayer(unitTest *testing.T) {
+	playerNames := testPlayerNames()
+	nameToIdentifier, _, _, gameHandler := setUpHandlerAndRequirements(playerNames)
+	gameName := "Test game"
+	gameIdentifier := nameToIdentifier.Identifier(gameName)
+
+	bytesBuffer := new(bytes.Buffer)
+	json.NewEncoder(bytesBuffer).Encode(endpoint.GameDefinition{
+		Name: gameName,
+		Players: []string{
+			nameToIdentifier.Identifier(playerNames[1]),
+			nameToIdentifier.Identifier(playerNames[2]),
+			nameToIdentifier.Identifier(playerNames[3]),
+		},
+	})
+
+	playerIdentifier := nameToIdentifier.Identifier(playerNames[0])
+
+	_, postCode :=
+		gameHandler.HandlePost(json.NewDecoder(bytesBuffer), []string{"create-new-game"})
+
+	// We only check that the POST returned a valid response.
+	if postCode != http.StatusOK {
+		unitTest.Fatalf(
+			"POST create-new-game did not return expected HTTP code %v, instead was %v.",
+			http.StatusOK,
+			postCode)
+	}
+
+	_, getCode :=
+		gameHandler.HandleGet([]string{"game-as-seen-by-player", gameIdentifier, playerIdentifier})
+
+	if getCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			"GET game-as-seen-by-player/%v with invalid player did not return expected HTTP code %v, instead was %v.",
+			gameIdentifier,
+			http.StatusBadRequest,
+			getCode)
+	}
+}
+
 func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 	nameToIdentifier := testNameToIdentifier()
 	playerNames := []string{"a", "b", "c", "d", "e"}
