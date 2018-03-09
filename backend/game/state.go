@@ -80,24 +80,24 @@ type Collection interface {
 	All(playerIdentifier string) []State
 }
 
-// byCreationTime implements sort interface for []State based on the creationTime field.
-type byCreationTime []State
+// ByCreationTime implements sort interface for []State based on the creationTime field.
+type ByCreationTime []State
 
-// Len implements part of the sort interface for byCreationTime.
-func (statePointerArray byCreationTime) Len() int {
-	return len(statePointerArray)
+// Len implements part of the sort interface for ByCreationTime.
+func (byCreationTime ByCreationTime) Len() int {
+	return len(byCreationTime)
 }
 
-// Swap implements part of the sort interface for byCreationTime.
-func (statePointerArray byCreationTime) Swap(firstIndex int, secondIndex int) {
-	statePointerArray[firstIndex], statePointerArray[secondIndex] =
-		statePointerArray[secondIndex], statePointerArray[firstIndex]
+// Swap implements part of the sort interface for ByCreationTime.
+func (byCreationTime ByCreationTime) Swap(firstIndex int, secondIndex int) {
+	byCreationTime[firstIndex], byCreationTime[secondIndex] =
+		byCreationTime[secondIndex], byCreationTime[firstIndex]
 }
 
-// Less implements part of the sort interface for byCreationTime.
-func (statePointerArray byCreationTime) Less(firstIndex int, secondIndex int) bool {
-	return statePointerArray[firstIndex].CreationTime().Before(
-		statePointerArray[secondIndex].CreationTime())
+// Less implements part of the sort interface for ByCreationTime.
+func (byCreationTime ByCreationTime) Less(firstIndex int, secondIndex int) bool {
+	return byCreationTime[firstIndex].CreationTime().Before(
+		byCreationTime[secondIndex].CreationTime())
 }
 
 // TurnSummariesForFrontend writes the turn summary information for each game which has
@@ -105,7 +105,7 @@ func (statePointerArray byCreationTime) Less(firstIndex int, secondIndex int) bo
 func TurnSummariesForFrontend(collection Collection, playerIdentifier string) endpoint.TurnSummaryList {
 	gameList := collection.All(playerIdentifier)
 
-	sort.Sort(byCreationTime(gameList))
+	sort.Sort(ByCreationTime(gameList))
 
 	numberOfGamesWithPlayer := len(gameList)
 

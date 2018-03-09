@@ -76,6 +76,7 @@ func (inMemoryCollection *InMemoryCollection) Add(
 		mutualExclusion:      sync.Mutex{},
 		gameIdentifier:       gameIdentifier,
 		gameName:             gameDefinition.Name,
+		creationTime:         time.Now(),
 		participatingPlayers: playerStates,
 		turnNumber:           1,
 		chatLog:              chat.NewLog(),
