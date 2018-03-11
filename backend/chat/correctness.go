@@ -31,7 +31,7 @@ func AssertLogCorrect(
 			if (loggedMessage.PlayerName != "") ||
 				(loggedMessage.ChatColor != "") ||
 				(loggedMessage.MessageText != "") {
-				unitTest.Fatalf(
+				unitTest.Errorf(
 					"Expected empty message with index %v, instead was %v",
 					LogSize-reverseIndex,
 					loggedMessage)
@@ -42,7 +42,7 @@ func AssertLogCorrect(
 			if (loggedMessage.PlayerName != expectedMessage.PlayerName) ||
 				(loggedMessage.ChatColor != expectedMessage.ChatColor) ||
 				(loggedMessage.MessageText != expectedMessage.MessageText) {
-				unitTest.Fatalf(
+				unitTest.Errorf(
 					"For log index %v, expected %v, instead was %v",
 					LogSize-reverseIndex,
 					expectedMessage,
