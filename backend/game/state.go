@@ -50,8 +50,8 @@ type State interface {
 
 // ForPlayer writes the relevant parts of the state of the game as should be known by the given
 // player into the relevant JSON object for the frontend.
-func ForPlayer(state State, playerIdentifier string) endpoint.PlayerKnowledge {
-	return endpoint.PlayerKnowledge{ChatLog: state.ChatLog().ForFrontend()}
+func ForPlayer(state State, playerIdentifier string) endpoint.GameView {
+	return endpoint.GameView{ChatLog: state.ChatLog().ForFrontend()}
 }
 
 // Collection defines the interface for structs which should be able to create objects

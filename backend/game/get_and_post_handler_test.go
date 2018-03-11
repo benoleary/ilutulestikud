@@ -1207,7 +1207,7 @@ func assertGetChatLogIsCorrect(
 			getCode)
 	}
 
-	playerKnowledge, isTypeCorrect := getInterface.(endpoint.PlayerKnowledge)
+	playerKnowledge, isTypeCorrect := getInterface.(endpoint.GameView)
 	if !isTypeCorrect {
 		unitTest.Fatalf(
 			testIdentifier+": GET game-as-seen-by-player/%v/%v did not return expected endpoint.PlayerKnowledge, instead was %v.",

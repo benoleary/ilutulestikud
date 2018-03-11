@@ -39,7 +39,7 @@ type ChatLogMessage struct {
 	MessageText        string
 }
 
-// PlayerKnowledge contains the information of what a player can see about a game.
-type PlayerKnowledge struct {
+// GameView contains the information of what a player can see about a game.
+type GameView struct {
 	ChatLog []ChatLogMessage
 }
