@@ -111,58 +111,248 @@ func TestOrderByCreationTime(unitTest *testing.T) {
 }
 
 func TestInitialState(unitTest *testing.T) {
-	playerNames := []string{"Player One", "Player Two", "Player Three", "Player Four"}
+	type testArguments struct {
+		initialPlayerNames []string
+		isRainbowIncluded  bool
+	}
+
+	testCases := []struct {
+		name      string
+		arguments testArguments
+	}{
+		{
+			name: "Two players, no rainbow",
+			arguments: testArguments{
+				initialPlayerNames: []string{"Player One", "Player Two"},
+				isRainbowIncluded:  false,
+			},
+		},
+		{
+			name: "Three players, no rainbow",
+			arguments: testArguments{
+				initialPlayerNames: []string{"Player One", "Player Two", "Player Three"},
+				isRainbowIncluded:  false,
+			},
+		},
+		{
+			name: "Four players, no rainbow",
+			arguments: testArguments{
+				initialPlayerNames: []string{"Player One", "Player Two", "Player Three", "Player Four"},
+				isRainbowIncluded:  false,
+			},
+		},
+		{
+			name: "Five players, no rainbow",
+			arguments: testArguments{
+				initialPlayerNames: []string{"Player One", "Player Two", "Player Three", "Player Four", "Player Five"},
+				isRainbowIncluded:  false,
+			},
+		},
+		{
+			name: "Two players, with rainbow",
+			arguments: testArguments{
+				initialPlayerNames: []string{"Player One", "Player Two"},
+				isRainbowIncluded:  true,
+			},
+		},
+		{
+			name: "Five players, with rainbow",
+			arguments: testArguments{
+				initialPlayerNames: []string{"Player One", "Player Two", "Player Three", "Player Four", "Player Five"},
+				isRainbowIncluded:  true,
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		unitTest.Run(testCase.name, func(unitTest *testing.T) {
+			gameStates := prepareImplementations(
+				unitTest,
+				"Test game",
+				testCase.arguments.initialPlayerNames)
+
+			numberOfPlayers := len(testCase.arguments.initialPlayerNames)
+
+			for stateIndex := 0; stateIndex < len(gameStates); stateIndex++ {
+				gameState := gameStates[stateIndex]
+				participatingPlayers := gameState.Players()
+
+				AssertThatParticipantsAreCorrect(
+					unitTest,
+					testCase.arguments.initialPlayerNames,
+					participatingPlayers)
+
+				viewingPlayer := participatingPlayers[0]
+
+				gameView := game.ForPlayer(gameState, viewingPlayer.Identifier())
+
+				chat.AssertLogCorrect(
+					unitTest,
+					[]endpoint.ChatLogMessage{},
+					gameView.ChatLog,
+				)
+
+				numberOfCardsPerHand := game.NumberOfCardsInPlayerHand(numberOfPlayers)
+				expectedNumberOfCardsInPlayerHands :=
+					numberOfPlayers * numberOfCardsPerHand
+				colorSuits := game.ColorSuits(testCase.arguments.isRainbowIncluded)
+				sequenceIndices := game.SequenceIndices()
+				numberOfCardsInTotal := len(colorSuits) * len(sequenceIndices)
+				expectedNumberOfCardsInDeck := numberOfCardsInTotal - expectedNumberOfCardsInPlayerHands
+
+				expectedVisibleHands := make([]endpoint.VisibleHand, numberOfPlayers)
+
+				// We start from index 1 as player 0 is the viewing player.
+				for playerIndex := 1; playerIndex < numberOfPlayers; playerIndex++ {
+					expectedVisibleHands[playerIndex] = endpoint.VisibleHand{
+						PlayerIdentifier: participatingPlayers[playerIndex].Identifier(),
+						PlayerName:       participatingPlayers[playerIndex].Name(),
+						HandCards:        make([]endpoint.VisibleCard, numberOfCardsPerHand),
+					}
+				}
+
+				AssertThatMechanicalGameStateIsCorrect(
+					"Initial state",
+					unitTest,
+					len(testCase.arguments.initialPlayerNames),
+					testCase.arguments.isRainbowIncluded,
+					endpoint.GameView{
+						ScoreSoFar:                   0,
+						NumberOfReadyHints:           game.MaximumNumberOfHints,
+						NumberOfSpentHints:           0,
+						NumberOfMistakesStillAllowed: game.MaximumNumberOfMistakesAllowed,
+						NumberOfMistakesMade:         0,
+						NumberOfCardsLeftInDeck:      expectedNumberOfCardsInDeck,
+						PlayedCards:                  [][]endpoint.VisibleCard{},
+						DiscardedCards:               [][]endpoint.VisibleCard{},
+						ThisPlayerHand:               make([]endpoint.CardFromBehind, numberOfCardsPerHand),
+						OtherPlayerHands:             expectedVisibleHands,
+					},
+					gameView)
+			}
+		})
+	}
+}
+
+func AssertThatParticipantsAreCorrect(
+	unitTest *testing.T,
+	playerNames []string,
+	participatingPlayers []player.State) {
 	numberOfPlayers := len(playerNames)
 	namesToFind := make(map[string]bool, numberOfPlayers)
 	for _, playerName := range playerNames {
 		namesToFind[playerName] = true
 	}
 
-	gameStates := prepareImplementations(
-		unitTest,
-		"Test game",
-		playerNames)
+	if len(participatingPlayers) != numberOfPlayers {
+		unitTest.Fatalf(
+			"Expected %v participants %v but retrieved",
+			numberOfPlayers,
+			participatingPlayers)
+	}
 
-	for stateIndex := 0; stateIndex < len(gameStates); stateIndex++ {
-		gameState := gameStates[stateIndex]
+	for _, participatingPlayer := range participatingPlayers {
+		if !namesToFind[participatingPlayer.Name()] {
+			unitTest.Errorf(
+				"Input participants %v does not include retrieved participant %v",
+				playerNames,
+				participatingPlayer.Name())
+		}
 
-		participatingPlayers := gameState.Players()
+		namesToFind[participatingPlayer.Name()] = false
+	}
 
-		if len(participatingPlayers) != numberOfPlayers {
-			unitTest.Fatalf(
-				"Expected %v participants %v but retrieved",
-				numberOfPlayers,
+	for playerName, nameIsMissing := range namesToFind {
+		if nameIsMissing {
+			unitTest.Errorf(
+				"Input participant %v was not found in retrieve participant list %v",
+				playerName,
 				participatingPlayers)
 		}
+	}
+}
 
-		for _, participatingPlayer := range participatingPlayers {
-			if !namesToFind[participatingPlayer.Name()] {
-				unitTest.Fatalf(
-					"Input participants %v does not include retrieved participant %v",
-					playerNames,
-					participatingPlayer.Name())
-			}
+func AssertThatMechanicalGameStateIsCorrect(
+	identifyingLabel string,
+	unitTest *testing.T,
+	numberOfPlayers int,
+	isRainbowIncluded bool,
+	expectedView endpoint.GameView,
+	actualView endpoint.GameView) {
+	if actualView.ScoreSoFar != expectedView.ScoreSoFar {
+		unitTest.Errorf(
+			identifyingLabel+": score was %v rather than expected %v",
+			actualView.ScoreSoFar,
+			expectedView.ScoreSoFar)
+	}
 
-			namesToFind[participatingPlayer.Name()] = false
-		}
+	if actualView.NumberOfReadyHints != game.MaximumNumberOfHints {
+		unitTest.Errorf(
+			identifyingLabel+": number of hints was %v rather than expected %v",
+			actualView.NumberOfReadyHints,
+			expectedView.NumberOfReadyHints)
+	}
 
-		for playerName, nameIsMissing := range namesToFind {
-			if nameIsMissing {
-				unitTest.Fatalf(
-					"Input participant %v was not found in retrieve participant list %v",
-					playerName,
-					participatingPlayers)
-			}
-		}
+	if actualView.NumberOfSpentHints != expectedView.NumberOfSpentHints {
+		unitTest.Errorf(
+			identifyingLabel+": number of spent hints was %v rather than expected %v",
+			actualView.NumberOfSpentHints,
+			expectedView.NumberOfSpentHints)
+	}
 
-		viewingPlayer := participatingPlayers[0]
+	if actualView.NumberOfMistakesStillAllowed != game.MaximumNumberOfMistakesAllowed {
+		unitTest.Errorf(
+			identifyingLabel+": number of mistakes still allowed was %v rather than expected %v",
+			actualView.NumberOfMistakesStillAllowed,
+			expectedView.NumberOfMistakesStillAllowed)
+	}
 
-		gameView := game.ForPlayer(gameState, viewingPlayer.Identifier())
+	if actualView.NumberOfMistakesMade != 0 {
+		unitTest.Errorf(
+			identifyingLabel+": number of mistakes made was %v rather than expected %v",
+			actualView.NumberOfMistakesMade,
+			0)
+	}
 
-		chat.AssertLogCorrect(
-			unitTest,
-			gameView.ChatLog,
-			[]endpoint.ChatLogMessage{},
-		)
+	if actualView.NumberOfCardsLeftInDeck != expectedView.NumberOfCardsLeftInDeck {
+		unitTest.Errorf(
+			identifyingLabel+": number of cards in deck was %v rather than expected %v",
+			actualView.NumberOfCardsLeftInDeck,
+			expectedView.NumberOfCardsLeftInDeck)
+	}
+
+	if len(actualView.PlayedCards) != len(expectedView.PlayedCards) {
+		unitTest.Errorf(
+			identifyingLabel+": played cards set was %v rather than expected %v",
+			actualView.PlayedCards,
+			expectedView.PlayedCards)
+	}
+
+	unitTest.Errorf("Need to properly compare actualView.PlayedCards to expectedView.PlayedCards")
+
+	if len(actualView.DiscardedCards) != len(expectedView.DiscardedCards) {
+		unitTest.Errorf(
+			identifyingLabel+": discarded cards set was %v rather than expected %v",
+			actualView.DiscardedCards,
+			expectedView.DiscardedCards)
+	}
+
+	unitTest.Errorf("Need to properly compare actualView.DiscardedCards to expectedView.DiscardedCards")
+
+	if len(actualView.ThisPlayerHand) != len(expectedView.ThisPlayerHand) {
+		unitTest.Errorf(
+			identifyingLabel+": player hand card was %v rather than expected %v",
+			actualView.ThisPlayerHand,
+			expectedView.ThisPlayerHand)
+	}
+
+	unitTest.Errorf("Need to properly compare actualView.ThisPlayerHand to expectedView.ThisPlayerHand")
+
+	expectedNumberOfVisibleHands := numberOfPlayers - 1
+	if len(actualView.OtherPlayerHands) != expectedNumberOfVisibleHands {
+		unitTest.Errorf(
+			identifyingLabel+": visible player hands was %v rather than expected %v hands",
+			actualView.ThisPlayerHand,
+			expectedNumberOfVisibleHands)
 	}
 }
