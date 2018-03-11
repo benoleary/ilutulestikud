@@ -7,7 +7,7 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 )
 
-// logSize gives the size of the list of the last chat messages.
+// LogSize gives the size of the list of the last chat messages.
 const LogSize = 8
 
 // message is a struct to hold the details of a single chat message.
