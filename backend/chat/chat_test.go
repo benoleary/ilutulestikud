@@ -83,42 +83,10 @@ func TestLogForFrontendAfterAppending(unitTest *testing.T) {
 
 			loggedMessages := chatLog.ForFrontend()
 
-			if len(loggedMessages) != chat.LogSize {
-				unitTest.Fatalf(
-					"Log did not have correct size: expected %v messages, but log was %v",
-					chat.LogSize,
-					loggedMessages)
-			}
-
-			numberOfSentMessages := len(testCase.arguments.messagesToAppend)
-
-			// We work our way backwards from the latest message.
-			for reverseIndex := 1; reverseIndex <= chat.LogSize; reverseIndex++ {
-				loggedMessage := loggedMessages[chat.LogSize-reverseIndex]
-
-				if reverseIndex > numberOfSentMessages {
-					if (loggedMessage.PlayerName != "") ||
-						(loggedMessage.ChatColor != "") ||
-						(loggedMessage.MessageText != "") {
-						unitTest.Fatalf(
-							"Expected empty message with index %v, instead was %v",
-							chat.LogSize-reverseIndex,
-							loggedMessage)
-					}
-				} else {
-					expectedMessage :=
-						testCase.arguments.messagesToAppend[numberOfSentMessages-reverseIndex]
-					if (loggedMessage.PlayerName != expectedMessage.PlayerName) ||
-						(loggedMessage.ChatColor != expectedMessage.ChatColor) ||
-						(loggedMessage.MessageText != expectedMessage.MessageText) {
-						unitTest.Fatalf(
-							"For log index %v, expected %v, instead was %v",
-							chat.LogSize-reverseIndex,
-							expectedMessage,
-							loggedMessage)
-					}
-				}
-			}
+			chat.AssertLogCorrect(
+				unitTest,
+				testCase.arguments.messagesToAppend,
+				loggedMessages)
 		})
 	}
 }
