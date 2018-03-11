@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/benoleary/ilutulestikud/backend/chat"
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/player"
@@ -106,5 +107,62 @@ func TestOrderByCreationTime(unitTest *testing.T) {
 				gameList[0].Name(),
 				gameList[1].Name())
 		}
+	}
+}
+
+func TestInitialState(unitTest *testing.T) {
+	playerNames := []string{"Player One", "Player Two", "Player Three", "Player Four"}
+	numberOfPlayers := len(playerNames)
+	namesToFind := make(map[string]bool, numberOfPlayers)
+	for _, playerName := range playerNames {
+		namesToFind[playerName] = true
+	}
+
+	gameStates := prepareImplementations(
+		unitTest,
+		"Test game",
+		playerNames)
+
+	for stateIndex := 0; stateIndex < len(gameStates); stateIndex++ {
+		gameState := gameStates[stateIndex]
+
+		participatingPlayers := gameState.Players()
+
+		if len(participatingPlayers) != numberOfPlayers {
+			unitTest.Fatalf(
+				"Expected %v participants %v but retrieved",
+				numberOfPlayers,
+				participatingPlayers)
+		}
+
+		for _, participatingPlayer := range participatingPlayers {
+			if !namesToFind[participatingPlayer.Name()] {
+				unitTest.Fatalf(
+					"Input participants %v does not include retrieved participant %v",
+					playerNames,
+					participatingPlayer.Name())
+			}
+
+			namesToFind[participatingPlayer.Name()] = false
+		}
+
+		for playerName, nameIsMissing := range namesToFind {
+			if nameIsMissing {
+				unitTest.Fatalf(
+					"Input participant %v was not found in retrieve participant list %v",
+					playerName,
+					participatingPlayers)
+			}
+		}
+
+		viewingPlayer := participatingPlayers[0]
+
+		gameView := game.ForPlayer(gameState, viewingPlayer.Identifier())
+
+		chat.AssertLogCorrect(
+			unitTest,
+			gameView.ChatLog,
+			[]endpoint.ChatLogMessage{},
+		)
 	}
 }
