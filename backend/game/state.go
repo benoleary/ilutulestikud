@@ -9,12 +9,6 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
-// MinimumNumberOfPlayers is the minimum number of players for a game.
-const MinimumNumberOfPlayers = 2
-
-// MaximumNumberOfPlayers is the maximum number of players for a game.
-const MaximumNumberOfPlayers = 5
-
 // State defines the interface for structs which should encapsulate the state of a single game.
 type State interface {
 	// Identifier should return the identifier of the game for interaction between frontend
@@ -140,7 +134,7 @@ func TurnSummariesForFrontend(collection Collection, playerIdentifier string) en
 			GameName:                   nameOfGame,
 			CreationTimestampInSeconds: gameList[gameIndex].CreationTime().Unix(),
 			TurnNumber:                 gameTurn,
-			PlayersInNextTurnOrder:     playerNamesInTurnOrder,
+			PlayerNamesInNextTurnOrder: playerNamesInTurnOrder,
 			IsPlayerTurn:               turnsUntilPlayer == 0,
 		}
 	}
