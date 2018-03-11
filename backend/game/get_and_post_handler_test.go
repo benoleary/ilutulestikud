@@ -648,7 +648,7 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 						GameIdentifier: gameIdentifiers[0],
 						GameName:       gameNames[0],
 						TurnNumber:     1,
-						PlayersInNextTurnOrder: []string{
+						PlayerNamesInNextTurnOrder: []string{
 							playerNames[1],
 							playerNames[2],
 							playerNames[0],
@@ -701,7 +701,7 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 						GameIdentifier: gameIdentifiers[0],
 						GameName:       gameNames[0],
 						TurnNumber:     1,
-						PlayersInNextTurnOrder: []string{
+						PlayerNamesInNextTurnOrder: []string{
 							playerNames[1],
 							playerNames[2],
 							playerNames[0],
@@ -712,7 +712,7 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 						GameIdentifier: gameIdentifiers[3],
 						GameName:       gameNames[3],
 						TurnNumber:     1,
-						PlayersInNextTurnOrder: []string{
+						PlayerNamesInNextTurnOrder: []string{
 							playerIdentifiers[0],
 							playerIdentifiers[4],
 							playerIdentifiers[3],
@@ -757,7 +757,7 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 						GameIdentifier: gameIdentifiers[0],
 						GameName:       gameNames[0],
 						TurnNumber:     1,
-						PlayersInNextTurnOrder: []string{
+						PlayerNamesInNextTurnOrder: []string{
 							playerNames[1],
 							playerNames[2],
 							playerNames[0],
@@ -768,7 +768,7 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 						GameIdentifier: gameIdentifiers[1],
 						GameName:       gameNames[1],
 						TurnNumber:     1,
-						PlayersInNextTurnOrder: []string{
+						PlayerNamesInNextTurnOrder: []string{
 							playerIdentifiers[4],
 							playerIdentifiers[0],
 						},
@@ -778,7 +778,7 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 						GameIdentifier: gameIdentifiers[2],
 						GameName:       gameNames[2],
 						TurnNumber:     1,
-						PlayersInNextTurnOrder: []string{
+						PlayerNamesInNextTurnOrder: []string{
 							playerIdentifiers[0],
 							playerIdentifiers[4],
 							playerIdentifiers[3],
@@ -849,8 +849,8 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 			for summaryIndex := 0; summaryIndex < len(actualTurnSummaryList.TurnSummaries); summaryIndex++ {
 				actualSummary := actualTurnSummaryList.TurnSummaries[summaryIndex]
 				expectedSummary := testCase.expected.turnSummaries[summaryIndex]
-				actualPlayerOrder := actualSummary.PlayersInNextTurnOrder
-				expectedPlayerOrder := actualSummary.PlayersInNextTurnOrder
+				actualPlayerOrder := actualSummary.PlayerNamesInNextTurnOrder
+				expectedPlayerOrder := actualSummary.PlayerNamesInNextTurnOrder
 
 				// We do not bother checking the timestamps as that would be too much effort.
 				if (actualSummary.GameIdentifier != expectedSummary.GameIdentifier) ||

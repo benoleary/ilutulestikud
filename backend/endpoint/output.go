@@ -22,7 +22,7 @@ type TurnSummary struct {
 	GameName                   string
 	CreationTimestampInSeconds int64
 	TurnNumber                 int
-	PlayersInNextTurnOrder     []string
+	PlayerNamesInNextTurnOrder []string
 	IsPlayerTurn               bool
 }
 
@@ -39,7 +39,41 @@ type ChatLogMessage struct {
 	MessageText        string
 }
 
+// VisibleCard is a struct to hold the details of a single outgoing card when visible
+// to a player.
+type VisibleCard struct {
+	ColorSuit     string
+	SequenceIndex int
+}
+
+// VisibleHand is a struct to hold the details of the hand of cards held by a player
+// other than the player who is viewing the game state.
+type VisibleHand struct {
+	PlayerIdentifier string
+	PlayerName       string
+	HandCards        []VisibleCard
+}
+
+// CardFromBehind is a struct to hold the details of a single outgoing card as known
+// to the player who is holding the card.
+type CardFromBehind struct {
+	AllowedColorSuits       []string
+	ExcludedColorSuits      []string
+	AllowedSequenceIndices  []int
+	ExcludedSequenceIndices []int
+}
+
 // GameView contains the information of what a player can see about a game.
 type GameView struct {
-	ChatLog []ChatLogMessage
+	ChatLog                      []ChatLogMessage
+	ScoreSoFar                   int
+	NumberOfReadyHints           int
+	NumberOfSpentHints           int
+	NumberOfMistakesStillAllowed int
+	NumberOfMistakesMade         int
+	NumberOfCardsLeftInDeck      int
+	PlayedCards                  [][]VisibleCard
+	DiscardedCards               [][]VisibleCard
+	ThisPlayerHand               []CardFromBehind
+	OtherPlayerHands             []VisibleHand
 }
