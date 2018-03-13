@@ -111,9 +111,19 @@ func TestOrderByCreationTime(unitTest *testing.T) {
 }
 
 func TestInitialState(unitTest *testing.T) {
+	standardRuleset := &game.StandardWithoutRainbowRuleset{}
+
+	separateRainbowRuleset := &game.RainbowAsSeparateSuitRuleset{
+		BasisRules: standardRuleset,
+	}
+
+	compoundRainbowRuleset := &game.RainbowAsCompoundSuitRuleset{
+		BasisRainbow: separateRainbowRuleset,
+	}
+
 	type testArguments struct {
 		initialPlayerNames []string
-		isRainbowIncluded  bool
+		gameRuleset        game.Ruleset
 	}
 
 	testCases := []struct {
@@ -124,42 +134,42 @@ func TestInitialState(unitTest *testing.T) {
 			name: "Two players, no rainbow",
 			arguments: testArguments{
 				initialPlayerNames: []string{"Player One", "Player Two"},
-				isRainbowIncluded:  false,
+				gameRuleset:        standardRuleset,
 			},
 		},
 		{
 			name: "Three players, no rainbow",
 			arguments: testArguments{
 				initialPlayerNames: []string{"Player One", "Player Two", "Player Three"},
-				isRainbowIncluded:  false,
+				gameRuleset:        standardRuleset,
 			},
 		},
 		{
 			name: "Four players, no rainbow",
 			arguments: testArguments{
 				initialPlayerNames: []string{"Player One", "Player Two", "Player Three", "Player Four"},
-				isRainbowIncluded:  false,
+				gameRuleset:        standardRuleset,
 			},
 		},
 		{
 			name: "Five players, no rainbow",
 			arguments: testArguments{
 				initialPlayerNames: []string{"Player One", "Player Two", "Player Three", "Player Four", "Player Five"},
-				isRainbowIncluded:  false,
+				gameRuleset:        standardRuleset,
 			},
 		},
 		{
-			name: "Two players, with rainbow",
+			name: "Two players, with rainbow (as separate, but doesn't matter for initial state)",
 			arguments: testArguments{
 				initialPlayerNames: []string{"Player One", "Player Two"},
-				isRainbowIncluded:  true,
+				gameRuleset:        separateRainbowRuleset,
 			},
 		},
 		{
-			name: "Five players, with rainbow",
+			name: "Five players, with rainbow (as compound, but doesn't matter for initial state)",
 			arguments: testArguments{
 				initialPlayerNames: []string{"Player One", "Player Two", "Player Three", "Player Four", "Player Five"},
-				isRainbowIncluded:  true,
+				gameRuleset:        compoundRainbowRuleset,
 			},
 		},
 	}
@@ -192,11 +202,11 @@ func TestInitialState(unitTest *testing.T) {
 					gameView.ChatLog,
 				)
 
-				numberOfCardsPerHand := game.NumberOfCardsInPlayerHand(numberOfPlayers)
+				numberOfCardsPerHand := testCase.arguments.gameRuleset.NumberOfCardsInPlayerHand(numberOfPlayers)
 				expectedNumberOfCardsInPlayerHands :=
 					numberOfPlayers * numberOfCardsPerHand
-				colorSuits := game.ColorSuits(testCase.arguments.isRainbowIncluded)
-				sequenceIndices := game.SequenceIndices()
+				colorSuits := testCase.arguments.gameRuleset.ColorSuits()
+				sequenceIndices := testCase.arguments.gameRuleset.SequenceIndices()
 				numberOfCardsInTotal := len(colorSuits) * len(sequenceIndices)
 				expectedNumberOfCardsInDeck := numberOfCardsInTotal - expectedNumberOfCardsInPlayerHands
 
@@ -215,7 +225,7 @@ func TestInitialState(unitTest *testing.T) {
 					"Initial state",
 					unitTest,
 					len(testCase.arguments.initialPlayerNames),
-					testCase.arguments.isRainbowIncluded,
+					testCase.arguments.gameRuleset,
 					endpoint.GameView{
 						ScoreSoFar:                   0,
 						NumberOfReadyHints:           game.MaximumNumberOfHints,
@@ -276,7 +286,7 @@ func AssertThatMechanicalGameStateIsCorrect(
 	identifyingLabel string,
 	unitTest *testing.T,
 	numberOfPlayers int,
-	isRainbowIncluded bool,
+	gameRuleset game.Ruleset,
 	expectedView endpoint.GameView,
 	actualView endpoint.GameView) {
 	if actualView.ScoreSoFar != expectedView.ScoreSoFar {
