@@ -34,11 +34,14 @@ func NewInMemoryCollection(nameToIdentifier endpoint.NameToIdentifier) *InMemory
 func (inMemoryCollection *InMemoryCollection) Add(
 	gameDefinition endpoint.GameDefinition,
 	playerCollection player.Collection) error {
+	fmt.Printf("gameDefinition = %v", gameDefinition)
+
 	if gameDefinition.GameName == "" {
 		return fmt.Errorf("Game must have a name")
 	}
 
 	gameIdentifier := inMemoryCollection.nameToIdentifier.Identifier(gameDefinition.GameName)
+	fmt.Printf("gameIdentifier = %v", gameIdentifier)
 	_, gameExists := inMemoryCollection.gameStates[gameIdentifier]
 
 	if gameExists {

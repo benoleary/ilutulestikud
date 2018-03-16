@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"net/http"
+
+	"github.com/benoleary/ilutulestikud/backend/endpoint"
 
 	"github.com/benoleary/ilutulestikud/backend/defaults"
 	"github.com/benoleary/ilutulestikud/backend/game"
@@ -17,11 +18,11 @@ func main() {
 	// This main function just injects hard-coded dependencies.
 	playerCollection :=
 		player.NewInMemoryCollection(
-			&endpoint.Base64NameEncoder{},
+			&endpoint.Base32NameEncoder{},
 			defaults.InitialPlayerNames(),
 			defaults.AvailableColors())
 	playerHandler := player.NewGetAndPostHandler(playerCollection)
-	gameCollection := game.NewInMemoryCollection(&endpoint.Base64NameEncoder{})
+	gameCollection := game.NewInMemoryCollection(&endpoint.Base32NameEncoder{})
 	gameHandler := game.NewGetAndPostHandler(playerCollection, gameCollection)
 
 	// We could load the allowed origin from a file, but this app is very specific to a set of fixed addresses.

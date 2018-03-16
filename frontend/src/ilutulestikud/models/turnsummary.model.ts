@@ -4,7 +4,7 @@ export class TurnSummary
     GameName: string;
     CreationTimestampInSeconds: number;
     TurnNumber: number;
-    PlayersInNextTurnOrder: string[];
+    PlayerNamesInNextTurnOrder: string[];
     IsPlayerTurn: boolean;
 
     constructor(turnSummaryObject: Object)
@@ -18,7 +18,7 @@ export class TurnSummary
         this.GameName = turnSummaryObject["GameName"];
         this.CreationTimestampInSeconds = turnSummaryObject["CreationTimestampInSeconds"];
         this.TurnNumber = turnSummaryObject["TurnNumber"];
-        this.PlayersInNextTurnOrder = turnSummaryObject["PlayersInNextTurnOrder"];
+        this.PlayerNamesInNextTurnOrder = turnSummaryObject["PlayerNamesInNextTurnOrder"];
         this.IsPlayerTurn = turnSummaryObject["IsPlayerTurn"];
     }
 
@@ -27,6 +27,6 @@ export class TurnSummary
         // Date constructors take a timestamp in units of milliseconds.
         return "Created: " + (new Date(this.CreationTimestampInSeconds * 1000)).toTimeString()
              + "; turn number: " + this.TurnNumber
-             + "; player order: " + this.PlayersInNextTurnOrder.join(", ");
+             + "; player order: " + this.PlayerNamesInNextTurnOrder.join(", ");
     }
 }

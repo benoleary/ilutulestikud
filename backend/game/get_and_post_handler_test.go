@@ -31,9 +31,6 @@ func testPlayerIdentifier(playerIndex int) string {
 	return nameToIdentifier.Identifier(testPlayerNames()[playerIndex])
 }
 
-// newCollectionAndHandler prepares a game.Collection and a game.GetAndPostHandler
-// in a consistent way for the tests. The player.Collection is created with a simple
-// name-to-indentifier encoder which just uses the name as its identifier.
 func setUpHandlerAndRequirements(registeredPlayers []string) (
 	endpoint.NameToIdentifier, player.Collection, game.Collection, *game.GetAndPostHandler) {
 	nameToIdentifier := testNameToIdentifier()
@@ -45,6 +42,18 @@ func setUpHandlerAndRequirements(registeredPlayers []string) (
 	gameCollection := game.NewInMemoryCollection(nameToIdentifier)
 	gameHandler := game.NewGetAndPostHandler(playerCollection, gameCollection)
 	return nameToIdentifier, playerCollection, gameCollection, gameHandler
+}
+
+func GetAvailableRulesets(unitTest *testing.T) []endpoint.SelectableRuleset {
+	availableRulesets := game.AvailableRulesets()
+
+	if len(availableRulesets) < 1 {
+		unitTest.Fatalf(
+			"At least one ruleset must be available for tests: game.AvailableRulesets() returned %v",
+			availableRulesets)
+	}
+
+	return availableRulesets
 }
 
 func TestGetNoSegmentBadRequest(unitTest *testing.T) {
@@ -142,10 +151,31 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 			},
 		},
 		{
-			name: "Nil players",
+			name: "Non-existent ruleset",
 			arguments: testArguments{
 				bodyObject: &endpoint.GameDefinition{
 					GameName: "Test game",
+					// This relies on the ruleset identifiers being 0 to N-1 if there are N rulesets.
+					RulesetIdentifier: len(GetAvailableRulesets(unitTest)),
+					PlayerIdentifiers: []string{
+						// We use the same set of player names here as used to set up the game.Collection.
+						testPlayerIdentifier(0),
+						testPlayerIdentifier(1),
+						"I am not registered!",
+						testPlayerIdentifier(2),
+					},
+				},
+			},
+			expected: expectedReturns{
+				codeFromPost: http.StatusBadRequest,
+			},
+		},
+		{
+			name: "Nil players",
+			arguments: testArguments{
+				bodyObject: &endpoint.GameDefinition{
+					GameName:          "Test game",
+					RulesetIdentifier: GetAvailableRulesets(unitTest)[0].Identifier,
 				},
 			},
 			expected: expectedReturns{
@@ -157,6 +187,7 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 			arguments: testArguments{
 				bodyObject: &endpoint.GameDefinition{
 					GameName:          "Test game",
+					RulesetIdentifier: GetAvailableRulesets(unitTest)[0].Identifier,
 					PlayerIdentifiers: make([]string, 0),
 				},
 			},
@@ -168,7 +199,8 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 			name: "Too few players",
 			arguments: testArguments{
 				bodyObject: &endpoint.GameDefinition{
-					GameName: "Test game",
+					GameName:          "Test game",
+					RulesetIdentifier: GetAvailableRulesets(unitTest)[0].Identifier,
 					// We use the same set of player names here as used to set up the game.Collection
 					// as well as the name encoding.
 					PlayerIdentifiers: []string{testPlayerIdentifier(1)},
@@ -182,7 +214,8 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 			name: "Too many players",
 			arguments: testArguments{
 				bodyObject: &endpoint.GameDefinition{
-					GameName: "Test game",
+					GameName:          "Test game",
+					RulesetIdentifier: GetAvailableRulesets(unitTest)[0].Identifier,
 					// We use the same set of player names here as used to set up the game.Collection
 					// as well as the name encoding.
 					PlayerIdentifiers: []string{
@@ -203,7 +236,8 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 			name: "Repeated player",
 			arguments: testArguments{
 				bodyObject: &endpoint.GameDefinition{
-					GameName: "Test game",
+					GameName:          "Test game",
+					RulesetIdentifier: GetAvailableRulesets(unitTest)[0].Identifier,
 					PlayerIdentifiers: []string{
 						// We use the same set of player names here as used to set up the game.Collection
 						// as well as the name encoding.
@@ -222,7 +256,8 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 			name: "Unregistered player",
 			arguments: testArguments{
 				bodyObject: &endpoint.GameDefinition{
-					GameName: "Test game",
+					GameName:          "Test game",
+					RulesetIdentifier: GetAvailableRulesets(unitTest)[0].Identifier,
 					PlayerIdentifiers: []string{
 						// We use the same set of player names here as used to set up the game.Collection.
 						testPlayerIdentifier(0),
@@ -264,15 +299,7 @@ func TestRejectNewGameWithExistingName(unitTest *testing.T) {
 	playerNames := testPlayerNames()
 	nameToIdentifier, _, _, gameHandler := setUpHandlerAndRequirements(playerNames)
 
-	availableRulesets := game.AvailableRulesets()
-
-	if len(availableRulesets) < 1 {
-		unitTest.Fatalf(
-			"At least one ruleset must be available: game.AvailableRulesets() returned %v",
-			availableRulesets)
-	}
-
-	rulesetIdentifier := availableRulesets[0].Identifier
+	rulesetIdentifier := GetAvailableRulesets(unitTest)[0].Identifier
 
 	gameName := "Test game"
 	firstBodyObject := &endpoint.GameDefinition{
@@ -350,6 +377,12 @@ func TestRegisterAndRetrieveNewGame(unitTest *testing.T) {
 			},
 		},
 		{
+			name: "Breaks base64",
+			arguments: testArguments{
+				gameName: "\\/\\\\\\?", // should unescape to \/\\\?
+			},
+		},
+		{
 			name: "URI segment delimiter",
 			arguments: testArguments{
 				gameName: "/Slashes/are/reserved/for/parsing/URI/segments/",
@@ -361,18 +394,44 @@ func TestRegisterAndRetrieveNewGame(unitTest *testing.T) {
 		unitTest.Run(testCase.name, func(unitTest *testing.T) {
 			nameToIdentifier, _, gameCollection, gameHandler := setUpHandlerAndRequirements(playerList)
 
+			// First we get the list of rulesets which are valid for creating a game.
+			getRulesetsInterface, getRulesetsCode := gameHandler.HandleGet([]string{"available-rulesets"})
+
+			if getRulesetsCode != http.StatusOK {
+				unitTest.Fatalf(
+					"GET available-rulesets did not return expected HTTP code %v, instead was %v.",
+					http.StatusOK,
+					getRulesetsCode)
+			}
+
+			availableRulesetList, isTypeCorrect := getRulesetsInterface.(endpoint.RulesetList)
+
+			if !isTypeCorrect {
+				unitTest.Fatalf(
+					"GET available-rulesets did not return expected endpoint.RulesetList, instead was %v.",
+					getRulesetsInterface)
+			}
+
+			if len(availableRulesetList.Rulesets) < 1 {
+				unitTest.Fatalf(
+					"GET available-rulesets returned a nil or empty list of rulesets: %v.",
+					getRulesetsInterface)
+			}
+
 			playerIdentifiers := make([]string, len(playerList))
 			for playerIndex, playerName := range playerList {
 				playerIdentifiers[playerIndex] = nameToIdentifier.Identifier(playerName)
 			}
 
+			// We prepare the definition of the game, choosing the first available ruleset.
 			bytesBuffer := new(bytes.Buffer)
 			json.NewEncoder(bytesBuffer).Encode(endpoint.GameDefinition{
 				GameName:          testCase.arguments.gameName,
+				RulesetIdentifier: availableRulesetList.Rulesets[0].Identifier,
 				PlayerIdentifiers: playerIdentifiers,
 			})
 
-			// First we add the new game.
+			// Now we add the new game.
 			_, postCode :=
 				gameHandler.HandlePost(json.NewDecoder(bytesBuffer), []string{"create-new-game"})
 
