@@ -14,10 +14,14 @@ type ChatColorList struct {
 
 // Types emitted by game.GetAndPostHandler:
 
-// SelectableRuleset contains the information required to enable a player to select a ruleset.
+// SelectableRuleset contains the information required to enable a player to select a ruleset,
+// plus the pertinent information from the ruleset to allow the frontend to form a valid request
+// to create a new game with the ruleset.
 type SelectableRuleset struct {
-	Identifier  int
-	Description string
+	Identifier             int
+	Description            string
+	MinimumNumberOfPlayers int
+	MaximumNumberOfPlayers int
 }
 
 // RulesetList lists the rulesets which are available for the creation of a game.

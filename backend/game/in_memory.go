@@ -45,15 +45,27 @@ func (inMemoryCollection *InMemoryCollection) Add(
 		return "", fmt.Errorf("Game %v already exists", gameDefinition.GameName)
 	}
 
+	gameRuleset, unknownRulesetError := GetRuleset(gameDefinition.RulesetIdentifier)
+	if unknownRulesetError != nil {
+		return "", fmt.Errorf(
+			"Problem identifying ruleset from identifier %v; error is: %v",
+			gameDefinition.RulesetIdentifier,
+			unknownRulesetError)
+	}
+
 	// A nil slice still has a length of 0, so this is OK.
 	numberOfPlayers := len(gameDefinition.PlayerIdentifiers)
 
-	if numberOfPlayers < MinimumNumberOfPlayers {
-		return "", fmt.Errorf("Game must have at least %v players", MinimumNumberOfPlayers)
+	if numberOfPlayers < gameRuleset.MinimumNumberOfPlayers() {
+		return "", fmt.Errorf(
+			"Game must have at least %v players",
+			gameRuleset.MinimumNumberOfPlayers())
 	}
 
-	if numberOfPlayers > MaximumNumberOfPlayers {
-		return "", fmt.Errorf("Game must have no more than %v players", MaximumNumberOfPlayers)
+	if numberOfPlayers > gameRuleset.MaximumNumberOfPlayers() {
+		return "", fmt.Errorf(
+			"Game must have no more than %v players",
+			gameRuleset.MaximumNumberOfPlayers())
 	}
 
 	playerIdentifiers := make(map[string]bool, 0)

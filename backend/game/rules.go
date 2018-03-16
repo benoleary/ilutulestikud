@@ -1,6 +1,9 @@
 package game
 
-import "github.com/benoleary/ilutulestikud/backend/endpoint"
+import (
+	"fmt"
+	"github.com/benoleary/ilutulestikud/backend/endpoint"
+)
 
 // This file contains the definition of an interface for rulesets,
 // along with some implementations of the interface, and some
@@ -8,12 +11,6 @@ import "github.com/benoleary/ilutulestikud/backend/endpoint"
 // rulesets. These could of course be replaced by interface
 // functions which return the same constants across the various
 // implementations, but that's just busywork for no gain.
-
-// MinimumNumberOfPlayers is the minimum number of players for a game.
-const MinimumNumberOfPlayers = 2
-
-// MaximumNumberOfPlayers is the maximum number of players for a game.
-const MaximumNumberOfPlayers = 5
 
 // MaximumNumberOfHints is the maximum number of hints which can be
 // ready to use in a game at any time.
@@ -26,6 +23,9 @@ const MaximumNumberOfMistakesAllowed = 2
 
 // Ruleset should encapsulate the set of rules for a game as functions.
 type Ruleset interface {
+	// FrontendDescription should describe the ruleset succintly enough for the frontend.
+	FrontendDescription() string
+
 	// NumberOfCardsInPlayerHand should return the number of cards held
 	// in a player's hand, dependent on the number of players in the game.
 	NumberOfCardsInPlayerHand(numberOfPlayers int) int
@@ -36,51 +36,75 @@ type Ruleset interface {
 	// SequenceIndices returns all the indices for the cards, per card so
 	// including repetitions of indices, as they should be played per suit.
 	SequenceIndices() []int
+
+	// MinimumNumberOfPlayers should return the minimum number of players needed for a game.
+	MinimumNumberOfPlayers() int
+
+	// MaximumNumberOfPlayers should return the maximum number of players allowed for a game.
+	MaximumNumberOfPlayers() int
 }
 
 const (
+	// We denote 0 as no ruleset chosen as a missing JSON identifier will end up as 0.
+	noRulesetChosen        = iota
 	standardWithoutRainbow = iota
 	withRainbowAsSeparate  = iota
 	withRainbowAsCompound  = iota
 )
 
-// These descriptions are public for ease of testing. It is harmless to have them as public anyway.
-
-// DescriptionOfStandardRules describes the standard ruleset.
-const DescriptionOfStandardRules = "Standard (without rainbow cards)"
-
-// DescriptionOfSeparateRainbowRules describes the ruleset with rainbow cards which are a separate suit
-// which behaves like the standard suits.
-const DescriptionOfSeparateRainbowRules = "With rainbow cards counting as separate color for hints"
-
-// DescriptionOfCompoundRainbowRules describes the ruleset with rainbow cards which are a separate suit
-// which behaves differently from the standard suits, in the sense that it is not directly a color which
-// can be given as a hint, but rather every hint for a standard color will also identify a rainbow card
-// as a card of that standard color.
-const DescriptionOfCompoundRainbowRules = "With rainbow cards counting as every normal color for hints"
-
 // AvailableRulesets returns the list of identifiers with descriptions
 // representing the rulesets which are available for creating games.
-func AvailableRulesets() []endpoint.SelectableRuleset {
-	return []endpoint.SelectableRuleset{
-		endpoint.SelectableRuleset{
-			Identifier:  standardWithoutRainbow,
-			Description: DescriptionOfStandardRules,
-		},
-		endpoint.SelectableRuleset{
-			Identifier:  withRainbowAsSeparate,
-			Description: DescriptionOfSeparateRainbowRules,
-		},
-		endpoint.SelectableRuleset{
-			Identifier:  withRainbowAsCompound,
-			Description: DescriptionOfCompoundRainbowRules,
-		},
+func AvailableRulesets() ([]endpoint.SelectableRuleset, error) {
+	availableRulesets := make([]endpoint.SelectableRuleset, 0)
+	for rulesetIndex := standardWithoutRainbow; rulesetIndex <= withRainbowAsCompound; rulesetIndex++ {
+		availableRuleset, indexError := GetRuleset(rulesetIndex)
+		if indexError != nil {
+			return nil, fmt.Errorf(
+				"AvailableRulesets() managed to get an error when iterating over rulesets: %v",
+				indexError)
+		}
+
+		availableRulesets = append(
+			availableRulesets,
+			endpoint.SelectableRuleset{
+				Identifier:             rulesetIndex,
+				Description:            availableRuleset.FrontendDescription(),
+				MinimumNumberOfPlayers: availableRuleset.MinimumNumberOfPlayers(),
+				MaximumNumberOfPlayers: availableRuleset.MaximumNumberOfPlayers(),
+			})
+	}
+
+	return availableRulesets, nil
+}
+
+// GetRuleset returns the appropriate ruleset for the identifier.
+func GetRuleset(rulesetIdentifier int) (Ruleset, error) {
+	switch rulesetIdentifier {
+	case standardWithoutRainbow:
+		return &StandardWithoutRainbowRuleset{}, nil
+	case withRainbowAsSeparate:
+		return &RainbowAsSeparateSuitRuleset{
+			BasisRules: &StandardWithoutRainbowRuleset{},
+		}, nil
+	case withRainbowAsCompound:
+		return &RainbowAsCompoundSuitRuleset{
+			BasisRainbow: &RainbowAsSeparateSuitRuleset{
+				BasisRules: &StandardWithoutRainbowRuleset{},
+			},
+		}, nil
+	default:
+		return nil, fmt.Errorf("Ruleset identifier %v not recognized", rulesetIdentifier)
 	}
 }
 
 // StandardWithoutRainbowRuleset represents the standard ruleset, which does
 // not include the rainbow color suit.
 type StandardWithoutRainbowRuleset struct {
+}
+
+// FrontendDescription describes the standard ruleset.
+func (standardRuleset *StandardWithoutRainbowRuleset) FrontendDescription() string {
+	return "Standard (without rainbow cards)"
 }
 
 // NumberOfCardsInPlayerHand returns the number of cards held in a player's
@@ -122,11 +146,27 @@ func (standardRuleset *StandardWithoutRainbowRuleset) PointsPerCard(
 	return cardSequenceIndex
 }
 
+// MinimumNumberOfPlayers returns the minimum number of players needed for a game.
+func (standardRuleset *StandardWithoutRainbowRuleset) MinimumNumberOfPlayers() int {
+	return 2
+}
+
+// MaximumNumberOfPlayers returns the maximum number of players allowed for a game.
+func (standardRuleset *StandardWithoutRainbowRuleset) MaximumNumberOfPlayers() int {
+	return 5
+}
+
 // RainbowAsSeparateSuitRuleset represents the ruleset which include sthe rainbow
 // color suit as just another suit which is separate for the purposes of hints as
 // well.
 type RainbowAsSeparateSuitRuleset struct {
 	BasisRules *StandardWithoutRainbowRuleset
+}
+
+// FrontendDescription describes the ruleset with rainbow cards which are a separate suit
+// which behaves like the standard suits.
+func (separateRainbow *RainbowAsSeparateSuitRuleset) FrontendDescription() string {
+	return "With rainbow cards counting as separate color for hints"
 }
 
 // NumberOfCardsInPlayerHand returns the number of cards held in a player's
@@ -154,11 +194,29 @@ func (separateRainbow *RainbowAsSeparateSuitRuleset) PointsPerCard(
 	return separateRainbow.BasisRules.PointsPerCard(cardSequenceIndex)
 }
 
+// MinimumNumberOfPlayers returns the minimum number of players needed for a game.
+func (separateRainbow *RainbowAsSeparateSuitRuleset) MinimumNumberOfPlayers() int {
+	return separateRainbow.BasisRules.MinimumNumberOfPlayers()
+}
+
+// MaximumNumberOfPlayers returns the maximum number of players allowed for a game.
+func (separateRainbow *RainbowAsSeparateSuitRuleset) MaximumNumberOfPlayers() int {
+	return separateRainbow.BasisRules.MaximumNumberOfPlayers()
+}
+
 // RainbowAsCompoundSuitRuleset represents the ruleset which includes the rainbow
 // color suit as another suit which, however, counts as all the other suits for
 // hints. Most of the functions are the same.
 type RainbowAsCompoundSuitRuleset struct {
 	BasisRainbow *RainbowAsSeparateSuitRuleset
+}
+
+// FrontendDescription describes the ruleset with rainbow cards which are a separate suit
+// which behaves differently from the standard suits, in the sense that it is not directly a color which
+// can be given as a hint, but rather every hint for a standard color will also identify a rainbow card
+// as a card of that standard color.
+func (compoundRainbow *RainbowAsCompoundSuitRuleset) FrontendDescription() string {
+	return "With rainbow cards counting as every normal color for hints"
 }
 
 // NumberOfCardsInPlayerHand returns the number of cards held in a player's
@@ -184,4 +242,14 @@ func (compoundRainbow *RainbowAsCompoundSuitRuleset) SequenceIndices() []int {
 func (compoundRainbow *RainbowAsCompoundSuitRuleset) PointsPerCard(
 	cardSequenceIndex int) int {
 	return compoundRainbow.BasisRainbow.PointsPerCard(cardSequenceIndex)
+}
+
+// MinimumNumberOfPlayers returns the minimum number of players needed for a game.
+func (compoundRainbow *RainbowAsCompoundSuitRuleset) MinimumNumberOfPlayers() int {
+	return compoundRainbow.BasisRainbow.MinimumNumberOfPlayers()
+}
+
+// MaximumNumberOfPlayers returns the maximum number of players allowed for a game.
+func (compoundRainbow *RainbowAsCompoundSuitRuleset) MaximumNumberOfPlayers() int {
+	return compoundRainbow.BasisRainbow.MaximumNumberOfPlayers()
 }

@@ -47,7 +47,13 @@ func setUpHandlerAndRequirements(registeredPlayers []string) (
 }
 
 func GetAvailableRulesets(unitTest *testing.T) []endpoint.SelectableRuleset {
-	availableRulesets := game.AvailableRulesets()
+	availableRulesets, creationError := game.AvailableRulesets()
+
+	if creationError != nil {
+		unitTest.Fatalf(
+			"Error when trying to create list of available rulesets: %v",
+			creationError)
+	}
 
 	if len(availableRulesets) < 1 {
 		unitTest.Fatalf(
