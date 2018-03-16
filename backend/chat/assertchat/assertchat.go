@@ -13,11 +13,12 @@ import (
 // the actual messages from the front so that it is also the correct length.
 func LogIsCorrect(
 	unitTest *testing.T,
+	testIdentifier string,
 	expectedWithoutEmpties []endpoint.ChatLogMessage,
 	actualWithEmpties []endpoint.ChatLogMessage) {
 	if len(actualWithEmpties) != chat.LogSize {
 		unitTest.Fatalf(
-			"Log did not have correct size: expected %v messages, but log was %v",
+			testIdentifier+" - log did not have correct size: expected %v messages, but log was %v",
 			chat.LogSize,
 			actualWithEmpties)
 	}

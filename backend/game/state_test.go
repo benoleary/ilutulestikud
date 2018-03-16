@@ -198,6 +198,7 @@ func TestInitialState(unitTest *testing.T) {
 
 				assertchat.LogIsCorrect(
 					unitTest,
+					testCase.name,
 					[]endpoint.ChatLogMessage{},
 					gameView.ChatLog,
 				)

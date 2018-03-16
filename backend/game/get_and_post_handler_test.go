@@ -6,9 +6,11 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/benoleary/ilutulestikud/backend/chat/assertchat"
 	"github.com/benoleary/ilutulestikud/backend/defaults"
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/game"
+	"github.com/benoleary/ilutulestikud/backend/game/assertgame"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
@@ -392,7 +394,7 @@ func TestRegisterAndRetrieveNewGame(unitTest *testing.T) {
 			}
 
 			// Finally we check that the game was registered properly.
-			assertGameIsCorrect(
+			assertgame.StateIsCorrect(
 				unitTest,
 				testCase.arguments.gameName,
 				playerIdentifiers,
@@ -1166,41 +1168,6 @@ func TestThreePlayersChatting(unitTest *testing.T) {
 	}
 }
 
-func assertGameIsCorrect(
-	unitTest *testing.T,
-	expectedGameName string,
-	expectedPlayers []string,
-	actualGame game.State,
-	testIdentifier string) {
-	if actualGame.Name() != expectedGameName {
-		unitTest.Fatalf(
-			testIdentifier+": game %v was found but had name %v.",
-			expectedGameName,
-			actualGame.Name())
-	}
-
-	actualPlayers := actualGame.Players()
-	playerSlicesMatch := (len(actualPlayers) == len(expectedPlayers))
-
-	if playerSlicesMatch {
-		for playerIndex := 0; playerIndex < len(actualPlayers); playerIndex++ {
-			playerSlicesMatch =
-				(actualPlayers[playerIndex].Identifier() == expectedPlayers[playerIndex])
-			if !playerSlicesMatch {
-				break
-			}
-		}
-	}
-
-	if !playerSlicesMatch {
-		unitTest.Fatalf(
-			testIdentifier+": game %v was found but had players %v instead of expected %v.",
-			expectedGameName,
-			actualPlayers,
-			expectedPlayers)
-	}
-}
-
 func assertGetChatLogIsCorrect(
 	unitTest *testing.T,
 	testIdentifier string,
@@ -1228,30 +1195,9 @@ func assertGetChatLogIsCorrect(
 			getInterface)
 	}
 
-	expectedLogLength := len(expectedMessages)
-	actualLogLength := len(playerKnowledge.ChatLog)
-	unitTest.Logf(
-		"Comparing %v expected chat messages to last %v of log of length %v",
-		expectedLogLength,
-		expectedLogLength,
-		actualLogLength)
-	for indexFromEnd := expectedLogLength; indexFromEnd > 0; indexFromEnd-- {
-		expectedMessage := expectedMessages[expectedLogLength-indexFromEnd]
-		actualMessage := playerKnowledge.ChatLog[actualLogLength-indexFromEnd]
-
-		if (actualMessage.PlayerName != expectedMessage.PlayerName) ||
-			(actualMessage.ChatColor != expectedMessage.ChatColor) ||
-			(actualMessage.MessageText != expectedMessage.MessageText) {
-			unitTest.Fatalf(
-				testIdentifier+": GET game-as-seen-by-player/%v/%v did not return expected chat messages %v,"+
-					" instead got %v (problem index %v, expected %v, actual %v).",
-				gameIdentifier,
-				playerIdentifier,
-				expectedMessages,
-				playerKnowledge.ChatLog,
-				expectedLogLength-indexFromEnd,
-				expectedMessage,
-				actualMessage)
-		}
-	}
+	assertchat.LogIsCorrect(
+		unitTest,
+		testIdentifier,
+		expectedMessages,
+		playerKnowledge.ChatLog)
 }

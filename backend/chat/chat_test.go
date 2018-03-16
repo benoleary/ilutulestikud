@@ -86,6 +86,7 @@ func TestLogForFrontendAfterAppending(unitTest *testing.T) {
 
 			assertchat.LogIsCorrect(
 				unitTest,
+				testCase.name,
 				testCase.arguments.messagesToAppend,
 				loggedMessages)
 		})
