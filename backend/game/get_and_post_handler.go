@@ -90,18 +90,24 @@ func (getAndPostHandler *GetAndPostHandler) writeTurnSummariesForPlayer(
 func (getAndPostHandler *GetAndPostHandler) handleNewGame(
 	httpBodyDecoder *json.Decoder,
 	relevantSegments []string) (interface{}, int) {
-	var newGame endpoint.GameDefinition
+	var gameDefinition endpoint.GameDefinition
 
-	parsingError := httpBodyDecoder.Decode(&newGame)
+	parsingError := httpBodyDecoder.Decode(&gameDefinition)
 	if parsingError != nil {
 		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
 	}
 
-	if newGame.Name == "" {
-		return "No name for new game parsed from JSON", http.StatusBadRequest
+	// This is for backwards compatibility with the frontend.
+	if gameDefinition.Name != "" {
+		gameDefinition.GameName = gameDefinition.Name
 	}
 
-	addError := getAndPostHandler.gameCollection.Add(newGame, getAndPostHandler.playerCollection)
+	// This is for backwards compatibility with the frontend.
+	if len(gameDefinition.Players) > 0 {
+		gameDefinition.PlayerIdentifiers = gameDefinition.Players
+	}
+
+	addError := getAndPostHandler.gameCollection.Add(gameDefinition, getAndPostHandler.playerCollection)
 
 	if addError != nil {
 		return addError, http.StatusBadRequest
@@ -142,6 +148,7 @@ func (getAndPostHandler *GetAndPostHandler) writeGameForPlayer(
 func (getAndPostHandler *GetAndPostHandler) handlePlayerAction(
 	httpBodyDecoder *json.Decoder,
 	relevantSegments []string) (interface{}, int) {
+
 	var playerAction endpoint.PlayerAction
 
 	parsingError := httpBodyDecoder.Decode(&playerAction)
@@ -149,25 +156,40 @@ func (getAndPostHandler *GetAndPostHandler) handlePlayerAction(
 		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
 	}
 
-	gameState, isFound := getAndPostHandler.gameCollection.Get(playerAction.Game)
+	// This is for backwards compatibility with the frontend.
+	if playerAction.Game != "" {
+		playerAction.GameIdentifier = playerAction.Game
+	}
+
+	// This is for backwards compatibility with the frontend.
+	if playerAction.Player != "" {
+		playerAction.PlayerIdentifier = playerAction.Player
+	}
+
+	// This is for backwards compatibility with the frontend.
+	if playerAction.Action != "" {
+		playerAction.ActionType = playerAction.Action
+	}
+
+	gameState, isFound := getAndPostHandler.gameCollection.Get(playerAction.GameIdentifier)
 
 	if !isFound {
 		errorMessage :=
-			"Game " + playerAction.Game + " does not exist, cannot perform action from player " + playerAction.Player
+			"Game " + playerAction.GameIdentifier + " does not exist, cannot perform action from player " + playerAction.PlayerIdentifier
 		return errorMessage, http.StatusBadRequest
 	}
 
-	actingPlayer, isRegisteredPlayer := getAndPostHandler.playerCollection.Get(playerAction.Player)
+	actingPlayer, isRegisteredPlayer := getAndPostHandler.playerCollection.Get(playerAction.PlayerIdentifier)
 
 	if !isRegisteredPlayer {
 		errorMessage :=
-			"Player " + playerAction.Player + " is not registered, should have no actions for game " + playerAction.Game
+			"Player " + playerAction.PlayerIdentifier + " is not registered, should have no actions for game " + playerAction.GameIdentifier
 		return errorMessage, http.StatusBadRequest
 	}
 
-	if !gameState.HasPlayerAsParticipant(playerAction.Player) {
+	if !gameState.HasPlayerAsParticipant(playerAction.PlayerIdentifier) {
 		errorMessage :=
-			"Player " + playerAction.Player + " is not a participant in game " + playerAction.Game
+			"Player " + playerAction.PlayerIdentifier + " is not a participant in game " + playerAction.GameIdentifier
 		return errorMessage, http.StatusBadRequest
 	}
 

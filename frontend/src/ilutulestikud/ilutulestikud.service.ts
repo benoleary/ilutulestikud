@@ -45,8 +45,8 @@ export class IlutulestikudService {
     return this.httpClient.post(
       this.uriRoot + "game/create-new-game",
       {
-        "Name": newGameName,
-        "Players": playerIdentifiers
+        "GameName": newGameName,
+        "PlayerIdentifiers": playerIdentifiers
       })
   }
 
@@ -59,9 +59,9 @@ export class IlutulestikudService {
     return this.httpClient.post(
       this.uriRoot + "game/player-action",
       {
-        "Player": playerIdentifier,
-        "Game": gameIdentifier,
-        "Action": "chat",
+        "PlayerIdentifier": playerIdentifier,
+        "GameIdentifier": gameIdentifier,
+        "ActionType": "chat",
         "ChatMessage": chatText
       })
   }

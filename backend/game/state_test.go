@@ -33,8 +33,8 @@ func prepareImplementations(
 	}
 
 	gameDefinition := endpoint.GameDefinition{
-		Name:    gameName,
-		Players: playerIdentifiers,
+		GameName:          gameName,
+		PlayerIdentifiers: playerIdentifiers,
 	}
 
 	gameStates := make([]game.State, len(gameCollections))
@@ -52,7 +52,7 @@ func prepareImplementations(
 		// We find the game identifier by looking for all the games for the first
 		// player of the game definition, as there should only be one game in the
 		// collection, and it should include this player.
-		playerIdentifier := gameDefinition.Players[0]
+		playerIdentifier := gameDefinition.PlayerIdentifiers[0]
 		allGames := gameCollection.All(playerIdentifier)
 
 		if (allGames == nil) || (len(allGames) != 1) {

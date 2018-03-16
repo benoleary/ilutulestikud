@@ -75,8 +75,8 @@ func TestPostNoSegmentBadRequest(unitTest *testing.T) {
 	_, _, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
 	bytesBuffer := new(bytes.Buffer)
 	json.NewEncoder(bytesBuffer).Encode(endpoint.GameDefinition{
-		Name:    "Game name",
-		Players: []string{"Player One", "Player Two"},
+		GameName:          "Game name",
+		PlayerIdentifiers: []string{"Player One", "Player Two"},
 	})
 
 	_, actualCode := gameHandler.HandlePost(json.NewDecoder(bytesBuffer), make([]string, 0))
@@ -93,8 +93,8 @@ func TestPostInvalidSegmentNotFound(unitTest *testing.T) {
 	_, _, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
 	bytesBuffer := new(bytes.Buffer)
 	json.NewEncoder(bytesBuffer).Encode(endpoint.GameDefinition{
-		Name:    "Game name",
-		Players: []string{"Player One", "Player Two"},
+		GameName:          "Game name",
+		PlayerIdentifiers: []string{"Player One", "Player Two"},
 	})
 
 	_, actualCode := gameHandler.HandlePost(json.NewDecoder(bytesBuffer), []string{"invalid-segment"})
@@ -145,7 +145,7 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 			name: "Nil players",
 			arguments: testArguments{
 				bodyObject: &endpoint.GameDefinition{
-					Name: "Test game",
+					GameName: "Test game",
 				},
 			},
 			expected: expectedReturns{
@@ -156,8 +156,8 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 			name: "No players",
 			arguments: testArguments{
 				bodyObject: &endpoint.GameDefinition{
-					Name:    "Test game",
-					Players: make([]string, 0),
+					GameName:          "Test game",
+					PlayerIdentifiers: make([]string, 0),
 				},
 			},
 			expected: expectedReturns{
@@ -168,10 +168,10 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 			name: "Too few players",
 			arguments: testArguments{
 				bodyObject: &endpoint.GameDefinition{
-					Name: "Test game",
+					GameName: "Test game",
 					// We use the same set of player names here as used to set up the game.Collection
 					// as well as the name encoding.
-					Players: []string{testPlayerIdentifier(1)},
+					PlayerIdentifiers: []string{testPlayerIdentifier(1)},
 				},
 			},
 			expected: expectedReturns{
@@ -182,10 +182,10 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 			name: "Too many players",
 			arguments: testArguments{
 				bodyObject: &endpoint.GameDefinition{
-					Name: "Test game",
+					GameName: "Test game",
 					// We use the same set of player names here as used to set up the game.Collection
 					// as well as the name encoding.
-					Players: []string{
+					PlayerIdentifiers: []string{
 						testPlayerIdentifier(0),
 						testPlayerIdentifier(1),
 						testPlayerIdentifier(2),
@@ -203,8 +203,8 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 			name: "Repeated player",
 			arguments: testArguments{
 				bodyObject: &endpoint.GameDefinition{
-					Name: "Test game",
-					Players: []string{
+					GameName: "Test game",
+					PlayerIdentifiers: []string{
 						// We use the same set of player names here as used to set up the game.Collection
 						// as well as the name encoding.
 						testPlayerIdentifier(0),
@@ -222,8 +222,8 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 			name: "Unregistered player",
 			arguments: testArguments{
 				bodyObject: &endpoint.GameDefinition{
-					Name: "Test game",
-					Players: []string{
+					GameName: "Test game",
+					PlayerIdentifiers: []string{
 						// We use the same set of player names here as used to set up the game.Collection.
 						testPlayerIdentifier(0),
 						testPlayerIdentifier(1),
@@ -368,8 +368,8 @@ func TestRegisterAndRetrieveNewGame(unitTest *testing.T) {
 
 			bytesBuffer := new(bytes.Buffer)
 			json.NewEncoder(bytesBuffer).Encode(endpoint.GameDefinition{
-				Name:    testCase.arguments.gameName,
-				Players: playerIdentifiers,
+				GameName:          testCase.arguments.gameName,
+				PlayerIdentifiers: playerIdentifiers,
 			})
 
 			// First we add the new game.
@@ -448,8 +448,8 @@ func TestRejectGetGameForPlayerWithInvalidGame(unitTest *testing.T) {
 
 	bytesBuffer := new(bytes.Buffer)
 	json.NewEncoder(bytesBuffer).Encode(endpoint.GameDefinition{
-		Name: gameName,
-		Players: []string{
+		GameName: gameName,
+		PlayerIdentifiers: []string{
 			playerIdentifier,
 			nameToIdentifier.Identifier(playerNames[2]),
 			nameToIdentifier.Identifier(playerNames[3]),
@@ -487,8 +487,8 @@ func TestRejectGetGameForPlayerWithoutPlayer(unitTest *testing.T) {
 
 	bytesBuffer := new(bytes.Buffer)
 	json.NewEncoder(bytesBuffer).Encode(endpoint.GameDefinition{
-		Name: gameName,
-		Players: []string{
+		GameName: gameName,
+		PlayerIdentifiers: []string{
 			nameToIdentifier.Identifier(playerNames[1]),
 			nameToIdentifier.Identifier(playerNames[2]),
 			nameToIdentifier.Identifier(playerNames[3]),
@@ -525,8 +525,8 @@ func TestRejectGetGameForPlayerWithNonparticipantPlayer(unitTest *testing.T) {
 
 	bytesBuffer := new(bytes.Buffer)
 	json.NewEncoder(bytesBuffer).Encode(endpoint.GameDefinition{
-		Name: gameName,
-		Players: []string{
+		GameName: gameName,
+		PlayerIdentifiers: []string{
 			nameToIdentifier.Identifier(playerNames[1]),
 			nameToIdentifier.Identifier(playerNames[2]),
 			nameToIdentifier.Identifier(playerNames[3]),
@@ -599,24 +599,24 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 			arguments: testArguments{
 				gameDefinitions: []endpoint.GameDefinition{
 					endpoint.GameDefinition{
-						Name: gameNames[0],
-						Players: []string{
+						GameName: gameNames[0],
+						PlayerIdentifiers: []string{
 							playerIdentifiers[1],
 							playerIdentifiers[2],
 							playerIdentifiers[3],
 						},
 					},
 					endpoint.GameDefinition{
-						Name: gameNames[1],
-						Players: []string{
+						GameName: gameNames[1],
+						PlayerIdentifiers: []string{
 							playerIdentifiers[2],
 							playerIdentifiers[3],
 							playerIdentifiers[4],
 						},
 					},
 					endpoint.GameDefinition{
-						Name: gameNames[2],
-						Players: []string{
+						GameName: gameNames[2],
+						PlayerIdentifiers: []string{
 							playerIdentifiers[4],
 							playerIdentifiers[3],
 						},
@@ -632,24 +632,24 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 			arguments: testArguments{
 				gameDefinitions: []endpoint.GameDefinition{
 					endpoint.GameDefinition{
-						Name: gameNames[0],
-						Players: []string{
+						GameName: gameNames[0],
+						PlayerIdentifiers: []string{
 							playerIdentifiers[1],
 							playerIdentifiers[2],
 							playerIdentifiers[0],
 						},
 					},
 					endpoint.GameDefinition{
-						Name: gameNames[1],
-						Players: []string{
+						GameName: gameNames[1],
+						PlayerIdentifiers: []string{
 							playerIdentifiers[2],
 							playerIdentifiers[3],
 							playerIdentifiers[4],
 						},
 					},
 					endpoint.GameDefinition{
-						Name: gameNames[2],
-						Players: []string{
+						GameName: gameNames[2],
+						PlayerIdentifiers: []string{
 							playerIdentifiers[4],
 							playerIdentifiers[3],
 						},
@@ -677,31 +677,31 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 			arguments: testArguments{
 				gameDefinitions: []endpoint.GameDefinition{
 					endpoint.GameDefinition{
-						Name: gameNames[0],
-						Players: []string{
+						GameName: gameNames[0],
+						PlayerIdentifiers: []string{
 							playerIdentifiers[1],
 							playerIdentifiers[2],
 							playerIdentifiers[0],
 						},
 					},
 					endpoint.GameDefinition{
-						Name: gameNames[1],
-						Players: []string{
+						GameName: gameNames[1],
+						PlayerIdentifiers: []string{
 							playerIdentifiers[2],
 							playerIdentifiers[3],
 							playerIdentifiers[4],
 						},
 					},
 					endpoint.GameDefinition{
-						Name: gameNames[2],
-						Players: []string{
+						GameName: gameNames[2],
+						PlayerIdentifiers: []string{
 							playerIdentifiers[4],
 							playerIdentifiers[3],
 						},
 					},
 					endpoint.GameDefinition{
-						Name: gameNames[3],
-						Players: []string{
+						GameName: gameNames[3],
+						PlayerIdentifiers: []string{
 							playerIdentifiers[0],
 							playerIdentifiers[4],
 							playerIdentifiers[3],
@@ -741,23 +741,23 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 			arguments: testArguments{
 				gameDefinitions: []endpoint.GameDefinition{
 					endpoint.GameDefinition{
-						Name: gameNames[0],
-						Players: []string{
+						GameName: gameNames[0],
+						PlayerIdentifiers: []string{
 							playerIdentifiers[1],
 							playerIdentifiers[2],
 							playerIdentifiers[0],
 						},
 					},
 					endpoint.GameDefinition{
-						Name: gameNames[1],
-						Players: []string{
+						GameName: gameNames[1],
+						PlayerIdentifiers: []string{
 							playerIdentifiers[4],
 							playerIdentifiers[0],
 						},
 					},
 					endpoint.GameDefinition{
-						Name: gameNames[2],
-						Players: []string{
+						GameName: gameNames[2],
+						PlayerIdentifiers: []string{
 							playerIdentifiers[0],
 							playerIdentifiers[4],
 							playerIdentifiers[3],
@@ -940,10 +940,10 @@ func TestRejectInvalidPlayerAction(unitTest *testing.T) {
 			name: "Non-existent game",
 			arguments: testArguments{
 				bodyObject: &endpoint.PlayerAction{
-					Player:      nameToIdentifier.Identifier(playerNames[0]),
-					Game:        nameToIdentifier.Identifier("Non-existent game"),
-					Action:      "chat",
-					ChatMessage: "test message",
+					PlayerIdentifier: nameToIdentifier.Identifier(playerNames[0]),
+					GameIdentifier:   nameToIdentifier.Identifier("Non-existent game"),
+					ActionType:       "chat",
+					ChatMessage:      "test message",
 				},
 			},
 			expected: expectedReturns{
@@ -954,10 +954,10 @@ func TestRejectInvalidPlayerAction(unitTest *testing.T) {
 			name: "Non-existent player",
 			arguments: testArguments{
 				bodyObject: &endpoint.PlayerAction{
-					Player:      nameToIdentifier.Identifier("Non-Existent Player"),
-					Game:        gameIdentifier,
-					Action:      "chat",
-					ChatMessage: "test message",
+					PlayerIdentifier: nameToIdentifier.Identifier("Non-Existent Player"),
+					GameIdentifier:   gameIdentifier,
+					ActionType:       "chat",
+					ChatMessage:      "test message",
 				},
 			},
 			expected: expectedReturns{
@@ -968,10 +968,10 @@ func TestRejectInvalidPlayerAction(unitTest *testing.T) {
 			name: "Non-participant player",
 			arguments: testArguments{
 				bodyObject: &endpoint.PlayerAction{
-					Player:      nameToIdentifier.Identifier(playerNames[4]),
-					Game:        gameIdentifier,
-					Action:      "chat",
-					ChatMessage: "test message",
+					PlayerIdentifier: nameToIdentifier.Identifier(playerNames[4]),
+					GameIdentifier:   gameIdentifier,
+					ActionType:       "chat",
+					ChatMessage:      "test message",
 				},
 			},
 			expected: expectedReturns{
@@ -982,9 +982,9 @@ func TestRejectInvalidPlayerAction(unitTest *testing.T) {
 			name: "Nil action",
 			arguments: testArguments{
 				bodyObject: &endpoint.PlayerAction{
-					Player:      nameToIdentifier.Identifier(playerNames[0]),
-					Game:        gameIdentifier,
-					ChatMessage: "test message",
+					PlayerIdentifier: nameToIdentifier.Identifier(playerNames[0]),
+					GameIdentifier:   gameIdentifier,
+					ChatMessage:      "test message",
 				},
 			},
 			expected: expectedReturns{
@@ -995,9 +995,9 @@ func TestRejectInvalidPlayerAction(unitTest *testing.T) {
 			name: "Invalid action",
 			arguments: testArguments{
 				bodyObject: &endpoint.PlayerAction{
-					Player: nameToIdentifier.Identifier(playerNames[0]),
-					Game:   gameIdentifier,
-					Action: "invalid_action",
+					PlayerIdentifier: nameToIdentifier.Identifier(playerNames[0]),
+					GameIdentifier:   gameIdentifier,
+					ActionType:       "invalid_action",
 				},
 			},
 			expected: expectedReturns{
@@ -1011,8 +1011,8 @@ func TestRejectInvalidPlayerAction(unitTest *testing.T) {
 			creationBytesBuffer := new(bytes.Buffer)
 			json.NewEncoder(creationBytesBuffer).Encode(
 				endpoint.GameDefinition{
-					Name: gameName,
-					Players: []string{
+					GameName: gameName,
+					PlayerIdentifiers: []string{
 						playerIdentifiers[1],
 						playerIdentifiers[2],
 						playerIdentifiers[0],
@@ -1070,8 +1070,8 @@ func TestThreePlayersChatting(unitTest *testing.T) {
 	creationBytesBuffer := new(bytes.Buffer)
 	json.NewEncoder(creationBytesBuffer).Encode(
 		endpoint.GameDefinition{
-			Name: gameName,
-			Players: []string{
+			GameName: gameName,
+			PlayerIdentifiers: []string{
 				playerIdentifiers[2],
 				playerIdentifiers[3],
 				viewingPlayerIdentifier,
@@ -1139,10 +1139,10 @@ func TestThreePlayersChatting(unitTest *testing.T) {
 
 		actionBytesBuffer := new(bytes.Buffer)
 		json.NewEncoder(actionBytesBuffer).Encode(endpoint.PlayerAction{
-			Player:      playerIdentifier,
-			Game:        gameIdentifier,
-			Action:      "chat",
-			ChatMessage: chatMessage.MessageText,
+			PlayerIdentifier: playerIdentifier,
+			GameIdentifier:   gameIdentifier,
+			ActionType:       "chat",
+			ChatMessage:      chatMessage.MessageText,
 		})
 
 		actionResponse, actionCode :=

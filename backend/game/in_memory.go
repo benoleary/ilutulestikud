@@ -34,15 +34,19 @@ func NewInMemoryCollection(nameToIdentifier endpoint.NameToIdentifier) *InMemory
 func (inMemoryCollection *InMemoryCollection) Add(
 	gameDefinition endpoint.GameDefinition,
 	playerCollection player.Collection) error {
-	gameIdentifier := inMemoryCollection.nameToIdentifier.Identifier(gameDefinition.Name)
+	if gameDefinition.GameName == "" {
+		return fmt.Errorf("Game must have a name")
+	}
+
+	gameIdentifier := inMemoryCollection.nameToIdentifier.Identifier(gameDefinition.GameName)
 	_, gameExists := inMemoryCollection.gameStates[gameIdentifier]
 
 	if gameExists {
-		return fmt.Errorf("Game %v already exists", gameDefinition.Name)
+		return fmt.Errorf("Game %v already exists", gameDefinition.GameName)
 	}
 
 	// A nil slice still has a length of 0, so this is OK.
-	numberOfPlayers := len(gameDefinition.Players)
+	numberOfPlayers := len(gameDefinition.PlayerIdentifiers)
 
 	if numberOfPlayers < MinimumNumberOfPlayers {
 		return fmt.Errorf("Game must have at least %v players", MinimumNumberOfPlayers)
@@ -56,7 +60,7 @@ func (inMemoryCollection *InMemoryCollection) Add(
 
 	playerStates := make([]player.State, numberOfPlayers)
 	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
-		playerIdentifier := gameDefinition.Players[playerIndex]
+		playerIdentifier := gameDefinition.PlayerIdentifiers[playerIndex]
 		playerState, playerExists := playerCollection.Get(playerIdentifier)
 
 		if !playerExists {
@@ -75,7 +79,7 @@ func (inMemoryCollection *InMemoryCollection) Add(
 	newGame := &inMemoryState{
 		mutualExclusion:      sync.Mutex{},
 		gameIdentifier:       gameIdentifier,
-		gameName:             gameDefinition.Name,
+		gameName:             gameDefinition.GameName,
 		creationTime:         time.Now(),
 		participatingPlayers: playerStates,
 		turnNumber:           1,
@@ -86,7 +90,7 @@ func (inMemoryCollection *InMemoryCollection) Add(
 
 	inMemoryCollection.gameStates[gameIdentifier] = newGame
 
-	for _, playerName := range gameDefinition.Players {
+	for _, playerName := range gameDefinition.PlayerIdentifiers {
 		existingGamesWithPlayer := inMemoryCollection.gamesWithPlayers[playerName]
 		inMemoryCollection.gamesWithPlayers[playerName] = append(existingGamesWithPlayer, newGame)
 	}
@@ -174,7 +178,7 @@ func (gameState *inMemoryState) ChatLog() *chat.Log {
 func (gameState *inMemoryState) PerformAction(
 	actingPlayer player.State,
 	playerAction endpoint.PlayerAction) error {
-	if playerAction.Action == "chat" {
+	if playerAction.ActionType == "chat" {
 		gameState.chatLog.AppendNewMessage(
 			actingPlayer.Name(),
 			actingPlayer.Color(),
@@ -182,5 +186,5 @@ func (gameState *inMemoryState) PerformAction(
 		return nil
 	}
 
-	return fmt.Errorf("Unknown action: %v", playerAction.Action)
+	return fmt.Errorf("Unknown action: %v", playerAction.ActionType)
 }
