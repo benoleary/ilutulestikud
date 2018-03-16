@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/benoleary/ilutulestikud/backend/chat"
+	"github.com/benoleary/ilutulestikud/backend/chat/assertchat"
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/player"
@@ -196,7 +196,7 @@ func TestInitialState(unitTest *testing.T) {
 
 				gameView := game.ForPlayer(gameState, viewingPlayer.Identifier())
 
-				chat.AssertLogCorrect(
+				assertchat.LogIsCorrect(
 					unitTest,
 					[]endpoint.ChatLogMessage{},
 					gameView.ChatLog,

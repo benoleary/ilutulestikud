@@ -1,5 +1,7 @@
 package game
 
+import "github.com/benoleary/ilutulestikud/backend/endpoint"
+
 // This file contains the definition of an interface for rulesets,
 // along with some implementations of the interface, and some
 // interface-independent constants which are common to all the
@@ -34,6 +36,46 @@ type Ruleset interface {
 	// SequenceIndices returns all the indices for the cards, per card so
 	// including repetitions of indices, as they should be played per suit.
 	SequenceIndices() []int
+}
+
+const (
+	standardWithoutRainbow = iota
+	withRainbowAsSeparate  = iota
+	withRainbowAsCompound  = iota
+)
+
+// These descriptions are public for ease of testing. It is harmless to have them as public anyway.
+
+// DescriptionOfStandardRules describes the standard ruleset.
+const DescriptionOfStandardRules = "Standard (without rainbow cards)"
+
+// DescriptionOfSeparateRainbowRules describes the ruleset with rainbow cards which are a separate suit
+// which behaves like the standard suits.
+const DescriptionOfSeparateRainbowRules = "With rainbow cards counting as separate color for hints"
+
+// DescriptionOfCompoundRainbowRules describes the ruleset with rainbow cards which are a separate suit
+// which behaves differently from the standard suits, in the sense that it is not directly a color which
+// can be given as a hint, but rather every hint for a standard color will also identify a rainbow card
+// as a card of that standard color.
+const DescriptionOfCompoundRainbowRules = "With rainbow cards counting as every normal color for hints"
+
+// AvailableRulesets returns the list of identifiers with descriptions
+// representing the rulesets which are available for creating games.
+func AvailableRulesets() []endpoint.SelectableRuleset {
+	return []endpoint.SelectableRuleset{
+		endpoint.SelectableRuleset{
+			Identifier:  standardWithoutRainbow,
+			Description: DescriptionOfStandardRules,
+		},
+		endpoint.SelectableRuleset{
+			Identifier:  withRainbowAsSeparate,
+			Description: DescriptionOfSeparateRainbowRules,
+		},
+		endpoint.SelectableRuleset{
+			Identifier:  withRainbowAsCompound,
+			Description: DescriptionOfCompoundRainbowRules,
+		},
+	}
 }
 
 // StandardWithoutRainbowRuleset represents the standard ruleset, which does

@@ -31,6 +31,8 @@ func (getAndPostHandler *GetAndPostHandler) HandleGet(
 	}
 
 	switch relevantSegments[0] {
+	case "available-rulesets":
+		return getAndPostHandler.writeAvailableRulesets()
 	case "all-games-with-player":
 		return getAndPostHandler.writeTurnSummariesForPlayer(relevantSegments[1:])
 	case "game-as-seen-by-player":
@@ -57,6 +59,12 @@ func (getAndPostHandler *GetAndPostHandler) HandlePost(
 	default:
 		return "URI segment " + relevantSegments[0] + " not valid", http.StatusNotFound
 	}
+}
+
+// writeAvailableRulesets writes a JSON object into the HTTP response which has
+// the list of available rulesets as its "Rulesets" attribute.
+func (getAndPostHandler *GetAndPostHandler) writeAvailableRulesets() (interface{}, int) {
+	return endpoint.RulesetList{Rulesets: AvailableRulesets()}, http.StatusOK
 }
 
 // writeTurnSummariesForPlayer writes a JSON object into the HTTP response which has

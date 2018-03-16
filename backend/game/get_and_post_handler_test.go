@@ -262,10 +262,21 @@ func TestRejectNewGameWithExistingName(unitTest *testing.T) {
 	playerNames := testPlayerNames()
 	nameToIdentifier, _, _, gameHandler := setUpHandlerAndRequirements(playerNames)
 
+	availableRulesets := game.AvailableRulesets()
+
+	if len(availableRulesets) < 1 {
+		unitTest.Fatalf(
+			"At least one ruleset must be available: game.AvailableRulesets() returned %v",
+			availableRulesets)
+	}
+
+	rulesetIdentifier := availableRulesets[0].Identifier
+
 	gameName := "Test game"
 	firstBodyObject := &endpoint.GameDefinition{
-		Name: gameName,
-		Players: []string{
+		GameName:          gameName,
+		RulesetIdentifier: rulesetIdentifier,
+		PlayerIdentifiers: []string{
 			nameToIdentifier.Identifier(playerNames[1]),
 			nameToIdentifier.Identifier(playerNames[2]),
 			nameToIdentifier.Identifier(playerNames[3]),
@@ -287,8 +298,9 @@ func TestRejectNewGameWithExistingName(unitTest *testing.T) {
 	}
 
 	secondBodyObject := endpoint.GameDefinition{
-		Name: gameName,
-		Players: []string{
+		GameName:          gameName,
+		RulesetIdentifier: rulesetIdentifier,
+		PlayerIdentifiers: []string{
 			nameToIdentifier.Identifier(playerNames[1]),
 			nameToIdentifier.Identifier(playerNames[3]),
 			nameToIdentifier.Identifier(playerNames[4]),

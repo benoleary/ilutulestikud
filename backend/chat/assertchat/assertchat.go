@@ -1,31 +1,32 @@
-package chat
+package assertchat
 
 import (
 	"testing"
 
+	"github.com/benoleary/ilutulestikud/backend/chat"
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 )
 
-// AssertLogCorrect fails the given unit test if the given slices do not match,
+// LogIsCorrect fails the given unit test if the given slices do not match,
 // with the logical equivalent of first padding out the expected messages list
 // by prepending empty messages until it is the correct length, and truncating
 // the actual messages from the front so that it is also the correct length.
-func AssertLogCorrect(
+func LogIsCorrect(
 	unitTest *testing.T,
 	expectedWithoutEmpties []endpoint.ChatLogMessage,
 	actualWithEmpties []endpoint.ChatLogMessage) {
-	if len(actualWithEmpties) != LogSize {
+	if len(actualWithEmpties) != chat.LogSize {
 		unitTest.Fatalf(
 			"Log did not have correct size: expected %v messages, but log was %v",
-			LogSize,
+			chat.LogSize,
 			actualWithEmpties)
 	}
 
 	numberOfSentMessages := len(expectedWithoutEmpties)
 
 	// We work our way backwards from the latest message.
-	for reverseIndex := 1; reverseIndex <= LogSize; reverseIndex++ {
-		loggedMessage := actualWithEmpties[LogSize-reverseIndex]
+	for reverseIndex := 1; reverseIndex <= chat.LogSize; reverseIndex++ {
+		loggedMessage := actualWithEmpties[chat.LogSize-reverseIndex]
 
 		if reverseIndex > numberOfSentMessages {
 			if (loggedMessage.PlayerName != "") ||
@@ -33,7 +34,7 @@ func AssertLogCorrect(
 				(loggedMessage.MessageText != "") {
 				unitTest.Errorf(
 					"Expected empty message with index %v, instead was %v",
-					LogSize-reverseIndex,
+					chat.LogSize-reverseIndex,
 					loggedMessage)
 			}
 		} else {
@@ -44,7 +45,7 @@ func AssertLogCorrect(
 				(loggedMessage.MessageText != expectedMessage.MessageText) {
 				unitTest.Errorf(
 					"For log index %v, expected %v, instead was %v",
-					LogSize-reverseIndex,
+					chat.LogSize-reverseIndex,
 					expectedMessage,
 					loggedMessage)
 			}

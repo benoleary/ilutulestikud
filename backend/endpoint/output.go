@@ -14,6 +14,17 @@ type ChatColorList struct {
 
 // Types emitted by game.GetAndPostHandler:
 
+// SelectableRuleset contains the information required to enable a player to select a ruleset.
+type SelectableRuleset struct {
+	Identifier  int
+	Description string
+}
+
+// RulesetList lists the rulesets which are available for the creation of a game.
+type RulesetList struct {
+	Rulesets []SelectableRuleset
+}
+
 // TurnSummary contains the information to determine what games involve a player and whose turn it is.
 // All the fields need to be public so that the JSON encoder can see them to serialize them.
 // The creation timestamp is int64 because that is what time.Unix() returns.

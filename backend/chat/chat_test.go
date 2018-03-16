@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/benoleary/ilutulestikud/backend/chat"
+	"github.com/benoleary/ilutulestikud/backend/chat/assertchat"
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 )
 
@@ -83,7 +84,7 @@ func TestLogForFrontendAfterAppending(unitTest *testing.T) {
 
 			loggedMessages := chatLog.ForFrontend()
 
-			chat.AssertLogCorrect(
+			assertchat.LogIsCorrect(
 				unitTest,
 				testCase.arguments.messagesToAppend,
 				loggedMessages)
