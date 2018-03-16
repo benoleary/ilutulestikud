@@ -53,13 +53,15 @@ func ForPlayer(state State, playerIdentifier string) endpoint.GameView {
 // games, and for tracking the objects by their identifier, which is the game name.
 type Collection interface {
 	// Add should add an element to the collection which is a new object implementing
-	// the State interface with information given by the endpoint.GameDefinition object.
+	// the State interface with information given by the endpoint.GameDefinition object,
+	// and return the identifier of the newly-created game, along with an error which
+	// of course should be nil if there was no problem.
 	// The given player collection should be used as the source of player states to be
 	// matched to names given in the game definition. It should return an error if a
 	// game with the given name already exists, or if the definition includes invalid
 	// players.
 	Add(gameDefinition endpoint.GameDefinition,
-		playerCollection player.Collection) error
+		playerCollection player.Collection) (string, error)
 
 	// Get should return the State corresponding to the given game identifier if it
 	// exists already (or else nil) along with whether the State exists, analogously to

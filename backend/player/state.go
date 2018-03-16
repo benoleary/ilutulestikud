@@ -31,9 +31,11 @@ type State interface {
 // the list of chat colors available for player states.
 type Collection interface {
 	// Add should add an element to the collection which is a new object implementing
-	// the State interface with information given by the endpoint.PlayerState object.
+	// the State interface with information given by the endpoint.PlayerState object,
+	// and return the identifier of the newly-created player, along with an error which
+	// of course should be nil if there was no problem.
 	// It should return an error if the player already exists.
-	Add(playerInformation endpoint.PlayerState) error
+	Add(playerInformation endpoint.PlayerState) (string, error)
 
 	// Get should return the State corresponding to the given player identifier if it
 	// exists already (or else nil) along with whether the State exists, analogously to

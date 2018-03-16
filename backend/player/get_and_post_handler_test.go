@@ -15,13 +15,20 @@ var colorsAvailableInTest []string = defaults.AvailableColors()
 
 // newCollectionAndHandler prepares a player.Collection and a player.GetAndPostHandler
 // in a consistent way for the tests.
-func newCollectionAndHandler() (player.Collection, *player.GetAndPostHandler) {
+func newCollectionAndHandlerForIdentifier(
+	nameToIdentifier endpoint.NameToIdentifier) (player.Collection, *player.GetAndPostHandler) {
 	playerCollection :=
 		player.NewInMemoryCollection(
-			&endpoint.Base64NameEncoder{},
+			nameToIdentifier,
 			defaults.InitialPlayerNames(),
 			colorsAvailableInTest)
 	return playerCollection, player.NewGetAndPostHandler(playerCollection)
+}
+
+// newCollectionAndHandler prepares a player.Collection and a player.GetAndPostHandler
+// in a consistent way for the tests.
+func newCollectionAndHandler() (player.Collection, *player.GetAndPostHandler) {
+	return newCollectionAndHandlerForIdentifier(&endpoint.Base32NameEncoder{})
 }
 
 func TestGetNoSegmentBadRequest(unitTest *testing.T) {
@@ -181,6 +188,33 @@ func TestRejectInvalidNewPlayer(unitTest *testing.T) {
 					postCode)
 			}
 		})
+	}
+}
+
+func TestRejectNewPlayerWithNameWhichBreaksEncoding(unitTest *testing.T) {
+	// We need a special kind of name and encoding.
+	playerName := "\\/\\\\\\?" // should unescape to \/\\\?
+	_, playerHandler := newCollectionAndHandlerForIdentifier(&endpoint.Base64NameEncoder{})
+
+	bodyObject := endpoint.PlayerState{
+		Name:  playerName,
+		Color: "First color",
+	}
+
+	bytesBuffer := new(bytes.Buffer)
+	json.NewEncoder(bytesBuffer).Encode(bodyObject)
+
+	_, invalidRegistrationCode :=
+		playerHandler.HandlePost(json.NewDecoder(bytesBuffer), []string{"new-player"})
+
+	if invalidRegistrationCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			"POST new-player with valid JSON %v but second request for same player name %v"+
+				" did not return expected HTTP code %v, instead was %v.",
+			playerName,
+			bodyObject,
+			http.StatusBadRequest,
+			invalidRegistrationCode)
 	}
 }
 

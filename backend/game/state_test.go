@@ -40,7 +40,7 @@ func prepareImplementations(
 	gameStates := make([]game.State, len(gameCollections))
 
 	for collectionIndex, gameCollection := range gameCollections {
-		addError := gameCollection.Add(gameDefinition, playerCollection)
+		_, addError := gameCollection.Add(gameDefinition, playerCollection)
 
 		if addError != nil {
 			unitTest.Fatalf(

@@ -2,7 +2,9 @@ package player
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 )
@@ -82,10 +84,17 @@ func (getAndPostHandler *GetAndPostHandler) handleNewPlayer(httpBodyDecoder *jso
 		return "No name for new player parsed from JSON", http.StatusBadRequest
 	}
 
-	addError := getAndPostHandler.playerCollection.Add(endpointPlayer)
+	playerIdentifier, addError := getAndPostHandler.playerCollection.Add(endpointPlayer)
 
 	if addError != nil {
 		return addError, http.StatusBadRequest
+	}
+
+	if strings.Contains(playerIdentifier, "/") {
+		errorMessage := fmt.Sprintf(
+			"Server set up with encoding which cannot convert %v to identifier with '/' in it",
+			endpointPlayer.Name)
+		return errorMessage, http.StatusBadRequest
 	}
 
 	return getAndPostHandler.writeRegisteredPlayers()

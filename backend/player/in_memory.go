@@ -57,7 +57,8 @@ func NewInMemoryCollection(
 // Add creates a new inMemoryState object with name and color parsed from the given
 // endpoint.PlayerState (choosing a default color if the endpoint.PlayerState did not
 // provide one), and adds a reference to it into the collection.
-func (inMemoryCollection *InMemoryCollection) Add(endpointPlayer endpoint.PlayerState) error {
+func (inMemoryCollection *InMemoryCollection) Add(
+	endpointPlayer endpoint.PlayerState) (string, error) {
 	if endpointPlayer.Color == "" {
 		return inMemoryCollection.addWithDefaultColor(endpointPlayer.Name)
 	}
@@ -112,13 +113,13 @@ func (inMemoryCollection *InMemoryCollection) AvailableChatColors() []string {
 // given color, and adds a reference to it into the collection.
 func (inMemoryCollection *InMemoryCollection) addWithGivenColor(
 	playerName string,
-	chatColor string) error {
+	chatColor string) (string, error) {
 	playerIdentifier := inMemoryCollection.nameToIdentifier.Identifier(playerName)
 
 	_, playerExists := inMemoryCollection.playerStates[playerIdentifier]
 
 	if playerExists {
-		return fmt.Errorf("Player %v already exists", playerName)
+		return "", fmt.Errorf("Player %v already exists", playerName)
 	}
 
 	inMemoryCollection.mutualExclusion.Lock()
@@ -132,14 +133,14 @@ func (inMemoryCollection *InMemoryCollection) addWithGivenColor(
 
 	inMemoryCollection.mutualExclusion.Unlock()
 
-	return nil
+	return playerIdentifier, nil
 }
 
 // addWithDefaultColor chooses a default chat color for the given new player name
 // based on the given number of existing players and the given number of available
 // chat colors, and then adds the new player as Add would.
 func (inMemoryCollection *InMemoryCollection) addWithDefaultColor(
-	playerName string) error {
+	playerName string) (string, error) {
 	return inMemoryCollection.addWithDefaultColorWithoutCounting(
 		playerName,
 		len(inMemoryCollection.playerStates),
@@ -152,7 +153,7 @@ func (inMemoryCollection *InMemoryCollection) addWithDefaultColor(
 func (inMemoryCollection *InMemoryCollection) addWithDefaultColorWithoutCounting(
 	playerName string,
 	playerCount int,
-	numberOfColors int) error {
+	numberOfColors int) (string, error) {
 	chatColor := inMemoryCollection.availableChatColors[playerCount%numberOfColors]
 	return inMemoryCollection.addWithGivenColor(playerName, chatColor)
 }

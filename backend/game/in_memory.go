@@ -33,30 +33,27 @@ func NewInMemoryCollection(nameToIdentifier endpoint.NameToIdentifier) *InMemory
 // the State interface with information given by the endpoint.GameDefinition object.
 func (inMemoryCollection *InMemoryCollection) Add(
 	gameDefinition endpoint.GameDefinition,
-	playerCollection player.Collection) error {
-	fmt.Printf("gameDefinition = %v", gameDefinition)
-
+	playerCollection player.Collection) (string, error) {
 	if gameDefinition.GameName == "" {
-		return fmt.Errorf("Game must have a name")
+		return "", fmt.Errorf("Game must have a name")
 	}
 
 	gameIdentifier := inMemoryCollection.nameToIdentifier.Identifier(gameDefinition.GameName)
-	fmt.Printf("gameIdentifier = %v", gameIdentifier)
 	_, gameExists := inMemoryCollection.gameStates[gameIdentifier]
 
 	if gameExists {
-		return fmt.Errorf("Game %v already exists", gameDefinition.GameName)
+		return "", fmt.Errorf("Game %v already exists", gameDefinition.GameName)
 	}
 
 	// A nil slice still has a length of 0, so this is OK.
 	numberOfPlayers := len(gameDefinition.PlayerIdentifiers)
 
 	if numberOfPlayers < MinimumNumberOfPlayers {
-		return fmt.Errorf("Game must have at least %v players", MinimumNumberOfPlayers)
+		return "", fmt.Errorf("Game must have at least %v players", MinimumNumberOfPlayers)
 	}
 
 	if numberOfPlayers > MaximumNumberOfPlayers {
-		return fmt.Errorf("Game must have no more than %v players", MaximumNumberOfPlayers)
+		return "", fmt.Errorf("Game must have no more than %v players", MaximumNumberOfPlayers)
 	}
 
 	playerIdentifiers := make(map[string]bool, 0)
@@ -67,11 +64,11 @@ func (inMemoryCollection *InMemoryCollection) Add(
 		playerState, playerExists := playerCollection.Get(playerIdentifier)
 
 		if !playerExists {
-			return fmt.Errorf("Player with identifier %v is not registered", playerIdentifier)
+			return "", fmt.Errorf("Player with identifier %v is not registered", playerIdentifier)
 		}
 
 		if playerIdentifiers[playerIdentifier] {
-			return fmt.Errorf("Player with identifier %v appears more than once in the list of players", playerIdentifier)
+			return "", fmt.Errorf("Player with identifier %v appears more than once in the list of players", playerIdentifier)
 		}
 
 		playerIdentifiers[playerIdentifier] = true
@@ -99,7 +96,7 @@ func (inMemoryCollection *InMemoryCollection) Add(
 	}
 
 	inMemoryCollection.mutualExclusion.Unlock()
-	return nil
+	return gameIdentifier, nil
 }
 
 // Get should return the State corresponding to the given game identifier if it

@@ -2,7 +2,9 @@ package game
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/player"
@@ -107,10 +109,17 @@ func (getAndPostHandler *GetAndPostHandler) handleNewGame(
 		gameDefinition.PlayerIdentifiers = gameDefinition.Players
 	}
 
-	addError := getAndPostHandler.gameCollection.Add(gameDefinition, getAndPostHandler.playerCollection)
+	gameIdentifier, addError := getAndPostHandler.gameCollection.Add(gameDefinition, getAndPostHandler.playerCollection)
 
 	if addError != nil {
 		return addError, http.StatusBadRequest
+	}
+
+	if strings.Contains(gameIdentifier, "/") {
+		errorMessage := fmt.Sprintf(
+			"Server set up with encoding which cannot convert %v to identifier with '/' in it",
+			gameDefinition.GameName)
+		return errorMessage, http.StatusBadRequest
 	}
 
 	return "OK", http.StatusOK
