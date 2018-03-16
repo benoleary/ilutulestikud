@@ -11,6 +11,8 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
+const breaksBase64 = "\\/\\\\\\?" // should unescape to \/\\\?
+
 var colorsAvailableInTest []string = defaults.AvailableColors()
 
 // newCollectionAndHandler prepares a player.Collection and a player.GetAndPostHandler
@@ -193,7 +195,7 @@ func TestRejectInvalidNewPlayer(unitTest *testing.T) {
 
 func TestRejectNewPlayerWithNameWhichBreaksEncoding(unitTest *testing.T) {
 	// We need a special kind of name and encoding.
-	playerName := "\\/\\\\\\?" // should unescape to \/\\\?
+	playerName := breaksBase64
 	_, playerHandler := newCollectionAndHandlerForIdentifier(&endpoint.Base64NameEncoder{})
 
 	bodyObject := endpoint.PlayerState{
@@ -297,6 +299,13 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 			arguments: testArguments{
 				playerName: "/Slashes/are/reserved/for/parsing/URI/segments/",
 				chatColor:  "irrelevant",
+			},
+		},
+		{
+			name: "Produces identifier with '/' in base64",
+			arguments: testArguments{
+				playerName: breaksBase64,
+				chatColor:  breaksBase64,
 			},
 		},
 	}

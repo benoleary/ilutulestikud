@@ -14,6 +14,8 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
+const breaksBase64 = "\\/\\\\\\?" // should unescape to \/\\\?
+
 type nameToName struct {
 }
 
