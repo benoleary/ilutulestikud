@@ -211,10 +211,10 @@ func TestRejectNewPlayerWithNameWhichBreaksEncoding(unitTest *testing.T) {
 
 	if invalidRegistrationCode != http.StatusBadRequest {
 		unitTest.Fatalf(
-			"POST new-player with valid JSON %v but second request for same player name %v"+
+			"POST new-player with valid JSON %v but encoding-breaking player name %v"+
 				" did not return expected HTTP code %v, instead was %v.",
-			playerName,
 			bodyObject,
+			playerName,
 			http.StatusBadRequest,
 			invalidRegistrationCode)
 	}
@@ -257,8 +257,8 @@ func TestRejectNewPlayerWithExistingName(unitTest *testing.T) {
 		unitTest.Fatalf(
 			"POST new-player with valid JSON %v but second request for same player name %v"+
 				" did not return expected HTTP code %v, instead was %v.",
-			playerName,
 			secondBodyObject,
+			playerName,
 			http.StatusBadRequest,
 			invalidRegistrationCode)
 	}
