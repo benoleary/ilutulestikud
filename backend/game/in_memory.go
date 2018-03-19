@@ -92,6 +92,7 @@ func (inMemoryCollection *InMemoryCollection) Add(
 		mutualExclusion:      sync.Mutex{},
 		gameIdentifier:       gameIdentifier,
 		gameName:             gameDefinition.GameName,
+		gameRuleset:          gameRuleset,
 		creationTime:         time.Now(),
 		participatingPlayers: playerStates,
 		turnNumber:           1,
@@ -133,6 +134,7 @@ type inMemoryState struct {
 	mutualExclusion      sync.Mutex
 	gameIdentifier       string
 	gameName             string
+	gameRuleset          Ruleset
 	creationTime         time.Time
 	participatingPlayers []player.State
 	turnNumber           int
@@ -147,6 +149,11 @@ func (gameState *inMemoryState) Identifier() string {
 // Name returns the value of the private gameName string.
 func (gameState *inMemoryState) Name() string {
 	return gameState.gameName
+}
+
+// Ruleset returns the ruleset for the game.
+func (gameState *inMemoryState) Ruleset() Ruleset {
+	return gameState.gameRuleset
 }
 
 // Name returns a slice of the private participatingPlayers array.

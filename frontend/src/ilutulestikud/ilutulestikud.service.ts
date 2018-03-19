@@ -36,16 +36,21 @@ export class IlutulestikudService {
       playerOverride)
   }
 
+  availableRulesets(): Observable<any> {
+    return this.httpClient.get(this.uriRoot + "game/available-rulesets")
+  }
+
   gamesWithPlayer(playerIdentifier: string): Observable<any> {
     return this.httpClient.get(
       this.uriRoot + "game/all-games-with-player/" + encodeURIComponent(playerIdentifier))
   }
 
-  newGame(newGameName: string, playerIdentifiers: string[]): Observable<any> {
+  newGame(newGameName: string, rulesetIdentifier: number, playerIdentifiers: string[]): Observable<any> {
     return this.httpClient.post(
       this.uriRoot + "game/create-new-game",
       {
         "GameName": newGameName,
+        "RulesetIdentifier": rulesetIdentifier,
         "PlayerIdentifiers": playerIdentifiers
       })
   }

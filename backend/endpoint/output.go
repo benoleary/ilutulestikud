@@ -18,8 +18,10 @@ type ChatColorList struct {
 // plus the pertinent information from the ruleset to allow the frontend to form a valid request
 // to create a new game with the ruleset.
 type SelectableRuleset struct {
-	Identifier             int
-	Description            string
+	Identifier  int
+	Description string
+
+	// This saves the dialog having to find out how many players can play when the ruleset is chosen.
 	MinimumNumberOfPlayers int
 	MaximumNumberOfPlayers int
 }
@@ -35,6 +37,7 @@ type RulesetList struct {
 type TurnSummary struct {
 	GameIdentifier             string
 	GameName                   string
+	RulesetDescription         string
 	CreationTimestampInSeconds int64
 	TurnNumber                 int
 	PlayerNamesInNextTurnOrder []string

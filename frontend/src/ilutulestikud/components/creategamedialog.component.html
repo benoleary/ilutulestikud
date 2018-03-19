@@ -3,16 +3,28 @@
     <mat-form-field>
         <input matInput placeholder="Name for the game" [(ngModel)]="gameName">
     </mat-form-field>
+    <mat-form-field>
+      <mat-select
+        placeholder="Select the rules"
+        [(ngModel)]="selectedRuleset"
+        [disabled]="selectedRuleset">
+        <mat-option
+          *ngFor="let availableRuleset of availableRulesetsReference"
+          [value]="availableRuleset">
+          {{ availableRuleset.Description }}
+        </mat-option>
+      </mat-select>
+    </mat-form-field>
     <ul *ngFor="let participatingPlayer of participatingPlayers; let participantIndex = index">
         <li>Player {{participantIndex + 1}}: {{participatingPlayer.Name}}</li>
     </ul>
-    <mat-form-field *ngIf="participatingPlayers && participatingPlayers.length < maximumParticipants">
+    <mat-form-field *ngIf="isAllowedToAddPlayer()">
       <mat-select
         placeholder="Add Player {{participatingPlayers.length + 1}}?"
         [ngModel]="selectedParticipant"
         (ngModelChange)="addParticipant($event)">
         <mat-option
-          *ngFor="let availablePlayer of availablePlayers"
+          *ngFor="let availablePlayer of availablePlayersCopy"
           [value]="availablePlayer">
           {{ availablePlayer.Name }}
         </mat-option>
@@ -23,8 +35,8 @@
     <button
         mat-button
         (click)="createGame()"
-        [disabled]="!participatingPlayers || participatingPlayers.length < 2">
+        [disabled]="!isAllowedToCreateGame()">
         Confirm create game
     </button>
-    <button mat-button (click)="cancelDialogue()">Cancel</button>
+    <button mat-button (click)="cancelDialog()">Cancel</button>
 </mat-dialog-actions>

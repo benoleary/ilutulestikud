@@ -18,6 +18,9 @@ type State interface {
 	// Name should return the name of the game as known to the players.
 	Name() string
 
+	// Ruleset should return the ruleset for the game.
+	Ruleset() Ruleset
+
 	// Players should return the list of players participating in the game, in the order in
 	// which they have their first turns.
 	Players() []player.State
@@ -134,6 +137,7 @@ func TurnSummariesForFrontend(collection Collection, playerIdentifier string) en
 		turnSummaries[gameIndex] = endpoint.TurnSummary{
 			GameIdentifier:             gameList[gameIndex].Identifier(),
 			GameName:                   nameOfGame,
+			RulesetDescription:         gameList[gameIndex].Ruleset().FrontendDescription(),
 			CreationTimestampInSeconds: gameList[gameIndex].CreationTime().Unix(),
 			TurnNumber:                 gameTurn,
 			PlayerNamesInNextTurnOrder: playerNamesInTurnOrder,

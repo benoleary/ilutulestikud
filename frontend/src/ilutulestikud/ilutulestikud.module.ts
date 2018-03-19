@@ -15,20 +15,20 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatListModule } from '@angular/material/list';
 import { IlutulestikudComponent } from './ilutulestikud.component';
 import { IlutulestikudService } from './ilutulestikud.service';
-import { AddPlayerDialogueComponent } from './components/addplayerdialogue.component'
-import { CreateGameDialogueComponent } from './components/creategamedialogue.component'
+import { AddPlayerDialogComponent } from './components/addplayerdialog.component'
+import { CreateGameDialogComponent } from './components/creategamedialog.component'
 import { GameDisplayComponent } from './components/gamedisplay.component'
 
 @NgModule({
   declarations: [
     IlutulestikudComponent,
-    AddPlayerDialogueComponent,
-    CreateGameDialogueComponent,
+    AddPlayerDialogComponent,
+    CreateGameDialogComponent,
     GameDisplayComponent
   ],
   entryComponents: [
-    AddPlayerDialogueComponent,
-    CreateGameDialogueComponent
+    AddPlayerDialogComponent,
+    CreateGameDialogComponent
   ],
   imports: [
     BrowserModule,

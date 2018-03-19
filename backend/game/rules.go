@@ -104,7 +104,7 @@ type StandardWithoutRainbowRuleset struct {
 
 // FrontendDescription describes the standard ruleset.
 func (standardRuleset *StandardWithoutRainbowRuleset) FrontendDescription() string {
-	return "Standard (without rainbow cards)"
+	return "standard (without rainbow cards)"
 }
 
 // NumberOfCardsInPlayerHand returns the number of cards held in a player's
@@ -166,7 +166,7 @@ type RainbowAsSeparateSuitRuleset struct {
 // FrontendDescription describes the ruleset with rainbow cards which are a separate suit
 // which behaves like the standard suits.
 func (separateRainbow *RainbowAsSeparateSuitRuleset) FrontendDescription() string {
-	return "With rainbow cards counting as separate color for hints"
+	return "with rainbow, hints as separate color"
 }
 
 // NumberOfCardsInPlayerHand returns the number of cards held in a player's
@@ -216,7 +216,7 @@ type RainbowAsCompoundSuitRuleset struct {
 // can be given as a hint, but rather every hint for a standard color will also identify a rainbow card
 // as a card of that standard color.
 func (compoundRainbow *RainbowAsCompoundSuitRuleset) FrontendDescription() string {
-	return "With rainbow cards counting as every normal color for hints"
+	return "with rainbow, hints as every color"
 }
 
 // NumberOfCardsInPlayerHand returns the number of cards held in a player's

@@ -60,7 +60,11 @@
     <mat-tab-group (selectedTabChange)="selectGameTab($event)">
       <mat-tab
         *ngFor="let turnSummary of turnSummariesOfGamesWithPlayer"
-        label="{{ turnSummary.GameName }}">{{ turnSummary.asText() }}</mat-tab>
+        label="{{ turnSummary.GameName }}">
+        <ul *ngFor="let summaryLine of turnSummary.asTextLines()">
+          <li>{{ summaryLine }}</li>
+        </ul>
+      </mat-tab>
     </mat-tab-group>
   </div>
 

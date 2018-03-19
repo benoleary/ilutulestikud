@@ -6,9 +6,10 @@ import { Observable } from 'rxjs/Rx';
 import { Subscription } from 'rxjs/Subscription';
 import { IlutulestikudService } from './ilutulestikud.service';
 import { Player } from './models/player.model'
+import { Ruleset } from './models/ruleset.model'
 import { TurnSummary } from './models/turnsummary.model'
-import { AddPlayerDialogueComponent } from './components/addplayerdialogue.component'
-import { CreateGameDialogueComponent } from './components/creategamedialogue.component'
+import { AddPlayerDialogComponent } from './components/addplayerdialog.component'
+import { CreateGameDialogComponent } from './components/creategamedialog.component'
 
 @Component({
   selector: 'app-ilutulestikud',
@@ -21,6 +22,7 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
   selectedPlayer: Player;
   registeredPlayers: Player[];
   availableColors: string[];
+  availableRulesets: Ruleset[];
   turnSummariesOfGamesWithPlayer: TurnSummary[];
   gameTurnSummariesSubscription: Subscription;
   isAwaitingGameTurnSummaries: boolean;
@@ -33,6 +35,7 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
     this.selectedPlayer = null;
     this.registeredPlayers = [];
     this.availableColors = [];
+    this.availableRulesets = [];
     this.informationText = null;
     this.turnSummariesOfGamesWithPlayer = [];
     this.gameTurnSummariesSubscription = null;
@@ -43,10 +46,7 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
 
   ngOnInit(): void
   {
-    this.ilutulestikudService.registeredPlayers().subscribe(
-      fetchedPlayersObject => this.parsePlayers(fetchedPlayersObject),
-      thrownError => this.handleError(thrownError),
-      () => {});
+    this.fetchRegisteredPlayers();
     this.ilutulestikudService.availableColors().subscribe(
       fetchedColorsObject => this.parseColors(fetchedColorsObject),
       thrownError => this.handleError(thrownError),
@@ -66,6 +66,14 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
   dismissErrorMessage(): void
   {
     this.informationText = null;
+  }
+
+  fetchRegisteredPlayers(): void
+  {
+    this.ilutulestikudService.registeredPlayers().subscribe(
+      fetchedPlayersObject => this.parsePlayers(fetchedPlayersObject),
+      thrownError => this.handleError(thrownError),
+      () => {});
   }
 
   parsePlayers(fetchedPlayersObject: Object): void
@@ -110,7 +118,7 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
   
   openAddPlayerDialog(): void
   {
-    let dialogRef = this.materialDialog.open(AddPlayerDialogueComponent, {
+    let dialogRef = this.materialDialog.open(AddPlayerDialogComponent, {
       width: '250px'
     });
 
@@ -129,11 +137,22 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
 
   openCreateGameDialog(): void
   {
-    let dialogRef = this.materialDialog.open(CreateGameDialogueComponent, {
+    // We update the list of available players and also fetch the available rulesets,
+    // so that the dialog has enough information to create a valid game.
+    this.fetchRegisteredPlayers();
+
+    this.ilutulestikudService.availableRulesets().subscribe(
+      fetchedRulesetListObject => this.parseRulesets(fetchedRulesetListObject),
+      thrownError => this.handleError(thrownError),
+      () => {});
+    
+
+    let dialogRef = this.materialDialog.open(CreateGameDialogComponent, {
       width: '250px',
       data: {
         creatingPlayer: this.selectedPlayer,
-        availablePlayers: this.registeredPlayers
+        availablePlayers: this.registeredPlayers,
+        availableRulesets: this.availableRulesets
       }
     });
 
@@ -143,13 +162,24 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
       {
         this.informationText = null;
         this.ilutulestikudService
-          .newGame(resultFromClose["Name"], resultFromClose["Players"])
+          .newGame(resultFromClose["GameName"], resultFromClose["RulesetIdentifier"], resultFromClose["PlayerIdentifiers"])
           .subscribe(
             () => {},
             thrownError => this.handleError(thrownError),
             () => {});
       }
     });
+  }
+
+  parseRulesets(fetchedRulesetListObject: Object): void
+  {
+    this.availableRulesets.length = 0;
+
+    // fetchedPlayersObject["Players"] is only an "array-like object", not an array, so does not have foreach.
+    for (const fetchedRuleset of fetchedRulesetListObject["Rulesets"])
+    {
+      this.availableRulesets.push(new Ruleset(fetchedRuleset));
+    }
   }
 
   startRefreshingGameTurnSummaries(): void

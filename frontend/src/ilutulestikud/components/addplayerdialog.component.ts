@@ -3,14 +3,14 @@ import { MatInputModule } from '@angular/material';
 import { MatDialogRef } from '@angular/material';
 
 @Component({
-    selector: 'add-player-dialogue',
-    templateUrl: './addplayerdialogue.component.html',
+    selector: 'add-player-dialog',
+    templateUrl: './addplayerdialog.component.html',
   })
-  export class AddPlayerDialogueComponent
+  export class AddPlayerDialogComponent
   {
     newPlayerName: string;
 
-    constructor(public dialogReference: MatDialogRef<AddPlayerDialogueComponent>)
+    constructor(public dialogReference: MatDialogRef<AddPlayerDialogComponent>)
     {
         this.newPlayerName = null;
     }
@@ -20,7 +20,7 @@ import { MatDialogRef } from '@angular/material';
         this.dialogReference.close(this.newPlayerName);
     }
 
-    cancelDialogue(): void
+    cancelDialog(): void
     {
         this.dialogReference.close(null);
     }
