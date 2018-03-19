@@ -24,18 +24,24 @@ func testPlayerNames() []string {
 }
 
 func testNameToIdentifier() endpoint.NameToIdentifier {
-	return &endpoint.Base64NameEncoder{}
+	return &endpoint.Base32NameEncoder{}
 }
 
 func testPlayerIdentifier(playerIndex int) string {
 	// Terribly inefficient, but it is the easiest way to be consistent in the tests.
-	nameToIdentifier := &endpoint.Base64NameEncoder{}
+	nameToIdentifier := &endpoint.Base32NameEncoder{}
 	return nameToIdentifier.Identifier(testPlayerNames()[playerIndex])
 }
 
 func setUpHandlerAndRequirements(registeredPlayers []string) (
 	endpoint.NameToIdentifier, player.Collection, game.Collection, *game.GetAndPostHandler) {
-	nameToIdentifier := testNameToIdentifier()
+	return setUpHandlerAndRequirementsWithIdentifier(testNameToIdentifier(), registeredPlayers)
+}
+
+func setUpHandlerAndRequirementsWithIdentifier(
+	nameToIdentifier endpoint.NameToIdentifier,
+	registeredPlayers []string) (
+	endpoint.NameToIdentifier, player.Collection, game.Collection, *game.GetAndPostHandler) {
 	playerCollection :=
 		player.NewInMemoryCollection(
 			nameToIdentifier,
@@ -47,13 +53,7 @@ func setUpHandlerAndRequirements(registeredPlayers []string) (
 }
 
 func GetAvailableRulesets(unitTest *testing.T) []endpoint.SelectableRuleset {
-	availableRulesets, creationError := game.AvailableRulesets()
-
-	if creationError != nil {
-		unitTest.Fatalf(
-			"Error when trying to create list of available rulesets: %v",
-			creationError)
-	}
+	availableRulesets := game.AvailableRulesets()
 
 	if len(availableRulesets) < 1 {
 		unitTest.Fatalf(
@@ -62,6 +62,19 @@ func GetAvailableRulesets(unitTest *testing.T) []endpoint.SelectableRuleset {
 	}
 
 	return availableRulesets
+}
+
+func DescriptionOfRuleset(unitTest *testing.T, rulesetIdentifier int) string {
+	foundRuleset, identifierError := game.RulesetFromIdentifier(rulesetIdentifier)
+
+	if identifierError != nil {
+		unitTest.Fatalf(
+			"Unable to find description of ruleset with identifier %v: error is %v",
+			rulesetIdentifier,
+			identifierError)
+	}
+
+	return foundRuleset.FrontendDescription()
 }
 
 func TestGetNoSegmentBadRequest(unitTest *testing.T) {
@@ -93,6 +106,7 @@ func TestPostNoSegmentBadRequest(unitTest *testing.T) {
 	bytesBuffer := new(bytes.Buffer)
 	json.NewEncoder(bytesBuffer).Encode(endpoint.GameDefinition{
 		GameName:          "Game name",
+		RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
 		PlayerIdentifiers: []string{"Player One", "Player Two"},
 	})
 
@@ -111,6 +125,7 @@ func TestPostInvalidSegmentNotFound(unitTest *testing.T) {
 	bytesBuffer := new(bytes.Buffer)
 	json.NewEncoder(bytesBuffer).Encode(endpoint.GameDefinition{
 		GameName:          "Game name",
+		RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
 		PlayerIdentifiers: []string{"Player One", "Player Two"},
 	})
 
@@ -163,8 +178,8 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 			arguments: testArguments{
 				bodyObject: &endpoint.GameDefinition{
 					GameName: "Test game",
-					// This relies on the ruleset identifiers being 0 to N-1 if there are N rulesets.
-					RulesetIdentifier: len(GetAvailableRulesets(unitTest)),
+					// This relies on 0 being the ruleset identifier for "no ruleset selected".
+					RulesetIdentifier: 0,
 					PlayerIdentifiers: []string{
 						// We use the same set of player names here as used to set up the game.Collection.
 						testPlayerIdentifier(0),
@@ -183,7 +198,7 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 			arguments: testArguments{
 				bodyObject: &endpoint.GameDefinition{
 					GameName:          "Test game",
-					RulesetIdentifier: GetAvailableRulesets(unitTest)[0].Identifier,
+					RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
 				},
 			},
 			expected: expectedReturns{
@@ -195,7 +210,7 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 			arguments: testArguments{
 				bodyObject: &endpoint.GameDefinition{
 					GameName:          "Test game",
-					RulesetIdentifier: GetAvailableRulesets(unitTest)[0].Identifier,
+					RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
 					PlayerIdentifiers: make([]string, 0),
 				},
 			},
@@ -208,7 +223,7 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 			arguments: testArguments{
 				bodyObject: &endpoint.GameDefinition{
 					GameName:          "Test game",
-					RulesetIdentifier: GetAvailableRulesets(unitTest)[0].Identifier,
+					RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
 					// We use the same set of player names here as used to set up the game.Collection
 					// as well as the name encoding.
 					PlayerIdentifiers: []string{testPlayerIdentifier(1)},
@@ -223,7 +238,7 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 			arguments: testArguments{
 				bodyObject: &endpoint.GameDefinition{
 					GameName:          "Test game",
-					RulesetIdentifier: GetAvailableRulesets(unitTest)[0].Identifier,
+					RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
 					// We use the same set of player names here as used to set up the game.Collection
 					// as well as the name encoding.
 					PlayerIdentifiers: []string{
@@ -245,7 +260,7 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 			arguments: testArguments{
 				bodyObject: &endpoint.GameDefinition{
 					GameName:          "Test game",
-					RulesetIdentifier: GetAvailableRulesets(unitTest)[0].Identifier,
+					RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
 					PlayerIdentifiers: []string{
 						// We use the same set of player names here as used to set up the game.Collection
 						// as well as the name encoding.
@@ -265,7 +280,7 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 			arguments: testArguments{
 				bodyObject: &endpoint.GameDefinition{
 					GameName:          "Test game",
-					RulesetIdentifier: GetAvailableRulesets(unitTest)[0].Identifier,
+					RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
 					PlayerIdentifiers: []string{
 						// We use the same set of player names here as used to set up the game.Collection.
 						testPlayerIdentifier(0),
@@ -303,11 +318,46 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 	}
 }
 
+func TestRejectNewGameWithNameWhichBreaksEncoding(unitTest *testing.T) {
+	// We need a special kind of name and encoding.
+	gameName := breaksBase64
+	playerNames := testPlayerNames()
+	nameToIdentifier, _, _, gameHandler := setUpHandlerAndRequirementsWithIdentifier(
+		&endpoint.Base64NameEncoder{},
+		playerNames)
+
+	bodyObject := endpoint.GameDefinition{
+		GameName:          gameName,
+		RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
+		PlayerIdentifiers: []string{
+			nameToIdentifier.Identifier(playerNames[1]),
+			nameToIdentifier.Identifier(playerNames[3]),
+			nameToIdentifier.Identifier(playerNames[4]),
+		},
+	}
+
+	bytesBuffer := new(bytes.Buffer)
+	json.NewEncoder(bytesBuffer).Encode(bodyObject)
+
+	_, invalidRegistrationCode :=
+		gameHandler.HandlePost(json.NewDecoder(bytesBuffer), []string{"create-new-game"})
+
+	if invalidRegistrationCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			"POST create-new-game with valid JSON %v but with encoding-breaking game name %v"+
+				" did not return expected HTTP code %v, instead was %v.",
+			bodyObject,
+			gameName,
+			http.StatusBadRequest,
+			invalidRegistrationCode)
+	}
+}
+
 func TestRejectNewGameWithExistingName(unitTest *testing.T) {
 	playerNames := testPlayerNames()
 	nameToIdentifier, _, _, gameHandler := setUpHandlerAndRequirements(playerNames)
 
-	rulesetIdentifier := GetAvailableRulesets(unitTest)[0].Identifier
+	rulesetIdentifier := game.StandardWithoutRainbowIdentifier
 
 	gameName := "Test game"
 	firstBodyObject := &endpoint.GameDefinition{
@@ -352,7 +402,7 @@ func TestRejectNewGameWithExistingName(unitTest *testing.T) {
 
 	if invalidRegistrationCode != http.StatusBadRequest {
 		unitTest.Fatalf(
-			"POST new-player with valid JSON %v but second request for same player name %v"+
+			"POST create-new-game with valid JSON %v but second request for same game name %v"+
 				" did not return expected HTTP code %v, instead was %v.",
 			gameName,
 			secondBodyObject,
@@ -387,7 +437,7 @@ func TestRegisterAndRetrieveNewGame(unitTest *testing.T) {
 		{
 			name: "Breaks base64",
 			arguments: testArguments{
-				gameName: "\\/\\\\\\?", // should unescape to \/\\\?
+				gameName: breaksBase64,
 			},
 		},
 		{
@@ -515,7 +565,8 @@ func TestRejectGetGameForPlayerWithInvalidGame(unitTest *testing.T) {
 
 	bytesBuffer := new(bytes.Buffer)
 	json.NewEncoder(bytesBuffer).Encode(endpoint.GameDefinition{
-		GameName: gameName,
+		GameName:          gameName,
+		RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
 		PlayerIdentifiers: []string{
 			playerIdentifier,
 			nameToIdentifier.Identifier(playerNames[2]),
@@ -554,7 +605,8 @@ func TestRejectGetGameForPlayerWithoutPlayer(unitTest *testing.T) {
 
 	bytesBuffer := new(bytes.Buffer)
 	json.NewEncoder(bytesBuffer).Encode(endpoint.GameDefinition{
-		GameName: gameName,
+		GameName:          gameName,
+		RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
 		PlayerIdentifiers: []string{
 			nameToIdentifier.Identifier(playerNames[1]),
 			nameToIdentifier.Identifier(playerNames[2]),
@@ -592,7 +644,8 @@ func TestRejectGetGameForPlayerWithNonparticipantPlayer(unitTest *testing.T) {
 
 	bytesBuffer := new(bytes.Buffer)
 	json.NewEncoder(bytesBuffer).Encode(endpoint.GameDefinition{
-		GameName: gameName,
+		GameName:          gameName,
+		RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
 		PlayerIdentifiers: []string{
 			nameToIdentifier.Identifier(playerNames[1]),
 			nameToIdentifier.Identifier(playerNames[2]),
@@ -635,8 +688,12 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 
 	gameNames := []string{"1", "2", "3", "4"}
 	gameIdentifiers := make([]string, len(gameNames))
+	availableRulesets := GetAvailableRulesets(unitTest)
+	numberOfRulesets := len(availableRulesets)
+	rulesetIdentifiers := make([]int, len(gameNames))
 	for gameIndex, gameName := range gameNames {
 		gameIdentifiers[gameIndex] = nameToIdentifier.Identifier(gameName)
+		rulesetIdentifiers[gameIndex] = (gameIndex % numberOfRulesets) + game.StandardWithoutRainbowIdentifier
 	}
 
 	type testArguments struct {
@@ -666,7 +723,8 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 			arguments: testArguments{
 				gameDefinitions: []endpoint.GameDefinition{
 					endpoint.GameDefinition{
-						GameName: gameNames[0],
+						GameName:          gameNames[0],
+						RulesetIdentifier: rulesetIdentifiers[0],
 						PlayerIdentifiers: []string{
 							playerIdentifiers[1],
 							playerIdentifiers[2],
@@ -674,7 +732,8 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 						},
 					},
 					endpoint.GameDefinition{
-						GameName: gameNames[1],
+						GameName:          gameNames[1],
+						RulesetIdentifier: rulesetIdentifiers[1],
 						PlayerIdentifiers: []string{
 							playerIdentifiers[2],
 							playerIdentifiers[3],
@@ -682,7 +741,8 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 						},
 					},
 					endpoint.GameDefinition{
-						GameName: gameNames[2],
+						GameName:          gameNames[2],
+						RulesetIdentifier: rulesetIdentifiers[2],
 						PlayerIdentifiers: []string{
 							playerIdentifiers[4],
 							playerIdentifiers[3],
@@ -699,7 +759,8 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 			arguments: testArguments{
 				gameDefinitions: []endpoint.GameDefinition{
 					endpoint.GameDefinition{
-						GameName: gameNames[0],
+						GameName:          gameNames[0],
+						RulesetIdentifier: rulesetIdentifiers[0],
 						PlayerIdentifiers: []string{
 							playerIdentifiers[1],
 							playerIdentifiers[2],
@@ -707,7 +768,8 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 						},
 					},
 					endpoint.GameDefinition{
-						GameName: gameNames[1],
+						GameName:          gameNames[1],
+						RulesetIdentifier: rulesetIdentifiers[1],
 						PlayerIdentifiers: []string{
 							playerIdentifiers[2],
 							playerIdentifiers[3],
@@ -715,7 +777,8 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 						},
 					},
 					endpoint.GameDefinition{
-						GameName: gameNames[2],
+						GameName:          gameNames[2],
+						RulesetIdentifier: rulesetIdentifiers[2],
 						PlayerIdentifiers: []string{
 							playerIdentifiers[4],
 							playerIdentifiers[3],
@@ -726,9 +789,10 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 			expected: expectedReturns{
 				turnSummaries: []endpoint.TurnSummary{
 					endpoint.TurnSummary{
-						GameIdentifier: gameIdentifiers[0],
-						GameName:       gameNames[0],
-						TurnNumber:     1,
+						GameIdentifier:     gameIdentifiers[0],
+						GameName:           gameNames[0],
+						RulesetDescription: DescriptionOfRuleset(unitTest, rulesetIdentifiers[0]),
+						TurnNumber:         1,
 						PlayerNamesInNextTurnOrder: []string{
 							playerNames[1],
 							playerNames[2],
@@ -744,7 +808,8 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 			arguments: testArguments{
 				gameDefinitions: []endpoint.GameDefinition{
 					endpoint.GameDefinition{
-						GameName: gameNames[0],
+						GameName:          gameNames[0],
+						RulesetIdentifier: rulesetIdentifiers[0],
 						PlayerIdentifiers: []string{
 							playerIdentifiers[1],
 							playerIdentifiers[2],
@@ -752,7 +817,8 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 						},
 					},
 					endpoint.GameDefinition{
-						GameName: gameNames[1],
+						GameName:          gameNames[1],
+						RulesetIdentifier: rulesetIdentifiers[1],
 						PlayerIdentifiers: []string{
 							playerIdentifiers[2],
 							playerIdentifiers[3],
@@ -760,14 +826,16 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 						},
 					},
 					endpoint.GameDefinition{
-						GameName: gameNames[2],
+						GameName:          gameNames[2],
+						RulesetIdentifier: rulesetIdentifiers[2],
 						PlayerIdentifiers: []string{
 							playerIdentifiers[4],
 							playerIdentifiers[3],
 						},
 					},
 					endpoint.GameDefinition{
-						GameName: gameNames[3],
+						GameName:          gameNames[3],
+						RulesetIdentifier: rulesetIdentifiers[3],
 						PlayerIdentifiers: []string{
 							playerIdentifiers[0],
 							playerIdentifiers[4],
@@ -779,9 +847,10 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 			expected: expectedReturns{
 				turnSummaries: []endpoint.TurnSummary{
 					endpoint.TurnSummary{
-						GameIdentifier: gameIdentifiers[0],
-						GameName:       gameNames[0],
-						TurnNumber:     1,
+						GameIdentifier:     gameIdentifiers[0],
+						GameName:           gameNames[0],
+						RulesetDescription: DescriptionOfRuleset(unitTest, rulesetIdentifiers[0]),
+						TurnNumber:         1,
 						PlayerNamesInNextTurnOrder: []string{
 							playerNames[1],
 							playerNames[2],
@@ -790,9 +859,10 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 						IsPlayerTurn: false,
 					},
 					endpoint.TurnSummary{
-						GameIdentifier: gameIdentifiers[3],
-						GameName:       gameNames[3],
-						TurnNumber:     1,
+						GameIdentifier:     gameIdentifiers[3],
+						GameName:           gameNames[3],
+						RulesetDescription: DescriptionOfRuleset(unitTest, rulesetIdentifiers[3]),
+						TurnNumber:         1,
 						PlayerNamesInNextTurnOrder: []string{
 							playerIdentifiers[0],
 							playerIdentifiers[4],
@@ -808,7 +878,8 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 			arguments: testArguments{
 				gameDefinitions: []endpoint.GameDefinition{
 					endpoint.GameDefinition{
-						GameName: gameNames[0],
+						GameName:          gameNames[0],
+						RulesetIdentifier: rulesetIdentifiers[0],
 						PlayerIdentifiers: []string{
 							playerIdentifiers[1],
 							playerIdentifiers[2],
@@ -816,14 +887,16 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 						},
 					},
 					endpoint.GameDefinition{
-						GameName: gameNames[1],
+						GameName:          gameNames[1],
+						RulesetIdentifier: rulesetIdentifiers[1],
 						PlayerIdentifiers: []string{
 							playerIdentifiers[4],
 							playerIdentifiers[0],
 						},
 					},
 					endpoint.GameDefinition{
-						GameName: gameNames[2],
+						GameName:          gameNames[2],
+						RulesetIdentifier: rulesetIdentifiers[2],
 						PlayerIdentifiers: []string{
 							playerIdentifiers[0],
 							playerIdentifiers[4],
@@ -835,9 +908,10 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 			expected: expectedReturns{
 				turnSummaries: []endpoint.TurnSummary{
 					endpoint.TurnSummary{
-						GameIdentifier: gameIdentifiers[0],
-						GameName:       gameNames[0],
-						TurnNumber:     1,
+						GameIdentifier:     gameIdentifiers[0],
+						GameName:           gameNames[0],
+						RulesetDescription: DescriptionOfRuleset(unitTest, rulesetIdentifiers[0]),
+						TurnNumber:         1,
 						PlayerNamesInNextTurnOrder: []string{
 							playerNames[1],
 							playerNames[2],
@@ -846,9 +920,10 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 						IsPlayerTurn: false,
 					},
 					endpoint.TurnSummary{
-						GameIdentifier: gameIdentifiers[1],
-						GameName:       gameNames[1],
-						TurnNumber:     1,
+						GameIdentifier:     gameIdentifiers[1],
+						GameName:           gameNames[1],
+						RulesetDescription: DescriptionOfRuleset(unitTest, rulesetIdentifiers[1]),
+						TurnNumber:         1,
 						PlayerNamesInNextTurnOrder: []string{
 							playerIdentifiers[4],
 							playerIdentifiers[0],
@@ -856,9 +931,10 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 						IsPlayerTurn: false,
 					},
 					endpoint.TurnSummary{
-						GameIdentifier: gameIdentifiers[2],
-						GameName:       gameNames[2],
-						TurnNumber:     1,
+						GameIdentifier:     gameIdentifiers[2],
+						GameName:           gameNames[2],
+						RulesetDescription: DescriptionOfRuleset(unitTest, rulesetIdentifiers[2]),
+						TurnNumber:         1,
 						PlayerNamesInNextTurnOrder: []string{
 							playerIdentifiers[0],
 							playerIdentifiers[4],
@@ -936,6 +1012,7 @@ func TestGetTurnSummariesForValidPlayer(unitTest *testing.T) {
 				// We do not bother checking the timestamps as that would be too much effort.
 				if (actualSummary.GameIdentifier != expectedSummary.GameIdentifier) ||
 					(actualSummary.GameName != expectedSummary.GameName) ||
+					(actualSummary.RulesetDescription != expectedSummary.RulesetDescription) ||
 					(actualSummary.TurnNumber != expectedSummary.TurnNumber) ||
 					(actualSummary.IsPlayerTurn != expectedSummary.IsPlayerTurn) ||
 					(len(actualPlayerOrder) != len(expectedPlayerOrder)) {
@@ -1078,7 +1155,8 @@ func TestRejectInvalidPlayerAction(unitTest *testing.T) {
 			creationBytesBuffer := new(bytes.Buffer)
 			json.NewEncoder(creationBytesBuffer).Encode(
 				endpoint.GameDefinition{
-					GameName: gameName,
+					GameName:          gameName,
+					RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
 					PlayerIdentifiers: []string{
 						playerIdentifiers[1],
 						playerIdentifiers[2],
@@ -1137,7 +1215,8 @@ func TestThreePlayersChatting(unitTest *testing.T) {
 	creationBytesBuffer := new(bytes.Buffer)
 	json.NewEncoder(creationBytesBuffer).Encode(
 		endpoint.GameDefinition{
-			GameName: gameName,
+			GameName:          gameName,
+			RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
 			PlayerIdentifiers: []string{
 				playerIdentifiers[2],
 				playerIdentifiers[3],
