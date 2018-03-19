@@ -45,48 +45,61 @@ type Ruleset interface {
 }
 
 const (
-	// We denote 0 as no ruleset chosen as a missing JSON identifier will end up as 0.
-	noRulesetChosen        = iota
-	standardWithoutRainbow = iota
-	withRainbowAsSeparate  = iota
-	withRainbowAsCompound  = iota
+	// NoRulesetChosen denotes 0 as no ruleset chosen, as a missing JSON identifier
+	// will end up as 0.
+	NoRulesetChosen = iota
+
+	// StandardWithoutRainbowIdentifier is the identifier of the standard ruleset.
+	StandardWithoutRainbowIdentifier = iota
+
+	// WithRainbowAsSeparateIdentifier is the identifier of the ruleset with rainbow
+	// cards added as a separate suit.
+	WithRainbowAsSeparateIdentifier = iota
+
+	// WithRainbowAsCompoundIdentifier is the identifier of the ruleset with rainbow
+	// cards added as a special suit which counts as all the others.
+	WithRainbowAsCompoundIdentifier = iota
 )
+
+func validRulesetIdentifiers() []int {
+	return []int{
+		StandardWithoutRainbowIdentifier,
+		WithRainbowAsSeparateIdentifier,
+		WithRainbowAsCompoundIdentifier,
+	}
+}
 
 // AvailableRulesets returns the list of identifiers with descriptions
 // representing the rulesets which are available for creating games.
-func AvailableRulesets() ([]endpoint.SelectableRuleset, error) {
+func AvailableRulesets() []endpoint.SelectableRuleset {
 	availableRulesets := make([]endpoint.SelectableRuleset, 0)
-	for rulesetIndex := standardWithoutRainbow; rulesetIndex <= withRainbowAsCompound; rulesetIndex++ {
-		availableRuleset, indexError := GetRuleset(rulesetIndex)
-		if indexError != nil {
-			return nil, fmt.Errorf(
-				"AvailableRulesets() managed to get an error when iterating over rulesets: %v",
-				indexError)
-		}
-
+	for _, rulesetIdentifier := range validRulesetIdentifiers() {
+		// There definitely will not be an error from RulesetFromIdentifier if we
+		// iterate only over the valid identifiers.
+		availableRuleset, _ := RulesetFromIdentifier(rulesetIdentifier)
 		availableRulesets = append(
 			availableRulesets,
 			endpoint.SelectableRuleset{
-				Identifier:             rulesetIndex,
+				Identifier:             rulesetIdentifier,
 				Description:            availableRuleset.FrontendDescription(),
 				MinimumNumberOfPlayers: availableRuleset.MinimumNumberOfPlayers(),
 				MaximumNumberOfPlayers: availableRuleset.MaximumNumberOfPlayers(),
 			})
 	}
 
-	return availableRulesets, nil
+	return availableRulesets
 }
 
-// GetRuleset returns the appropriate ruleset for the identifier.
-func GetRuleset(rulesetIdentifier int) (Ruleset, error) {
+// RulesetFromIdentifier returns the appropriate ruleset for the identifier.
+func RulesetFromIdentifier(rulesetIdentifier int) (Ruleset, error) {
 	switch rulesetIdentifier {
-	case standardWithoutRainbow:
+	case StandardWithoutRainbowIdentifier:
 		return &StandardWithoutRainbowRuleset{}, nil
-	case withRainbowAsSeparate:
+	case WithRainbowAsSeparateIdentifier:
 		return &RainbowAsSeparateSuitRuleset{
 			BasisRules: &StandardWithoutRainbowRuleset{},
 		}, nil
-	case withRainbowAsCompound:
+	case WithRainbowAsCompoundIdentifier:
 		return &RainbowAsCompoundSuitRuleset{
 			BasisRainbow: &RainbowAsSeparateSuitRuleset{
 				BasisRules: &StandardWithoutRainbowRuleset{},

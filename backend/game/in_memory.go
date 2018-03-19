@@ -45,7 +45,7 @@ func (inMemoryCollection *InMemoryCollection) Add(
 		return "", fmt.Errorf("Game %v already exists", gameDefinition.GameName)
 	}
 
-	gameRuleset, unknownRulesetError := GetRuleset(gameDefinition.RulesetIdentifier)
+	gameRuleset, unknownRulesetError := RulesetFromIdentifier(gameDefinition.RulesetIdentifier)
 	if unknownRulesetError != nil {
 		return "", fmt.Errorf(
 			"Problem identifying ruleset from identifier %v; error is: %v",

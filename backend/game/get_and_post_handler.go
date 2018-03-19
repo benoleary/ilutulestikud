@@ -66,13 +66,7 @@ func (getAndPostHandler *GetAndPostHandler) HandlePost(
 // writeAvailableRulesets writes a JSON object into the HTTP response which has
 // the list of available rulesets as its "Rulesets" attribute.
 func (getAndPostHandler *GetAndPostHandler) writeAvailableRulesets() (interface{}, int) {
-	availableRulesets, creationError := AvailableRulesets()
-
-	if creationError != nil {
-		return creationError, http.StatusInternalServerError
-	}
-
-	return endpoint.RulesetList{Rulesets: availableRulesets}, http.StatusOK
+	return endpoint.RulesetList{Rulesets: AvailableRulesets()}, http.StatusOK
 }
 
 // writeTurnSummariesForPlayer writes a JSON object into the HTTP response which has
