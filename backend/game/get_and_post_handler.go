@@ -99,16 +99,6 @@ func (getAndPostHandler *GetAndPostHandler) handleNewGame(
 		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
 	}
 
-	// This is for backwards compatibility with the frontend.
-	if gameDefinition.Name != "" {
-		gameDefinition.GameName = gameDefinition.Name
-	}
-
-	// This is for backwards compatibility with the frontend.
-	if len(gameDefinition.Players) > 0 {
-		gameDefinition.PlayerIdentifiers = gameDefinition.Players
-	}
-
 	gameIdentifier, addError := getAndPostHandler.gameCollection.Add(gameDefinition, getAndPostHandler.playerCollection)
 
 	if addError != nil {
@@ -163,21 +153,6 @@ func (getAndPostHandler *GetAndPostHandler) handlePlayerAction(
 	parsingError := httpBodyDecoder.Decode(&playerAction)
 	if parsingError != nil {
 		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
-	}
-
-	// This is for backwards compatibility with the frontend.
-	if playerAction.Game != "" {
-		playerAction.GameIdentifier = playerAction.Game
-	}
-
-	// This is for backwards compatibility with the frontend.
-	if playerAction.Player != "" {
-		playerAction.PlayerIdentifier = playerAction.Player
-	}
-
-	// This is for backwards compatibility with the frontend.
-	if playerAction.Action != "" {
-		playerAction.ActionType = playerAction.Action
 	}
 
 	gameState, isFound := getAndPostHandler.gameCollection.Get(playerAction.GameIdentifier)
