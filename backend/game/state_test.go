@@ -14,14 +14,30 @@ import (
 func prepareImplementations(
 	unitTest *testing.T,
 	gameName string,
-	playerNames []string) []game.State {
-	if len(playerNames) < game.MinimumNumberOfPlayers {
+	rulesetIdentifier int,
+	playerNames []string) ([]game.State, game.Ruleset) {
+	gameRuleset, identifierError := game.RulesetFromIdentifier(rulesetIdentifier)
+
+	if identifierError != nil {
+		unitTest.Fatalf(
+			"Unable to get valid ruleset for identifier %v: error is %v",
+			rulesetIdentifier,
+			identifierError)
+	}
+
+	if len(playerNames) < gameRuleset.MinimumNumberOfPlayers() {
 		unitTest.Fatalf(
 			"Not enough players: %v",
 			playerNames)
 	}
 
-	nameToIdentifier := &endpoint.Base64NameEncoder{}
+	if len(playerNames) > gameRuleset.MaximumNumberOfPlayers() {
+		unitTest.Fatalf(
+			"Too many players: %v",
+			playerNames)
+	}
+
+	nameToIdentifier := &endpoint.Base32NameEncoder{}
 	playerCollection := player.NewInMemoryCollection(nameToIdentifier, playerNames, []string{"red", "green", "blue"})
 	gameCollections := []game.Collection{
 		game.NewInMemoryCollection(nameToIdentifier),
@@ -34,6 +50,7 @@ func prepareImplementations(
 
 	gameDefinition := endpoint.GameDefinition{
 		GameName:          gameName,
+		RulesetIdentifier: rulesetIdentifier,
 		PlayerIdentifiers: playerIdentifiers,
 	}
 
@@ -65,21 +82,24 @@ func prepareImplementations(
 		gameStates[collectionIndex] = allGames[0]
 	}
 
-	return gameStates
+	return gameStates, gameRuleset
 }
 
 func TestOrderByCreationTime(unitTest *testing.T) {
 	playerNames := []string{"Player One", "Player Two", "Player Three"}
-	earlyGameStates := prepareImplementations(
+
+	earlyGameStates, _ := prepareImplementations(
 		unitTest,
 		"Early game",
+		game.StandardWithoutRainbowIdentifier,
 		playerNames)
 
 	time.Sleep(100 * time.Millisecond)
 
-	lateGameStates := prepareImplementations(
+	lateGameStates, _ := prepareImplementations(
 		unitTest,
 		"Late game",
+		game.StandardWithoutRainbowIdentifier,
 		playerNames)
 
 	for stateIndex := 0; stateIndex < len(lateGameStates); stateIndex++ {
@@ -111,19 +131,9 @@ func TestOrderByCreationTime(unitTest *testing.T) {
 }
 
 func TestInitialState(unitTest *testing.T) {
-	standardRuleset := &game.StandardWithoutRainbowRuleset{}
-
-	separateRainbowRuleset := &game.RainbowAsSeparateSuitRuleset{
-		BasisRules: standardRuleset,
-	}
-
-	compoundRainbowRuleset := &game.RainbowAsCompoundSuitRuleset{
-		BasisRainbow: separateRainbowRuleset,
-	}
-
 	type testArguments struct {
 		initialPlayerNames []string
-		gameRuleset        game.Ruleset
+		rulesetIdentifier  int
 	}
 
 	testCases := []struct {
@@ -134,51 +144,52 @@ func TestInitialState(unitTest *testing.T) {
 			name: "Two players, no rainbow",
 			arguments: testArguments{
 				initialPlayerNames: []string{"Player One", "Player Two"},
-				gameRuleset:        standardRuleset,
+				rulesetIdentifier:  game.StandardWithoutRainbowIdentifier,
 			},
 		},
 		{
 			name: "Three players, no rainbow",
 			arguments: testArguments{
 				initialPlayerNames: []string{"Player One", "Player Two", "Player Three"},
-				gameRuleset:        standardRuleset,
+				rulesetIdentifier:  game.StandardWithoutRainbowIdentifier,
 			},
 		},
 		{
 			name: "Four players, no rainbow",
 			arguments: testArguments{
 				initialPlayerNames: []string{"Player One", "Player Two", "Player Three", "Player Four"},
-				gameRuleset:        standardRuleset,
+				rulesetIdentifier:  game.StandardWithoutRainbowIdentifier,
 			},
 		},
 		{
 			name: "Five players, no rainbow",
 			arguments: testArguments{
 				initialPlayerNames: []string{"Player One", "Player Two", "Player Three", "Player Four", "Player Five"},
-				gameRuleset:        standardRuleset,
+				rulesetIdentifier:  game.StandardWithoutRainbowIdentifier,
 			},
 		},
 		{
 			name: "Two players, with rainbow (as separate, but doesn't matter for initial state)",
 			arguments: testArguments{
 				initialPlayerNames: []string{"Player One", "Player Two"},
-				gameRuleset:        separateRainbowRuleset,
+				rulesetIdentifier:  game.WithRainbowAsSeparateIdentifier,
 			},
 		},
 		{
 			name: "Five players, with rainbow (as compound, but doesn't matter for initial state)",
 			arguments: testArguments{
 				initialPlayerNames: []string{"Player One", "Player Two", "Player Three", "Player Four", "Player Five"},
-				gameRuleset:        compoundRainbowRuleset,
+				rulesetIdentifier:  game.WithRainbowAsCompoundIdentifier,
 			},
 		},
 	}
 
 	for _, testCase := range testCases {
 		unitTest.Run(testCase.name, func(unitTest *testing.T) {
-			gameStates := prepareImplementations(
+			gameStates, gameRuleset := prepareImplementations(
 				unitTest,
 				"Test game",
+				testCase.arguments.rulesetIdentifier,
 				testCase.arguments.initialPlayerNames)
 
 			numberOfPlayers := len(testCase.arguments.initialPlayerNames)
@@ -203,11 +214,11 @@ func TestInitialState(unitTest *testing.T) {
 					gameView.ChatLog,
 				)
 
-				numberOfCardsPerHand := testCase.arguments.gameRuleset.NumberOfCardsInPlayerHand(numberOfPlayers)
+				numberOfCardsPerHand := gameRuleset.NumberOfCardsInPlayerHand(numberOfPlayers)
 				expectedNumberOfCardsInPlayerHands :=
 					numberOfPlayers * numberOfCardsPerHand
-				colorSuits := testCase.arguments.gameRuleset.ColorSuits()
-				sequenceIndices := testCase.arguments.gameRuleset.SequenceIndices()
+				colorSuits := gameRuleset.ColorSuits()
+				sequenceIndices := gameRuleset.SequenceIndices()
 				numberOfCardsInTotal := len(colorSuits) * len(sequenceIndices)
 				expectedNumberOfCardsInDeck := numberOfCardsInTotal - expectedNumberOfCardsInPlayerHands
 
@@ -226,7 +237,7 @@ func TestInitialState(unitTest *testing.T) {
 					"Initial state",
 					unitTest,
 					len(testCase.arguments.initialPlayerNames),
-					testCase.arguments.gameRuleset,
+					gameRuleset,
 					endpoint.GameView{
 						ScoreSoFar:                   0,
 						NumberOfReadyHints:           game.MaximumNumberOfHints,
