@@ -95,8 +95,10 @@ func (inMemoryCollection *InMemoryCollection) Add(
 		gameRuleset:          gameRuleset,
 		creationTime:         time.Now(),
 		participatingPlayers: playerStates,
-		turnNumber:           1,
 		chatLog:              chat.NewLog(),
+		turnNumber:           1,
+		numberOfReadyHints:   MaximumNumberOfHints,
+		numberOfMistakesMade: 0,
 	}
 
 	inMemoryCollection.mutualExclusion.Lock()
@@ -137,8 +139,11 @@ type inMemoryState struct {
 	gameRuleset          Ruleset
 	creationTime         time.Time
 	participatingPlayers []player.State
-	turnNumber           int
 	chatLog              *chat.Log
+	turnNumber           int
+	currentScore         int
+	numberOfReadyHints   int
+	numberOfMistakesMade int
 }
 
 // Identifier returns the private gameIdentifier field.
@@ -187,11 +192,6 @@ func (gameState *inMemoryState) HasPlayerAsParticipant(playerIdentifier string) 
 	return false
 }
 
-// ChatLog returns the chat log of the game at the current moment.
-func (gameState *inMemoryState) ChatLog() *chat.Log {
-	return gameState.chatLog
-}
-
 // PerformAction should perform the given action for its player or return an error,
 // but right now it only performs the action to record a chat message.
 func (gameState *inMemoryState) PerformAction(
@@ -206,4 +206,27 @@ func (gameState *inMemoryState) PerformAction(
 	}
 
 	return fmt.Errorf("Unknown action: %v", playerAction.ActionType)
+}
+
+// ChatLog returns the chat log of the game at the current moment.
+func (gameState *inMemoryState) ChatLog() *chat.Log {
+	return gameState.chatLog
+}
+
+// Score returns the total score of the cards which have been correctly played in the
+// game so far.
+func (gameState *inMemoryState) Score() int {
+	return gameState.currentScore
+}
+
+// NumberOfReadyHints returns the total number of hints which are available to be
+// played.
+func (gameState *inMemoryState) NumberOfReadyHints() int {
+	return gameState.numberOfReadyHints
+}
+
+// NumberOfMistakesMade returns the total number of cards which have been played
+// incorrectly.
+func (gameState *inMemoryState) NumberOfMistakesMade() int {
+	return gameState.numberOfMistakesMade
 }

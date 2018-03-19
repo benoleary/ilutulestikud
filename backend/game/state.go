@@ -38,17 +38,38 @@ type State interface {
 	// the identifier of any of the game's participating players.
 	HasPlayerAsParticipant(playerIdentifier string) bool
 
+	// PerformAction should perform the given action for its player or return an error.
+	PerformAction(actingPlayer player.State, playerAction endpoint.PlayerAction) error
+
 	// ChatLog should return the chat log of the game at the current moment.
 	ChatLog() *chat.Log
 
-	// PerformAction should perform the given action for its player or return an error.
-	PerformAction(actingPlayer player.State, playerAction endpoint.PlayerAction) error
+	// Score should return the total score of the cards which have been correctly played in the
+	// game so far.
+	Score() int
+
+	// NumberOfReadyHints should return the total number of hints which are available to be
+	// played.
+	NumberOfReadyHints() int
+
+	// NumberOfMistakesMade should return the total number of cards which have been played
+	// incorrectly.
+	NumberOfMistakesMade() int
 }
 
 // ForPlayer writes the relevant parts of the state of the game as should be known by the given
 // player into the relevant JSON object for the frontend.
 func ForPlayer(state State, playerIdentifier string) endpoint.GameView {
-	return endpoint.GameView{ChatLog: state.ChatLog().ForFrontend()}
+	// The remaining attributes of the endpoint.GameView require some calculation based on the
+	// game's ruleset.
+	return endpoint.GameView{
+		ChatLog:                      state.ChatLog().ForFrontend(),
+		ScoreSoFar:                   state.Score(),
+		NumberOfReadyHints:           state.NumberOfReadyHints(),
+		NumberOfSpentHints:           MaximumNumberOfHints - state.NumberOfReadyHints(),
+		NumberOfMistakesStillAllowed: MaximumNumberOfMistakesAllowed - state.NumberOfMistakesMade(),
+		NumberOfMistakesMade:         state.NumberOfMistakesMade(),
+	}
 }
 
 // Collection defines the interface for structs which should be able to create objects
