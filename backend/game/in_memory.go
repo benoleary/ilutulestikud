@@ -76,11 +76,15 @@ func (inMemoryCollection *InMemoryCollection) Add(
 		playerState, playerExists := playerCollection.Get(playerIdentifier)
 
 		if !playerExists {
-			return "", fmt.Errorf("Player with identifier %v is not registered", playerIdentifier)
+			return "", fmt.Errorf(
+				"Player with identifier %v is not registered",
+				playerIdentifier)
 		}
 
 		if playerIdentifiers[playerIdentifier] {
-			return "", fmt.Errorf("Player with identifier %v appears more than once in the list of players", playerIdentifier)
+			return "", fmt.Errorf(
+				"Player with identifier %v appears more than once in the list of players",
+				playerIdentifier)
 		}
 
 		playerIdentifiers[playerIdentifier] = true
@@ -88,18 +92,12 @@ func (inMemoryCollection *InMemoryCollection) Add(
 		playerStates[playerIndex] = playerState
 	}
 
-	newGame := &inMemoryState{
-		mutualExclusion:      sync.Mutex{},
-		gameIdentifier:       gameIdentifier,
-		gameName:             gameDefinition.GameName,
-		gameRuleset:          gameRuleset,
-		creationTime:         time.Now(),
-		participatingPlayers: playerStates,
-		chatLog:              chat.NewLog(),
-		turnNumber:           1,
-		numberOfReadyHints:   MaximumNumberOfHints,
-		numberOfMistakesMade: 0,
-	}
+	newGame :=
+		NewInMemoryState(
+			gameIdentifier,
+			gameDefinition.GameName,
+			gameRuleset,
+			playerStates)
 
 	inMemoryCollection.mutualExclusion.Lock()
 
@@ -144,6 +142,37 @@ type inMemoryState struct {
 	currentScore         int
 	numberOfReadyHints   int
 	numberOfMistakesMade int
+	undrawnDeck          []Card
+}
+
+// NewInMemoryState creates a new game given the required information.
+func NewInMemoryState(
+	gameIdentifier string,
+	gameName string,
+	gameRuleset Ruleset,
+	playerStates []player.State) State {
+	shuffledDeck := gameRuleset.FullCardset()
+
+	for shuffleCount := 0; shuffleCount < initialShuffleCount; shuffleCount++ {
+		firstShuffleIndex := randomIndex()
+		secondShuffleIndex := randomIndex()
+		shuffledDeck[firstShuffleIndex], shuffledDeck[secondShuffleIndex] =
+			shuffledDeck[secondShuffleIndex], shuffledDeck[firstShuffleIndex]
+	}
+
+	return &inMemoryState{
+		mutualExclusion:      sync.Mutex{},
+		gameIdentifier:       gameIdentifier,
+		gameName:             gameName,
+		gameRuleset:          gameRuleset,
+		creationTime:         time.Now(),
+		participatingPlayers: playerStates,
+		chatLog:              chat.NewLog(),
+		turnNumber:           1,
+		numberOfReadyHints:   MaximumNumberOfHints,
+		numberOfMistakesMade: 0,
+		undrawnDeck:          shuffledDeck,
+	}
 }
 
 // Identifier returns the private gameIdentifier field.
