@@ -4,8 +4,8 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 )
 
-// State defines the interface for structs which should encapsulate the state of a player.
-type State interface {
+// ReadOnly defines the interface for structs which should encapsulate the state of a player.
+type ReadOnly interface {
 	// Identifier should return the identifier of the player for interaction between
 	// frontend and backend.
 	Identifier() string
@@ -40,13 +40,13 @@ type Collection interface {
 	// Get should return the State corresponding to the given player identifier if it
 	// exists already (or else nil) along with whether the State exists, analogously to
 	// a standard Golang map.
-	Get(playerIdentifier string) (State, bool)
+	Get(playerIdentifier string) (ReadOnly, bool)
 
 	// All should return a slice of all the State instances in the collection. The order
 	// is not mandated, and may even change with repeated calls to the same unchanged
 	// Collection (analogously to the entry set of a standard Golang map, for example),
 	// though of course an implementation may order the slice consistently.
-	All() []State
+	All() []ReadOnly
 
 	// Reset should remove all players which are not among the initial players, and
 	// restore any initial players who have been removed.

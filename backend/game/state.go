@@ -23,7 +23,7 @@ type State interface {
 
 	// Players should return the list of players participating in the game, in the order in
 	// which they have their first turns.
-	Players() []player.State
+	Players() []player.ReadOnly
 
 	// Turn should given the number of the turn (with thfirst turn being 1 rather than 0) which
 	// is the current turn in the game (assuming 1 turn per player, not 1 turn being when all
@@ -39,7 +39,7 @@ type State interface {
 	HasPlayerAsParticipant(playerIdentifier string) bool
 
 	// PerformAction should perform the given action for its player or return an error.
-	PerformAction(actingPlayer player.State, playerAction endpoint.PlayerAction) error
+	PerformAction(actingPlayer player.ReadOnly, playerAction endpoint.PlayerAction) error
 
 	// ChatLog should return the chat log of the game at the current moment.
 	ChatLog() *chat.Log

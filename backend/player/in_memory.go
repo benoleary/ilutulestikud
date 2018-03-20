@@ -11,7 +11,7 @@ import (
 // players are mapped to by their identifiers.
 type InMemoryCollection struct {
 	mutualExclusion     sync.Mutex
-	playerStates        map[string]State
+	playerStates        map[string]ReadOnly
 	nameToIdentifier    endpoint.NameToIdentifier
 	initialPlayerNames  map[string]bool
 	availableChatColors []string
@@ -37,7 +37,7 @@ func NewInMemoryCollection(
 
 	newCollection := &InMemoryCollection{
 		mutualExclusion:     sync.Mutex{},
-		playerStates:        make(map[string]State, numberOfPlayers),
+		playerStates:        make(map[string]ReadOnly, numberOfPlayers),
 		nameToIdentifier:    nameToIdentifier,
 		initialPlayerNames:  initialPlayerNameSet,
 		availableChatColors: deepCopyOfChatColors,
@@ -69,15 +69,15 @@ func (inMemoryCollection *InMemoryCollection) Add(
 // Get returns the State corresponding to the given player name if it exists already
 // (or else nil) along with whether the State exists, analogously to a standard Golang
 // map.
-func (inMemoryCollection *InMemoryCollection) Get(playerIdentifier string) (State, bool) {
+func (inMemoryCollection *InMemoryCollection) Get(playerIdentifier string) (ReadOnly, bool) {
 	playerState, playerExists := inMemoryCollection.playerStates[playerIdentifier]
 	return playerState, playerExists
 }
 
 // All returns a slice of all the State instances in the collection, ordered in the
 // random way the iteration over the entries of a Golang map normally is.
-func (inMemoryCollection *InMemoryCollection) All() []State {
-	playerList := make([]State, 0, len(inMemoryCollection.playerStates))
+func (inMemoryCollection *InMemoryCollection) All() []ReadOnly {
+	playerList := make([]ReadOnly, 0, len(inMemoryCollection.playerStates))
 	for _, playerState := range inMemoryCollection.playerStates {
 		playerList = append(playerList, playerState)
 	}

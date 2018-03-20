@@ -71,7 +71,7 @@ func (inMemoryCollection *InMemoryCollection) Add(
 
 	playerIdentifiers := make(map[string]bool, 0)
 
-	playerStates := make([]player.State, numberOfPlayers)
+	playerStates := make([]player.ReadOnly, numberOfPlayers)
 	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
 		playerIdentifier := gameDefinition.PlayerIdentifiers[playerIndex]
 		playerState, playerExists := playerCollection.Get(playerIdentifier)
@@ -137,7 +137,7 @@ type inMemoryState struct {
 	gameName             string
 	gameRuleset          Ruleset
 	creationTime         time.Time
-	participatingPlayers []player.State
+	participatingPlayers []player.ReadOnly
 	chatLog              *chat.Log
 	turnNumber           int
 	currentScore         int
@@ -151,7 +151,7 @@ func NewInMemoryState(
 	gameIdentifier string,
 	gameName string,
 	gameRuleset Ruleset,
-	playerStates []player.State) State {
+	playerStates []player.ReadOnly) State {
 	return NewInMemoryStateWithGivenSeed(
 		gameIdentifier,
 		gameName,
@@ -167,8 +167,7 @@ func NewInMemoryStateWithGivenSeed(
 	gameIdentifier string,
 	gameName string,
 	gameRuleset Ruleset,
-	playerStates []player.State,
-	randomNumberSeed int64) State {
+	playerStates []player.ReadOnly, randomNumberSeed int64) State {
 	randomNumberGenerator := rand.New(rand.NewSource(randomNumberSeed))
 
 	shuffledDeck := gameRuleset.FullCardset()
@@ -216,7 +215,7 @@ func (gameState *inMemoryState) Ruleset() Ruleset {
 }
 
 // Name returns a slice of the private participatingPlayers array.
-func (gameState *inMemoryState) Players() []player.State {
+func (gameState *inMemoryState) Players() []player.ReadOnly {
 	return gameState.participatingPlayers
 }
 
@@ -249,8 +248,7 @@ func (gameState *inMemoryState) HasPlayerAsParticipant(playerIdentifier string) 
 // PerformAction should perform the given action for its player or return an error,
 // but right now it only performs the action to record a chat message.
 func (gameState *inMemoryState) PerformAction(
-	actingPlayer player.State,
-	playerAction endpoint.PlayerAction) error {
+	actingPlayer player.ReadOnly, playerAction endpoint.PlayerAction) error {
 	if playerAction.ActionType == "chat" {
 		gameState.chatLog.AppendNewMessage(
 			actingPlayer.Name(),

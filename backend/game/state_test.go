@@ -259,7 +259,7 @@ func TestInitialState(unitTest *testing.T) {
 func AssertThatParticipantsAreCorrect(
 	unitTest *testing.T,
 	playerNames []string,
-	participatingPlayers []player.State) {
+	participatingPlayers []player.ReadOnly) {
 	numberOfPlayers := len(playerNames)
 	namesToFind := make(map[string]bool, numberOfPlayers)
 	for _, playerName := range playerNames {
