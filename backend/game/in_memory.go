@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -151,11 +152,35 @@ func NewInMemoryState(
 	gameName string,
 	gameRuleset Ruleset,
 	playerStates []player.State) State {
+	return NewInMemoryStateWithGivenSeed(
+		gameIdentifier,
+		gameName,
+		gameRuleset,
+		playerStates,
+		time.Now().UnixNano())
+}
+
+// NewInMemoryStateWithGivenSeed creates a new game given the required information,
+// using the given seed for the random number generator used to shuffle the deck
+// initially.
+func NewInMemoryStateWithGivenSeed(
+	gameIdentifier string,
+	gameName string,
+	gameRuleset Ruleset,
+	playerStates []player.State,
+	randomNumberSeed int64) State {
+	randomNumberGenerator := rand.New(rand.NewSource(randomNumberSeed))
+
 	shuffledDeck := gameRuleset.FullCardset()
 
-	for shuffleCount := 0; shuffleCount < initialShuffleCount; shuffleCount++ {
-		firstShuffleIndex := randomIndex()
-		secondShuffleIndex := randomIndex()
+	numberOfCards := len(shuffledDeck)
+
+	// This is probably excessive.
+	numberOfShuffles := 8 * numberOfCards
+
+	for shuffleCount := 0; shuffleCount < numberOfShuffles; shuffleCount++ {
+		firstShuffleIndex := randomNumberGenerator.Intn(numberOfCards)
+		secondShuffleIndex := randomNumberGenerator.Intn(numberOfCards)
 		shuffledDeck[firstShuffleIndex], shuffledDeck[secondShuffleIndex] =
 			shuffledDeck[secondShuffleIndex], shuffledDeck[firstShuffleIndex]
 	}
