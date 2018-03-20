@@ -74,12 +74,10 @@ func (inMemoryCollection *InMemoryCollection) Add(
 	playerStates := make([]player.ReadOnly, numberOfPlayers)
 	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
 		playerIdentifier := gameDefinition.PlayerIdentifiers[playerIndex]
-		playerState, playerExists := playerCollection.Get(playerIdentifier)
+		playerState, identificationError := playerCollection.Get(playerIdentifier)
 
-		if !playerExists {
-			return "", fmt.Errorf(
-				"Player with identifier %v is not registered",
-				playerIdentifier)
+		if identificationError != nil {
+			return "", identificationError
 		}
 
 		if playerIdentifiers[playerIdentifier] {

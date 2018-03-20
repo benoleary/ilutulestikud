@@ -23,7 +23,8 @@ func NewGetAndPostHandler(stateCollection Collection) *GetAndPostHandler {
 
 // HandleGet parses an HTTP GET request and responds with the appropriate function.
 // This implements part of github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
-func (getAndPostHandler *GetAndPostHandler) HandleGet(relevantSegments []string) (interface{}, int) {
+func (getAndPostHandler *GetAndPostHandler) HandleGet(
+	relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 1 {
 		return "Not enough segments in URI to determine what to do", http.StatusBadRequest
 	}
@@ -40,7 +41,8 @@ func (getAndPostHandler *GetAndPostHandler) HandleGet(relevantSegments []string)
 
 // HandlePost parses an HTTP POST request and responds with the appropriate function.
 // This implements part of github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
-func (getAndPostHandler *GetAndPostHandler) HandlePost(httpBodyDecoder *json.Decoder, relevantSegments []string) (interface{}, int) {
+func (getAndPostHandler *GetAndPostHandler) HandlePost(
+	httpBodyDecoder *json.Decoder, relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 1 {
 		return "Not enough segments in URI to determine what to do", http.StatusBadRequest
 	}
@@ -61,7 +63,7 @@ func (getAndPostHandler *GetAndPostHandler) HandlePost(httpBodyDecoder *json.Dec
 // the list of player objects as its "Players" attribute. The order of the players
 // may not consistent with repeated calls as ForEndpoint does not guarantee it.
 func (getAndPostHandler *GetAndPostHandler) writeRegisteredPlayers() (interface{}, int) {
-	return ForEndpoint(getAndPostHandler.playerCollection), http.StatusOK
+	return RegisteredPlayersForEndpoint(getAndPostHandler.playerCollection), http.StatusOK
 }
 
 // writeAvailableColors writes a JSON object into the HTTP response which has
@@ -73,7 +75,8 @@ func (getAndPostHandler *GetAndPostHandler) writeAvailableColors() (interface{},
 // handleNewPlayer adds the player defined by the JSON of the request's body to the list
 // of registered players, and returns the updated list as writeRegisteredPlayerNameListJson
 // would.
-func (getAndPostHandler *GetAndPostHandler) handleNewPlayer(httpBodyDecoder *json.Decoder) (interface{}, int) {
+func (getAndPostHandler *GetAndPostHandler) handleNewPlayer(
+	httpBodyDecoder *json.Decoder) (interface{}, int) {
 	var endpointPlayer endpoint.PlayerState
 	parsingError := httpBodyDecoder.Decode(&endpointPlayer)
 	if parsingError != nil {
@@ -103,20 +106,19 @@ func (getAndPostHandler *GetAndPostHandler) handleNewPlayer(httpBodyDecoder *jso
 // handleUpdatePlayer updates the player defined by the JSON of the request's body, taking the "Name"
 // attribute as the key, and returns the updated list as writeRegisteredPlayers would. Attributes
 // which are present are updated, those which are missing remain unchanged.
-func (getAndPostHandler *GetAndPostHandler) handleUpdatePlayer(httpBodyDecoder *json.Decoder) (interface{}, int) {
-	var newPlayer endpoint.PlayerState
-	parsingError := httpBodyDecoder.Decode(&newPlayer)
+func (getAndPostHandler *GetAndPostHandler) handleUpdatePlayer(
+	httpBodyDecoder *json.Decoder) (interface{}, int) {
+	var playerUpdate endpoint.PlayerState
+	parsingError := httpBodyDecoder.Decode(&playerUpdate)
 	if parsingError != nil {
 		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
 	}
 
-	existingPlayer, playerExists := getAndPostHandler.playerCollection.Get(newPlayer.Identifier)
+	updateError := getAndPostHandler.playerCollection.UpdateFromPresentAttributes(playerUpdate)
 
-	if !playerExists {
-		return "Name " + newPlayer.Name + " not found", http.StatusBadRequest
+	if updateError != nil {
+		return updateError, http.StatusBadRequest
 	}
-
-	existingPlayer.UpdateFromPresentAttributes(newPlayer)
 
 	return getAndPostHandler.writeRegisteredPlayers()
 }

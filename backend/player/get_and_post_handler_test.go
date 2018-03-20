@@ -865,15 +865,20 @@ func assertPlayerIsCorrectExternallyAndInternally(
 	}
 
 	// We can check the internal function now that we have the identifier.
-	internalPlayer, isFoundInternally :=
+	internalPlayer, internalIdentificationError :=
 		playerCollection.Get(expectedIdentifier)
 
-	if !isFoundInternally {
-		unitTest.Fatalf(testIdentifier+"/internal: did not find player %v.", expectedPlayerName)
+	if internalIdentificationError != nil {
+		unitTest.Fatalf(
+			testIdentifier+"/internal: did not find player %v (error = %v).",
+			expectedPlayerName,
+			internalIdentificationError)
 	}
 
 	if internalPlayer == nil {
-		unitTest.Fatalf(testIdentifier+"/internal: found nil for player %v.", expectedPlayerName)
+		unitTest.Fatalf(
+			testIdentifier+"/internal: found nil for player %v.",
+			expectedPlayerName)
 	}
 
 	assertPlayerIsCorrect(

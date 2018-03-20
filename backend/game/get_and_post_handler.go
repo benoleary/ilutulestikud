@@ -79,10 +79,10 @@ func (getAndPostHandler *GetAndPostHandler) writeTurnSummariesForPlayer(
 
 	playerIdentifier := relevantSegments[0]
 
-	_, playerExists := getAndPostHandler.playerCollection.Get(playerIdentifier)
+	_, identificationError := getAndPostHandler.playerCollection.Get(playerIdentifier)
 
-	if !playerExists {
-		return "Player with identifier %v is not registered, cannot participate in games", http.StatusBadRequest
+	if identificationError != nil {
+		return identificationError, http.StatusBadRequest
 	}
 
 	return TurnSummariesForFrontend(getAndPostHandler.gameCollection, playerIdentifier), http.StatusOK
@@ -163,12 +163,10 @@ func (getAndPostHandler *GetAndPostHandler) handlePlayerAction(
 		return errorMessage, http.StatusBadRequest
 	}
 
-	actingPlayer, isRegisteredPlayer := getAndPostHandler.playerCollection.Get(playerAction.PlayerIdentifier)
+	actingPlayer, identificationError := getAndPostHandler.playerCollection.Get(playerAction.PlayerIdentifier)
 
-	if !isRegisteredPlayer {
-		errorMessage :=
-			"Player " + playerAction.PlayerIdentifier + " is not registered, should have no actions for game " + playerAction.GameIdentifier
-		return errorMessage, http.StatusBadRequest
+	if identificationError != nil {
+		return identificationError, http.StatusBadRequest
 	}
 
 	if !gameState.HasPlayerAsParticipant(playerAction.PlayerIdentifier) {

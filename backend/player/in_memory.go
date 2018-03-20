@@ -11,7 +11,7 @@ import (
 // players are mapped to by their identifiers.
 type InMemoryCollection struct {
 	mutualExclusion     sync.Mutex
-	playerStates        map[string]ReadOnly
+	playerStates        map[string]*inMemoryState
 	nameToIdentifier    endpoint.NameToIdentifier
 	initialPlayerNames  map[string]bool
 	availableChatColors []string
@@ -37,7 +37,7 @@ func NewInMemoryCollection(
 
 	newCollection := &InMemoryCollection{
 		mutualExclusion:     sync.Mutex{},
-		playerStates:        make(map[string]ReadOnly, numberOfPlayers),
+		playerStates:        make(map[string]*inMemoryState, numberOfPlayers),
 		nameToIdentifier:    nameToIdentifier,
 		initialPlayerNames:  initialPlayerNameSet,
 		availableChatColors: deepCopyOfChatColors,
@@ -66,15 +66,49 @@ func (inMemoryCollection *InMemoryCollection) Add(
 	return inMemoryCollection.addWithGivenColor(endpointPlayer.Name, endpointPlayer.Color)
 }
 
-// Get returns the State corresponding to the given player name if it exists already
-// (or else nil) along with whether the State exists, analogously to a standard Golang
-// map.
-func (inMemoryCollection *InMemoryCollection) Get(playerIdentifier string) (ReadOnly, bool) {
-	playerState, playerExists := inMemoryCollection.playerStates[playerIdentifier]
-	return playerState, playerExists
+// UpdateFromPresentAttributes updates the player identified by the endpoint.PlayerState
+// by over-writing all non-name string attributes with those from updaterReference, except
+// for strings in updaterReference which are empty strings. It uses a mutex to ensure thread
+// safety.
+func (inMemoryCollection *InMemoryCollection) UpdateFromPresentAttributes(
+	updaterReference endpoint.PlayerState) error {
+	playerToUpdate, playerExists := inMemoryCollection.playerStates[updaterReference.Identifier]
+
+	if !playerExists {
+		return fmt.Errorf(
+			"No player with identifier %v is registered",
+			updaterReference.Identifier)
+	}
+
+	// It would be more efficient to only lock if we go into an if statement,
+	// but then multiple if statements would be less efficient, and there would
+	// be a mutex in each if statement.
+	inMemoryCollection.mutualExclusion.Lock()
+
+	if updaterReference.Color != "" {
+		playerToUpdate.color = updaterReference.Color
+	}
+
+	inMemoryCollection.mutualExclusion.Unlock()
+
+	return nil
 }
 
-// All returns a slice of all the State instances in the collection, ordered in the
+// Get returns the ReadOnly corresponding to the given player identifier if it exists
+// already along with an error which is nil if there was no problem. If the player does
+// not exist, a non-nil error is returned along with a nil ReadOnly.
+func (inMemoryCollection *InMemoryCollection) Get(playerIdentifier string) (ReadOnly, error) {
+	playerState, playerExists := inMemoryCollection.playerStates[playerIdentifier]
+	if !playerExists {
+		return nil, fmt.Errorf(
+			"No player with identifier %v is registered",
+			playerIdentifier)
+	}
+
+	return playerState, nil
+}
+
+// All returns a slice of all the ReadOnly instances in the collection, ordered in the
 // random way the iteration over the entries of a Golang map normally is.
 func (inMemoryCollection *InMemoryCollection) All() []ReadOnly {
 	playerList := make([]ReadOnly, 0, len(inMemoryCollection.playerStates))
@@ -180,22 +214,4 @@ func (playerState *inMemoryState) Name() string {
 // Color returns the private color field.
 func (playerState *inMemoryState) Color() string {
 	return playerState.color
-}
-
-// UpdateFromPresentAttributes over-writes all non-name string attributes of this
-// state with those from updaterReference unless the string in updaterReference
-// is empty. It uses a mutex to ensure thread safety, and since the InMemoryCollection
-// does not persist inMemoryState instances outside of its map of interfaces,
-// there is no issue with persistence.
-func (playerState *inMemoryState) UpdateFromPresentAttributes(updaterReference endpoint.PlayerState) {
-	// It would be more efficient to only lock if we go into an if statement,
-	// but then multiple if statements would be less efficient, and there would
-	// be a mutex in each if statement.
-	playerState.mutualExclusion.Lock()
-
-	if updaterReference.Color != "" {
-		playerState.color = updaterReference.Color
-	}
-
-	playerState.mutualExclusion.Unlock()
 }

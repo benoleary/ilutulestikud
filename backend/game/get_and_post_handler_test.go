@@ -1274,14 +1274,13 @@ func TestThreePlayersChatting(unitTest *testing.T) {
 		chatMessage := chatMessages[messageCount]
 		playerIdentifier := nameToIdentifier.Identifier(chatMessage.PlayerName)
 
-		playerState, playerExists := playerCollection.Get(playerIdentifier)
-		if !playerExists {
+		playerUpdateError :=
+			playerCollection.UpdateFromPresentAttributes(endpoint.PlayerState{Color: chatMessage.ChatColor})
+		if playerUpdateError != nil {
 			unitTest.Fatalf(
-				"Internal get could not find player %v.",
-				playerIdentifier)
+				"Internal update produced error: %v).",
+				playerUpdateError)
 		}
-
-		playerState.UpdateFromPresentAttributes(endpoint.PlayerState{Color: chatMessage.ChatColor})
 
 		actionBytesBuffer := new(bytes.Buffer)
 		json.NewEncoder(actionBytesBuffer).Encode(endpoint.PlayerAction{
