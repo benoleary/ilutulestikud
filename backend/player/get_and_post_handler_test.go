@@ -135,6 +135,21 @@ func TestAvailableColorListNotEmpty(unitTest *testing.T) {
 	}
 }
 
+func TestReturnErrorWhenPlayerNotFoundInternally(unitTest *testing.T) {
+	playerCollection, _ := newCollectionAndHandler()
+
+	invalidIdentifier := "not a valid identifier"
+	internalPlayer, internalIdentificationError :=
+		playerCollection.Get(invalidIdentifier)
+
+	if internalIdentificationError == nil {
+		unitTest.Fatalf(
+			"Internal get of invalid player identifier %v did not return an error, did return player state %v",
+			invalidIdentifier,
+			internalPlayer)
+	}
+}
+
 func TestRejectInvalidNewPlayer(unitTest *testing.T) {
 	type testArguments struct {
 		bodyObject interface{}
