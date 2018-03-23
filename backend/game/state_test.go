@@ -15,7 +15,7 @@ func prepareImplementations(
 	unitTest *testing.T,
 	gameName string,
 	rulesetIdentifier int,
-	playerNames []string) ([]game.State, game.Ruleset) {
+	playerNames []string) ([]game.ReadAndWriteState, game.Ruleset) {
 	gameRuleset, identifierError := game.RulesetFromIdentifier(rulesetIdentifier)
 
 	if identifierError != nil {
@@ -54,7 +54,7 @@ func prepareImplementations(
 		PlayerIdentifiers: playerIdentifiers,
 	}
 
-	gameStates := make([]game.State, len(gameCollections))
+	gameStates := make([]game.ReadAndWriteState, len(gameCollections))
 
 	for collectionIndex, gameCollection := range gameCollections {
 		_, addError := gameCollection.Add(gameDefinition, playerCollection)
@@ -103,7 +103,7 @@ func TestOrderByCreationTime(unitTest *testing.T) {
 		playerNames)
 
 	for stateIndex := 0; stateIndex < len(lateGameStates); stateIndex++ {
-		gameList := game.ByCreationTime([]game.State{
+		gameList := game.ByCreationTime([]game.ReadAndWriteState{
 			lateGameStates[stateIndex],
 			earlyGameStates[stateIndex],
 		})
@@ -259,7 +259,7 @@ func TestInitialState(unitTest *testing.T) {
 func AssertThatParticipantsAreCorrect(
 	unitTest *testing.T,
 	playerNames []string,
-	participatingPlayers []player.ReadOnly) {
+	participatingPlayers []player.ReadonlyState) {
 	numberOfPlayers := len(playerNames)
 	namesToFind := make(map[string]bool, numberOfPlayers)
 	for _, playerName := range playerNames {

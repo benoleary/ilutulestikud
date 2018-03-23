@@ -12,7 +12,7 @@ func StateIsCorrect(
 	unitTest *testing.T,
 	expectedGameName string,
 	expectedPlayers []string,
-	actualGame game.State,
+	actualGame game.ReadAndWriteState,
 	testIdentifier string) {
 	if actualGame.Name() != expectedGameName {
 		unitTest.Fatalf(

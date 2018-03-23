@@ -11,14 +11,14 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
-const breaksBase64 = "\\/\\\\\\?" // should unescape to \/\\\?
+const breaksBase64 = "\\/\\\\\\?" // This should unescape to \/\\\? in the tests.
 
 var colorsAvailableInTest []string = defaults.AvailableColors()
 
 // newCollectionAndHandler prepares a player.Collection and a player.GetAndPostHandler
 // in a consistent way for the tests.
 func newCollectionAndHandlerForIdentifier(
-	nameToIdentifier endpoint.NameToIdentifier) (player.Collection, *player.GetAndPostHandler) {
+	nameToIdentifier endpoint.NameToIdentifier) (player.StateCollection, *player.GetAndPostHandler) {
 	playerCollection :=
 		player.NewInMemoryCollection(
 			nameToIdentifier,
@@ -29,7 +29,7 @@ func newCollectionAndHandlerForIdentifier(
 
 // newCollectionAndHandler prepares a player.Collection and a player.GetAndPostHandler
 // in a consistent way for the tests.
-func newCollectionAndHandler() (player.Collection, *player.GetAndPostHandler) {
+func newCollectionAndHandler() (player.StateCollection, *player.GetAndPostHandler) {
 	return newCollectionAndHandlerForIdentifier(&endpoint.Base32NameEncoder{})
 }
 
@@ -821,8 +821,7 @@ func assertPlayerIsCorrect(
 
 func assertPlayerIsCorrectExternallyAndInternally(
 	unitTest *testing.T,
-	playerCollection player.Collection,
-	testHandler *player.GetAndPostHandler,
+	playerCollection player.StateCollection, testHandler *player.GetAndPostHandler,
 	expectedPlayerName string,
 	expectedChatColor string,
 	testIdentifier string) {

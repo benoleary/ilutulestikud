@@ -13,15 +13,18 @@ import (
 // GetAndPostHandler is a struct meant to encapsulate all the state co-ordinating all the games.
 // It implements github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
 type GetAndPostHandler struct {
-	playerCollection player.Collection
+	playerCollection player.StateCollection
 	gameCollection   Collection
 }
 
 // NewGetAndPostHandler constructs a Handler object around the given game.Collection object.
 func NewGetAndPostHandler(
-	playerCollection player.Collection,
+	playerCollection player.StateCollection,
 	gameCollection Collection) *GetAndPostHandler {
-	return &GetAndPostHandler{playerCollection: playerCollection, gameCollection: gameCollection}
+	return &GetAndPostHandler{
+		playerCollection: playerCollection,
+		gameCollection:   gameCollection,
+	}
 }
 
 // HandleGet parses an HTTP GET request and responds with the appropriate function.
@@ -99,7 +102,8 @@ func (getAndPostHandler *GetAndPostHandler) handleNewGame(
 		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
 	}
 
-	gameIdentifier, addError := getAndPostHandler.gameCollection.Add(gameDefinition, getAndPostHandler.playerCollection)
+	gameIdentifier, addError :=
+		getAndPostHandler.gameCollection.Add(gameDefinition, getAndPostHandler.playerCollection)
 
 	if addError != nil {
 		return addError, http.StatusBadRequest
@@ -159,7 +163,8 @@ func (getAndPostHandler *GetAndPostHandler) handlePlayerAction(
 
 	if !isFound {
 		errorMessage :=
-			"Game " + playerAction.GameIdentifier + " does not exist, cannot perform action from player " + playerAction.PlayerIdentifier
+			"Game " + playerAction.GameIdentifier +
+				" does not exist, cannot perform action from player " + playerAction.PlayerIdentifier
 		return errorMessage, http.StatusBadRequest
 	}
 
@@ -171,7 +176,8 @@ func (getAndPostHandler *GetAndPostHandler) handlePlayerAction(
 
 	if !gameState.HasPlayerAsParticipant(playerAction.PlayerIdentifier) {
 		errorMessage :=
-			"Player " + playerAction.PlayerIdentifier + " is not a participant in game " + playerAction.GameIdentifier
+			"Player " + playerAction.PlayerIdentifier +
+				" is not a participant in game " + playerAction.GameIdentifier
 		return errorMessage, http.StatusBadRequest
 	}
 

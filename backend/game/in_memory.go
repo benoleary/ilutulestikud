@@ -15,18 +15,18 @@ import (
 // mapped to by their identifiers, as are the players.
 type InMemoryCollection struct {
 	mutualExclusion  sync.Mutex
-	gameStates       map[string]State
+	gameStates       map[string]ReadAndWriteState
 	nameToIdentifier endpoint.NameToIdentifier
-	gamesWithPlayers map[string][]State
+	gamesWithPlayers map[string][]ReadAndWriteState
 }
 
 // NewInMemoryCollection creates a Collection around a map of games.
 func NewInMemoryCollection(nameToIdentifier endpoint.NameToIdentifier) *InMemoryCollection {
 	return &InMemoryCollection{
 		mutualExclusion:  sync.Mutex{},
-		gameStates:       make(map[string]State, 1),
+		gameStates:       make(map[string]ReadAndWriteState, 1),
 		nameToIdentifier: nameToIdentifier,
-		gamesWithPlayers: make(map[string][]State, 0),
+		gamesWithPlayers: make(map[string][]ReadAndWriteState, 0),
 	}
 }
 
@@ -34,7 +34,7 @@ func NewInMemoryCollection(nameToIdentifier endpoint.NameToIdentifier) *InMemory
 // the State interface with information given by the endpoint.GameDefinition object.
 func (inMemoryCollection *InMemoryCollection) Add(
 	gameDefinition endpoint.GameDefinition,
-	playerCollection player.Collection) (string, error) {
+	playerCollection player.StateCollection) (string, error) {
 	if gameDefinition.GameName == "" {
 		return "", fmt.Errorf("Game must have a name")
 	}
@@ -71,7 +71,7 @@ func (inMemoryCollection *InMemoryCollection) Add(
 
 	playerIdentifiers := make(map[string]bool, 0)
 
-	playerStates := make([]player.ReadOnly, numberOfPlayers)
+	playerStates := make([]player.ReadonlyState, numberOfPlayers)
 	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
 		playerIdentifier := gameDefinition.PlayerIdentifiers[playerIndex]
 		playerState, identificationError := playerCollection.Get(playerIdentifier)
@@ -114,7 +114,7 @@ func (inMemoryCollection *InMemoryCollection) Add(
 // Get should return the State corresponding to the given game identifier if it
 // exists already (or else nil) along with whether the State exists, analogously
 // to a standard Golang map.
-func (inMemoryCollection *InMemoryCollection) Get(gameIdentifier string) (State, bool) {
+func (inMemoryCollection *InMemoryCollection) Get(gameIdentifier string) (ReadAndWriteState, bool) {
 	gameState, gameExists := inMemoryCollection.gameStates[gameIdentifier]
 	return gameState, gameExists
 }
@@ -124,7 +124,7 @@ func (inMemoryCollection *InMemoryCollection) Get(gameIdentifier string) (State,
 // change with repeated calls to the same unchanged Collection (analogously to the
 // entry set of a standard Golang map, for example), though of course an
 // implementation may order the slice consistently.
-func (inMemoryCollection *InMemoryCollection) All(playerName string) []State {
+func (inMemoryCollection *InMemoryCollection) All(playerName string) []ReadAndWriteState {
 	return inMemoryCollection.gamesWithPlayers[playerName]
 }
 
@@ -135,7 +135,7 @@ type inMemoryState struct {
 	gameName             string
 	gameRuleset          Ruleset
 	creationTime         time.Time
-	participatingPlayers []player.ReadOnly
+	participatingPlayers []player.ReadonlyState
 	chatLog              *chat.Log
 	turnNumber           int
 	currentScore         int
@@ -149,7 +149,7 @@ func NewInMemoryState(
 	gameIdentifier string,
 	gameName string,
 	gameRuleset Ruleset,
-	playerStates []player.ReadOnly) State {
+	playerStates []player.ReadonlyState) ReadAndWriteState {
 	return NewInMemoryStateWithGivenSeed(
 		gameIdentifier,
 		gameName,
@@ -165,7 +165,7 @@ func NewInMemoryStateWithGivenSeed(
 	gameIdentifier string,
 	gameName string,
 	gameRuleset Ruleset,
-	playerStates []player.ReadOnly, randomNumberSeed int64) State {
+	playerStates []player.ReadonlyState, randomNumberSeed int64) ReadAndWriteState {
 	randomNumberGenerator := rand.New(rand.NewSource(randomNumberSeed))
 
 	shuffledDeck := gameRuleset.FullCardset()
@@ -213,7 +213,7 @@ func (gameState *inMemoryState) Ruleset() Ruleset {
 }
 
 // Name returns a slice of the private participatingPlayers array.
-func (gameState *inMemoryState) Players() []player.ReadOnly {
+func (gameState *inMemoryState) Players() []player.ReadonlyState {
 	return gameState.participatingPlayers
 }
 
@@ -246,7 +246,7 @@ func (gameState *inMemoryState) HasPlayerAsParticipant(playerIdentifier string) 
 // PerformAction should perform the given action for its player or return an error,
 // but right now it only performs the action to record a chat message.
 func (gameState *inMemoryState) PerformAction(
-	actingPlayer player.ReadOnly, playerAction endpoint.PlayerAction) error {
+	actingPlayer player.ReadonlyState, playerAction endpoint.PlayerAction) error {
 	if playerAction.ActionType == "chat" {
 		gameState.chatLog.AppendNewMessage(
 			actingPlayer.Name(),

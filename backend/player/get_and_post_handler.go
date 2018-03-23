@@ -9,15 +9,16 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 )
 
-// GetAndPostHandler is a struct meant to encapsulate all the state co-ordinating all the players.
+// GetAndPostHandler is a struct meant to encapsulate all the state co-ordinating all the
+// players.
 // It implements github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
 type GetAndPostHandler struct {
-	playerCollection Collection
+	playerCollection StateCollection
 }
 
 // NewGetAndPostHandler constructs a GetAndPostHandler object with a non-nil, non-empty slice
 // of State objects, returning a pointer to the newly-created object.
-func NewGetAndPostHandler(stateCollection Collection) *GetAndPostHandler {
+func NewGetAndPostHandler(stateCollection StateCollection) *GetAndPostHandler {
 	return &GetAndPostHandler{playerCollection: stateCollection}
 }
 
@@ -42,7 +43,8 @@ func (getAndPostHandler *GetAndPostHandler) HandleGet(
 // HandlePost parses an HTTP POST request and responds with the appropriate function.
 // This implements part of github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
 func (getAndPostHandler *GetAndPostHandler) HandlePost(
-	httpBodyDecoder *json.Decoder, relevantSegments []string) (interface{}, int) {
+	httpBodyDecoder *json.Decoder,
+	relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 1 {
 		return "Not enough segments in URI to determine what to do", http.StatusBadRequest
 	}
@@ -103,9 +105,9 @@ func (getAndPostHandler *GetAndPostHandler) handleNewPlayer(
 	return getAndPostHandler.writeRegisteredPlayers()
 }
 
-// handleUpdatePlayer updates the player defined by the JSON of the request's body, taking the "Name"
-// attribute as the key, and returns the updated list as writeRegisteredPlayers would. Attributes
-// which are present are updated, those which are missing remain unchanged.
+// handleUpdatePlayer updates the player defined by the JSON of the request's body, taking
+// the "Name" attribute as the key, and returns the updated list as writeRegisteredPlayers
+// would. Attributes which are present are updated, those which are missing remain unchanged.
 func (getAndPostHandler *GetAndPostHandler) handleUpdatePlayer(
 	httpBodyDecoder *json.Decoder) (interface{}, int) {
 	var playerUpdate endpoint.PlayerState

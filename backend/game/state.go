@@ -9,8 +9,13 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
-// State defines the interface for structs which should encapsulate the state of a single game.
-type State interface {
+// ReadonlyState defines the interface for structs which should provide read-only information
+// which can completely describe the state of a game.
+type ReadonlyState interface {
+}
+
+// ReadAndWriteState defines the interface for structs which should encapsulate the state of a single game.
+type ReadAndWriteState interface {
 	// Identifier should return the identifier of the game for interaction between frontend
 	// and backend.
 	Identifier() string
@@ -23,7 +28,7 @@ type State interface {
 
 	// Players should return the list of players participating in the game, in the order in
 	// which they have their first turns.
-	Players() []player.ReadOnly
+	Players() []player.ReadonlyState
 
 	// Turn should given the number of the turn (with thfirst turn being 1 rather than 0) which
 	// is the current turn in the game (assuming 1 turn per player, not 1 turn being when all
@@ -39,7 +44,7 @@ type State interface {
 	HasPlayerAsParticipant(playerIdentifier string) bool
 
 	// PerformAction should perform the given action for its player or return an error.
-	PerformAction(actingPlayer player.ReadOnly, playerAction endpoint.PlayerAction) error
+	PerformAction(actingPlayer player.ReadonlyState, playerAction endpoint.PlayerAction) error
 
 	// ChatLog should return the chat log of the game at the current moment.
 	ChatLog() *chat.Log
@@ -59,7 +64,7 @@ type State interface {
 
 // ForPlayer writes the relevant parts of the state of the game as should be known by the given
 // player into the relevant JSON object for the frontend.
-func ForPlayer(state State, playerIdentifier string) endpoint.GameView {
+func ForPlayer(state ReadAndWriteState, playerIdentifier string) endpoint.GameView {
 	// The remaining attributes of the endpoint.GameView require some calculation based on the
 	// game's ruleset.
 	return endpoint.GameView{
@@ -85,23 +90,23 @@ type Collection interface {
 	// game with the given name already exists, or if the definition includes invalid
 	// players.
 	Add(gameDefinition endpoint.GameDefinition,
-		playerCollection player.Collection) (string, error)
+		playerCollection player.StateCollection) (string, error)
 
 	// Get should return the State corresponding to the given game identifier if it
 	// exists already (or else nil) along with whether the State exists, analogously to
 	// a standard Golang map.
-	Get(gameIdentifier string) (State, bool)
+	Get(gameIdentifier string) (ReadAndWriteState, bool)
 
 	// All should return a slice of all the State instances in the collection which
 	// have the given player as a participant. The order is not mandated, and may even
 	// change with repeated calls to the same unchanged Collection (analogously to the
 	// entry set of a standard Golang map, for example), though of course an
 	// implementation may order the slice consistently.
-	All(playerIdentifier string) []State
+	All(playerIdentifier string) []ReadAndWriteState
 }
 
 // ByCreationTime implements sort interface for []State based on the creationTime field.
-type ByCreationTime []State
+type ByCreationTime []ReadAndWriteState
 
 // Len implements part of the sort interface for ByCreationTime.
 func (byCreationTime ByCreationTime) Len() int {

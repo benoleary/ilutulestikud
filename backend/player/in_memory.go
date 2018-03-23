@@ -97,7 +97,7 @@ func (inMemoryCollection *InMemoryCollection) UpdateFromPresentAttributes(
 // Get returns the ReadOnly corresponding to the given player identifier if it exists
 // already along with an error which is nil if there was no problem. If the player does
 // not exist, a non-nil error is returned along with a nil ReadOnly.
-func (inMemoryCollection *InMemoryCollection) Get(playerIdentifier string) (ReadOnly, error) {
+func (inMemoryCollection *InMemoryCollection) Get(playerIdentifier string) (ReadonlyState, error) {
 	playerState, playerExists := inMemoryCollection.playerStates[playerIdentifier]
 	if !playerExists {
 		return nil, fmt.Errorf(
@@ -110,8 +110,8 @@ func (inMemoryCollection *InMemoryCollection) Get(playerIdentifier string) (Read
 
 // All returns a slice of all the ReadOnly instances in the collection, ordered in the
 // random way the iteration over the entries of a Golang map normally is.
-func (inMemoryCollection *InMemoryCollection) All() []ReadOnly {
-	playerList := make([]ReadOnly, 0, len(inMemoryCollection.playerStates))
+func (inMemoryCollection *InMemoryCollection) All() []ReadonlyState {
+	playerList := make([]ReadonlyState, 0, len(inMemoryCollection.playerStates))
 	for _, playerState := range inMemoryCollection.playerStates {
 		playerList = append(playerList, playerState)
 	}

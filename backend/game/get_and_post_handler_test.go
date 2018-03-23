@@ -14,7 +14,7 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
-const breaksBase64 = "\\/\\\\\\?" // should unescape to \/\\\?
+const breaksBase64 = "\\/\\\\\\?" // This should unescape to \/\\\? in the tests.
 
 type nameToName struct {
 }
@@ -34,14 +34,14 @@ func testPlayerIdentifier(playerIndex int) string {
 }
 
 func setUpHandlerAndRequirements(registeredPlayers []string) (
-	endpoint.NameToIdentifier, player.Collection, game.Collection, *game.GetAndPostHandler) {
+	endpoint.NameToIdentifier, player.StateCollection, game.Collection, *game.GetAndPostHandler) {
 	return setUpHandlerAndRequirementsWithIdentifier(testNameToIdentifier(), registeredPlayers)
 }
 
 func setUpHandlerAndRequirementsWithIdentifier(
 	nameToIdentifier endpoint.NameToIdentifier,
 	registeredPlayers []string) (
-	endpoint.NameToIdentifier, player.Collection, game.Collection, *game.GetAndPostHandler) {
+	endpoint.NameToIdentifier, player.StateCollection, game.Collection, *game.GetAndPostHandler) {
 	playerCollection :=
 		player.NewInMemoryCollection(
 			nameToIdentifier,
