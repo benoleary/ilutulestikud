@@ -1,6 +1,7 @@
 package game
 
 import (
+	"fmt"
 	"sort"
 	"time"
 
@@ -12,10 +13,6 @@ import (
 // ReadonlyState defines the interface for structs which should provide read-only information
 // which can completely describe the state of a game.
 type ReadonlyState interface {
-}
-
-// ReadAndWriteState defines the interface for structs which should encapsulate the state of a single game.
-type ReadAndWriteState interface {
 	// Identifier should return the identifier of the game for interaction between frontend
 	// and backend.
 	Identifier() string
@@ -43,9 +40,6 @@ type ReadAndWriteState interface {
 	// the identifier of any of the game's participating players.
 	HasPlayerAsParticipant(playerIdentifier string) bool
 
-	// PerformAction should perform the given action for its player or return an error.
-	PerformAction(actingPlayer player.ReadonlyState, playerAction endpoint.PlayerAction) error
-
 	// ChatLog should return the chat log of the game at the current moment.
 	ChatLog() *chat.Log
 
@@ -62,18 +56,27 @@ type ReadAndWriteState interface {
 	NumberOfMistakesMade() int
 }
 
+// readAndWriteState defines the interface for structs which should encapsulate the state of a single game.
+type readAndWriteState interface {
+	// Read should return the state as a read-only object for the purposes of reading properties.
+	read() ReadonlyState
+
+	// performAction should perform the given action for its player or return an error.
+	performAction(actingPlayer player.ReadonlyState, playerAction endpoint.PlayerAction) error
+}
+
 // ForPlayer writes the relevant parts of the state of the game as should be known by the given
 // player into the relevant JSON object for the frontend.
-func ForPlayer(state ReadAndWriteState, playerIdentifier string) endpoint.GameView {
+func ForPlayer(readonlyState ReadonlyState, playerIdentifier string) endpoint.GameView {
 	// The remaining attributes of the endpoint.GameView require some calculation based on the
 	// game's ruleset.
 	return endpoint.GameView{
-		ChatLog:                      state.ChatLog().ForFrontend(),
-		ScoreSoFar:                   state.Score(),
-		NumberOfReadyHints:           state.NumberOfReadyHints(),
-		NumberOfSpentHints:           MaximumNumberOfHints - state.NumberOfReadyHints(),
-		NumberOfMistakesStillAllowed: MaximumNumberOfMistakesAllowed - state.NumberOfMistakesMade(),
-		NumberOfMistakesMade:         state.NumberOfMistakesMade(),
+		ChatLog:                      readonlyState.ChatLog().ForFrontend(),
+		ScoreSoFar:                   readonlyState.Score(),
+		NumberOfReadyHints:           readonlyState.NumberOfReadyHints(),
+		NumberOfSpentHints:           MaximumNumberOfHints - readonlyState.NumberOfReadyHints(),
+		NumberOfMistakesStillAllowed: MaximumNumberOfMistakesAllowed - readonlyState.NumberOfMistakesMade(),
+		NumberOfMistakesMade:         readonlyState.NumberOfMistakesMade(),
 	}
 }
 
@@ -81,32 +84,78 @@ func ForPlayer(state ReadAndWriteState, playerIdentifier string) endpoint.GameVi
 // implementing the State interface encapsulating the state information for individual
 // games, and for tracking the objects by their identifier, which is the game name.
 type Collection interface {
-	// Add should add an element to the collection which is a new object implementing
-	// the State interface with information given by the endpoint.GameDefinition object,
-	// and return the identifier of the newly-created game, along with an error which
-	// of course should be nil if there was no problem.
+	// AddGame should add an element to the collection which is a new object implementing
+	// the readAndWriteState interface with information given by the endpoint.GameDefinition
+	// object, and return the identifier of the newly-created game, along with an error
+	// which of course should be nil if there was no problem.
 	// The given player collection should be used as the source of player states to be
 	// matched to names given in the game definition. It should return an error if a
 	// game with the given name already exists, or if the definition includes invalid
 	// players.
-	Add(gameDefinition endpoint.GameDefinition,
+	AddGame(gameDefinition endpoint.GameDefinition,
 		playerCollection player.StateCollection) (string, error)
 
-	// Get should return the State corresponding to the given game identifier if it
-	// exists already (or else nil) along with whether the State exists, analogously to
-	// a standard Golang map.
-	Get(gameIdentifier string) (ReadAndWriteState, bool)
+	// readAllWithPlayer should return a slice of all the games in the collection which
+	// have the given player as a participant, where each game is given as a ReadonlyState
+	// instance.
+	// The order is not mandated, and may even change with repeated calls to the same
+	// unchanged Collection (analogously to the entry set of a standard Golang map, for
+	// example), though of course an implementation may order the slice consistently.
+	readAllWithPlayer(playerIdentifier string) []ReadonlyState
 
-	// All should return a slice of all the State instances in the collection which
-	// have the given player as a participant. The order is not mandated, and may even
-	// change with repeated calls to the same unchanged Collection (analogously to the
-	// entry set of a standard Golang map, for example), though of course an
-	// implementation may order the slice consistently.
-	All(playerIdentifier string) []ReadAndWriteState
+	// readAndWriteGame should return the readAndWriteState corresponding to the given game
+	// identifier if it exists already (or else nil) along with whether the game exists,
+	// analogously to a standard Golang map.
+	readAndWriteGame(gameIdentifier string) (readAndWriteState, bool)
+}
+
+// ReadState returns the ReadonlyState corresponding to the given game identifier if
+// it exists in the given collection already (or else nil) along with whether the game
+// exists, analogously to a standard Golang map.
+func ReadState(gameCollection Collection, gameIdentifier string) (ReadonlyState, bool) {
+	gameState, gameExists := gameCollection.readAndWriteGame(gameIdentifier)
+
+	if gameState == nil {
+		return nil, false
+	}
+
+	return gameState.read(), gameExists
+}
+
+// PerformAction finds the given game and performs the given action for its player,
+// or returns an error.
+func PerformAction(
+	gameCollection Collection,
+	playerCollection player.StateCollection,
+	playerAction endpoint.PlayerAction) error {
+	actingPlayer, playeridentificationError :=
+		playerCollection.Get(playerAction.PlayerIdentifier)
+
+	if playeridentificationError != nil {
+		return playeridentificationError
+	}
+
+	gameState, isFound := gameCollection.readAndWriteGame(playerAction.GameIdentifier)
+
+	if !isFound {
+		return fmt.Errorf(
+			"Game %v does not exist, cannot perform action from player %v",
+			playerAction.GameIdentifier,
+			playerAction.PlayerIdentifier)
+	}
+
+	if !gameState.read().HasPlayerAsParticipant(playerAction.PlayerIdentifier) {
+		return fmt.Errorf(
+			"Player %v is not a participant in game %v",
+			playerAction.PlayerIdentifier,
+			playerAction.GameIdentifier)
+	}
+
+	return gameState.performAction(actingPlayer, playerAction)
 }
 
 // ByCreationTime implements sort interface for []State based on the creationTime field.
-type ByCreationTime []ReadAndWriteState
+type ByCreationTime []ReadonlyState
 
 // Len implements part of the sort interface for ByCreationTime.
 func (byCreationTime ByCreationTime) Len() int {
@@ -128,7 +177,7 @@ func (byCreationTime ByCreationTime) Less(firstIndex int, secondIndex int) bool 
 // TurnSummariesForFrontend writes the turn summary information for each game which has
 // the given player into the relevant JSON object for the frontend.
 func TurnSummariesForFrontend(collection Collection, playerIdentifier string) endpoint.TurnSummaryList {
-	gameList := collection.All(playerIdentifier)
+	gameList := collection.readAllWithPlayer(playerIdentifier)
 
 	sort.Sort(ByCreationTime(gameList))
 

@@ -103,7 +103,7 @@ func (getAndPostHandler *GetAndPostHandler) handleNewGame(
 	}
 
 	gameIdentifier, addError :=
-		getAndPostHandler.gameCollection.Add(gameDefinition, getAndPostHandler.playerCollection)
+		getAndPostHandler.gameCollection.AddGame(gameDefinition, getAndPostHandler.playerCollection)
 
 	if addError != nil {
 		return addError, http.StatusBadRequest
@@ -130,7 +130,7 @@ func (getAndPostHandler *GetAndPostHandler) writeGameForPlayer(
 	gameIdentifier := relevantSegments[0]
 	playerIdentifier := relevantSegments[1]
 
-	gameState, isFound := getAndPostHandler.gameCollection.Get(gameIdentifier)
+	gameState, isFound := ReadState(getAndPostHandler.gameCollection, gameIdentifier)
 
 	if !isFound {
 		errorMessage :=
@@ -159,29 +159,11 @@ func (getAndPostHandler *GetAndPostHandler) handlePlayerAction(
 		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
 	}
 
-	gameState, isFound := getAndPostHandler.gameCollection.Get(playerAction.GameIdentifier)
-
-	if !isFound {
-		errorMessage :=
-			"Game " + playerAction.GameIdentifier +
-				" does not exist, cannot perform action from player " + playerAction.PlayerIdentifier
-		return errorMessage, http.StatusBadRequest
-	}
-
-	actingPlayer, identificationError := getAndPostHandler.playerCollection.Get(playerAction.PlayerIdentifier)
-
-	if identificationError != nil {
-		return identificationError, http.StatusBadRequest
-	}
-
-	if !gameState.HasPlayerAsParticipant(playerAction.PlayerIdentifier) {
-		errorMessage :=
-			"Player " + playerAction.PlayerIdentifier +
-				" is not a participant in game " + playerAction.GameIdentifier
-		return errorMessage, http.StatusBadRequest
-	}
-
-	actionError := gameState.PerformAction(actingPlayer, playerAction)
+	actionError :=
+		PerformAction(
+			getAndPostHandler.gameCollection,
+			getAndPostHandler.playerCollection,
+			playerAction)
 
 	if actionError != nil {
 		return actionError, http.StatusBadRequest

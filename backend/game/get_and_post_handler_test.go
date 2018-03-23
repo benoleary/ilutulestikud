@@ -503,7 +503,7 @@ func TestRegisterAndRetrieveNewGame(unitTest *testing.T) {
 
 			// We fetch the game directly.
 			gameIdentifier := nameToIdentifier.Identifier(testCase.arguments.gameName)
-			actualGame, gameExists := gameCollection.Get(gameIdentifier)
+			actualGame, gameExists := game.ReadState(gameCollection, gameIdentifier)
 			if !gameExists {
 				unitTest.Fatalf(
 					"POST create-new-game did not create a game that can be accessed internally with identifier %v",

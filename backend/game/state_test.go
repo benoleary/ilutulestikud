@@ -15,7 +15,7 @@ func prepareImplementations(
 	unitTest *testing.T,
 	gameName string,
 	rulesetIdentifier int,
-	playerNames []string) ([]game.ReadAndWriteState, game.Ruleset) {
+	playerNames []string) ([]game.ReadonlyState, game.Ruleset) {
 	gameRuleset, identifierError := game.RulesetFromIdentifier(rulesetIdentifier)
 
 	if identifierError != nil {
@@ -54,10 +54,10 @@ func prepareImplementations(
 		PlayerIdentifiers: playerIdentifiers,
 	}
 
-	gameStates := make([]game.ReadAndWriteState, len(gameCollections))
+	gameStates := make([]game.ReadonlyState, len(gameCollections))
 
 	for collectionIndex, gameCollection := range gameCollections {
-		_, addError := gameCollection.Add(gameDefinition, playerCollection)
+		gameIdentifier, addError := gameCollection.AddGame(gameDefinition, playerCollection)
 
 		if addError != nil {
 			unitTest.Fatalf(
@@ -66,20 +66,16 @@ func prepareImplementations(
 				addError)
 		}
 
-		// We find the game identifier by looking for all the games for the first
-		// player of the game definition, as there should only be one game in the
-		// collection, and it should include this player.
-		playerIdentifier := gameDefinition.PlayerIdentifiers[0]
-		allGames := gameCollection.All(playerIdentifier)
-
-		if (allGames == nil) || (len(allGames) != 1) {
+		addedGame, gameExists := game.ReadState(gameCollection, gameIdentifier)
+		if !gameExists {
 			unitTest.Fatalf(
-				"Error when trying to add find identifier for game for collection index %v: allGames = %v",
+				"Error when trying to find identifier %v for game for collection index %v: gameCollection = %v",
+				gameIdentifier,
 				collectionIndex,
-				allGames)
+				gameCollection)
 		}
 
-		gameStates[collectionIndex] = allGames[0]
+		gameStates[collectionIndex] = addedGame
 	}
 
 	return gameStates, gameRuleset
@@ -103,7 +99,7 @@ func TestOrderByCreationTime(unitTest *testing.T) {
 		playerNames)
 
 	for stateIndex := 0; stateIndex < len(lateGameStates); stateIndex++ {
-		gameList := game.ByCreationTime([]game.ReadAndWriteState{
+		gameList := game.ByCreationTime([]game.ReadonlyState{
 			lateGameStates[stateIndex],
 			earlyGameStates[stateIndex],
 		})
