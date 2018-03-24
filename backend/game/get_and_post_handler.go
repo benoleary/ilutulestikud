@@ -14,13 +14,13 @@ import (
 // It implements github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
 type GetAndPostHandler struct {
 	playerCollection player.StateCollection
-	gameCollection   Collection
+	gameCollection   StateCollection
 }
 
 // NewGetAndPostHandler constructs a Handler object around the given game.Collection object.
 func NewGetAndPostHandler(
 	playerCollection player.StateCollection,
-	gameCollection Collection) *GetAndPostHandler {
+	gameCollection StateCollection) *GetAndPostHandler {
 	return &GetAndPostHandler{
 		playerCollection: playerCollection,
 		gameCollection:   gameCollection,

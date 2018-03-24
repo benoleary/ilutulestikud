@@ -34,14 +34,14 @@ func testPlayerIdentifier(playerIndex int) string {
 }
 
 func setUpHandlerAndRequirements(registeredPlayers []string) (
-	endpoint.NameToIdentifier, player.StateCollection, game.Collection, *game.GetAndPostHandler) {
+	endpoint.NameToIdentifier, player.StateCollection, game.StateCollection, *game.GetAndPostHandler) {
 	return setUpHandlerAndRequirementsWithIdentifier(testNameToIdentifier(), registeredPlayers)
 }
 
 func setUpHandlerAndRequirementsWithIdentifier(
 	nameToIdentifier endpoint.NameToIdentifier,
 	registeredPlayers []string) (
-	endpoint.NameToIdentifier, player.StateCollection, game.Collection, *game.GetAndPostHandler) {
+	endpoint.NameToIdentifier, player.StateCollection, game.StateCollection, *game.GetAndPostHandler) {
 	playerCollection :=
 		player.NewInMemoryCollection(
 			nameToIdentifier,
@@ -1275,7 +1275,11 @@ func TestThreePlayersChatting(unitTest *testing.T) {
 		playerIdentifier := nameToIdentifier.Identifier(chatMessage.PlayerName)
 
 		playerUpdateError :=
-			playerCollection.UpdateFromPresentAttributes(endpoint.PlayerState{Color: chatMessage.ChatColor})
+			playerCollection.UpdateFromPresentAttributes(
+				endpoint.PlayerState{
+					Identifier: playerIdentifier,
+					Color:      chatMessage.ChatColor,
+				})
 		if playerUpdateError != nil {
 			unitTest.Fatalf(
 				"Internal update produced error: %v).",

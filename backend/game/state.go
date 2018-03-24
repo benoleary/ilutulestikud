@@ -80,10 +80,11 @@ func ForPlayer(readonlyState ReadonlyState, playerIdentifier string) endpoint.Ga
 	}
 }
 
-// Collection defines the interface for structs which should be able to create objects
-// implementing the State interface encapsulating the state information for individual
-// games, and for tracking the objects by their identifier, which is the game name.
-type Collection interface {
+// StateCollection defines the interface for structs which should be able to create objects
+// implementing the readAndWriteState interface encapsulating the state information for
+// individual games, and for tracking the objects by their identifier, which is an encoded
+// form of the game name.
+type StateCollection interface {
 	// AddGame should add an element to the collection which is a new object implementing
 	// the readAndWriteState interface with information given by the endpoint.GameDefinition
 	// object, and return the identifier of the newly-created game, along with an error
@@ -112,7 +113,7 @@ type Collection interface {
 // ReadState returns the ReadonlyState corresponding to the given game identifier if
 // it exists in the given collection already (or else nil) along with whether the game
 // exists, analogously to a standard Golang map.
-func ReadState(gameCollection Collection, gameIdentifier string) (ReadonlyState, bool) {
+func ReadState(gameCollection StateCollection, gameIdentifier string) (ReadonlyState, bool) {
 	gameState, gameExists := gameCollection.readAndWriteGame(gameIdentifier)
 
 	if gameState == nil {
@@ -125,8 +126,7 @@ func ReadState(gameCollection Collection, gameIdentifier string) (ReadonlyState,
 // PerformAction finds the given game and performs the given action for its player,
 // or returns an error.
 func PerformAction(
-	gameCollection Collection,
-	playerCollection player.StateCollection,
+	gameCollection StateCollection, playerCollection player.StateCollection,
 	playerAction endpoint.PlayerAction) error {
 	actingPlayer, playeridentificationError :=
 		playerCollection.Get(playerAction.PlayerIdentifier)
@@ -176,7 +176,7 @@ func (byCreationTime ByCreationTime) Less(firstIndex int, secondIndex int) bool 
 
 // TurnSummariesForFrontend writes the turn summary information for each game which has
 // the given player into the relevant JSON object for the frontend.
-func TurnSummariesForFrontend(collection Collection, playerIdentifier string) endpoint.TurnSummaryList {
+func TurnSummariesForFrontend(collection StateCollection, playerIdentifier string) endpoint.TurnSummaryList {
 	gameList := collection.readAllWithPlayer(playerIdentifier)
 
 	sort.Sort(ByCreationTime(gameList))
