@@ -2,6 +2,7 @@ package game
 
 import (
 	"fmt"
+	"math/rand"
 	"sort"
 	"time"
 
@@ -56,9 +57,11 @@ type ReadonlyState interface {
 	NumberOfMistakesMade() int
 }
 
-// readAndWriteState defines the interface for structs which should encapsulate the state of a single game.
+// readAndWriteState defines the interface for structs which should encapsulate the state of
+// a single game.
 type readAndWriteState interface {
-	// Read should return the state as a read-only object for the purposes of reading properties.
+	// Read should return the state as a read-only object for the purposes of reading
+	// properties.
 	read() ReadonlyState
 
 	// performAction should perform the given action for its player or return an error.
@@ -85,16 +88,24 @@ func ForPlayer(readonlyState ReadonlyState, playerIdentifier string) endpoint.Ga
 // individual games, and for tracking the objects by their identifier, which is an encoded
 // form of the game name.
 type StateCollection interface {
-	// AddGame should add an element to the collection which is a new object implementing
-	// the readAndWriteState interface with information given by the endpoint.GameDefinition
-	// object, and return the identifier of the newly-created game, along with an error
-	// which of course should be nil if there was no problem.
-	// The given player collection should be used as the source of player states to be
-	// matched to names given in the game definition. It should return an error if a
-	// game with the given name already exists, or if the definition includes invalid
-	// players.
-	AddGame(gameDefinition endpoint.GameDefinition,
-		playerCollection player.StateCollection) (string, error)
+	// randomSeed should provide an int64 which can be used as a seed for the
+	// rand.NewSource(...) function.
+	randomSeed() int64
+
+	// addGame should add an element to the collection which is a new object implementing
+	// the readAndWriteState interface from the given arguments, and return the identifier
+	// of the newly-created game, along with an error which of course should be nil if
+	// there was no problem. It should return an error if a game with the given name
+	// already exists.
+	addGame(
+		gameName string,
+		gameRuleset Ruleset,
+		playerStates []player.ReadonlyState,
+		initialShuffle []Card) (string, error)
+
+	// setUpFromInitialShuffle should set the initial deck to be as given, and set up the
+	// initial hands, played cards area, and discard pile accordingly.
+	setUpFromInitialShuffle(initialShuffle []Card)
 
 	// readAllWithPlayer should return a slice of all the games in the collection which
 	// have the given player as a participant, where each game is given as a ReadonlyState
@@ -154,7 +165,8 @@ func PerformAction(
 	return gameState.performAction(actingPlayer, playerAction)
 }
 
-// ByCreationTime implements sort interface for []State based on the creationTime field.
+// ByCreationTime implements sort interface for []ReadonlyState based on the return
+// from its CreationTime().
 type ByCreationTime []ReadonlyState
 
 // Len implements part of the sort interface for ByCreationTime.
@@ -174,10 +186,110 @@ func (byCreationTime ByCreationTime) Less(firstIndex int, secondIndex int) bool 
 		byCreationTime[secondIndex].CreationTime())
 }
 
+// AddNew prepares a new shuffled deck using a random seed taken from the given
+// collection, and uses it to create a new game in the given collection from the
+// given definition. It returns an error if a game with the given name already
+// exists, or if the definition includes invalid players.
+func AddNew(
+	gameDefinition endpoint.GameDefinition,
+	gameCollection StateCollection,
+	playerCollection player.StateCollection) (string, error) {
+	if gameCollection == nil {
+		return "Error", fmt.Errorf("Cannot create a game in a nil collection")
+	}
+
+	return AddNewWithGivenRandomSeed(
+		gameDefinition,
+		gameCollection,
+		playerCollection,
+		gameCollection.randomSeed())
+}
+
+// AddNewWithGivenRandomSeed prepares a new shuffled deck using the given seed for
+// a random number generator, and uses it to create a new game in the given collection
+// from the given definition. It returns an error if a game with the given name already
+// exists, or if the definition includes invalid players.
+func AddNewWithGivenRandomSeed(
+	gameDefinition endpoint.GameDefinition,
+	gameCollection StateCollection,
+	playerCollection player.StateCollection,
+	randomSeed int64) (string, error) {
+	if gameDefinition.GameName == "" {
+		return "", fmt.Errorf("Game must have a name")
+	}
+
+	gameRuleset, unknownRulesetError := RulesetFromIdentifier(gameDefinition.RulesetIdentifier)
+	if unknownRulesetError != nil {
+		return "", fmt.Errorf(
+			"Problem identifying ruleset from identifier %v; error is: %v",
+			gameDefinition.RulesetIdentifier,
+			unknownRulesetError)
+	}
+
+	// A nil slice still has a length of 0, so this is OK.
+	numberOfPlayers := len(gameDefinition.PlayerIdentifiers)
+
+	if numberOfPlayers < gameRuleset.MinimumNumberOfPlayers() {
+		return "", fmt.Errorf(
+			"Game must have at least %v players",
+			gameRuleset.MinimumNumberOfPlayers())
+	}
+
+	if numberOfPlayers > gameRuleset.MaximumNumberOfPlayers() {
+		return "", fmt.Errorf(
+			"Game must have no more than %v players",
+			gameRuleset.MaximumNumberOfPlayers())
+	}
+
+	playerIdentifiers := make(map[string]bool, 0)
+
+	playerStates := make([]player.ReadonlyState, numberOfPlayers)
+	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
+		playerIdentifier := gameDefinition.PlayerIdentifiers[playerIndex]
+		playerState, identificationError := playerCollection.Get(playerIdentifier)
+
+		if identificationError != nil {
+			return "", identificationError
+		}
+
+		if playerIdentifiers[playerIdentifier] {
+			return "", fmt.Errorf(
+				"Player with identifier %v appears more than once in the list of players",
+				playerIdentifier)
+		}
+
+		playerIdentifiers[playerIdentifier] = true
+
+		playerStates[playerIndex] = playerState
+	}
+
+	randomNumberGenerator := rand.New(rand.NewSource(randomSeed))
+
+	shuffledDeck := gameRuleset.FullCardset()
+
+	numberOfCards := len(shuffledDeck)
+
+	// This is probably excessive.
+	numberOfShuffles := 8 * numberOfCards
+
+	for shuffleCount := 0; shuffleCount < numberOfShuffles; shuffleCount++ {
+		firstShuffleIndex := randomNumberGenerator.Intn(numberOfCards)
+		secondShuffleIndex := randomNumberGenerator.Intn(numberOfCards)
+		shuffledDeck[firstShuffleIndex], shuffledDeck[secondShuffleIndex] =
+			shuffledDeck[secondShuffleIndex], shuffledDeck[firstShuffleIndex]
+	}
+
+	return gameCollection.addGame(
+		gameDefinition.GameName,
+		gameRuleset,
+		playerStates,
+		shuffledDeck)
+}
+
 // TurnSummariesForFrontend writes the turn summary information for each game which has
 // the given player into the relevant JSON object for the frontend.
-func TurnSummariesForFrontend(collection StateCollection, playerIdentifier string) endpoint.TurnSummaryList {
-	gameList := collection.readAllWithPlayer(playerIdentifier)
+func TurnSummariesForFrontend(gameCollection StateCollection, playerIdentifier string) endpoint.TurnSummaryList {
+	gameList := gameCollection.readAllWithPlayer(playerIdentifier)
 
 	sort.Sort(ByCreationTime(gameList))
 

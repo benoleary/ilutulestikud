@@ -103,7 +103,10 @@ func (getAndPostHandler *GetAndPostHandler) handleNewGame(
 	}
 
 	gameIdentifier, addError :=
-		getAndPostHandler.gameCollection.AddGame(gameDefinition, getAndPostHandler.playerCollection)
+		AddNew(
+			gameDefinition,
+			getAndPostHandler.gameCollection,
+			getAndPostHandler.playerCollection)
 
 	if addError != nil {
 		return addError, http.StatusBadRequest
