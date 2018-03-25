@@ -103,10 +103,6 @@ type StateCollection interface {
 		playerStates []player.ReadonlyState,
 		initialShuffle []Card) (string, error)
 
-	// setUpFromInitialShuffle should set the initial deck to be as given, and set up the
-	// initial hands, played cards area, and discard pile accordingly.
-	setUpFromInitialShuffle(initialShuffle []Card)
-
 	// readAllWithPlayer should return a slice of all the games in the collection which
 	// have the given player as a participant, where each game is given as a ReadonlyState
 	// instance.

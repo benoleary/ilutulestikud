@@ -57,7 +57,8 @@ func prepareImplementations(
 	gameStates := make([]game.ReadonlyState, len(gameCollections))
 
 	for collectionIndex, gameCollection := range gameCollections {
-		gameIdentifier, addError := gameCollection.AddGame(gameDefinition, playerCollection)
+		gameIdentifier, addError :=
+			game.AddNew(gameDefinition, gameCollection, playerCollection)
 
 		if addError != nil {
 			unitTest.Fatalf(

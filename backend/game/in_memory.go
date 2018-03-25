@@ -14,96 +14,65 @@ import (
 // InMemoryCollection stores inMemoryState objects as State objects. The games are
 // mapped to by their identifiers, as are the players.
 type InMemoryCollection struct {
-	mutualExclusion  sync.Mutex
-	gameStates       map[string]readAndWriteState
-	nameToIdentifier endpoint.NameToIdentifier
-	gamesWithPlayers map[string][]ReadonlyState
+	mutualExclusion       sync.Mutex
+	randomNumberGenerator *rand.Rand
+	gameStates            map[string]readAndWriteState
+	nameToIdentifier      endpoint.NameToIdentifier
+	gamesWithPlayers      map[string][]ReadonlyState
 }
 
 // NewInMemoryCollection creates a Collection around a map of games.
 func NewInMemoryCollection(nameToIdentifier endpoint.NameToIdentifier) *InMemoryCollection {
 	return &InMemoryCollection{
-		mutualExclusion:  sync.Mutex{},
-		gameStates:       make(map[string]readAndWriteState, 1),
-		nameToIdentifier: nameToIdentifier,
-		gamesWithPlayers: make(map[string][]ReadonlyState, 0),
+		mutualExclusion:       sync.Mutex{},
+		randomNumberGenerator: rand.New(rand.NewSource(time.Now().Unix())),
+		gameStates:            make(map[string]readAndWriteState, 1),
+		nameToIdentifier:      nameToIdentifier,
+		gamesWithPlayers:      make(map[string][]ReadonlyState, 0),
 	}
 }
 
-// AddGame adds an element to the collection which is a new object implementing the
-// readAndWriteState interface with information given by the endpoint.GameDefinition
-// object.
-func (inMemoryCollection *InMemoryCollection) AddGame(
-	gameDefinition endpoint.GameDefinition,
-	playerCollection player.StateCollection) (string, error) {
-	if gameDefinition.GameName == "" {
+// randomSeed provides an int64 which can be used as a seed for the
+// rand.NewSource(...) function.
+func (inMemoryCollection *InMemoryCollection) randomSeed() int64 {
+	return inMemoryCollection.randomNumberGenerator.Int63()
+}
+
+// addGame adds an element to the collection which is a new object implementing
+// the readAndWriteState interface from the given arguments, and returns the
+// identifier of the newly-created game, along with an error which of course is
+// nil if there was no problem. It returns an error if a game with the given name
+// already exists.
+func (inMemoryCollection *InMemoryCollection) addGame(
+	gameName string,
+	gameRuleset Ruleset,
+	playerStates []player.ReadonlyState,
+	initialShuffle []Card) (string, error) {
+	if gameName == "" {
 		return "", fmt.Errorf("Game must have a name")
 	}
 
-	gameIdentifier := inMemoryCollection.nameToIdentifier.Identifier(gameDefinition.GameName)
+	gameIdentifier := inMemoryCollection.nameToIdentifier.Identifier(gameName)
 	_, gameExists := inMemoryCollection.gameStates[gameIdentifier]
 
 	if gameExists {
-		return "", fmt.Errorf("Game %v already exists", gameDefinition.GameName)
-	}
-
-	gameRuleset, unknownRulesetError := RulesetFromIdentifier(gameDefinition.RulesetIdentifier)
-	if unknownRulesetError != nil {
-		return "", fmt.Errorf(
-			"Problem identifying ruleset from identifier %v; error is: %v",
-			gameDefinition.RulesetIdentifier,
-			unknownRulesetError)
-	}
-
-	// A nil slice still has a length of 0, so this is OK.
-	numberOfPlayers := len(gameDefinition.PlayerIdentifiers)
-
-	if numberOfPlayers < gameRuleset.MinimumNumberOfPlayers() {
-		return "", fmt.Errorf(
-			"Game must have at least %v players",
-			gameRuleset.MinimumNumberOfPlayers())
-	}
-
-	if numberOfPlayers > gameRuleset.MaximumNumberOfPlayers() {
-		return "", fmt.Errorf(
-			"Game must have no more than %v players",
-			gameRuleset.MaximumNumberOfPlayers())
-	}
-
-	playerIdentifiers := make(map[string]bool, 0)
-
-	playerStates := make([]player.ReadonlyState, numberOfPlayers)
-	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
-		playerIdentifier := gameDefinition.PlayerIdentifiers[playerIndex]
-		playerState, identificationError := playerCollection.Get(playerIdentifier)
-
-		if identificationError != nil {
-			return "", identificationError
-		}
-
-		if playerIdentifiers[playerIdentifier] {
-			return "", fmt.Errorf(
-				"Player with identifier %v appears more than once in the list of players",
-				playerIdentifier)
-		}
-
-		playerIdentifiers[playerIdentifier] = true
-
-		playerStates[playerIndex] = playerState
+		return "", fmt.Errorf("Game %v already exists", gameName)
 	}
 
 	newGame :=
 		newInMemoryState(
 			gameIdentifier,
-			gameDefinition.GameName,
+			gameName,
 			gameRuleset,
-			playerStates)
+			playerStates,
+			initialShuffle)
 
 	inMemoryCollection.mutualExclusion.Lock()
 
 	inMemoryCollection.gameStates[gameIdentifier] = newGame
 
-	for _, playerIdentifier := range gameDefinition.PlayerIdentifiers {
+	for _, playerState := range playerStates {
+		playerIdentifier := playerState.Identifier()
 		existingGamesWithPlayer := inMemoryCollection.gamesWithPlayers[playerIdentifier]
 		inMemoryCollection.gamesWithPlayers[playerIdentifier] =
 			append(existingGamesWithPlayer, newGame.read())
@@ -146,45 +115,15 @@ type inMemoryState struct {
 	undrawnDeck          []Card
 }
 
-// newInMemoryState creates a new game given the required information.
+// newInMemoryState creates a new game given the required information,
+// using the given seed for the random number generator used to shuffle the deck
+// initially.
 func newInMemoryState(
 	gameIdentifier string,
 	gameName string,
 	gameRuleset Ruleset,
-	playerStates []player.ReadonlyState) readAndWriteState {
-	return newInMemoryStateWithGivenSeed(
-		gameIdentifier,
-		gameName,
-		gameRuleset,
-		playerStates,
-		time.Now().UnixNano())
-}
-
-// newInMemoryStateWithGivenSeed creates a new game given the required information,
-// using the given seed for the random number generator used to shuffle the deck
-// initially.
-func newInMemoryStateWithGivenSeed(
-	gameIdentifier string,
-	gameName string,
-	gameRuleset Ruleset,
 	playerStates []player.ReadonlyState,
-	randomNumberSeed int64) readAndWriteState {
-	randomNumberGenerator := rand.New(rand.NewSource(randomNumberSeed))
-
-	shuffledDeck := gameRuleset.FullCardset()
-
-	numberOfCards := len(shuffledDeck)
-
-	// This is probably excessive.
-	numberOfShuffles := 8 * numberOfCards
-
-	for shuffleCount := 0; shuffleCount < numberOfShuffles; shuffleCount++ {
-		firstShuffleIndex := randomNumberGenerator.Intn(numberOfCards)
-		secondShuffleIndex := randomNumberGenerator.Intn(numberOfCards)
-		shuffledDeck[firstShuffleIndex], shuffledDeck[secondShuffleIndex] =
-			shuffledDeck[secondShuffleIndex], shuffledDeck[firstShuffleIndex]
-	}
-
+	shuffledDeck []Card) readAndWriteState {
 	return &inMemoryState{
 		mutualExclusion:      sync.Mutex{},
 		gameIdentifier:       gameIdentifier,
