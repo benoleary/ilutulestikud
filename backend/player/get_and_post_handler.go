@@ -13,16 +13,14 @@ import (
 // players.
 // It implements github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
 type GetAndPostHandler struct {
-	stateHandler StateHandler
+	stateHandler *StateHandler
 }
 
 // NewGetAndPostHandler constructs a GetAndPostHandler object with a non-nil, non-empty slice
 // of State objects, returning a pointer to the newly-created object.
-func NewGetAndPostHandler(stateCollection StateCollection) *GetAndPostHandler {
+func NewGetAndPostHandler(playerHandler *StateHandler) *GetAndPostHandler {
 	return &GetAndPostHandler{
-		stateHandler: StateHandler{
-			PlayerStates: stateCollection,
-		},
+		stateHandler: playerHandler,
 	}
 }
 
@@ -93,7 +91,7 @@ func (getAndPostHandler *GetAndPostHandler) handleNewPlayer(
 		return "No name for new player parsed from JSON", http.StatusBadRequest
 	}
 
-	playerIdentifier, addError := getAndPostHandler.stateHandler.PlayerStates.Add(endpointPlayer)
+	playerIdentifier, addError := getAndPostHandler.stateHandler.Add(endpointPlayer)
 
 	if addError != nil {
 		return addError, http.StatusBadRequest
@@ -121,7 +119,7 @@ func (getAndPostHandler *GetAndPostHandler) handleUpdatePlayer(
 	}
 
 	updateError :=
-		getAndPostHandler.stateHandler.PlayerStates.UpdateFromPresentAttributes(playerUpdate)
+		getAndPostHandler.stateHandler.UpdateFromPresentAttributes(playerUpdate)
 
 	if updateError != nil {
 		return updateError, http.StatusBadRequest
@@ -133,7 +131,7 @@ func (getAndPostHandler *GetAndPostHandler) handleUpdatePlayer(
 // handleResetPlayers resets the player list to the initial list, and returns the updated list
 // as writeRegisteredPlayers would.
 func (getAndPostHandler *GetAndPostHandler) handleResetPlayers() (interface{}, int) {
-	getAndPostHandler.stateHandler.PlayerStates.Reset()
+	getAndPostHandler.stateHandler.Reset()
 
 	return getAndPostHandler.writeRegisteredPlayers()
 }

@@ -18,9 +18,9 @@ var colorsAvailableInTest []string = defaults.AvailableColors()
 // newCollectionAndHandler prepares a player.Collection and a player.GetAndPostHandler
 // in a consistent way for the tests.
 func newCollectionAndHandlerForIdentifier(
-	nameToIdentifier endpoint.NameToIdentifier) (player.StateCollection, *player.GetAndPostHandler) {
+	nameToIdentifier endpoint.NameToIdentifier) (player.StatePersister, *player.GetAndPostHandler) {
 	playerCollection :=
-		player.NewInMemoryCollection(
+		player.NewInMemoryPersister(
 			nameToIdentifier,
 			defaults.InitialPlayerNames(),
 			colorsAvailableInTest)
@@ -29,7 +29,7 @@ func newCollectionAndHandlerForIdentifier(
 
 // newCollectionAndHandler prepares a player.Collection and a player.GetAndPostHandler
 // in a consistent way for the tests.
-func newCollectionAndHandler() (player.StateCollection, *player.GetAndPostHandler) {
+func newCollectionAndHandler() (player.StatePersister, *player.GetAndPostHandler) {
 	return newCollectionAndHandlerForIdentifier(&endpoint.Base32NameEncoder{})
 }
 
@@ -616,7 +616,7 @@ func TestResetPlayers(unitTest *testing.T) {
 	for _, testCase := range testCases {
 		unitTest.Run(testCase.name, func(unitTest *testing.T) {
 			playerCollection :=
-				player.NewInMemoryCollection(
+				player.NewInMemoryPersister(
 					&endpoint.Base64NameEncoder{},
 					initialPlayers,
 					availableColors)
@@ -836,7 +836,7 @@ func assertPlayerIsCorrect(
 
 func assertPlayerIsCorrectExternallyAndInternally(
 	unitTest *testing.T,
-	playerCollection player.StateCollection, testHandler *player.GetAndPostHandler,
+	playerCollection player.StatePersister, testHandler *player.GetAndPostHandler,
 	expectedPlayerName string,
 	expectedChatColor string,
 	testIdentifier string) {

@@ -38,7 +38,7 @@ func prepareImplementations(
 	}
 
 	nameToIdentifier := &endpoint.Base32NameEncoder{}
-	playerCollection := player.NewInMemoryCollection(nameToIdentifier, playerNames, []string{"red", "green", "blue"})
+	playerCollection := player.NewInMemoryPersister(nameToIdentifier, playerNames, []string{"red", "green", "blue"})
 	gameCollections := []game.StateCollection{
 		game.NewInMemoryCollection(nameToIdentifier),
 	}

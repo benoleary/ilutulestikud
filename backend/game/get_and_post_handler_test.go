@@ -34,16 +34,16 @@ func testPlayerIdentifier(playerIndex int) string {
 }
 
 func setUpHandlerAndRequirements(registeredPlayers []string) (
-	endpoint.NameToIdentifier, player.StateCollection, game.StateCollection, *game.GetAndPostHandler) {
+	endpoint.NameToIdentifier, player.StatePersister, game.StateCollection, *game.GetAndPostHandler) {
 	return setUpHandlerAndRequirementsWithIdentifier(testNameToIdentifier(), registeredPlayers)
 }
 
 func setUpHandlerAndRequirementsWithIdentifier(
 	nameToIdentifier endpoint.NameToIdentifier,
 	registeredPlayers []string) (
-	endpoint.NameToIdentifier, player.StateCollection, game.StateCollection, *game.GetAndPostHandler) {
+	endpoint.NameToIdentifier, player.StatePersister, game.StateCollection, *game.GetAndPostHandler) {
 	playerCollection :=
-		player.NewInMemoryCollection(
+		player.NewInMemoryPersister(
 			nameToIdentifier,
 			registeredPlayers,
 			defaults.AvailableColors())

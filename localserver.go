@@ -16,17 +16,18 @@ func main() {
 	fmt.Printf("Local server started.\n")
 
 	// This main function just injects hard-coded dependencies.
-	playerCollection :=
-		player.NewInMemoryCollection(
-			&endpoint.Base32NameEncoder{},
+	playerPersister := player.NewInMemoryPersister(&endpoint.Base32NameEncoder{})
+	playerStateHandler :=
+		player.NewStateHandler(
+			playerPersister,
 			defaults.InitialPlayerNames(),
 			defaults.AvailableColors())
-	playerHandler := player.NewGetAndPostHandler(playerCollection)
+	playerGetAndPostHandler := player.NewGetAndPostHandler(playerStateHandler)
 	gameCollection := game.NewInMemoryCollection(&endpoint.Base32NameEncoder{})
-	gameHandler := game.NewGetAndPostHandler(playerCollection, gameCollection)
+	gameGetAndPostHandler := game.NewGetAndPostHandler(playerStateHandler, gameCollection)
 
 	// We could load the allowed origin from a file, but this app is very specific to a set of fixed addresses.
-	serverState := server.New("http://localhost:4233", playerHandler, gameHandler)
+	serverState := server.New("http://localhost:4233", playerGetAndPostHandler, gameGetAndPostHandler)
 	http.HandleFunc("/backend/", serverState.HandleBackend)
 	http.ListenAndServe(":8080", nil)
 }

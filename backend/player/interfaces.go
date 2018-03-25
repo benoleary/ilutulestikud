@@ -18,45 +18,42 @@ type ReadonlyState interface {
 	Color() string
 }
 
-// StateCollection defines the interface for structs which should be able to create
+// StatePersister defines the interface for structs which should be able to create
 // objects implementing the ReadOnly interface out of instances of endpoint.PlayerState,
 // which normally represents de-serialized JSON from the frontend, and for tracking the
 // objects by their identifier, which is the player name encoded in a way compatible with
 // the identifier being a segment of a URI with '/' as a delimiter. It is also responsible
 // for maintaining the list of chat colors available for players.
-type StateCollection interface {
-	// Add should add an element to the collection which is a new object implementing
+type StatePersister interface {
+	// add should add an element to the collection which is a new object implementing
 	// the ReadonlyState interface with information given by the endpoint.PlayerState
 	// object, and return the identifier of the newly-created player, along with an error
 	// which of course should be nil if there was no problem. It should return an error if
 	// the player already exists.
-	Add(playerInformation endpoint.PlayerState) (string, error)
+	add(playerInformation endpoint.PlayerState) (string, error)
 
-	// UpdateFromPresentAttributes should update the player identified by the
+	// updateFromPresentAttributes should update the player identified by the
 	// endpoint.PlayerState by over-writing all non-name string attributes with those from
 	// updaterReference, except for strings in updaterReference which are empty strings.
 	// This should be thread-safe and if the instance is persisted by a Collection, this
 	// function should ensure that the updated version gets persisted, again in a thread-safe
 	// way. It should return an error if there was a problem, including if the player cannot
 	// be identified.
-	UpdateFromPresentAttributes(updaterReference endpoint.PlayerState) error
+	updateFromPresentAttributes(updaterReference endpoint.PlayerState) error
 
-	// Get should return the ReadOnly corresponding to the given player identifier if it
+	// get should return the ReadOnly corresponding to the given player identifier if it
 	// exists already along with an error which of course should be nil if there was no
 	// problem. If the player does not exist, a non-nil error should be returned along with
 	// a nil ReadOnly.
-	Get(playerIdentifier string) (ReadonlyState, error)
+	get(playerIdentifier string) (ReadonlyState, error)
 
-	// All should return a slice of all the State instances in the collection. The order
+	// all should return a slice of all the State instances in the collection. The order
 	// is not mandated, and may even change with repeated calls to the same unchanged
 	// Collection (analogously to the entry set of a standard Golang map, for example),
 	// though of course an implementation may order the slice consistently.
-	All() []ReadonlyState
+	all() []ReadonlyState
 
-	// Reset should remove all players which are not among the initial players, and
+	// reset should remove all players which are not among the initial players, and
 	// restore any initial players who have been removed.
-	Reset()
-
-	// AvailableChatColors should return the chat colors which are allowed for players.
-	AvailableChatColors() []string
+	reset()
 }

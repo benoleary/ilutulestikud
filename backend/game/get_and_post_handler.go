@@ -13,16 +13,16 @@ import (
 // GetAndPostHandler is a struct meant to encapsulate all the state co-ordinating all the games.
 // It implements github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
 type GetAndPostHandler struct {
-	playerCollection player.StateCollection
+	playerCollection *player.StateHandler
 	gameCollection   StateCollection
 }
 
 // NewGetAndPostHandler constructs a Handler object around the given game.Collection object.
 func NewGetAndPostHandler(
-	playerCollection player.StateCollection,
+	playerStates *player.StateHandler,
 	gameCollection StateCollection) *GetAndPostHandler {
 	return &GetAndPostHandler{
-		playerCollection: playerCollection,
+		playerCollection: playerStates,
 		gameCollection:   gameCollection,
 	}
 }

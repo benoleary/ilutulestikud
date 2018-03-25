@@ -7,72 +7,64 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 )
 
-// InMemoryCollection stores inMemoryState objects as State objects. The
+// InMemoryPersister stores inMemoryState objects as instances
+// of the implementation of the readAndWriteState interface. The
 // players are mapped to by their identifiers.
-type InMemoryCollection struct {
-	mutualExclusion     sync.Mutex
-	playerStates        map[string]*inMemoryState
-	nameToIdentifier    endpoint.NameToIdentifier
-	initialPlayerNames  map[string]bool
-	availableChatColors []string
-	numberOfChatColors  int
+type InMemoryPersister struct {
+	mutualExclusion    sync.Mutex
+	playerStates       map[string]*inMemoryState
+	nameToIdentifier   endpoint.NameToIdentifier
+	initialPlayerNames map[string]bool
 }
 
-// NewInMemoryCollection creates a Collection around a map of players created
-// from the given initial player names, with colors according to the available
-// chat colors.
-func NewInMemoryCollection(
-	nameToIdentifier endpoint.NameToIdentifier,
-	initialPlayerNames []string,
-	availableChatColors []string) *InMemoryCollection {
-	numberOfPlayers := len(initialPlayerNames)
-	initialPlayerNameSet := make(map[string]bool, numberOfPlayers)
-	for _, initialPlayerName := range initialPlayerNames {
-		initialPlayerNameSet[initialPlayerName] = true
+// NewInMemoryPersister creates a stateCollection around a map of
+// players created from the given initial player names, with colors
+// according to the available chat colors.
+func NewInMemoryPersister(
+	nameToIdentifier endpoint.NameToIdentifier) *InMemoryPersister {
+	return &InMemoryPersister{
+		mutualExclusion:    sync.Mutex{},
+		playerStates:       make(map[string]*inMemoryState, 0),
+		nameToIdentifier:   nameToIdentifier,
+		initialPlayerNames: make(map[string]bool, 0),
 	}
-
-	numberOfColors := len(availableChatColors)
-	deepCopyOfChatColors := make([]string, numberOfColors)
-	copy(deepCopyOfChatColors, availableChatColors)
-
-	newCollection := &InMemoryCollection{
-		mutualExclusion:     sync.Mutex{},
-		playerStates:        make(map[string]*inMemoryState, numberOfPlayers),
-		nameToIdentifier:    nameToIdentifier,
-		initialPlayerNames:  initialPlayerNameSet,
-		availableChatColors: deepCopyOfChatColors,
-		numberOfChatColors:  numberOfColors,
-	}
-
-	for playerCount := 0; playerCount < numberOfPlayers; playerCount++ {
-		newCollection.addWithDefaultColorWithoutCounting(
-			initialPlayerNames[playerCount],
-			playerCount,
-			numberOfColors)
-	}
-
-	return newCollection
 }
 
-// Add creates a new inMemoryState object with name and color parsed from the given
-// endpoint.PlayerState (choosing a default color if the endpoint.PlayerState did not
-// provide one), and adds a reference to it into the collection.
-func (inMemoryCollection *InMemoryCollection) Add(
-	endpointPlayer endpoint.PlayerState) (string, error) {
-	if endpointPlayer.Color == "" {
-		return inMemoryCollection.addWithDefaultColor(endpointPlayer.Name)
+// add creates a new inMemoryState object with the given name and
+// given color, and adds a reference to it into the collection.
+func (inMemoryPersister *InMemoryPersister) add(
+	playerDefinition endpoint.PlayerState) (string, error) {
+	playerName := playerDefinition.Name
+	playerIdentifier :=
+		inMemoryPersister.nameToIdentifier.Identifier(playerName)
+
+	_, playerExists := inMemoryPersister.playerStates[playerIdentifier]
+
+	if playerExists {
+		return "", fmt.Errorf("Player %v already exists", playerName)
 	}
 
-	return inMemoryCollection.addWithGivenColor(endpointPlayer.Name, endpointPlayer.Color)
+	inMemoryPersister.mutualExclusion.Lock()
+
+	inMemoryPersister.playerStates[playerIdentifier] = &inMemoryState{
+		mutualExclusion: sync.Mutex{},
+		identifier:      playerIdentifier,
+		name:            playerName,
+		color:           playerDefinition.Color,
+	}
+
+	inMemoryPersister.mutualExclusion.Unlock()
+
+	return playerIdentifier, nil
 }
 
-// UpdateFromPresentAttributes updates the player identified by the endpoint.PlayerState
+// updateFromPresentAttributes updates the player identified by the endpoint.PlayerState
 // by over-writing all non-name string attributes with those from updaterReference, except
 // for strings in updaterReference which are empty strings. It uses a mutex to ensure thread
 // safety.
-func (inMemoryCollection *InMemoryCollection) UpdateFromPresentAttributes(
+func (inMemoryPersister *InMemoryPersister) updateFromPresentAttributes(
 	updaterReference endpoint.PlayerState) error {
-	playerToUpdate, playerExists := inMemoryCollection.playerStates[updaterReference.Identifier]
+	playerToUpdate, playerExists := inMemoryPersister.playerStates[updaterReference.Identifier]
 
 	if !playerExists {
 		return fmt.Errorf(
@@ -83,22 +75,22 @@ func (inMemoryCollection *InMemoryCollection) UpdateFromPresentAttributes(
 	// It would be more efficient to only lock if we go into an if statement,
 	// but then multiple if statements would be less efficient, and there would
 	// be a mutex in each if statement.
-	inMemoryCollection.mutualExclusion.Lock()
+	inMemoryPersister.mutualExclusion.Lock()
 
 	if updaterReference.Color != "" {
 		playerToUpdate.color = updaterReference.Color
 	}
 
-	inMemoryCollection.mutualExclusion.Unlock()
+	inMemoryPersister.mutualExclusion.Unlock()
 
 	return nil
 }
 
-// Get returns the ReadOnly corresponding to the given player identifier if it exists
+// get returns the ReadOnly corresponding to the given player identifier if it exists
 // already along with an error which is nil if there was no problem. If the player does
 // not exist, a non-nil error is returned along with a nil ReadOnly.
-func (inMemoryCollection *InMemoryCollection) Get(playerIdentifier string) (ReadonlyState, error) {
-	playerState, playerExists := inMemoryCollection.playerStates[playerIdentifier]
+func (inMemoryPersister *InMemoryPersister) get(playerIdentifier string) (ReadonlyState, error) {
+	playerState, playerExists := inMemoryPersister.playerStates[playerIdentifier]
 	if !playerExists {
 		return nil, fmt.Errorf(
 			"No player with identifier %v is registered",
@@ -108,88 +100,32 @@ func (inMemoryCollection *InMemoryCollection) Get(playerIdentifier string) (Read
 	return playerState, nil
 }
 
-// All returns a slice of all the ReadOnly instances in the collection, ordered in the
-// random way the iteration over the entries of a Golang map normally is.
-func (inMemoryCollection *InMemoryCollection) All() []ReadonlyState {
-	playerList := make([]ReadonlyState, 0, len(inMemoryCollection.playerStates))
-	for _, playerState := range inMemoryCollection.playerStates {
+// all returns a slice of all the players in the collection as
+// ReadonlyState instances, ordered in the random way the iteration
+// over the entries of a Golang map normally is.
+func (inMemoryPersister *InMemoryPersister) all() []ReadonlyState {
+	playerList := make([]ReadonlyState, 0, len(inMemoryPersister.playerStates))
+	for _, playerState := range inMemoryPersister.playerStates {
 		playerList = append(playerList, playerState)
 	}
 
 	return playerList
 }
 
-// Reset removes all players which are not among the initial players.
+// reset removes all players which are not among the initial players.
 // It does not restore any initial players who have been removed as
 // there is no possibility to remove them anyway.
-func (inMemoryCollection *InMemoryCollection) Reset() {
+func (inMemoryPersister *InMemoryPersister) reset() {
 	playersToRemove := make([]string, 0)
-	for _, playerState := range inMemoryCollection.playerStates {
-		if !inMemoryCollection.initialPlayerNames[playerState.Name()] {
+	for _, playerState := range inMemoryPersister.playerStates {
+		if !inMemoryPersister.initialPlayerNames[playerState.Name()] {
 			playersToRemove = append(playersToRemove, playerState.Identifier())
 		}
 	}
 
 	for _, playerToRemove := range playersToRemove {
-		delete(inMemoryCollection.playerStates, playerToRemove)
+		delete(inMemoryPersister.playerStates, playerToRemove)
 	}
-}
-
-// AvailableChatColors returns the chat colors which are allowed for players, as
-// a full deep copy of the internal slice.
-func (inMemoryCollection *InMemoryCollection) AvailableChatColors() []string {
-	deepCopyOfChatColors := make([]string, inMemoryCollection.numberOfChatColors)
-	copy(deepCopyOfChatColors, inMemoryCollection.availableChatColors)
-	return deepCopyOfChatColors
-}
-
-// addWithGivenColor creates a new inMemoryState object with the given name and
-// given color, and adds a reference to it into the collection.
-func (inMemoryCollection *InMemoryCollection) addWithGivenColor(
-	playerName string,
-	chatColor string) (string, error) {
-	playerIdentifier := inMemoryCollection.nameToIdentifier.Identifier(playerName)
-
-	_, playerExists := inMemoryCollection.playerStates[playerIdentifier]
-
-	if playerExists {
-		return "", fmt.Errorf("Player %v already exists", playerName)
-	}
-
-	inMemoryCollection.mutualExclusion.Lock()
-
-	inMemoryCollection.playerStates[playerIdentifier] = &inMemoryState{
-		mutualExclusion: sync.Mutex{},
-		identifier:      playerIdentifier,
-		name:            playerName,
-		color:           chatColor,
-	}
-
-	inMemoryCollection.mutualExclusion.Unlock()
-
-	return playerIdentifier, nil
-}
-
-// addWithDefaultColor chooses a default chat color for the given new player name
-// based on the given number of existing players and the given number of available
-// chat colors, and then adds the new player as Add would.
-func (inMemoryCollection *InMemoryCollection) addWithDefaultColor(
-	playerName string) (string, error) {
-	return inMemoryCollection.addWithDefaultColorWithoutCounting(
-		playerName,
-		len(inMemoryCollection.playerStates),
-		inMemoryCollection.numberOfChatColors)
-}
-
-// addWithDefaultColor chooses a default chat color for the given new player name
-// based on the given number of existing players and the given number of available
-// chat colors, and then adds the new player as Add would.
-func (inMemoryCollection *InMemoryCollection) addWithDefaultColorWithoutCounting(
-	playerName string,
-	playerCount int,
-	numberOfColors int) (string, error) {
-	chatColor := inMemoryCollection.availableChatColors[playerCount%numberOfColors]
-	return inMemoryCollection.addWithGivenColor(playerName, chatColor)
 }
 
 // inMemoryState encapsulates all the state that the backend needs to know about a player,
