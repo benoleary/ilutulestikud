@@ -60,27 +60,3 @@ type StateCollection interface {
 	// AvailableChatColors should return the chat colors which are allowed for players.
 	AvailableChatColors() []string
 }
-
-// RegisteredPlayersForEndpoint writes relevant parts of the collection's players into the
-// JSON object for the frontend as a list of player objects as its "Players" attribute.
-// The order of the players may not be consistent with repeated calls, as the order of All
-// is not guaranteed to be consistent.
-func RegisteredPlayersForEndpoint(collection StateCollection) endpoint.PlayerList {
-	playerStates := collection.All()
-	playerList := make([]endpoint.PlayerState, 0, len(playerStates))
-	for _, playerState := range playerStates {
-		playerList = append(playerList, endpoint.PlayerState{
-			Identifier: playerState.Identifier(),
-			Name:       playerState.Name(),
-			Color:      playerState.Color(),
-		})
-	}
-
-	return endpoint.PlayerList{Players: playerList}
-}
-
-// AvailableChatColorsForEndpoint writes the chat colors available to the given collection
-// into the JSON object for the frontend.
-func AvailableChatColorsForEndpoint(collection StateCollection) endpoint.ChatColorList {
-	return endpoint.ChatColorList{Colors: collection.AvailableChatColors()}
-}
