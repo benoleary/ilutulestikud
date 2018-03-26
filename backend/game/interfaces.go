@@ -133,7 +133,8 @@ func ReadState(gameCollection StateCollection, gameIdentifier string) (ReadonlyS
 // PerformAction finds the given game and performs the given action for its player,
 // or returns an error.
 func PerformAction(
-	gameCollection StateCollection, playerCollection player.StatePersister,
+	gameCollection StateCollection,
+	playerCollection *player.StateHandler,
 	playerAction endpoint.PlayerAction) error {
 	actingPlayer, playeridentificationError :=
 		playerCollection.Get(playerAction.PlayerIdentifier)
@@ -189,7 +190,7 @@ func (byCreationTime ByCreationTime) Less(firstIndex int, secondIndex int) bool 
 func AddNew(
 	gameDefinition endpoint.GameDefinition,
 	gameCollection StateCollection,
-	playerCollection player.StatePersister) (string, error) {
+	playerCollection *player.StateHandler) (string, error) {
 	if gameCollection == nil {
 		return "Error", fmt.Errorf("Cannot create a game in a nil collection")
 	}
@@ -208,7 +209,7 @@ func AddNew(
 func AddNewWithGivenRandomSeed(
 	gameDefinition endpoint.GameDefinition,
 	gameCollection StateCollection,
-	playerCollection player.StatePersister,
+	playerCollection *player.StateHandler,
 	randomSeed int64) (string, error) {
 	if gameDefinition.GameName == "" {
 		return "", fmt.Errorf("Game must have a name")

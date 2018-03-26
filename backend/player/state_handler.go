@@ -6,19 +6,19 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 )
 
-// StateHandler wraps around a player.StateCollection to encapsulate logic acting on the
+// StateHandler wraps around a player.StatePersister to encapsulate logic acting on the
 // functions of the interface. It also has the responsibility of maintaining the list of
 // chat colors which are available to players, and providing default colors if player
 // definitions do not contain specific colors.
 type StateHandler struct {
-	stateCollection     StatePersister
+	statePersister      StatePersister
 	availableChatColors []string
 }
 
 // NewStateHandler creates a new StateHandler around the given StatePersister and list
 // of chat colors, giving default colors to the initial players.
 func NewStateHandler(
-	playerCollection StatePersister,
+	statePersister StatePersister,
 	initialPlayerNames []string,
 	availableColors []string) *StateHandler {
 	numberOfColors := len(availableColors)
@@ -26,7 +26,7 @@ func NewStateHandler(
 	copy(deepCopyOfChatColors, availableColors)
 
 	newHandler := &StateHandler{
-		stateCollection:     playerCollection,
+		statePersister:      statePersister,
 		availableChatColors: deepCopyOfChatColors,
 	}
 
@@ -48,34 +48,34 @@ func (stateHandler StateHandler) Add(
 	}
 
 	if playerInformation.Color == "" {
-		playerCount := len(stateHandler.stateCollection.all())
+		playerCount := len(stateHandler.statePersister.all())
 		numberOfColors := len(stateHandler.availableChatColors)
 		playerInformation.Color = stateHandler.availableChatColors[playerCount%numberOfColors]
 	}
 
-	return stateHandler.stateCollection.add(playerInformation)
+	return stateHandler.statePersister.add(playerInformation)
 }
 
 // UpdateFromPresentAttributes just wraps around the updateFromPresentAttributes
 // function of the internal collection.
 func (stateHandler StateHandler) UpdateFromPresentAttributes(
 	updaterReference endpoint.PlayerState) error {
-	return stateHandler.stateCollection.updateFromPresentAttributes(updaterReference)
+	return stateHandler.statePersister.updateFromPresentAttributes(updaterReference)
 }
 
 // Get just wraps around the get function of the internal collection.
 func (stateHandler StateHandler) Get(playerIdentifier string) (ReadonlyState, error) {
-	return stateHandler.stateCollection.get(playerIdentifier)
+	return stateHandler.statePersister.get(playerIdentifier)
 }
 
 // All just wraps around the all function of the internal collection.
 func (stateHandler StateHandler) All() []ReadonlyState {
-	return stateHandler.stateCollection.all()
+	return stateHandler.statePersister.all()
 }
 
 // Reset just wraps around the reset of the internal collection.
 func (stateHandler StateHandler) Reset() {
-	stateHandler.stateCollection.reset()
+	stateHandler.statePersister.reset()
 }
 
 // RegisteredPlayersForEndpoint writes relevant parts of the handler's collection's players
@@ -83,7 +83,7 @@ func (stateHandler StateHandler) Reset() {
 // attribute. he order of the players may not be consistent with repeated calls, as the
 // order of All is not guaranteed to be consistent.
 func (stateHandler StateHandler) RegisteredPlayersForEndpoint() endpoint.PlayerList {
-	playerStates := stateHandler.stateCollection.all()
+	playerStates := stateHandler.statePersister.all()
 	playerList := make([]endpoint.PlayerState, 0, len(playerStates))
 	for _, playerState := range playerStates {
 		playerList = append(playerList, endpoint.PlayerState{
