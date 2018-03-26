@@ -13,14 +13,14 @@ import (
 // players.
 // It implements github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
 type GetAndPostHandler struct {
-	stateHandler *StateHandler
+	stateCollection *StateCollection
 }
 
 // NewGetAndPostHandler constructs a GetAndPostHandler object with a non-nil, non-empty slice
 // of State objects, returning a pointer to the newly-created object.
-func NewGetAndPostHandler(playerHandler *StateHandler) *GetAndPostHandler {
+func NewGetAndPostHandler(stateCollection *StateCollection) *GetAndPostHandler {
 	return &GetAndPostHandler{
-		stateHandler: playerHandler,
+		stateCollection: stateCollection,
 	}
 }
 
@@ -67,13 +67,13 @@ func (getAndPostHandler *GetAndPostHandler) HandlePost(
 // the list of player objects as its "Players" attribute. The order of the players
 // may not consistent with repeated calls as ForEndpoint does not guarantee it.
 func (getAndPostHandler *GetAndPostHandler) writeRegisteredPlayers() (interface{}, int) {
-	return getAndPostHandler.stateHandler.RegisteredPlayersForEndpoint(), http.StatusOK
+	return getAndPostHandler.stateCollection.RegisteredPlayersForEndpoint(), http.StatusOK
 }
 
 // writeAvailableColors writes a JSON object into the HTTP response which has
 // the list of strings as its "Colors" attribute.
 func (getAndPostHandler *GetAndPostHandler) writeAvailableColors() (interface{}, int) {
-	return getAndPostHandler.stateHandler.AvailableChatColorsForEndpoint(), http.StatusOK
+	return getAndPostHandler.stateCollection.AvailableChatColorsForEndpoint(), http.StatusOK
 }
 
 // handleNewPlayer adds the player defined by the JSON of the request's body to the list
@@ -91,7 +91,7 @@ func (getAndPostHandler *GetAndPostHandler) handleNewPlayer(
 		return "No name for new player parsed from JSON", http.StatusBadRequest
 	}
 
-	playerIdentifier, addError := getAndPostHandler.stateHandler.Add(endpointPlayer)
+	playerIdentifier, addError := getAndPostHandler.stateCollection.Add(endpointPlayer)
 
 	if addError != nil {
 		return addError, http.StatusBadRequest
@@ -119,7 +119,7 @@ func (getAndPostHandler *GetAndPostHandler) handleUpdatePlayer(
 	}
 
 	updateError :=
-		getAndPostHandler.stateHandler.UpdateFromPresentAttributes(playerUpdate)
+		getAndPostHandler.stateCollection.UpdateFromPresentAttributes(playerUpdate)
 
 	if updateError != nil {
 		return updateError, http.StatusBadRequest
@@ -131,7 +131,7 @@ func (getAndPostHandler *GetAndPostHandler) handleUpdatePlayer(
 // handleResetPlayers resets the player list to the initial list, and returns the updated list
 // as writeRegisteredPlayers would.
 func (getAndPostHandler *GetAndPostHandler) handleResetPlayers() (interface{}, int) {
-	getAndPostHandler.stateHandler.Reset()
+	getAndPostHandler.stateCollection.Reset()
 
 	return getAndPostHandler.writeRegisteredPlayers()
 }

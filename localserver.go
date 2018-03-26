@@ -17,14 +17,14 @@ func main() {
 
 	// This main function just injects hard-coded dependencies.
 	playerPersister := player.NewInMemoryPersister(&endpoint.Base32NameEncoder{})
-	playerStateHandler :=
-		player.NewStateHandler(
+	playerCollection :=
+		player.NewCollection(
 			playerPersister,
 			defaults.InitialPlayerNames(),
 			defaults.AvailableColors())
-	playerGetAndPostHandler := player.NewGetAndPostHandler(playerStateHandler)
+	playerGetAndPostHandler := player.NewGetAndPostHandler(playerCollection)
 	gameCollection := game.NewInMemoryCollection(&endpoint.Base32NameEncoder{})
-	gameGetAndPostHandler := game.NewGetAndPostHandler(playerStateHandler, gameCollection)
+	gameGetAndPostHandler := game.NewGetAndPostHandler(playerCollection, gameCollection)
 
 	// We could load the allowed origin from a file, but this app is very specific to a set of fixed addresses.
 	serverState := server.New("http://localhost:4233", playerGetAndPostHandler, gameGetAndPostHandler)

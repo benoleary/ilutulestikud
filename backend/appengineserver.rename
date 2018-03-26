@@ -10,17 +10,19 @@ import (
 )
 func main() {
 	// This main function just injects hard-coded dependencies.
+	playerPersister := player.NewInMemoryPersister(&endpoint.Base32NameEncoder{})
 	playerCollection :=
-		player.NewInMemoryCollection(
-			&endpoint.Base32NameEncoder{},
+		player.NewCollection(
+			playerPersister,
 			defaults.InitialPlayerNames(),
 			defaults.AvailableColors())
-	playerHandler := player.NewGetAndPostHandler(playerCollection)
+	playerGetAndPostHandler := player.NewGetAndPostHandler(playerCollection)
 	gameCollection := game.NewInMemoryCollection(&endpoint.Base32NameEncoder{})
-	gameHandler := game.NewGetAndPostHandler(playerCollection, gameCollection)
+	gameGetAndPostHandler := game.NewGetAndPostHandler(playerCollection, gameCollection)
 
 	// We could load the allowed origin from a file, but this app is very specific to a set of fixed addresses.
-	serverState := server.New("https://storage.googleapis.com", playerHandler, gameHandler)
+	serverState :=
+	    server.New("https://storage.googleapis.com", playerGetAndPostHandler, gameGetAndPostHandler)
 	http.HandleFunc("/backend/", serverState.HandleBackend)
 	http.ListenAndServe(":8080", nil)
 	appengine.Main()
