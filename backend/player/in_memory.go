@@ -11,10 +11,9 @@ import (
 // of the implementation of the readAndWriteState interface. The
 // players are mapped to by their identifiers.
 type InMemoryPersister struct {
-	mutualExclusion    sync.Mutex
-	playerStates       map[string]*inMemoryState
-	nameToIdentifier   endpoint.NameToIdentifier
-	initialPlayerNames map[string]bool
+	mutualExclusion  sync.Mutex
+	playerStates     map[string]*inMemoryState
+	nameToIdentifier endpoint.NameToIdentifier
 }
 
 // NewInMemoryPersister creates a stateCollection around a map of
@@ -23,10 +22,9 @@ type InMemoryPersister struct {
 func NewInMemoryPersister(
 	nameToIdentifier endpoint.NameToIdentifier) *InMemoryPersister {
 	return &InMemoryPersister{
-		mutualExclusion:    sync.Mutex{},
-		playerStates:       make(map[string]*inMemoryState, 0),
-		nameToIdentifier:   nameToIdentifier,
-		initialPlayerNames: make(map[string]bool, 0),
+		mutualExclusion:  sync.Mutex{},
+		playerStates:     make(map[string]*inMemoryState, 0),
+		nameToIdentifier: nameToIdentifier,
 	}
 }
 
@@ -112,19 +110,10 @@ func (inMemoryPersister *InMemoryPersister) all() []ReadonlyState {
 	return playerList
 }
 
-// reset removes all players which are not among the initial players.
-// It does not restore any initial players who have been removed as
-// there is no possibility to remove them anyway.
+// reset removes all players.
 func (inMemoryPersister *InMemoryPersister) reset() {
-	playersToRemove := make([]string, 0)
-	for _, playerState := range inMemoryPersister.playerStates {
-		if !inMemoryPersister.initialPlayerNames[playerState.Name()] {
-			playersToRemove = append(playersToRemove, playerState.Identifier())
-		}
-	}
-
-	for _, playerToRemove := range playersToRemove {
-		delete(inMemoryPersister.playerStates, playerToRemove)
+	for playerIdentifier := range inMemoryPersister.playerStates {
+		delete(inMemoryPersister.playerStates, playerIdentifier)
 	}
 }
 

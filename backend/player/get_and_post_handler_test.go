@@ -18,18 +18,21 @@ var colorsAvailableInTest []string = defaults.AvailableColors()
 // newCollectionAndHandler prepares a player.Collection and a player.GetAndPostHandler
 // in a consistent way for the tests.
 func newCollectionAndHandlerForIdentifier(
-	nameToIdentifier endpoint.NameToIdentifier) (player.StatePersister, *player.GetAndPostHandler) {
+	nameToIdentifier endpoint.NameToIdentifier) (*player.StateCollection, *player.GetAndPostHandler) {
+	playerPersister := player.NewInMemoryPersister(nameToIdentifier)
 	playerCollection :=
-		player.NewInMemoryPersister(
-			nameToIdentifier,
+		player.NewCollection(
+			playerPersister,
 			defaults.InitialPlayerNames(),
 			colorsAvailableInTest)
-	return playerCollection, player.NewGetAndPostHandler(playerCollection)
+	playerGetAndPostHandler := player.NewGetAndPostHandler(playerCollection)
+
+	return playerCollection, playerGetAndPostHandler
 }
 
 // newCollectionAndHandler prepares a player.Collection and a player.GetAndPostHandler
 // in a consistent way for the tests.
-func newCollectionAndHandler() (player.StatePersister, *player.GetAndPostHandler) {
+func newCollectionAndHandler() (*player.StateCollection, *player.GetAndPostHandler) {
 	return newCollectionAndHandlerForIdentifier(&endpoint.Base32NameEncoder{})
 }
 
@@ -615,12 +618,13 @@ func TestResetPlayers(unitTest *testing.T) {
 
 	for _, testCase := range testCases {
 		unitTest.Run(testCase.name, func(unitTest *testing.T) {
+			playerPersister := player.NewInMemoryPersister(&endpoint.Base64NameEncoder{})
 			playerCollection :=
-				player.NewInMemoryPersister(
-					&endpoint.Base64NameEncoder{},
+				player.NewCollection(
+					playerPersister,
 					initialPlayers,
 					availableColors)
-			playerHandler := player.NewGetAndPostHandler(playerCollection)
+			playerGetAndPostHandler := player.NewGetAndPostHandler(playerCollection)
 
 			// First we have to determine what the expected reset state is, as the colors may have
 			// been randomly assigned.
@@ -672,7 +676,9 @@ func TestResetPlayers(unitTest *testing.T) {
 
 				// Now we update the player.
 				_, postCode :=
-					playerHandler.HandlePost(json.NewDecoder(updateBytesBuffer), []string{"update-player"})
+					playerGetAndPostHandler.HandlePost(
+						json.NewDecoder(updateBytesBuffer),
+						[]string{"update-player"})
 
 				if postCode != http.StatusOK {
 					unitTest.Fatalf(
@@ -691,7 +697,9 @@ func TestResetPlayers(unitTest *testing.T) {
 
 				// Now we add the player.
 				_, postCode :=
-					playerHandler.HandlePost(json.NewDecoder(registrationBytesBuffer), []string{"new-player"})
+					playerGetAndPostHandler.HandlePost(
+						json.NewDecoder(registrationBytesBuffer),
+						[]string{"new-player"})
 
 				if postCode != http.StatusOK {
 					unitTest.Fatalf(
@@ -702,7 +710,8 @@ func TestResetPlayers(unitTest *testing.T) {
 			}
 
 			// Now that the system has been set up, we reset it.
-			resetInterface, resetCode := playerHandler.HandlePost(nil, []string{"reset-players"})
+			resetInterface, resetCode :=
+				playerGetAndPostHandler.HandlePost(nil, []string{"reset-players"})
 
 			// Then we check that the POST returned a valid response.
 			resetResponseList := assertAtLeastOnePlayerReturnedInList(
@@ -717,13 +726,14 @@ func TestResetPlayers(unitTest *testing.T) {
 				assertPlayerIsCorrectExternallyAndInternally(
 					unitTest,
 					playerCollection,
-					playerHandler,
+					playerGetAndPostHandler,
 					expectedPlayer.Name,
 					expectedPlayer.Color,
 					"Reset player "+expectedPlayer.Name)
 			}
 
-			getInterface, getCode := playerHandler.HandleGet([]string{"registered-players"})
+			getInterface, getCode :=
+				playerGetAndPostHandler.HandleGet([]string{"registered-players"})
 
 			getListAfterReset := assertAtLeastOnePlayerReturnedInList(
 				unitTest,
@@ -836,7 +846,8 @@ func assertPlayerIsCorrect(
 
 func assertPlayerIsCorrectExternallyAndInternally(
 	unitTest *testing.T,
-	playerCollection player.StatePersister, testHandler *player.GetAndPostHandler,
+	playerCollection *player.StateCollection,
+	testHandler *player.GetAndPostHandler,
 	expectedPlayerName string,
 	expectedChatColor string,
 	testIdentifier string) {

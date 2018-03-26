@@ -22,8 +22,7 @@ type ReadonlyState interface {
 // objects implementing the ReadOnly interface out of instances of endpoint.PlayerState,
 // which normally represents de-serialized JSON from the frontend, and for tracking the
 // objects by their identifier, which is the player name encoded in a way compatible with
-// the identifier being a segment of a URI with '/' as a delimiter. It is also responsible
-// for maintaining the list of chat colors available for players.
+// the identifier being a segment of a URI with '/' as a delimiter.
 type StatePersister interface {
 	// add should add an element to the collection which is a new object implementing
 	// the ReadonlyState interface with information given by the endpoint.PlayerState
@@ -53,7 +52,6 @@ type StatePersister interface {
 	// though of course an implementation may order the slice consistently.
 	all() []ReadonlyState
 
-	// reset should remove all players which are not among the initial players, and
-	// restore any initial players who have been removed.
+	// reset should remove all players.
 	reset()
 }

@@ -12,6 +12,7 @@ import (
 // player definitions do not contain specific colors.
 type StateCollection struct {
 	statePersister      StatePersister
+	initialPlayerNames  []string
 	availableChatColors []string
 }
 
@@ -27,14 +28,11 @@ func NewCollection(
 
 	newCollection := &StateCollection{
 		statePersister:      statePersister,
+		initialPlayerNames:  initialPlayerNames,
 		availableChatColors: deepCopyOfChatColors,
 	}
 
-	for _, initialPlayerName := range initialPlayerNames {
-		newCollection.Add(endpoint.PlayerState{
-			Name: initialPlayerName,
-		})
-	}
+	newCollection.addInitialPlayers()
 
 	return newCollection
 }
@@ -73,9 +71,10 @@ func (stateCollection StateCollection) All() []ReadonlyState {
 	return stateCollection.statePersister.all()
 }
 
-// Reset just wraps around the reset of the internal collection.
+// Reset calls the reset of the internal collection then adds the initial players again.
 func (stateCollection StateCollection) Reset() {
 	stateCollection.statePersister.reset()
+	stateCollection.addInitialPlayers()
 }
 
 // RegisteredPlayersForEndpoint writes relevant parts of the collection's players
@@ -103,5 +102,13 @@ func (stateCollection StateCollection) RegisteredPlayersForEndpoint() endpoint.P
 func (stateCollection StateCollection) AvailableChatColorsForEndpoint() endpoint.ChatColorList {
 	return endpoint.ChatColorList{
 		Colors: stateCollection.availableChatColors,
+	}
+}
+
+func (stateCollection StateCollection) addInitialPlayers() {
+	for _, initialPlayerName := range stateCollection.initialPlayerNames {
+		stateCollection.Add(endpoint.PlayerState{
+			Name: initialPlayerName,
+		})
 	}
 }
