@@ -1,4 +1,4 @@
-package player_test
+package server_test
 
 import (
 	"bytes"
@@ -9,72 +9,83 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/defaults"
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/player"
+	"github.com/benoleary/ilutulestikud/backend/server"
 )
 
 const breaksBase64 = "\\/\\\\\\?" // This should unescape to \/\\\? in the tests.
 
 var colorsAvailableInTest []string = defaults.AvailableColors()
 
-// newCollectionAndHandler prepares a player.Collection and a player.GetAndPostHandler
-// in a consistent way for the tests.
-func newCollectionAndHandlerForIdentifier(
-	nameToIdentifier endpoint.NameToIdentifier) (*player.StateCollection, *player.GetAndPostHandler) {
+// newServerForIdentifier prepares a server.State in a consistent way for the
+// tests of the player endpoints.
+func newServerForIdentifier(
+	nameToIdentifier endpoint.NameToIdentifier) *server.State {
 	playerPersister := player.NewInMemoryPersister(nameToIdentifier)
 	playerCollection :=
 		player.NewCollection(
 			playerPersister,
 			defaults.InitialPlayerNames(),
 			colorsAvailableInTest)
-	playerGetAndPostHandler := player.NewGetAndPostHandler(playerCollection)
 
-	return playerCollection, playerGetAndPostHandler
+	return server.New("test",
+		playerCollection,
+		nil)
 }
 
-// newCollectionAndHandler prepares a player.Collection and a player.GetAndPostHandler
-// in a consistent way for the tests.
-func newCollectionAndHandler() (*player.StateCollection, *player.GetAndPostHandler) {
-	return newCollectionAndHandlerForIdentifier(&endpoint.Base32NameEncoder{})
+// newServer prepares a server.State in a consistent way for the tests of the
+// player endpoints.
+func newServer() *server.State {
+	return newServerForIdentifier(&endpoint.Base32NameEncoder{})
 }
 
 func TestGetNoSegmentBadRequest(unitTest *testing.T) {
-	_, playerHandler := newCollectionAndHandler()
-	_, actualCode := playerHandler.HandleGet(make([]string, 0))
+	testServer := newServer()
 
-	if actualCode != http.StatusBadRequest {
+	getResponse := server.MockGet(testServer, "/backend/player")
+
+	if getResponse.Code != http.StatusBadRequest {
 		unitTest.Fatalf(
 			"GET with empty list of relevant segments did not return expected HTTP code %v, instead was %v.",
 			http.StatusBadRequest,
-			actualCode)
+			getResponse.Code)
 	}
 }
 
 func TestGetInvalidSegmentNotFound(unitTest *testing.T) {
-	_, playerHandler := newCollectionAndHandler()
-	_, actualCode := playerHandler.HandleGet([]string{"invalid-segment"})
+	testServer := newServer()
 
-	if actualCode != http.StatusNotFound {
+	getResponse := server.MockGet(testServer, "/backend/player/invalid-segment")
+
+	if getResponse.Code != http.StatusNotFound {
 		unitTest.Fatalf(
 			"GET invalid-segment did not return expected HTTP code %v, instead was %v.",
 			http.StatusNotFound,
-			actualCode)
+			getResponse.Code)
 	}
 }
 
 func TestPostNoSegmentBadRequest(unitTest *testing.T) {
-	_, playerHandler := newCollectionAndHandler()
-	bytesBuffer := new(bytes.Buffer)
-	json.NewEncoder(bytesBuffer).Encode(endpoint.PlayerState{
+	testServer := newServer()
+
+	bodyObject := endpoint.PlayerState{
 		Name:  "Player Name",
 		Color: "Chat color",
-	})
+	}
 
-	_, actualCode := playerHandler.HandlePost(json.NewDecoder(bytesBuffer), make([]string, 0))
+	postResponse, encodingError :=
+		server.MockPost(testServer, "/backend/player", bodyObject)
 
-	if actualCode != http.StatusBadRequest {
+	if encodingError != nil {
+		unitTest.Fatalf(
+			"Encoding error for POST: %v",
+			encodingError)
+	}
+
+	if postResponse.Code != http.StatusBadRequest {
 		unitTest.Fatalf(
 			"POST with empty list of relevant segments did not return expected HTTP code %v, instead was %v.",
 			http.StatusBadRequest,
-			actualCode)
+			postResponse.Code)
 	}
 }
 
