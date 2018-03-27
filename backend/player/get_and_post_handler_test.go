@@ -575,7 +575,6 @@ func TestUpdatePlayer(unitTest *testing.T) {
 func TestResetPlayers(unitTest *testing.T) {
 	initialPlayers := []string{"Initial One", "Initial Two"}
 	newPlayer := "New Player"
-	availableColors := []string{"Color one", "Color two"}
 
 	type testArguments struct {
 		shouldUpdate   bool
@@ -623,27 +622,24 @@ func TestResetPlayers(unitTest *testing.T) {
 				player.NewCollection(
 					playerPersister,
 					initialPlayers,
-					availableColors)
+					colorsAvailableInTest)
 			playerGetAndPostHandler := player.NewGetAndPostHandler(playerCollection)
 
-			// First we have to determine what the expected reset state is, as the colors may have
-			// been randomly assigned.
-			expectedOne := endpoint.PlayerState{}
-			expectedTwo := endpoint.PlayerState{}
 			initialPlayerStates := playerCollection.All()
+			expectedPlayerNames := make(map[string]bool, 2)
 			foundOne := false
 			foundTwo := false
+			identifierOne := ""
+			colorOne := ""
 			for _, initialPlayerState := range initialPlayerStates {
+				expectedPlayerNames[initialPlayerState.Name()] = true
+
 				if initialPlayerState.Name() == initialPlayers[0] {
 					foundOne = true
-					expectedOne.Identifier = initialPlayerState.Identifier()
-					expectedOne.Name = initialPlayerState.Name()
-					expectedOne.Color = initialPlayerState.Color()
+					identifierOne = initialPlayerState.Identifier()
+					colorOne = initialPlayerState.Color()
 				} else if initialPlayerState.Name() == initialPlayers[1] {
 					foundTwo = true
-					expectedTwo.Identifier = initialPlayerState.Identifier()
-					expectedTwo.Name = initialPlayerState.Name()
-					expectedTwo.Color = initialPlayerState.Color()
 				}
 			}
 
@@ -659,20 +655,19 @@ func TestResetPlayers(unitTest *testing.T) {
 					initialPlayers[1])
 			}
 
-			expectedPlayerNames := make(map[string]bool, 2)
-			expectedPlayerNames[expectedOne.Name] = true
-			expectedPlayerNames[expectedTwo.Name] = true
-
 			if testCase.arguments.shouldUpdate {
-				// We update expectedOne to have the other color from the list.
-				if expectedOne.Color == availableColors[0] {
-					expectedOne.Color = availableColors[1]
+				// We update the first player to have a different color from the list.
+				if colorOne == colorsAvailableInTest[0] {
+					colorOne = colorsAvailableInTest[1]
 				} else {
-					expectedOne.Color = availableColors[0]
+					colorOne = colorsAvailableInTest[0]
 				}
 
 				updateBytesBuffer := new(bytes.Buffer)
-				json.NewEncoder(updateBytesBuffer).Encode(expectedOne)
+				json.NewEncoder(updateBytesBuffer).Encode(endpoint.PlayerState{
+					Identifier: identifierOne,
+					Color:      colorOne,
+				})
 
 				// Now we update the player.
 				_, postCode :=
@@ -692,7 +687,7 @@ func TestResetPlayers(unitTest *testing.T) {
 				registrationBytesBuffer := new(bytes.Buffer)
 				json.NewEncoder(registrationBytesBuffer).Encode(endpoint.PlayerState{
 					Name:  newPlayer,
-					Color: availableColors[0],
+					Color: colorsAvailableInTest[0],
 				})
 
 				// Now we add the player.
@@ -722,14 +717,14 @@ func TestResetPlayers(unitTest *testing.T) {
 
 			// Before we check that only initial players are returned, we check that each
 			// initial player is present and as expected.
-			for _, expectedPlayer := range []endpoint.PlayerState{expectedOne, expectedTwo} {
+			for _, expectedPlayerName := range initialPlayers {
 				assertPlayerIsCorrectExternallyAndInternally(
 					unitTest,
 					playerCollection,
 					playerGetAndPostHandler,
-					expectedPlayer.Name,
-					expectedPlayer.Color,
-					"Reset player "+expectedPlayer.Name)
+					expectedPlayerName,
+					"",
+					"Reset player "+expectedPlayerName)
 			}
 
 			getInterface, getCode :=

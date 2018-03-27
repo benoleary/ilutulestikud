@@ -87,10 +87,6 @@ func (getAndPostHandler *GetAndPostHandler) handleNewPlayer(
 		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
 	}
 
-	if endpointPlayer.Name == "" {
-		return "No name for new player parsed from JSON", http.StatusBadRequest
-	}
-
 	playerIdentifier, addError := getAndPostHandler.stateCollection.Add(endpointPlayer)
 
 	if addError != nil {
