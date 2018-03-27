@@ -1,4 +1,4 @@
-package player
+package server
 
 import (
 	"encoding/json"
@@ -7,26 +7,19 @@ import (
 	"strings"
 
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
+	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
-// GetAndPostHandler is a struct meant to encapsulate all the state co-ordinating all the
-// players.
+// playerEndpointHandler is a struct meant to encapsulate all the state making the
+// player states available to the endpoints.
 // It implements github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
-type GetAndPostHandler struct {
-	stateCollection *StateCollection
-}
-
-// NewGetAndPostHandler constructs a GetAndPostHandler object with a non-nil, non-empty slice
-// of State objects, returning a pointer to the newly-created object.
-func NewGetAndPostHandler(stateCollection *StateCollection) *GetAndPostHandler {
-	return &GetAndPostHandler{
-		stateCollection: stateCollection,
-	}
+type playerEndpointHandler struct {
+	stateCollection *player.StateCollection
 }
 
 // HandleGet parses an HTTP GET request and responds with the appropriate function.
 // This implements part of github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
-func (getAndPostHandler *GetAndPostHandler) HandleGet(
+func (playerHandler *playerEndpointHandler) HandleGet(
 	relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 1 {
 		return "Not enough segments in URI to determine what to do", http.StatusBadRequest
@@ -34,9 +27,9 @@ func (getAndPostHandler *GetAndPostHandler) HandleGet(
 
 	switch relevantSegments[0] {
 	case "registered-players":
-		return getAndPostHandler.writeRegisteredPlayers()
+		return playerHandler.writeRegisteredPlayers()
 	case "available-colors":
-		return getAndPostHandler.writeAvailableColors()
+		return playerHandler.writeAvailableColors()
 	default:
 		return "URI segment " + relevantSegments[0] + " not valid", http.StatusNotFound
 	}
@@ -44,7 +37,7 @@ func (getAndPostHandler *GetAndPostHandler) HandleGet(
 
 // HandlePost parses an HTTP POST request and responds with the appropriate function.
 // This implements part of github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
-func (getAndPostHandler *GetAndPostHandler) HandlePost(
+func (playerHandler *playerEndpointHandler) HandlePost(
 	httpBodyDecoder *json.Decoder,
 	relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 1 {
@@ -53,11 +46,11 @@ func (getAndPostHandler *GetAndPostHandler) HandlePost(
 
 	switch relevantSegments[0] {
 	case "new-player":
-		return getAndPostHandler.handleNewPlayer(httpBodyDecoder)
+		return playerHandler.handleNewPlayer(httpBodyDecoder)
 	case "update-player":
-		return getAndPostHandler.handleUpdatePlayer(httpBodyDecoder)
+		return playerHandler.handleUpdatePlayer(httpBodyDecoder)
 	case "reset-players":
-		return getAndPostHandler.handleResetPlayers()
+		return playerHandler.handleResetPlayers()
 	default:
 		return "URI segment " + relevantSegments[0] + " not valid", http.StatusNotFound
 	}
@@ -66,20 +59,20 @@ func (getAndPostHandler *GetAndPostHandler) HandlePost(
 // writeRegisteredPlayers writes a JSON object into the HTTP response which has
 // the list of player objects as its "Players" attribute. The order of the players
 // may not consistent with repeated calls as ForEndpoint does not guarantee it.
-func (getAndPostHandler *GetAndPostHandler) writeRegisteredPlayers() (interface{}, int) {
-	return getAndPostHandler.stateCollection.RegisteredPlayersForEndpoint(), http.StatusOK
+func (playerHandler *playerEndpointHandler) writeRegisteredPlayers() (interface{}, int) {
+	return playerHandler.stateCollection.RegisteredPlayersForEndpoint(), http.StatusOK
 }
 
 // writeAvailableColors writes a JSON object into the HTTP response which has
 // the list of strings as its "Colors" attribute.
-func (getAndPostHandler *GetAndPostHandler) writeAvailableColors() (interface{}, int) {
-	return getAndPostHandler.stateCollection.AvailableChatColorsForEndpoint(), http.StatusOK
+func (playerHandler *playerEndpointHandler) writeAvailableColors() (interface{}, int) {
+	return playerHandler.stateCollection.AvailableChatColorsForEndpoint(), http.StatusOK
 }
 
 // handleNewPlayer adds the player defined by the JSON of the request's body to the list
 // of registered players, and returns the updated list as writeRegisteredPlayerNameListJson
 // would.
-func (getAndPostHandler *GetAndPostHandler) handleNewPlayer(
+func (playerHandler *playerEndpointHandler) handleNewPlayer(
 	httpBodyDecoder *json.Decoder) (interface{}, int) {
 	var endpointPlayer endpoint.PlayerState
 	parsingError := httpBodyDecoder.Decode(&endpointPlayer)
@@ -87,7 +80,7 @@ func (getAndPostHandler *GetAndPostHandler) handleNewPlayer(
 		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
 	}
 
-	playerIdentifier, addError := getAndPostHandler.stateCollection.Add(endpointPlayer)
+	playerIdentifier, addError := playerHandler.stateCollection.Add(endpointPlayer)
 
 	if addError != nil {
 		return addError, http.StatusBadRequest
@@ -100,13 +93,13 @@ func (getAndPostHandler *GetAndPostHandler) handleNewPlayer(
 		return errorMessage, http.StatusBadRequest
 	}
 
-	return getAndPostHandler.writeRegisteredPlayers()
+	return playerHandler.writeRegisteredPlayers()
 }
 
 // handleUpdatePlayer updates the player defined by the JSON of the request's body, taking
 // the "Name" attribute as the key, and returns the updated list as writeRegisteredPlayers
 // would. Attributes which are present are updated, those which are missing remain unchanged.
-func (getAndPostHandler *GetAndPostHandler) handleUpdatePlayer(
+func (playerHandler *playerEndpointHandler) handleUpdatePlayer(
 	httpBodyDecoder *json.Decoder) (interface{}, int) {
 	var playerUpdate endpoint.PlayerState
 	parsingError := httpBodyDecoder.Decode(&playerUpdate)
@@ -115,19 +108,19 @@ func (getAndPostHandler *GetAndPostHandler) handleUpdatePlayer(
 	}
 
 	updateError :=
-		getAndPostHandler.stateCollection.UpdateFromPresentAttributes(playerUpdate)
+		playerHandler.stateCollection.UpdateFromPresentAttributes(playerUpdate)
 
 	if updateError != nil {
 		return updateError, http.StatusBadRequest
 	}
 
-	return getAndPostHandler.writeRegisteredPlayers()
+	return playerHandler.writeRegisteredPlayers()
 }
 
 // handleResetPlayers resets the player list to the initial list, and returns the updated list
 // as writeRegisteredPlayers would.
-func (getAndPostHandler *GetAndPostHandler) handleResetPlayers() (interface{}, int) {
-	getAndPostHandler.stateCollection.Reset()
+func (playerHandler *playerEndpointHandler) handleResetPlayers() (interface{}, int) {
+	playerHandler.stateCollection.Reset()
 
-	return getAndPostHandler.writeRegisteredPlayers()
+	return playerHandler.writeRegisteredPlayers()
 }

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+
+	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
 type httpGetAndPostHandler interface {
@@ -15,7 +17,7 @@ type httpGetAndPostHandler interface {
 // State contains all the state to allow the backend to function.
 type State struct {
 	accessControlAllowedOrigin string
-	playerHandler              httpGetAndPostHandler
+	playerHandler              *playerEndpointHandler
 	gameHandler                httpGetAndPostHandler
 }
 
@@ -23,12 +25,14 @@ type State struct {
 // given handlers are consistent.
 func New(
 	accessControlAllowedOrigin string,
-	playerHandler httpGetAndPostHandler,
+	playerCollection *player.StateCollection,
 	gameHandler httpGetAndPostHandler) *State {
 	return &State{
 		accessControlAllowedOrigin: accessControlAllowedOrigin,
-		playerHandler:              playerHandler,
-		gameHandler:                gameHandler,
+		playerHandler: &playerEndpointHandler{
+			stateCollection: playerCollection,
+		},
+		gameHandler: gameHandler,
 	}
 }
 
