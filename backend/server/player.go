@@ -7,14 +7,13 @@ import (
 	"strings"
 
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
-	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
 // playerEndpointHandler is a struct meant to encapsulate all the state making the
 // player states available to the endpoints.
 // It implements github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
 type playerEndpointHandler struct {
-	stateCollection *player.StateCollection
+	stateCollection playerCollection
 }
 
 // HandleGet parses an HTTP GET request and responds with the appropriate function.

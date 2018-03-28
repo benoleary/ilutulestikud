@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
@@ -12,6 +13,33 @@ type httpGetAndPostHandler interface {
 	HandleGet(relevantSegments []string) (interface{}, int)
 
 	HandlePost(httpBodyDecoder *json.Decoder, relevantSegments []string) (interface{}, int)
+}
+
+type playerCollection interface {
+	// Add should add a new player to the collection, defined by the given argument.
+	Add(playerInformation endpoint.PlayerState) (string, error)
+
+	// UpdateFromPresentAttributes should update the player by attributes present in the argument.
+	UpdateFromPresentAttributes(updaterReference endpoint.PlayerState) error
+
+	// Get should return a read-only state for the identified player.
+	Get(playerIdentifier string) (player.ReadonlyState, error)
+
+	// All should return all the players as read-only objects.
+	All() []player.ReadonlyState
+
+	// Reset should reset the players to the initial set.
+	Reset()
+
+	// RegisteredPlayersForEndpoint should write relevant parts of the collection's players
+	// into the JSON object for the frontend as a list of player objects as its
+	// "Players" attribute. The order of the players may not be consistent with repeated
+	// calls, as the order of All is not guaranteed to be consistent.
+	RegisteredPlayersForEndpoint() endpoint.PlayerList
+
+	// AvailableChatColorsForEndpoint should write the chat colors available to the collection
+	// into the JSON object for the frontend.
+	AvailableChatColorsForEndpoint() endpoint.ChatColorList
 }
 
 // State contains all the state to allow the backend to function.
@@ -25,12 +53,12 @@ type State struct {
 // given handlers are consistent.
 func New(
 	accessControlAllowedOrigin string,
-	playerCollection *player.StateCollection,
+	playerStateCollection playerCollection,
 	gameHandler httpGetAndPostHandler) *State {
 	return &State{
 		accessControlAllowedOrigin: accessControlAllowedOrigin,
 		playerHandler: &playerEndpointHandler{
-			stateCollection: playerCollection,
+			stateCollection: playerStateCollection,
 		},
 		gameHandler: gameHandler,
 	}
