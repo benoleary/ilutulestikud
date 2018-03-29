@@ -32,9 +32,12 @@ func (mockHandler *mockGetAndPostHandler) HandlePost(httpBodyDecoder *json.Decod
 }
 
 func prepareState(statusForGet int, statusForPost int) *server.State {
+	// It is OK to set the player handler to nil as this file just tests endpoints
+	// which are not covered by requests which would get validly redirected to the
+	// player endpoint handler.
 	return server.New(
 		"irrelevant",
-		&mockGetAndPostHandler{name: "player", getCode: statusForGet, postCode: statusForPost},
+		nil,
 		&mockGetAndPostHandler{name: "game", getCode: statusForGet, postCode: statusForPost})
 }
 
@@ -93,45 +96,6 @@ func TestHandleBackend(unitTest *testing.T) {
 			},
 			expected: expectedReturns{
 				returnedStruct: nil,
-				returnedCode:   http.StatusOK,
-			},
-		},
-		{
-			name:  "GetPlayer",
-			state: prepareState(http.StatusOK, http.StatusOK),
-			arguments: testArguments{
-				method:  http.MethodGet,
-				address: "/backend/player/test/get/player",
-				bodyIsNilRatherThanEmptyObject: false,
-			},
-			expected: expectedReturns{
-				returnedStruct: &mockReturnStruct{Name: "player", GivenSegments: []string{"test", "get", "player"}},
-				returnedCode:   http.StatusOK,
-			},
-		},
-		{
-			name:  "PostNilPlayer",
-			state: prepareState(http.StatusOK, http.StatusOK),
-			arguments: testArguments{
-				method:  http.MethodPost,
-				address: "/backend/player/test/post/player",
-				bodyIsNilRatherThanEmptyObject: true,
-			},
-			expected: expectedReturns{
-				returnedStruct: nil,
-				returnedCode:   http.StatusBadRequest,
-			},
-		},
-		{
-			name:  "PostNonnilPlayer",
-			state: prepareState(http.StatusOK, http.StatusOK),
-			arguments: testArguments{
-				method:  http.MethodPost,
-				address: "/backend/player/test/post/player",
-				bodyIsNilRatherThanEmptyObject: false,
-			},
-			expected: expectedReturns{
-				returnedStruct: &mockReturnStruct{Name: "player", GivenSegments: []string{"test", "post", "player"}},
 				returnedCode:   http.StatusOK,
 			},
 		},
