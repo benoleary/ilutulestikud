@@ -39,7 +39,7 @@ func NewCollection(
 
 // Add ensures that the player definition has a chat color before wrapping around
 // the add function of the internal collection.
-func (stateCollection StateCollection) Add(
+func (stateCollection *StateCollection) Add(
 	playerInformation endpoint.PlayerState) (string, error) {
 	if playerInformation.Name == "" {
 		return "", fmt.Errorf("Player must have a name")
@@ -56,23 +56,18 @@ func (stateCollection StateCollection) Add(
 
 // UpdateFromPresentAttributes just wraps around the updateFromPresentAttributes
 // function of the internal collection.
-func (stateCollection StateCollection) UpdateFromPresentAttributes(
+func (stateCollection *StateCollection) UpdateFromPresentAttributes(
 	updaterReference endpoint.PlayerState) error {
 	return stateCollection.statePersister.updateFromPresentAttributes(updaterReference)
 }
 
 // Get just wraps around the get function of the internal collection.
-func (stateCollection StateCollection) Get(playerIdentifier string) (ReadonlyState, error) {
+func (stateCollection *StateCollection) Get(playerIdentifier string) (ReadonlyState, error) {
 	return stateCollection.statePersister.get(playerIdentifier)
 }
 
-// All just wraps around the all function of the internal collection.
-func (stateCollection StateCollection) All() []ReadonlyState {
-	return stateCollection.statePersister.all()
-}
-
 // Reset calls the reset of the internal collection then adds the initial players again.
-func (stateCollection StateCollection) Reset() {
+func (stateCollection *StateCollection) Reset() {
 	stateCollection.statePersister.reset()
 	stateCollection.addInitialPlayers()
 }
@@ -81,7 +76,7 @@ func (stateCollection StateCollection) Reset() {
 // into the JSON object for the frontend as a list of player objects as its
 // "Players" attribute. The order of the players may not be consistent with repeated
 // calls, as the order of All is not guaranteed to be consistent.
-func (stateCollection StateCollection) RegisteredPlayersForEndpoint() endpoint.PlayerList {
+func (stateCollection *StateCollection) RegisteredPlayersForEndpoint() endpoint.PlayerList {
 	playerStates := stateCollection.statePersister.all()
 	playerList := make([]endpoint.PlayerState, 0, len(playerStates))
 	for _, playerState := range playerStates {
@@ -99,13 +94,13 @@ func (stateCollection StateCollection) RegisteredPlayersForEndpoint() endpoint.P
 
 // AvailableChatColorsForEndpoint writes the chat colors available to the collection
 // into the JSON object for the frontend.
-func (stateCollection StateCollection) AvailableChatColorsForEndpoint() endpoint.ChatColorList {
+func (stateCollection *StateCollection) AvailableChatColorsForEndpoint() endpoint.ChatColorList {
 	return endpoint.ChatColorList{
 		Colors: stateCollection.availableChatColors,
 	}
 }
 
-func (stateCollection StateCollection) addInitialPlayers() {
+func (stateCollection *StateCollection) addInitialPlayers() {
 	for _, initialPlayerName := range stateCollection.initialPlayerNames {
 		stateCollection.Add(endpoint.PlayerState{
 			Name: initialPlayerName,

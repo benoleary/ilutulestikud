@@ -25,9 +25,6 @@ type playerCollection interface {
 	// Get should return a read-only state for the identified player.
 	Get(playerIdentifier string) (player.ReadonlyState, error)
 
-	// All should return all the players as read-only objects.
-	All() []player.ReadonlyState
-
 	// Reset should reset the players to the initial set.
 	Reset()
 
