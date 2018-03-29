@@ -8,7 +8,11 @@ import (
 	"strings"
 )
 
-const breaksBase64 = "\\/\\\\\\?" // This should unescape to \/\\\? in the tests.
+// BreaksBase64 is a string which encodes in base 64 to a string which contains
+// a '/' character, which should in turn break the system which expects to be able
+// to parse identifiers from URI segments delimited by the '/' character.
+// It should unescape to \/\\\? as a literal.
+const BreaksBase64 = "\\/\\\\\\?"
 
 // MockGet creates a mock HTTP GET request and sends it to the given
 // server.State and returns an object containing the recorded response.

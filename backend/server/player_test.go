@@ -3,6 +3,7 @@ package server_test
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -15,9 +16,13 @@ import (
 
 var colorsAvailableInTest []string = defaults.AvailableColors()
 
+type functionNameAndArgument struct {
+	FunctionName     string
+	FunctionArgument interface{}
+}
+
 type mockPlayerCollection struct {
-	FunctionsReceived                       []string
-	ArgumentsReceived                       []interface{}
+	FunctionsAndArgumentsReceived           []functionNameAndArgument
 	ErrorToReturn                           error
 	ReturnForAdd                            string
 	ReturnForGet                            player.ReadonlyState
@@ -25,54 +30,68 @@ type mockPlayerCollection struct {
 	ReturnForAvailableChatColorsForEndpoint endpoint.ChatColorList
 }
 
-func (mockCollection *mockPlayerCollection) recordFunction(functionName string) {
-	mockCollection.FunctionsReceived = append(mockCollection.FunctionsReceived, functionName)
+func (mockCollection *mockPlayerCollection) recordFunctionAndArgument(
+	functionName string, functionArgument interface{}) {
+	mockCollection.FunctionsAndArgumentsReceived =
+		append(mockCollection.FunctionsAndArgumentsReceived, functionNameAndArgument{
+			FunctionName:     functionName,
+			FunctionArgument: functionArgument,
+		})
 }
 
-func (mockCollection *mockPlayerCollection) recordArgument(functionArgument interface{}) {
-	mockCollection.ArgumentsReceived = append(mockCollection.ArgumentsReceived, functionArgument)
+func (mockCollection *mockPlayerCollection) clearFunctionsAndArguments() {
+	mockCollection.FunctionsAndArgumentsReceived = make([]functionNameAndArgument, 0)
+}
+
+func (mockCollection *mockPlayerCollection) popSingleAndEnsureClear(
+	unitTest *testing.T,
+	testIdentifier string) functionNameAndArgument {
+	if len(mockCollection.FunctionsAndArgumentsReceived) != 1 {
+		unitTest.Fatalf(
+			testIdentifier+"/mock player collection recorded %v function calls, expected 1.",
+			mockCollection.FunctionsAndArgumentsReceived)
+	}
+
+	nameAndArgument := mockCollection.FunctionsAndArgumentsReceived[0]
+	mockCollection.clearFunctionsAndArguments()
+
+	return nameAndArgument
 }
 
 // Add gets mocked.
 func (mockCollection *mockPlayerCollection) Add(
 	playerInformation endpoint.PlayerState) (string, error) {
-	mockCollection.recordFunction("Add")
-	mockCollection.recordArgument(playerInformation)
+	mockCollection.recordFunctionAndArgument("Add", playerInformation)
 	return mockCollection.ReturnForAdd, mockCollection.ErrorToReturn
 }
 
 // UpdateFromPresentAttributes gets mocked.
 func (mockCollection *mockPlayerCollection) UpdateFromPresentAttributes(
 	updaterReference endpoint.PlayerState) error {
-	mockCollection.recordFunction("UpdateFromPresentAttributes")
-	mockCollection.recordArgument(updaterReference)
+	mockCollection.recordFunctionAndArgument("UpdateFromPresentAttributes", updaterReference)
 	return mockCollection.ErrorToReturn
 }
 
 // Get gets mocked.
 func (mockCollection *mockPlayerCollection) Get(playerIdentifier string) (player.ReadonlyState, error) {
-	mockCollection.recordFunction("playerIdentifier")
-	mockCollection.recordArgument(playerIdentifier)
+	mockCollection.recordFunctionAndArgument("playerIdentifier", playerIdentifier)
 	return mockCollection.ReturnForGet, mockCollection.ErrorToReturn
 }
 
 // Reset gets mocked.
 func (mockCollection *mockPlayerCollection) Reset() {
-	mockCollection.recordFunction("Reset")
-	mockCollection.recordArgument(nil)
+	mockCollection.recordFunctionAndArgument("Reset", nil)
 }
 
 // RegisteredPlayersForEndpoint gets mocked.
 func (mockCollection *mockPlayerCollection) RegisteredPlayersForEndpoint() endpoint.PlayerList {
-	mockCollection.recordFunction("RegisteredPlayersForEndpoint")
-	mockCollection.recordArgument(nil)
+	mockCollection.recordFunctionAndArgument("RegisteredPlayersForEndpoint", nil)
 	return mockCollection.ReturnForRegisteredPlayersForEndpoint
 }
 
 // AvailableChatColorsForEndpoint gets mocked.
 func (mockCollection *mockPlayerCollection) AvailableChatColorsForEndpoint() endpoint.ChatColorList {
-	mockCollection.recordFunction("AvailableChatColorsForEndpoint")
-	mockCollection.recordArgument(nil)
+	mockCollection.recordFunctionAndArgument("AvailableChatColorsForEndpoint", nil)
 	return mockCollection.ReturnForAvailableChatColorsForEndpoint
 }
 
@@ -83,9 +102,12 @@ func newServerForIdentifier(
 	playerPersister := player.NewInMemoryPersister(nameToIdentifier)
 	playerCollection := &mockPlayerCollection{}
 
-	return playerCollection, server.New("test",
-		playerCollection,
-		nil)
+	serverState :=
+		server.New("test",
+			playerCollection,
+			nil)
+
+	return playerCollection, serverState
 }
 
 // newServer prepares a server.State in a consistent way for the tests of the
@@ -130,19 +152,12 @@ func TestPostNoSegmentBadRequest(unitTest *testing.T) {
 
 	postResponse, encodingError :=
 		server.MockPost(testServer, "/backend/player", bodyObject)
-
-	if encodingError != nil {
-		unitTest.Fatalf(
-			"Encoding error for POST: %v",
-			encodingError)
-	}
-
-	if postResponse.Code != http.StatusBadRequest {
-		unitTest.Fatalf(
-			"POST with empty list of relevant segments did not return expected HTTP code %v, instead was %v.",
-			http.StatusBadRequest,
-			postResponse.Code)
-	}
+	assertPostResponseCorrect(
+		unitTest,
+		"POST with empty list of relevant segments",
+		postResponse,
+		encodingError,
+		http.StatusBadRequest)
 }
 
 func TestPostInvalidSegmentNotFound(unitTest *testing.T) {
@@ -155,25 +170,30 @@ func TestPostInvalidSegmentNotFound(unitTest *testing.T) {
 
 	postResponse, encodingError :=
 		server.MockPost(testServer, "/backend/player/invalid-segment", bodyObject)
-
-	if encodingError != nil {
-		unitTest.Fatalf(
-			"Encoding error for POST: %v",
-			encodingError)
-	}
-
-	if postResponse.Code != http.StatusNotFound {
-		unitTest.Fatalf(
-			"POST invalid-segment did not return expected HTTP code %v, instead was %v.",
-			http.StatusNotFound,
-			postResponse.Code)
-	}
+	assertPostResponseCorrect(
+		unitTest,
+		"POST invalid-segment",
+		postResponse,
+		encodingError,
+		http.StatusNotFound)
 }
 
 func TestDefaultPlayerListNotEmpty(unitTest *testing.T) {
 	playerCollection, testServer := newServer()
 
-	playerCollection.ReturnForRegisteredPlayersForEndpoint
+	playerCollection.ReturnForRegisteredPlayersForEndpoint = endpoint.PlayerList{
+		Players: []endpoint.PlayerState{
+			endpoint.PlayerState{
+				Name: "Player One",
+			},
+			endpoint.PlayerState{
+				Name: "Player Two",
+			},
+			endpoint.PlayerState{
+				Name: "Player Three",
+			},
+		},
+	}
 
 	getResponse := server.MockGet(testServer, "/backend/player/registered-players")
 
@@ -184,7 +204,15 @@ func TestDefaultPlayerListNotEmpty(unitTest *testing.T) {
 }
 
 func TestAvailableColorListNotEmpty(unitTest *testing.T) {
-	_, testServer := newServer()
+	playerCollection, testServer := newServer()
+
+	playerCollection.ReturnForAvailableChatColorsForEndpoint = endpoint.ChatColorList{
+		Colors: []string{
+			"red",
+			"green",
+			"blue",
+		},
+	}
 
 	getResponse := server.MockGet(testServer, "/backend/player/available-colors")
 
@@ -219,88 +247,52 @@ func TestAvailableColorListNotEmpty(unitTest *testing.T) {
 }
 
 func TestRejectInvalidNewPlayer(unitTest *testing.T) {
-	type testArguments struct {
-		bodyObject interface{}
-	}
+	playerCollection, testServer := newServer()
 
-	type expectedReturns struct {
-		codeFromPost int
-	}
+	bodyObject :=
+		endpoint.ChatColorList{
+			Colors: []string{
+				"Player 1",
+				"Player 2"},
+		}
 
-	testCases := []struct {
-		name      string
-		arguments testArguments
-		expected  expectedReturns
-	}{
-		{
-			name: "Nil object",
-			arguments: testArguments{
-				bodyObject: nil,
-			},
-			expected: expectedReturns{
-				codeFromPost: http.StatusBadRequest,
-			},
-		},
-		{
-			name: "Wrong object",
-			arguments: testArguments{
-				bodyObject: &endpoint.ChatColorList{
-					Colors: []string{"Player 1", "Player 2"},
-				},
-			},
-			expected: expectedReturns{
-				codeFromPost: http.StatusBadRequest,
-			},
-		},
-	}
+	playerCollection.ErrorToReturn = errors.New("error")
 
-	for _, testCase := range testCases {
-		unitTest.Run(testCase.name, func(unitTest *testing.T) {
-			bytesBuffer := new(bytes.Buffer)
-			if testCase.arguments.bodyObject != nil {
-				json.NewEncoder(bytesBuffer).Encode(testCase.arguments.bodyObject)
-			}
+	postResponse, encodingError :=
+		server.MockPost(testServer, "/backend/player/new-player", bodyObject)
 
-			_, playerHandler := newCollectionAndHandler()
-			_, postCode :=
-				playerHandler.HandlePost(json.NewDecoder(bytesBuffer), []string{"new-player"})
+	unitTest.Logf(
+		"POST new-player with invalid JSON %v generated encoding error %v.",
+		bodyObject,
+		encodingError)
 
-			if postCode != http.StatusBadRequest {
-				unitTest.Fatalf(
-					"POST new-player with invalid JSON %v did not return expected HTTP code %v, instead was %v.",
-					testCase.arguments.bodyObject,
-					http.StatusBadRequest,
-					postCode)
-			}
-		})
+	if postResponse.Code != http.StatusBadRequest {
+		unitTest.Fatalf(
+			"POST new-player with invalid JSON %v did not return expected HTTP code %v, instead was %v.",
+			bodyObject,
+			http.StatusBadRequest,
+			postResponse.Code)
 	}
 }
 
 func TestRejectNewPlayerWithNameWhichBreaksEncoding(unitTest *testing.T) {
 	// We need a special kind of name and encoding.
-	playerName := breaksBase64
-	_, playerHandler := newCollectionAndHandlerForIdentifier(&endpoint.Base64NameEncoder{})
+	playerName := server.BreaksBase64
+	playerCollection, testServer := newServerForIdentifier(&endpoint.Base64NameEncoder{})
 
 	bodyObject := endpoint.PlayerState{
 		Name:  playerName,
 		Color: "First color",
 	}
 
-	bytesBuffer := new(bytes.Buffer)
-	json.NewEncoder(bytesBuffer).Encode(bodyObject)
-
-	_, invalidRegistrationCode :=
-		playerHandler.HandlePost(json.NewDecoder(bytesBuffer), []string{"new-player"})
-
-	if invalidRegistrationCode != http.StatusBadRequest {
-		unitTest.Fatalf(
-			"POST new-player with valid JSON %v but encoding-breaking player name %v"+
-				" did not return expected HTTP code %v, instead was %v.",
-			bodyObject,
-			playerName,
-			http.StatusBadRequest,
-			invalidRegistrationCode)
-	}
+	postResponse, encodingError :=
+		server.MockPost(testServer, "/backend/player/new-player", bodyObject)
+	assertPostResponseCorrect(
+		unitTest,
+		"POST new-player with encoding-breaking player name",
+		postResponse,
+		encodingError,
+		http.StatusBadRequest)
 }
 
 func TestRejectNewPlayerWithExistingName(unitTest *testing.T) {
@@ -310,19 +302,33 @@ func TestRejectNewPlayerWithExistingName(unitTest *testing.T) {
 		Color: "First color",
 	}
 
-	firstBytesBuffer := new(bytes.Buffer)
-	json.NewEncoder(firstBytesBuffer).Encode(firstBodyObject)
+	playerCollection, testServer := newServer()
 
-	_, playerHandler := newCollectionAndHandler()
-	_, validRegistrationCode :=
-		playerHandler.HandlePost(json.NewDecoder(firstBytesBuffer), []string{"new-player"})
+	firstPostResponse, firstEncodingError :=
+		server.MockPost(testServer, "/backend/player/new-player", firstBodyObject)
+	assertPostResponseCorrect(
+		unitTest,
+		"POST new-player first time for name "+playerName,
+		firstPostResponse,
+		firstEncodingError,
+		http.StatusOK)
 
-	if validRegistrationCode != http.StatusOK {
+	functionRecord :=
+		playerCollection.popSingleAndEnsureClear(
+			unitTest,
+			"TestRejectNewPlayerWithExistingName/initial registration")
+
+	expectedFunctionRecord := functionNameAndArgument{
+		FunctionName:     "Add",
+		FunctionArgument: firstBodyObject,
+	}
+
+	if functionRecord != expectedFunctionRecord {
 		unitTest.Fatalf(
-			"POST new-player with valid JSON %v did not return expected HTTP code %v, instead was %v.",
+			"POST new-player with valid JSON %v did not trigger expected function %v, instead recorded %v",
 			firstBodyObject,
-			http.StatusOK,
-			validRegistrationCode)
+			expectedFunctionRecord,
+			functionRecord)
 	}
 
 	secondBodyObject := endpoint.PlayerState{
@@ -330,23 +336,17 @@ func TestRejectNewPlayerWithExistingName(unitTest *testing.T) {
 		Color: "Second color",
 	}
 
-	secondBytesBuffer := new(bytes.Buffer)
-	json.NewEncoder(secondBytesBuffer).Encode(secondBodyObject)
-
-	_, invalidRegistrationCode :=
-		playerHandler.HandlePost(json.NewDecoder(secondBytesBuffer), []string{"new-player"})
-
-	if invalidRegistrationCode != http.StatusBadRequest {
-		unitTest.Fatalf(
-			"POST new-player with valid JSON %v but second request for same player name %v"+
-				" did not return expected HTTP code %v, instead was %v.",
-			secondBodyObject,
-			playerName,
-			http.StatusBadRequest,
-			invalidRegistrationCode)
-	}
+	secondPostResponse, secondEncodingError :=
+		server.MockPost(testServer, "/backend/player/new-player", secondBodyObject)
+	assertPostResponseCorrect(
+		unitTest,
+		"POST new-player second time for name "+playerName,
+		secondPostResponse,
+		secondEncodingError,
+		http.StatusBadRequest)
 }
 
+// Remove, just test each endpoint called mock functions correctly.
 func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 	type testArguments struct {
 		playerName string
@@ -387,31 +387,34 @@ func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
 		{
 			name: "Produces identifier with '/' in base64",
 			arguments: testArguments{
-				playerName: breaksBase64,
-				chatColor:  breaksBase64,
+				playerName: server.BreaksBase64,
+				chatColor:  server.BreaksBase64,
 			},
 		},
 	}
 
 	for _, testCase := range testCases {
 		unitTest.Run(testCase.name, func(unitTest *testing.T) {
-			playerCollection, playerHandler := newCollectionAndHandler()
+			playerCollection, testServer := newServer()
 
-			bytesBuffer := new(bytes.Buffer)
-			json.NewEncoder(bytesBuffer).Encode(endpoint.PlayerState{
+			bodyObject := endpoint.PlayerState{
 				Name:  testCase.arguments.playerName,
 				Color: testCase.arguments.chatColor,
-			})
+			}
 
-			// First we add the new player.
-			postInterface, postCode :=
-				playerHandler.HandlePost(json.NewDecoder(bytesBuffer), []string{"new-player"})
+			postResponse, encodingError :=
+				server.MockPost(testServer, "/backend/player/new-player", bodyObject)
+			assertPostResponseCorrect(
+				unitTest,
+				"POST new-player",
+				postResponse,
+				encodingError,
+				http.StatusOK)
 
 			// Then we check that the POST returned a valid response.
 			assertAtLeastOnePlayerReturnedInList(
 				unitTest,
-				postCode,
-				postInterface,
+				postResponse,
 				"POST new-player")
 
 			// Finally we check that the player was registered properly.
@@ -814,6 +817,26 @@ func TestResetPlayers(unitTest *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func assertPostResponseCorrect(
+	unitTest *testing.T,
+	testIdentifier string,
+	responseRecorder *httptest.ResponseRecorder,
+	encodingError error,
+	expectedCode int) {
+	if encodingError != nil {
+		unitTest.Fatalf(
+			testIdentifier+"/encoding error: %v",
+			encodingError)
+	}
+
+	if postResponse.Code != expectedCode {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			expectedCode,
+			postResponse.Code)
 	}
 }
 
