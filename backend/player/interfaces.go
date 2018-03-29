@@ -25,11 +25,12 @@ type ReadonlyState interface {
 // the identifier being a segment of a URI with '/' as a delimiter.
 type StatePersister interface {
 	// add should add an element to the collection which is a new object implementing
-	// the ReadonlyState interface with information given by the endpoint.PlayerState
-	// object, and return the identifier of the newly-created player, along with an error
+	// the ReadonlyState interface with information given by the arguments, and return the
+	I dunno, probably nothing. Endpoint handler should do identifiers.
+	identifier of the newly-created player, along with an error
 	// which of course should be nil if there was no problem. It should return an error if
 	// the player already exists.
-	add(playerInformation endpoint.PlayerState) (string, error)
+	add(playerName string, chatColor string) (string, error)
 
 	// updateFromPresentAttributes should update the player identified by the
 	// endpoint.PlayerState by over-writing all non-name string attributes with those from
