@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+const breaksBase64 = "\\/\\\\\\?" // This should unescape to \/\\\? in the tests.
+
 // MockGet creates a mock HTTP GET request and sends it to the given
 // server.State and returns an object containing the recorded response.
 func MockGet(

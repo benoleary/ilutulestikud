@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/benoleary/ilutulestikud/backend/defaults"
@@ -12,34 +13,89 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/server"
 )
 
-const breaksBase64 = "\\/\\\\\\?" // This should unescape to \/\\\? in the tests.
-
 var colorsAvailableInTest []string = defaults.AvailableColors()
+
+type mockPlayerCollection struct {
+	FunctionsReceived                       []string
+	ArgumentsReceived                       []interface{}
+	ErrorToReturn                           error
+	ReturnForAdd                            string
+	ReturnForGet                            player.ReadonlyState
+	ReturnForRegisteredPlayersForEndpoint   endpoint.PlayerList
+	ReturnForAvailableChatColorsForEndpoint endpoint.ChatColorList
+}
+
+func (mockCollection *mockPlayerCollection) recordFunction(functionName string) {
+	mockCollection.FunctionsReceived = append(mockCollection.FunctionsReceived, functionName)
+}
+
+func (mockCollection *mockPlayerCollection) recordArgument(functionArgument interface{}) {
+	mockCollection.ArgumentsReceived = append(mockCollection.ArgumentsReceived, functionArgument)
+}
+
+// Add gets mocked.
+func (mockCollection *mockPlayerCollection) Add(
+	playerInformation endpoint.PlayerState) (string, error) {
+	mockCollection.recordFunction("Add")
+	mockCollection.recordArgument(playerInformation)
+	return mockCollection.ReturnForAdd, mockCollection.ErrorToReturn
+}
+
+// UpdateFromPresentAttributes gets mocked.
+func (mockCollection *mockPlayerCollection) UpdateFromPresentAttributes(
+	updaterReference endpoint.PlayerState) error {
+	mockCollection.recordFunction("UpdateFromPresentAttributes")
+	mockCollection.recordArgument(updaterReference)
+	return mockCollection.ErrorToReturn
+}
+
+// Get gets mocked.
+func (mockCollection *mockPlayerCollection) Get(playerIdentifier string) (player.ReadonlyState, error) {
+	mockCollection.recordFunction("playerIdentifier")
+	mockCollection.recordArgument(playerIdentifier)
+	return mockCollection.ReturnForGet, mockCollection.ErrorToReturn
+}
+
+// Reset gets mocked.
+func (mockCollection *mockPlayerCollection) Reset() {
+	mockCollection.recordFunction("Reset")
+	mockCollection.recordArgument(nil)
+}
+
+// RegisteredPlayersForEndpoint gets mocked.
+func (mockCollection *mockPlayerCollection) RegisteredPlayersForEndpoint() endpoint.PlayerList {
+	mockCollection.recordFunction("RegisteredPlayersForEndpoint")
+	mockCollection.recordArgument(nil)
+	return mockCollection.ReturnForRegisteredPlayersForEndpoint
+}
+
+// AvailableChatColorsForEndpoint gets mocked.
+func (mockCollection *mockPlayerCollection) AvailableChatColorsForEndpoint() endpoint.ChatColorList {
+	mockCollection.recordFunction("AvailableChatColorsForEndpoint")
+	mockCollection.recordArgument(nil)
+	return mockCollection.ReturnForAvailableChatColorsForEndpoint
+}
 
 // newServerForIdentifier prepares a server.State in a consistent way for the
 // tests of the player endpoints.
 func newServerForIdentifier(
-	nameToIdentifier endpoint.NameToIdentifier) *server.State {
+	nameToIdentifier endpoint.NameToIdentifier) (*mockPlayerCollection, *server.State) {
 	playerPersister := player.NewInMemoryPersister(nameToIdentifier)
-	playerCollection :=
-		player.NewCollection(
-			playerPersister,
-			defaults.InitialPlayerNames(),
-			colorsAvailableInTest)
+	playerCollection := &mockPlayerCollection{}
 
-	return server.New("test",
+	return playerCollection, server.New("test",
 		playerCollection,
 		nil)
 }
 
 // newServer prepares a server.State in a consistent way for the tests of the
 // player endpoints.
-func newServer() *server.State {
+func newServer() (*mockPlayerCollection, *server.State) {
 	return newServerForIdentifier(&endpoint.Base32NameEncoder{})
 }
 
 func TestGetNoSegmentBadRequest(unitTest *testing.T) {
-	testServer := newServer()
+	_, testServer := newServer()
 
 	getResponse := server.MockGet(testServer, "/backend/player")
 
@@ -52,7 +108,7 @@ func TestGetNoSegmentBadRequest(unitTest *testing.T) {
 }
 
 func TestGetInvalidSegmentNotFound(unitTest *testing.T) {
-	testServer := newServer()
+	_, testServer := newServer()
 
 	getResponse := server.MockGet(testServer, "/backend/player/invalid-segment")
 
@@ -65,7 +121,7 @@ func TestGetInvalidSegmentNotFound(unitTest *testing.T) {
 }
 
 func TestPostNoSegmentBadRequest(unitTest *testing.T) {
-	testServer := newServer()
+	_, testServer := newServer()
 
 	bodyObject := endpoint.PlayerState{
 		Name:  "Player Name",
@@ -90,77 +146,75 @@ func TestPostNoSegmentBadRequest(unitTest *testing.T) {
 }
 
 func TestPostInvalidSegmentNotFound(unitTest *testing.T) {
-	_, playerHandler := newCollectionAndHandler()
-	bytesBuffer := new(bytes.Buffer)
-	json.NewEncoder(bytesBuffer).Encode(endpoint.PlayerState{
+	_, testServer := newServer()
+
+	bodyObject := endpoint.PlayerState{
 		Name:  "Player Name",
 		Color: "Chat color",
-	})
+	}
 
-	_, actualCode := playerHandler.HandlePost(json.NewDecoder(bytesBuffer), []string{"invalid-segment"})
+	postResponse, encodingError :=
+		server.MockPost(testServer, "/backend/player/invalid-segment", bodyObject)
 
-	if actualCode != http.StatusNotFound {
+	if encodingError != nil {
+		unitTest.Fatalf(
+			"Encoding error for POST: %v",
+			encodingError)
+	}
+
+	if postResponse.Code != http.StatusNotFound {
 		unitTest.Fatalf(
 			"POST invalid-segment did not return expected HTTP code %v, instead was %v.",
 			http.StatusNotFound,
-			actualCode)
+			postResponse.Code)
 	}
 }
 
 func TestDefaultPlayerListNotEmpty(unitTest *testing.T) {
-	_, playerHandler := newCollectionAndHandler()
-	actualInterface, actualCode := playerHandler.HandleGet([]string{"registered-players"})
+	playerCollection, testServer := newServer()
+
+	playerCollection.ReturnForRegisteredPlayersForEndpoint
+
+	getResponse := server.MockGet(testServer, "/backend/player/registered-players")
+
 	assertAtLeastOnePlayerReturnedInList(
 		unitTest,
-		actualCode,
-		actualInterface,
+		getResponse,
 		"GET registered-players")
 }
 
 func TestAvailableColorListNotEmpty(unitTest *testing.T) {
-	_, playerHandler := newCollectionAndHandler()
-	actualInterface, actualCode := playerHandler.HandleGet([]string{"available-colors"})
+	_, testServer := newServer()
 
-	if actualCode != http.StatusOK {
+	getResponse := server.MockGet(testServer, "/backend/player/available-colors")
+
+	if getResponse.Code != http.StatusOK {
 		unitTest.Fatalf(
 			"GET available-colors did not return expected HTTP code %v, instead was %v.",
 			http.StatusOK,
-			actualCode)
+			getResponse.Code)
 	}
 
-	actualAvailableColorList, isTypeCorrect := actualInterface.(endpoint.ChatColorList)
+	bodyDecoder := json.NewDecoder(getResponse.Body)
 
-	if !isTypeCorrect {
+	var responseColorList endpoint.ChatColorList
+	parsingError := bodyDecoder.Decode(&responseColorList)
+	if parsingError != nil {
 		unitTest.Fatalf(
-			"GET available-colors did not return expected endpoint.ChatColorList, instead was %v.",
-			actualInterface)
+			"Error parsing JSON from HTTP response body: %v",
+			parsingError)
 	}
 
-	if actualAvailableColorList.Colors == nil {
+	if responseColorList.Colors == nil {
 		unitTest.Fatalf(
 			"GET available-colors returned %v which has a nil list of colors.",
-			actualInterface)
+			responseColorList)
 	}
 
-	if len(actualAvailableColorList.Colors) <= 0 {
+	if len(responseColorList.Colors) <= 0 {
 		unitTest.Fatalf(
 			"GET available-colors returned %v which has an empty list of colors.",
-			actualAvailableColorList)
-	}
-}
-
-func TestReturnErrorWhenPlayerNotFoundInternally(unitTest *testing.T) {
-	playerCollection, _ := newCollectionAndHandler()
-
-	invalidIdentifier := "not a valid identifier"
-	internalPlayer, internalIdentificationError :=
-		playerCollection.Get(invalidIdentifier)
-
-	if internalIdentificationError == nil {
-		unitTest.Fatalf(
-			"Internal get of invalid player identifier %v did not return an error, did return player state %v",
-			invalidIdentifier,
-			internalPlayer)
+			responseColorList)
 	}
 }
 
@@ -765,22 +819,23 @@ func TestResetPlayers(unitTest *testing.T) {
 
 func assertAtLeastOnePlayerReturnedInList(
 	unitTest *testing.T,
-	responseCode int,
-	responseInterface interface{},
+	responseRecorder *httptest.ResponseRecorder,
 	endpointIdentifier string) endpoint.PlayerList {
-	if responseCode != http.StatusOK {
+	if responseRecorder.Code != http.StatusOK {
 		unitTest.Fatalf(
 			"GET registered-players did not return expected HTTP code %v, instead was %v.",
 			http.StatusOK,
 			responseCode)
 	}
 
-	responsePlayerList, isTypeCorrect := responseInterface.(endpoint.PlayerList)
+	bodyDecoder := json.NewDecoder(responseRecorder.Body)
 
-	if !isTypeCorrect {
+	var responsePlayerList endpoint.PlayerList
+	parsingError := httpBodyDecoder.Decode(&responsePlayerList)
+	if parsingError != nil {
 		unitTest.Fatalf(
-			endpointIdentifier+" did not return expected endpoint.PlayerList, instead was %v.",
-			responseInterface)
+			"Error parsing JSON from HTTP response body: %v",
+			parsingError)
 	}
 
 	if responsePlayerList.Players == nil {
