@@ -38,6 +38,7 @@ func prepareState(statusForGet int, statusForPost int) *server.State {
 	return server.New(
 		"irrelevant",
 		nil,
+		nil,
 		&mockGetAndPostHandler{name: "game", getCode: statusForGet, postCode: statusForPost})
 }
 

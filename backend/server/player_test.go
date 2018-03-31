@@ -15,23 +15,55 @@ import (
 
 var colorsAvailableInTest []string = defaults.AvailableColors()
 
+var testSegmentTranslator server.EndpointSegmentTranslator = &server.Base32Translator{}
+
+type mockPlayerState struct {
+	name  string
+	color string
+}
+
+// Name returns the private name field.
+func (playerState *mockPlayerState) Name() string {
+	return playerState.name
+}
+
+// Color returns the private color field.
+func (playerState *mockPlayerState) Color() string {
+	return playerState.color
+}
+
+var testPlayerStates []player.ReadonlyState = []player.ReadonlyState{
+	&mockPlayerState{
+		name:  "Player One",
+		color: colorsAvailableInTest[0],
+	},
+	// Player Two has the same color as Player One
+	&mockPlayerState{
+		name:  "Player Two",
+		color: colorsAvailableInTest[0],
+	},
+	&mockPlayerState{
+		name:  "Player Three",
+		color: colorsAvailableInTest[1],
+	},
+}
+
 var testPlayerList endpoint.PlayerList = endpoint.PlayerList{
 	Players: []endpoint.PlayerState{
 		endpoint.PlayerState{
-			Identifier: "Identifier One",
-			Name:       "Player One",
-			Color:      colorsAvailableInTest[0],
-		},
-		// Player Two has the same color as Player One
-		endpoint.PlayerState{
-			Identifier: "Identifier Two",
-			Name:       "Player Two",
-			Color:      colorsAvailableInTest[0],
+			Identifier: testSegmentTranslator.ToSegment(testPlayerStates[0].Name()),
+			Name:       testPlayerStates[0].Name(),
+			Color:      testPlayerStates[0].Color(),
 		},
 		endpoint.PlayerState{
-			Identifier: "Identifier Three",
-			Name:       "Player Three",
-			Color:      colorsAvailableInTest[1],
+			Identifier: testSegmentTranslator.ToSegment(testPlayerStates[1].Name()),
+			Name:       testPlayerStates[1].Name(),
+			Color:      testPlayerStates[1].Color(),
+		},
+		endpoint.PlayerState{
+			Identifier: testSegmentTranslator.ToSegment(testPlayerStates[2].Name()),
+			Name:       testPlayerStates[2].Name(),
+			Color:      testPlayerStates[2].Color(),
 		},
 	},
 }
@@ -42,12 +74,11 @@ type functionNameAndArgument struct {
 }
 
 type mockPlayerCollection struct {
-	FunctionsAndArgumentsReceived           []functionNameAndArgument
-	ErrorToReturn                           error
-	ReturnForAdd                            string
-	ReturnForGet                            player.ReadonlyState
-	ReturnForRegisteredPlayersForEndpoint   endpoint.PlayerList
-	ReturnForAvailableChatColorsForEndpoint endpoint.ChatColorList
+	FunctionsAndArgumentsReceived []functionNameAndArgument
+	ErrorToReturn                 error
+	ReturnForAll                  []player.ReadonlyState
+	ReturnForGet                  player.ReadonlyState
+	ReturnForAvailableChatColors  []string
 }
 
 func (mockCollection *mockPlayerCollection) recordFunctionAndArgument(
@@ -76,20 +107,30 @@ func (mockCollection *mockPlayerCollection) getFirstAndEnsureOnly(
 
 // Add gets mocked.
 func (mockCollection *mockPlayerCollection) Add(
-	playerInformation endpoint.PlayerState) (string, error) {
+	playerName string,
+	chatColor string) error {
 	mockCollection.recordFunctionAndArgument(
 		"Add",
-		playerInformation)
-	return mockCollection.ReturnForAdd, mockCollection.ErrorToReturn
+		[]string{playerName, chatColor})
+	return mockCollection.ErrorToReturn
 }
 
-// UpdateFromPresentAttributes gets mocked.
-func (mockCollection *mockPlayerCollection) UpdateFromPresentAttributes(
-	updaterReference endpoint.PlayerState) error {
+// UpdateColor gets mocked.
+func (mockCollection *mockPlayerCollection) UpdateColor(
+	playerName string,
+	chatColor string) error {
 	mockCollection.recordFunctionAndArgument(
-		"UpdateFromPresentAttributes",
-		updaterReference)
+		"UpdateColor",
+		[]string{playerName, chatColor})
 	return mockCollection.ErrorToReturn
+}
+
+// All gets mocked.
+func (mockCollection *mockPlayerCollection) All() []player.ReadonlyState {
+	mockCollection.recordFunctionAndArgument(
+		"All",
+		nil)
+	return mockCollection.ReturnForAll
 }
 
 // Get gets mocked.
@@ -107,31 +148,34 @@ func (mockCollection *mockPlayerCollection) Reset() {
 		nil)
 }
 
-// RegisteredPlayersForEndpoint gets mocked.
-func (mockCollection *mockPlayerCollection) RegisteredPlayersForEndpoint() endpoint.PlayerList {
+// AvailableChatColors gets mocked.
+func (mockCollection *mockPlayerCollection) AvailableChatColors() []string {
 	mockCollection.recordFunctionAndArgument(
-		"RegisteredPlayersForEndpoint",
+		"AvailableChatColors",
 		nil)
-	return mockCollection.ReturnForRegisteredPlayersForEndpoint
+	return mockCollection.ReturnForAvailableChatColors
 }
 
-// AvailableChatColorsForEndpoint gets mocked.
-func (mockCollection *mockPlayerCollection) AvailableChatColorsForEndpoint() endpoint.ChatColorList {
-	mockCollection.recordFunctionAndArgument(
-		"AvailableChatColorsForEndpoint",
-		nil)
-	return mockCollection.ReturnForAvailableChatColorsForEndpoint
-}
-
-// newServerForIdentifier prepares a mock player collection and uses it to
-// prepare a server.State in a consistent way for the  tests of the player
-// endpoints, returning both.
+// newServer prepares a mock player collection and uses it to prepare a
+// server.State with the default endpoint segment translator for the tests,
+// in a consistent way for the tests of the player endpoints, returning the
+// mock collection and the server state.
 func newServer() (*mockPlayerCollection, *server.State) {
+	return newServerForTranslator(testSegmentTranslator)
+}
+
+// newServerForTranslator prepares a mock player collection and uses it to
+// prepare a server.State with the given endpoint segment translator in a
+// consistent way for the tests of the player endpoints, returning the
+// mock collection and the server state.
+func newServerForTranslator(
+	segmentTranslator server.EndpointSegmentTranslator) (*mockPlayerCollection, *server.State) {
 	mockCollection := &mockPlayerCollection{}
 
 	serverState :=
 		server.New(
 			"test",
+			segmentTranslator,
 			mockCollection,
 			nil)
 
@@ -234,7 +278,7 @@ func TestPostInvalidSegmentNotFound(unitTest *testing.T) {
 func TestPlayerListDelivered(unitTest *testing.T) {
 	mockCollection, testServer := newServer()
 
-	mockCollection.ReturnForRegisteredPlayersForEndpoint = testPlayerList
+	mockCollection.ReturnForAll = testPlayerStates
 
 	getResponse :=
 		server.MockGet(testServer, "/backend/player/registered-players")
@@ -257,7 +301,7 @@ func TestPlayerListDelivered(unitTest *testing.T) {
 		unitTest,
 		functionRecord,
 		functionNameAndArgument{
-			FunctionName:     "RegisteredPlayersForEndpoint",
+			FunctionName:     "All",
 			FunctionArgument: nil,
 		},
 		testIdentifier)
@@ -304,7 +348,7 @@ func TestPlayerListDelivered(unitTest *testing.T) {
 			unitTest.Fatalf(
 				testIdentifier+
 					"/returned %v which does not match the expected list of players %v"+
-					" (did not find $v).",
+					" (did not find %v).",
 				responsePlayerList,
 				expectedPlayers,
 				expectedPlayer)
@@ -322,10 +366,7 @@ func TestAvailableColorListNotEmpty(unitTest *testing.T) {
 			"blue",
 		}
 
-	mockCollection.ReturnForAvailableChatColorsForEndpoint =
-		endpoint.ChatColorList{
-			Colors: expectedColors,
-		}
+	mockCollection.ReturnForAvailableChatColors = expectedColors
 
 	getResponse :=
 		server.MockGet(testServer, "/backend/player/available-colors")
@@ -348,7 +389,7 @@ func TestAvailableColorListNotEmpty(unitTest *testing.T) {
 		unitTest,
 		functionRecord,
 		functionNameAndArgument{
-			FunctionName:     "AvailableChatColorsForEndpoint",
+			FunctionName:     "AvailableChatColors",
 			FunctionArgument: nil,
 		},
 		testIdentifier)
@@ -391,7 +432,7 @@ func TestAvailableColorListNotEmpty(unitTest *testing.T) {
 			unitTest.Fatalf(
 				testIdentifier+
 					"/returned %v which does not match the expected list of colors %v"+
-					" (did not find $v).",
+					" (did not find %v).",
 				responseColorList,
 				expectedColors,
 				expectedColor)
@@ -479,8 +520,7 @@ func TestRejectNewPlayerIfCollectionRejectsIt(unitTest *testing.T) {
 	mockCollection, testServer := newServer()
 
 	mockCollection.ErrorToReturn = errors.New("error")
-	mockCollection.ReturnForAdd = "error"
-	mockCollection.ReturnForRegisteredPlayersForEndpoint = testPlayerList
+	mockCollection.ReturnForAll = testPlayerStates
 
 	postResponse, encodingError :=
 		server.MockPost(testServer, "/backend/player/new-player", bodyObject)
@@ -523,8 +563,7 @@ func TestRejectNewPlayerIfIdentifierHasSegmentDelimiter(unitTest *testing.T) {
 	mockCollection, testServer := newServer()
 
 	mockCollection.ErrorToReturn = nil
-	mockCollection.ReturnForAdd = "should/break"
-	mockCollection.ReturnForRegisteredPlayersForEndpoint = testPlayerList
+	mockCollection.ReturnForAll = testPlayerStates
 
 	postResponse, encodingError :=
 		server.MockPost(testServer, "/backend/player/new-player", bodyObject)
@@ -567,8 +606,7 @@ func TestAcceptValidNewPlayer(unitTest *testing.T) {
 	mockCollection, testServer := newServer()
 
 	mockCollection.ErrorToReturn = nil
-	mockCollection.ReturnForAdd = "success"
-	mockCollection.ReturnForRegisteredPlayersForEndpoint = testPlayerList
+	mockCollection.ReturnForAll = testPlayerStates
 
 	postResponse, encodingError :=
 		server.MockPost(testServer, "/backend/player/new-player", bodyObject)
@@ -590,11 +628,11 @@ func TestAcceptValidNewPlayer(unitTest *testing.T) {
 	expectedRecords := []functionNameAndArgument{
 		functionNameAndArgument{
 			FunctionName:     "Add",
-			FunctionArgument: mockCollection.ReturnForAdd,
+			FunctionArgument: []string{bodyObject.Name, bodyObject.Color},
 		},
 		functionNameAndArgument{
-			FunctionName:     "ReturnForRegisteredPlayersForEndpoint",
-			FunctionArgument: mockCollection.ReturnForRegisteredPlayersForEndpoint,
+			FunctionName:     "All",
+			FunctionArgument: testPlayerList,
 		},
 	}
 
@@ -685,7 +723,7 @@ func TestRejectUpdatePlayerIfCollectionRejectsIt(unitTest *testing.T) {
 	mockCollection, testServer := newServer()
 
 	mockCollection.ErrorToReturn = errors.New("error")
-	mockCollection.ReturnForRegisteredPlayersForEndpoint = testPlayerList
+	mockCollection.ReturnForAll = testPlayerStates
 
 	postResponse, encodingError :=
 		server.MockPost(testServer, "/backend/player/update-player", bodyObject)
@@ -713,8 +751,8 @@ func TestRejectUpdatePlayerIfCollectionRejectsIt(unitTest *testing.T) {
 		unitTest,
 		functionRecord,
 		functionNameAndArgument{
-			FunctionName:     "UpdateFromPresentAttributes",
-			FunctionArgument: bodyObject,
+			FunctionName:     "UpdateColor",
+			FunctionArgument: []string{bodyObject.Name, bodyObject.Color},
 		},
 		testIdentifier)
 }
@@ -728,7 +766,7 @@ func TestAcceptValidUpdatePlayer(unitTest *testing.T) {
 	mockCollection, testServer := newServer()
 
 	mockCollection.ErrorToReturn = nil
-	mockCollection.ReturnForRegisteredPlayersForEndpoint = testPlayerList
+	mockCollection.ReturnForAll = testPlayerStates
 
 	postResponse, encodingError :=
 		server.MockPost(testServer, "/backend/player/update-player", bodyObject)
@@ -749,12 +787,12 @@ func TestAcceptValidUpdatePlayer(unitTest *testing.T) {
 
 	expectedRecords := []functionNameAndArgument{
 		functionNameAndArgument{
-			FunctionName:     "UpdateFromPresentAttributes",
-			FunctionArgument: bodyObject,
+			FunctionName:     "UpdateColor",
+			FunctionArgument: []string{bodyObject.Name, bodyObject.Color},
 		},
 		functionNameAndArgument{
-			FunctionName:     "ReturnForRegisteredPlayersForEndpoint",
-			FunctionArgument: mockCollection.ReturnForRegisteredPlayersForEndpoint,
+			FunctionName:     "All",
+			FunctionArgument: nil,
 		},
 	}
 
