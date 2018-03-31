@@ -48,12 +48,14 @@ type State struct {
 // given handlers are consistent.
 func New(
 	accessControlAllowedOrigin string,
+	segmentTranslator EndpointSegmentTranslator,
 	playerStateCollection playerCollection,
 	gameHandler httpGetAndPostHandler) *State {
 	return &State{
 		accessControlAllowedOrigin: accessControlAllowedOrigin,
 		playerHandler: &playerEndpointHandler{
-			stateCollection: playerStateCollection,
+			stateCollection:   playerStateCollection,
+			segmentTranslator: segmentTranslator,
 		},
 		gameHandler: gameHandler,
 	}

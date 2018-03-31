@@ -36,7 +36,7 @@ func (segmentTranslator *Base32Translator) FromSegment(segmentToDecode string) (
 
 // Base64Translator provides an easy way to encode names to base-64 representation of
 // the bytes of the name's characters. It mainly exists for tests demonstrating that
-// the handler classes forbid identifiers with '/' in them, and base-64
+// the handler classes forbid identifiers with '/' in them, and base-64.
 type Base64Translator struct {
 }
 
@@ -48,6 +48,21 @@ func (segmentTranslator *Base64Translator) ToSegment(nameToEncode string) string
 // FromSegment decodes the name from a base-64 representation of the bytes of the name.
 func (segmentTranslator *Base64Translator) FromSegment(segmentToDecode string) (string, error) {
 	return decodeBytesIfNoError(base64.StdEncoding.DecodeString(segmentToDecode))
+}
+
+// NoOperationTranslator just returns the name or segment without encoding or decoding
+// anything.
+type NoOperationTranslator struct {
+}
+
+// ToSegment encodes the name as a base-64 representation of the bytes of the name.
+func (segmentTranslator *NoOperationTranslator) ToSegment(nameToEncode string) string {
+	return nameToEncode
+}
+
+// FromSegment decodes the name from a base-64 representation of the bytes of the name.
+func (segmentTranslator *NoOperationTranslator) FromSegment(segmentToDecode string) (string, error) {
+	return segmentToDecode, nil
 }
 
 func decodeBytesIfNoError(decodedBytes []byte, decodingError error) (string, error) {

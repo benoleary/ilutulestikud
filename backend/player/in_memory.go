@@ -3,28 +3,23 @@ package player
 import (
 	"fmt"
 	"sync"
-
-	"github.com/benoleary/ilutulestikud/backend/endpoint"
 )
 
 // InMemoryPersister stores inMemoryState objects as instances
 // of the implementation of the readAndWriteState interface. The
 // players are mapped to by their identifiers.
 type InMemoryPersister struct {
-	mutualExclusion  sync.Mutex
-	playerStates     map[string]*inMemoryState
-	nameToIdentifier endpoint.NameToIdentifier
+	mutualExclusion sync.Mutex
+	playerStates    map[string]*inMemoryState
 }
 
 // NewInMemoryPersister creates a stateCollection around a map of
 // players created from the given initial player names, with colors
 // according to the available chat colors.
-func NewInMemoryPersister(
-	nameToIdentifier endpoint.NameToIdentifier) *InMemoryPersister {
+func NewInMemoryPersister() *InMemoryPersister {
 	return &InMemoryPersister{
-		mutualExclusion:  sync.Mutex{},
-		playerStates:     make(map[string]*inMemoryState, 0),
-		nameToIdentifier: nameToIdentifier,
+		mutualExclusion: sync.Mutex{},
+		playerStates:    make(map[string]*inMemoryState, 0),
 	}
 }
 
@@ -40,11 +35,11 @@ func (inMemoryPersister *InMemoryPersister) add(playerName string, chatColor str
 
 	inMemoryPersister.mutualExclusion.Lock()
 
-	inMemoryPersister.playerStates[playerName] = &inMemoryState{
-		mutualExclusion: sync.Mutex{},
-		name:            playerName,
-		color:           chatColor,
-	}
+	inMemoryPersister.playerStates[playerName] =
+		&inMemoryState{
+			name:  playerName,
+			color: chatColor,
+		}
 
 	inMemoryPersister.mutualExclusion.Unlock()
 
@@ -106,12 +101,10 @@ func (inMemoryPersister *InMemoryPersister) reset() {
 	}
 }
 
-// inMemoryState encapsulates all the state that the backend needs to know about a player,
-// using a mutex to ensure that updates are thread-safe.
+// inMemoryState encapsulates all the state that the backend needs to know about a player.
 type inMemoryState struct {
-	mutualExclusion sync.Mutex
-	name            string
-	color           string
+	name  string
+	color string
 }
 
 // Name returns the private name field.
