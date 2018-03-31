@@ -285,8 +285,8 @@ func AddNewWithGivenRandomSeed(
 
 // TurnSummariesForFrontend writes the turn summary information for each game which has
 // the given player into the relevant JSON object for the frontend.
-func TurnSummariesForFrontend(gameCollection StateCollection, playerIdentifier string) endpoint.TurnSummaryList {
-	gameList := gameCollection.readAllWithPlayer(playerIdentifier)
+func TurnSummariesForFrontend(gameCollection StateCollection, playerName string) endpoint.TurnSummaryList {
+	gameList := gameCollection.readAllWithPlayer(playerName)
 
 	sort.Sort(ByCreationTime(gameList))
 
@@ -313,7 +313,7 @@ func TurnSummariesForFrontend(gameCollection StateCollection, playerIdentifier s
 			playerNamesInTurnOrder[playerIndex] =
 				playerInTurnOrder.Name()
 
-			if playerIdentifier == playerInTurnOrder.Identifier() {
+			if playerName == playerInTurnOrder.Name() {
 				turnsUntilPlayer = playerIndex
 			}
 		}

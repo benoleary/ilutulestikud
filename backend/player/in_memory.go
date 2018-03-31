@@ -28,55 +28,22 @@ func NewInMemoryPersister(
 	}
 }
 
-// add creates a new inMemoryState object with the given name and
-// given color, and adds a reference to it into the collection.
-func (inMemoryPersister *InMemoryPersister) add(
-	playerDefinition endpoint.PlayerState) (string, error) {
-	playerName := playerDefinition.Name
-	playerIdentifier :=
-		inMemoryPersister.nameToIdentifier.Identifier(playerName)
-
-	_, playerExists := inMemoryPersister.playerStates[playerIdentifier]
+// add creates a new inMemoryState object with the given name and given color,
+// and adds a reference to it into the collection. It returns an error if the
+// player already exists.
+func (inMemoryPersister *InMemoryPersister) add(playerName string, chatColor string) error {
+	_, playerExists := inMemoryPersister.playerStates[playerName]
 
 	if playerExists {
-		return "", fmt.Errorf("Player %v already exists", playerName)
+		return fmt.Errorf("Player %v already exists", playerName)
 	}
 
 	inMemoryPersister.mutualExclusion.Lock()
 
-	inMemoryPersister.playerStates[playerIdentifier] = &inMemoryState{
+	inMemoryPersister.playerStates[playerName] = &inMemoryState{
 		mutualExclusion: sync.Mutex{},
-		identifier:      playerIdentifier,
 		name:            playerName,
-		color:           playerDefinition.Color,
-	}
-
-	inMemoryPersister.mutualExclusion.Unlock()
-
-	return playerIdentifier, nil
-}
-
-// updateFromPresentAttributes updates the player identified by the endpoint.PlayerState
-// by over-writing all non-name string attributes with those from updaterReference, except
-// for strings in updaterReference which are empty strings. It uses a mutex to ensure thread
-// safety.
-func (inMemoryPersister *InMemoryPersister) updateFromPresentAttributes(
-	updaterReference endpoint.PlayerState) error {
-	playerToUpdate, playerExists := inMemoryPersister.playerStates[updaterReference.Identifier]
-
-	if !playerExists {
-		return fmt.Errorf(
-			"No player with identifier %v is registered",
-			updaterReference.Identifier)
-	}
-
-	// It would be more efficient to only lock if we go into an if statement,
-	// but then multiple if statements would be less efficient, and there would
-	// be a mutex in each if statement.
-	inMemoryPersister.mutualExclusion.Lock()
-
-	if updaterReference.Color != "" {
-		playerToUpdate.color = updaterReference.Color
+		color:           chatColor,
 	}
 
 	inMemoryPersister.mutualExclusion.Unlock()
@@ -84,15 +51,37 @@ func (inMemoryPersister *InMemoryPersister) updateFromPresentAttributes(
 	return nil
 }
 
+// updateColor updates the given player to have the given chat color. It uses
+// a mutex to ensure thread safety.
+func (inMemoryPersister *InMemoryPersister) updateColor(
+	playerName string,
+	chatColor string) error {
+	playerToUpdate, playerExists := inMemoryPersister.playerStates[playerName]
+
+	if !playerExists {
+		return fmt.Errorf(
+			"No player with name %v is registered",
+			playerName)
+	}
+
+	if chatColor != "" {
+		inMemoryPersister.mutualExclusion.Lock()
+		playerToUpdate.color = chatColor
+		inMemoryPersister.mutualExclusion.Unlock()
+	}
+
+	return nil
+}
+
 // get returns the ReadOnly corresponding to the given player identifier if it exists
 // already along with an error which is nil if there was no problem. If the player does
 // not exist, a non-nil error is returned along with a nil ReadOnly.
-func (inMemoryPersister *InMemoryPersister) get(playerIdentifier string) (ReadonlyState, error) {
-	playerState, playerExists := inMemoryPersister.playerStates[playerIdentifier]
+func (inMemoryPersister *InMemoryPersister) get(playerName string) (ReadonlyState, error) {
+	playerState, playerExists := inMemoryPersister.playerStates[playerName]
 	if !playerExists {
 		return nil, fmt.Errorf(
-			"No player with identifier %v is registered",
-			playerIdentifier)
+			"No player with name %v is registered",
+			playerName)
 	}
 
 	return playerState, nil
@@ -112,8 +101,8 @@ func (inMemoryPersister *InMemoryPersister) all() []ReadonlyState {
 
 // reset removes all players.
 func (inMemoryPersister *InMemoryPersister) reset() {
-	for playerIdentifier := range inMemoryPersister.playerStates {
-		delete(inMemoryPersister.playerStates, playerIdentifier)
+	for playerName := range inMemoryPersister.playerStates {
+		delete(inMemoryPersister.playerStates, playerName)
 	}
 }
 
@@ -121,14 +110,8 @@ func (inMemoryPersister *InMemoryPersister) reset() {
 // using a mutex to ensure that updates are thread-safe.
 type inMemoryState struct {
 	mutualExclusion sync.Mutex
-	identifier      string
 	name            string
 	color           string
-}
-
-// Identifier returns the private identifier field.
-func (playerState *inMemoryState) Identifier() string {
-	return playerState.identifier
 }
 
 // Name returns the private name field.

@@ -72,9 +72,9 @@ func (inMemoryCollection *InMemoryCollection) addGame(
 	inMemoryCollection.gameStates[gameIdentifier] = newGame
 
 	for _, playerState := range playerStates {
-		playerIdentifier := playerState.Identifier()
-		existingGamesWithPlayer := inMemoryCollection.gamesWithPlayers[playerIdentifier]
-		inMemoryCollection.gamesWithPlayers[playerIdentifier] =
+		playerName := playerState.Name()
+		existingGamesWithPlayer := inMemoryCollection.gamesWithPlayers[playerName]
+		inMemoryCollection.gamesWithPlayers[playerName] =
 			append(existingGamesWithPlayer, newGame.read())
 	}
 
@@ -175,14 +175,14 @@ func (gameState *inMemoryState) CreationTime() time.Time {
 	return gameState.creationTime
 }
 
-// HasPlayerAsParticipant returns true if the given player identifier matches
-// the identifier of any of the game's participating players.
-// This could be done with using a map[string]bool for player identifier mapped
-// to whether or not a participant, but it's more effort to set up the map than
+// HasPlayerAsParticipant returns true if the given player name matches the name of
+// any of the game's participating players.
+// This could be done with using a map[string]bool for player name mapped to whether
+// or not the player is a participant, but it's more effort to set up the map than
 // would be gained in performance here.
-func (gameState *inMemoryState) HasPlayerAsParticipant(playerIdentifier string) bool {
+func (gameState *inMemoryState) HasPlayerAsParticipant(playerName string) bool {
 	for _, participatingPlayer := range gameState.participatingPlayers {
-		if participatingPlayer.Identifier() == playerIdentifier {
+		if participatingPlayer.Name() == playerName {
 			return true
 		}
 	}

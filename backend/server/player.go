@@ -13,7 +13,8 @@ import (
 // player states available to the endpoints.
 // It implements github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
 type playerEndpointHandler struct {
-	stateCollection playerCollection
+	stateCollection   playerCollection
+	segmentTranslator EndpointSegmentTranslator
 }
 
 // HandleGet parses an HTTP GET request and responds with the appropriate function.
@@ -59,13 +60,28 @@ func (playerHandler *playerEndpointHandler) HandlePost(
 // the list of player objects as its "Players" attribute. The order of the players
 // may not consistent with repeated calls as ForEndpoint does not guarantee it.
 func (playerHandler *playerEndpointHandler) writeRegisteredPlayers() (interface{}, int) {
-	return playerHandler.stateCollection.RegisteredPlayersForEndpoint(), http.StatusOK
+	playerStates := playerHandler.stateCollection.All()
+	playerList := make([]endpoint.PlayerState, 0, len(playerStates))
+	for _, playerState := range playerStates {
+		playerName := playerState.Name()
+		playerList = append(playerList, endpoint.PlayerState{
+			Identifier: playerHandler.segmentTranslator.ToSegment(playerName),
+			Name:       playerName,
+			Color:      playerState.Color(),
+		})
+	}
+
+	return endpoint.PlayerList{
+		Players: playerList,
+	}, http.StatusOK
 }
 
 // writeAvailableColors writes a JSON object into the HTTP response which has
 // the list of strings as its "Colors" attribute.
 func (playerHandler *playerEndpointHandler) writeAvailableColors() (interface{}, int) {
-	return playerHandler.stateCollection.AvailableChatColorsForEndpoint(), http.StatusOK
+	return endpoint.ChatColorList{
+		Colors: playerHandler.stateCollection.AvailableChatColors(),
+	}, http.StatusOK
 }
 
 // handleNewPlayer adds the player defined by the JSON of the request's body to the list
@@ -79,11 +95,13 @@ func (playerHandler *playerEndpointHandler) handleNewPlayer(
 		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
 	}
 
-	playerIdentifier, addError := playerHandler.stateCollection.Add(endpointPlayer)
+	addError := playerHandler.stateCollection.Add(endpointPlayer.Name, endpointPlayer.Color)
 
 	if addError != nil {
 		return addError, http.StatusBadRequest
 	}
+
+	playerIdentifier := playerHandler.segmentTranslator.ToSegment(endpointPlayer.Name)
 
 	if strings.Contains(playerIdentifier, "/") {
 		errorMessage := fmt.Sprintf(
@@ -107,7 +125,7 @@ func (playerHandler *playerEndpointHandler) handleUpdatePlayer(
 	}
 
 	updateError :=
-		playerHandler.stateCollection.UpdateFromPresentAttributes(playerUpdate)
+		playerHandler.stateCollection.UpdateColor(playerUpdate.Name, playerUpdate.Color)
 
 	if updateError != nil {
 		return updateError, http.StatusBadRequest

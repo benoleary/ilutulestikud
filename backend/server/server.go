@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
@@ -16,11 +15,11 @@ type httpGetAndPostHandler interface {
 }
 
 type playerCollection interface {
-	// Add should add a new player to the collection, defined by the given argument.
-	Add(playerInformation endpoint.PlayerState) (string, error)
+	// Add should add a new player to the collection, defined by the given arguments.
+	Add(playerName string, chatColor string) error
 
-	// UpdateFromPresentAttributes should update the player by attributes present in the argument.
-	UpdateFromPresentAttributes(updaterReference endpoint.PlayerState) error
+	// UpdateColor should update the given player with the given chat color.
+	UpdateColor(ulayerName string, chatColor string) error
 
 	// Get should return a read-only state for the identified player.
 	Get(playerIdentifier string) (player.ReadonlyState, error)
@@ -28,15 +27,14 @@ type playerCollection interface {
 	// Reset should reset the players to the initial set.
 	Reset()
 
-	// RegisteredPlayersForEndpoint should write relevant parts of the collection's players
-	// into the JSON object for the frontend as a list of player objects as its
-	// "Players" attribute. The order of the players may not be consistent with repeated
-	// calls, as the order of All is not guaranteed to be consistent.
-	RegisteredPlayersForEndpoint() endpoint.PlayerList
+	// All should return a slice of all the players in the collection. The order is not
+	// mandated, and may even change with repeated calls to the same unchanged collection
+	// (analogously to the entry set of a standard Golang map, for example), though of
+	// course an implementation may order the slice consistently.
+	All() []player.ReadonlyState
 
-	// AvailableChatColorsForEndpoint should write the chat colors available to the collection
-	// into the JSON object for the frontend.
-	AvailableChatColorsForEndpoint() endpoint.ChatColorList
+	// AvailableChatColors should return the chat colors available to the collection.
+	AvailableChatColors() []string
 }
 
 // State contains all the state to allow the backend to function.
