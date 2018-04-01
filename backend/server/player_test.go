@@ -73,6 +73,11 @@ type functionNameAndArgument struct {
 	FunctionArgument interface{}
 }
 
+type stringPair struct {
+	first  string
+	second string
+}
+
 type mockPlayerCollection struct {
 	FunctionsAndArgumentsReceived []functionNameAndArgument
 	ErrorToReturn                 error
@@ -111,7 +116,7 @@ func (mockCollection *mockPlayerCollection) Add(
 	chatColor string) error {
 	mockCollection.recordFunctionAndArgument(
 		"Add",
-		[]string{playerName, chatColor})
+		stringPair{first: playerName, second: chatColor})
 	return mockCollection.ErrorToReturn
 }
 
@@ -121,7 +126,7 @@ func (mockCollection *mockPlayerCollection) UpdateColor(
 	chatColor string) error {
 	mockCollection.recordFunctionAndArgument(
 		"UpdateColor",
-		[]string{playerName, chatColor})
+		stringPair{first: playerName, second: chatColor})
 	return mockCollection.ErrorToReturn
 }
 
@@ -183,11 +188,10 @@ func newServerForTranslator(
 }
 
 func TestGetNoSegmentBadRequest(unitTest *testing.T) {
+	testIdentifier := "GET with empty list of relevant segments"
 	mockCollection, testServer := newServer()
 
 	getResponse := server.MockGet(testServer, "/backend/player")
-
-	testIdentifier := "GET with empty list of relevant segments"
 
 	assertResponseIsCorrect(
 		unitTest,
@@ -203,12 +207,11 @@ func TestGetNoSegmentBadRequest(unitTest *testing.T) {
 }
 
 func TestGetInvalidSegmentNotFound(unitTest *testing.T) {
+	testIdentifier := "GET invalid-segment"
 	mockCollection, testServer := newServer()
 
 	getResponse :=
 		server.MockGet(testServer, "/backend/player/invalid-segment")
-
-	testIdentifier := "GET invalid-segment"
 
 	assertResponseIsCorrect(
 		unitTest,
@@ -224,6 +227,7 @@ func TestGetInvalidSegmentNotFound(unitTest *testing.T) {
 }
 
 func TestPostNoSegmentBadRequest(unitTest *testing.T) {
+	testIdentifier := "POST with empty list of relevant segments"
 	mockCollection, testServer := newServer()
 
 	bodyObject := endpoint.PlayerState{
@@ -233,8 +237,6 @@ func TestPostNoSegmentBadRequest(unitTest *testing.T) {
 
 	postResponse, encodingError :=
 		server.MockPost(testServer, "/backend/player", bodyObject)
-
-	testIdentifier := "POST with empty list of relevant segments"
 
 	assertResponseIsCorrect(
 		unitTest,
@@ -250,6 +252,7 @@ func TestPostNoSegmentBadRequest(unitTest *testing.T) {
 }
 
 func TestPostInvalidSegmentNotFound(unitTest *testing.T) {
+	testIdentifier := "POST invalid-segment"
 	mockCollection, testServer := newServer()
 
 	bodyObject := endpoint.PlayerState{
@@ -259,8 +262,6 @@ func TestPostInvalidSegmentNotFound(unitTest *testing.T) {
 
 	postResponse, encodingError :=
 		server.MockPost(testServer, "/backend/player/invalid-segment", bodyObject)
-
-	testIdentifier := "POST invalid-segment"
 
 	assertResponseIsCorrect(
 		unitTest,
@@ -276,14 +277,13 @@ func TestPostInvalidSegmentNotFound(unitTest *testing.T) {
 }
 
 func TestPlayerListDelivered(unitTest *testing.T) {
+	testIdentifier := "GET registered-players"
 	mockCollection, testServer := newServer()
 
 	mockCollection.ReturnForAll = testPlayerStates
 
 	getResponse :=
 		server.MockGet(testServer, "/backend/player/registered-players")
-
-	testIdentifier := "GET registered-players"
 
 	assertResponseIsCorrect(
 		unitTest,
@@ -357,6 +357,7 @@ func TestPlayerListDelivered(unitTest *testing.T) {
 }
 
 func TestAvailableColorListNotEmpty(unitTest *testing.T) {
+	testIdentifier := "GET available-colors"
 	mockCollection, testServer := newServer()
 
 	expectedColors :=
@@ -370,8 +371,6 @@ func TestAvailableColorListNotEmpty(unitTest *testing.T) {
 
 	getResponse :=
 		server.MockGet(testServer, "/backend/player/available-colors")
-
-	testIdentifier := "GET available-colors"
 
 	assertResponseIsCorrect(
 		unitTest,
@@ -440,92 +439,53 @@ func TestAvailableColorListNotEmpty(unitTest *testing.T) {
 	}
 }
 
-func TestRejectInvalidNewPlayerObject(unitTest *testing.T) {
-	baseIdentifier := "Reject invalid POST new-player with body = "
+func TestRejectInvalidNewPlayerWithMalformedRequest(unitTest *testing.T) {
+	testIdentifier := "Reject invalid POST new-player with malformed JSON body"
 
-	testCases := []struct {
-		testIdentifier string
-		bodyObject     interface{}
-		postFromString bool
-	}{
-		{
-			testIdentifier: baseIdentifier + "nil",
-			bodyObject:     nil,
-			postFromString: false,
-		},
-		{
-			testIdentifier: baseIdentifier + "malformed JSON",
-			bodyObject:     "{\"Identifier\" :\"Something\", \"Name\":}",
-			postFromString: true,
-		},
-		{
-			testIdentifier: baseIdentifier + "endpoint.ChatColorList",
-			bodyObject: &endpoint.ChatColorList{
-				Colors: []string{
-					"Player 1",
-					"Player 2",
-				},
-			},
-			postFromString: false,
-		},
-	}
+	// There is no point testing with valid JSON objects which do not correspond
+	// to the expected JSON object, as the JSON will just be parsed with empty
+	// strings for the missing attributes and extra attributes will just be
+	// ignored. The tests of the player state collection can cover the cases of
+	// empty player names and colors.
+	bodyString := "{\"Identifier\" :\"Something\", \"Name\":}"
 
-	for _, testCase := range testCases {
-		unitTest.Run(testCase.testIdentifier, func(unitTest *testing.T) {
-			mockCollection, testServer := newServer()
+	mockCollection, testServer := newServer()
 
-			mockCollection.ErrorToReturn = errors.New("error")
+	mockCollection.ErrorToReturn = errors.New("error")
 
-			var postResponse *httptest.ResponseRecorder
-			var encodingError error
-			if testCase.postFromString {
-				postResponse =
-					server.MockPostWithDirectBody(
-						testServer,
-						"/backend/player/new-player",
-						testCase.bodyObject.(string))
-				encodingError = nil
-			} else {
-				postResponse, encodingError =
-					server.MockPost(testServer, "/backend/player/new-player", testCase.bodyObject)
-			}
+	postResponse :=
+		server.MockPostWithDirectBody(
+			testServer,
+			"/backend/player/new-player",
+			bodyString)
 
-			unitTest.Logf(
-				testCase.testIdentifier+"/object %v generated encoding error %v.",
-				testCase.bodyObject,
-				encodingError)
+	assertResponseIsCorrect(
+		unitTest,
+		testIdentifier,
+		postResponse,
+		nil,
+		http.StatusBadRequest)
 
-			assertResponseIsCorrect(
-				unitTest,
-				testCase.testIdentifier,
-				postResponse,
-				encodingError,
-				http.StatusBadRequest)
-
-			assertNoFunctionWasCalled(
-				unitTest,
-				mockCollection,
-				testCase.testIdentifier)
-		})
-	}
-
+	assertNoFunctionWasCalled(
+		unitTest,
+		mockCollection,
+		testIdentifier)
 }
 
 func TestRejectNewPlayerIfCollectionRejectsIt(unitTest *testing.T) {
-	bodyObject := endpoint.PlayerState{
-		Name:  "A. Player Name",
-		Color: "The color",
-	}
-
+	testIdentifier := "Reject POST new-player if collection rejects it"
 	mockCollection, testServer := newServer()
 
 	mockCollection.ErrorToReturn = errors.New("error")
 	mockCollection.ReturnForAll = testPlayerStates
 
+	bodyObject := endpoint.PlayerState{
+		Name:  "A. Player Name",
+		Color: "The color",
+	}
+
 	postResponse, encodingError :=
 		server.MockPost(testServer, "/backend/player/new-player", bodyObject)
-
-	testIdentifier := "Reject POST new-player if collection rejects it"
 
 	unitTest.Logf(
 		testIdentifier+"/object %v generated encoding error %v.",
@@ -549,26 +509,25 @@ func TestRejectNewPlayerIfCollectionRejectsIt(unitTest *testing.T) {
 		functionRecord,
 		functionNameAndArgument{
 			FunctionName:     "Add",
-			FunctionArgument: bodyObject,
+			FunctionArgument: stringPair{first: bodyObject.Name, second: bodyObject.Color},
 		},
 		testIdentifier)
 }
 
 func TestRejectNewPlayerIfIdentifierHasSegmentDelimiter(unitTest *testing.T) {
-	bodyObject := endpoint.PlayerState{
-		Name:  "A. Player Name",
-		Color: "The color",
-	}
-
+	testIdentifier := "Reject POST new-player if identifier has segment delimiter"
 	mockCollection, testServer := newServer()
 
 	mockCollection.ErrorToReturn = nil
 	mockCollection.ReturnForAll = testPlayerStates
 
+	bodyObject := endpoint.PlayerState{
+		Name:  "A. Player Name",
+		Color: "The color",
+	}
+
 	postResponse, encodingError :=
 		server.MockPost(testServer, "/backend/player/new-player", bodyObject)
-
-	testIdentifier := "Reject POST new-player if identifier has segment delimiter"
 
 	unitTest.Logf(
 		testIdentifier+"/object %v generated encoding error %v.",
@@ -592,26 +551,25 @@ func TestRejectNewPlayerIfIdentifierHasSegmentDelimiter(unitTest *testing.T) {
 		functionRecord,
 		functionNameAndArgument{
 			FunctionName:     "Add",
-			FunctionArgument: bodyObject,
+			FunctionArgument: stringPair{first: bodyObject.Name, second: bodyObject.Color},
 		},
 		testIdentifier)
 }
 
 func TestAcceptValidNewPlayer(unitTest *testing.T) {
-	bodyObject := endpoint.PlayerState{
-		Name:  "A. Player Name",
-		Color: "The color",
-	}
-
+	testIdentifier := "POST new-player"
 	mockCollection, testServer := newServer()
 
 	mockCollection.ErrorToReturn = nil
 	mockCollection.ReturnForAll = testPlayerStates
 
+	bodyObject := endpoint.PlayerState{
+		Name:  "A. Player Name",
+		Color: "The color",
+	}
+
 	postResponse, encodingError :=
 		server.MockPost(testServer, "/backend/player/new-player", bodyObject)
-
-	testIdentifier := "POST new-player"
 
 	unitTest.Logf(
 		testIdentifier+"/object %v generated encoding error %v.",
@@ -628,11 +586,11 @@ func TestAcceptValidNewPlayer(unitTest *testing.T) {
 	expectedRecords := []functionNameAndArgument{
 		functionNameAndArgument{
 			FunctionName:     "Add",
-			FunctionArgument: []string{bodyObject.Name, bodyObject.Color},
+			FunctionArgument: stringPair{first: bodyObject.Name, second: bodyObject.Color},
 		},
 		functionNameAndArgument{
 			FunctionName:     "All",
-			FunctionArgument: testPlayerList,
+			FunctionArgument: nil,
 		},
 	}
 
@@ -643,92 +601,53 @@ func TestAcceptValidNewPlayer(unitTest *testing.T) {
 		testIdentifier)
 }
 
-func TestRejectInvalidUpdatePlayerObject(unitTest *testing.T) {
-	baseIdentifier := "Reject invalid POST update-player with body = "
+func TestRejectInvalidUpdatePlayerWithMalformedRequest(unitTest *testing.T) {
+	testIdentifier := "Reject invalid POST update-player with malformed JSON body"
 
-	testCases := []struct {
-		testIdentifier string
-		bodyObject     interface{}
-		postFromString bool
-	}{
-		{
-			testIdentifier: baseIdentifier + "nil",
-			bodyObject:     nil,
-			postFromString: false,
-		},
-		{
-			testIdentifier: baseIdentifier + "malformed JSON",
-			bodyObject:     "{\"Identifier\" :\"Something\", \"Name\":}",
-			postFromString: true,
-		},
-		{
-			testIdentifier: baseIdentifier + "endpoint.ChatColorList",
-			bodyObject: &endpoint.ChatColorList{
-				Colors: []string{
-					"Player 1",
-					"Player 2",
-				},
-			},
-			postFromString: false,
-		},
-	}
+	// There is no point testing with valid JSON objects which do not correspond
+	// to the expected JSON object, as the JSON will just be parsed with empty
+	// strings for the missing attributes and extra attributes will just be
+	// ignored. The tests of the player state collection can cover the cases of
+	// empty player names and colors.
+	bodyString := "{\"Identifier\" :\"Something\", \"Name\":}"
 
-	for _, testCase := range testCases {
-		unitTest.Run(testCase.testIdentifier, func(unitTest *testing.T) {
-			mockCollection, testServer := newServer()
+	mockCollection, testServer := newServer()
 
-			mockCollection.ErrorToReturn = errors.New("error")
+	mockCollection.ErrorToReturn = errors.New("error")
 
-			var postResponse *httptest.ResponseRecorder
-			var encodingError error
-			if testCase.postFromString {
-				postResponse =
-					server.MockPostWithDirectBody(
-						testServer,
-						"/backend/player/update-player",
-						testCase.bodyObject.(string))
-				encodingError = nil
-			} else {
-				postResponse, encodingError =
-					server.MockPost(testServer, "/backend/player/new-player", testCase.bodyObject)
-			}
+	postResponse :=
+		server.MockPostWithDirectBody(
+			testServer,
+			"/backend/player/update-player",
+			bodyString)
 
-			unitTest.Logf(
-				testCase.testIdentifier+"/object %v generated encoding error %v.",
-				testCase.bodyObject,
-				encodingError)
+	assertResponseIsCorrect(
+		unitTest,
+		testIdentifier,
+		postResponse,
+		nil,
+		http.StatusBadRequest)
 
-			assertResponseIsCorrect(
-				unitTest,
-				testCase.testIdentifier,
-				postResponse,
-				encodingError,
-				http.StatusBadRequest)
-
-			assertNoFunctionWasCalled(
-				unitTest,
-				mockCollection,
-				testCase.testIdentifier)
-		})
-	}
-
+	assertNoFunctionWasCalled(
+		unitTest,
+		mockCollection,
+		testIdentifier)
 }
 
 func TestRejectUpdatePlayerIfCollectionRejectsIt(unitTest *testing.T) {
-	bodyObject := endpoint.PlayerState{
-		Name:  "A. Player Name",
-		Color: "The color",
-	}
-
+	testIdentifier := "Reject POST update-player if collection rejects it"
 	mockCollection, testServer := newServer()
 
 	mockCollection.ErrorToReturn = errors.New("error")
 	mockCollection.ReturnForAll = testPlayerStates
 
+	bodyObject := endpoint.PlayerState{
+		Name:  "A. Player Name",
+		Color: "The color",
+	}
+
 	postResponse, encodingError :=
 		server.MockPost(testServer, "/backend/player/update-player", bodyObject)
-
-	testIdentifier := "Reject POST update-player if collection rejects it"
 
 	unitTest.Logf(
 		testIdentifier+"/object %v generated encoding error %v.",
@@ -752,26 +671,25 @@ func TestRejectUpdatePlayerIfCollectionRejectsIt(unitTest *testing.T) {
 		functionRecord,
 		functionNameAndArgument{
 			FunctionName:     "UpdateColor",
-			FunctionArgument: []string{bodyObject.Name, bodyObject.Color},
+			FunctionArgument: stringPair{first: bodyObject.Name, second: bodyObject.Color},
 		},
 		testIdentifier)
 }
 
 func TestAcceptValidUpdatePlayer(unitTest *testing.T) {
-	bodyObject := endpoint.PlayerState{
-		Name:  "A. Player Name",
-		Color: "The color",
-	}
-
+	testIdentifier := "POST update-player"
 	mockCollection, testServer := newServer()
 
 	mockCollection.ErrorToReturn = nil
 	mockCollection.ReturnForAll = testPlayerStates
 
+	bodyObject := endpoint.PlayerState{
+		Name:  "A. Player Name",
+		Color: "The color",
+	}
+
 	postResponse, encodingError :=
 		server.MockPost(testServer, "/backend/player/update-player", bodyObject)
-
-	testIdentifier := "POST update-player"
 
 	unitTest.Logf(
 		testIdentifier+"/object %v generated encoding error %v.",
@@ -788,7 +706,7 @@ func TestAcceptValidUpdatePlayer(unitTest *testing.T) {
 	expectedRecords := []functionNameAndArgument{
 		functionNameAndArgument{
 			FunctionName:     "UpdateColor",
-			FunctionArgument: []string{bodyObject.Name, bodyObject.Color},
+			FunctionArgument: stringPair{first: bodyObject.Name, second: bodyObject.Color},
 		},
 		functionNameAndArgument{
 			FunctionName:     "All",
