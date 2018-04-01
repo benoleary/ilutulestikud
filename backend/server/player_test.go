@@ -724,7 +724,43 @@ func TestAcceptValidUpdatePlayer(unitTest *testing.T) {
 		testIdentifier)
 }
 
-// Still need to test reset.
+func TestResetPlayers(unitTest *testing.T) {
+	testIdentifier := "POST reset-players"
+	mockCollection, testServer := newServer()
+
+	postResponse, encodingError :=
+		server.MockPost(testServer, "/backend/player/reset-players", nil)
+
+	if encodingError != nil {
+		unitTest.Fatalf(
+			testIdentifier+"/encoding nil produced error",
+			encodingError)
+	}
+
+	assertResponseIsCorrect(
+		unitTest,
+		testIdentifier,
+		postResponse,
+		encodingError,
+		http.StatusOK)
+
+	expectedRecords := []functionNameAndArgument{
+		functionNameAndArgument{
+			FunctionName:     "Reset",
+			FunctionArgument: nil,
+		},
+		functionNameAndArgument{
+			FunctionName:     "All",
+			FunctionArgument: nil,
+		},
+	}
+
+	assertFunctionRecordsAreCorrect(
+		unitTest,
+		mockCollection.FunctionsAndArgumentsReceived,
+		expectedRecords,
+		testIdentifier)
+}
 
 func assertNoFunctionWasCalled(
 	unitTest *testing.T,
