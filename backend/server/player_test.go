@@ -516,13 +516,16 @@ func TestRejectNewPlayerIfCollectionRejectsIt(unitTest *testing.T) {
 
 func TestRejectNewPlayerIfIdentifierHasSegmentDelimiter(unitTest *testing.T) {
 	testIdentifier := "Reject POST new-player if identifier has segment delimiter"
-	mockCollection, testServer := newServer()
+
+	// We could use a no-operation translator so that it is clear that the test case has
+	// a '/', but this way ensures that a translation does happen.
+	mockCollection, testServer := newServerForTranslator(&server.Base64Translator{})
 
 	mockCollection.ErrorToReturn = nil
 	mockCollection.ReturnForAll = testPlayerStates
 
 	bodyObject := endpoint.PlayerState{
-		Name:  "A. Player Name",
+		Name:  server.BreaksBase64,
 		Color: "The color",
 	}
 
