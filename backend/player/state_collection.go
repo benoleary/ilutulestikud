@@ -67,8 +67,8 @@ func (stateCollection *StateCollection) All() []ReadonlyState {
 }
 
 // Get just wraps around the get function of the internal collection.
-func (stateCollection *StateCollection) Get(playerIdentifier string) (ReadonlyState, error) {
-	return stateCollection.statePersister.get(playerIdentifier)
+func (stateCollection *StateCollection) Get(playerName string) (ReadonlyState, error) {
+	return stateCollection.statePersister.get(playerName)
 }
 
 // Reset calls the reset of the internal collection then adds the initial players again.

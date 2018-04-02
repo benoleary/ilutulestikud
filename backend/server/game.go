@@ -1,4 +1,4 @@
-package game
+package server
 
 import (
 	"encoding/json"
@@ -7,29 +7,19 @@ import (
 	"strings"
 
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
-	"github.com/benoleary/ilutulestikud/backend/player"
+	"github.com/benoleary/ilutulestikud/backend/game"
 )
 
-// GetAndPostHandler is a struct meant to encapsulate all the state co-ordinating all the games.
-// It implements github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
-type GetAndPostHandler struct {
-	playerCollection *player.StateCollection
-	gameCollection   StateCollection
-}
-
-// NewGetAndPostHandler constructs a Handler object around the given game.Collection object.
-func NewGetAndPostHandler(
-	playerStates *player.StateCollection,
-	gameCollection StateCollection) *GetAndPostHandler {
-	return &GetAndPostHandler{
-		playerCollection: playerStates,
-		gameCollection:   gameCollection,
-	}
+// gameEndpointHandler is a struct meant to encapsulate all the state co-ordinating
+// interaction with all the games through the endpoints.
+type gameEndpointHandler struct {
+	gameCollection    game.StateCollection
+	segmentTranslator EndpointSegmentTranslator
 }
 
 // HandleGet parses an HTTP GET request and responds with the appropriate function.
 // This implements part of github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
-func (getAndPostHandler *GetAndPostHandler) HandleGet(
+func (gameHandler *gameEndpointHandler) HandleGet(
 	relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 1 {
 		return "Not enough segments in URI to determine what to do", http.StatusBadRequest
@@ -37,11 +27,11 @@ func (getAndPostHandler *GetAndPostHandler) HandleGet(
 
 	switch relevantSegments[0] {
 	case "available-rulesets":
-		return getAndPostHandler.writeAvailableRulesets()
+		return gameHandler.writeAvailableRulesets()
 	case "all-games-with-player":
-		return getAndPostHandler.writeTurnSummariesForPlayer(relevantSegments[1:])
+		return gameHandler.writeTurnSummariesForPlayer(relevantSegments[1:])
 	case "game-as-seen-by-player":
-		return getAndPostHandler.writeGameForPlayer(relevantSegments[1:])
+		return gameHandler.writeGameForPlayer(relevantSegments[1:])
 	default:
 		return "URI segment " + relevantSegments[0] + " not valid", http.StatusNotFound
 	}
@@ -49,7 +39,7 @@ func (getAndPostHandler *GetAndPostHandler) HandleGet(
 
 // HandlePost parses an HTTP POST request and responds with the appropriate function.
 // This implements part of github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
-func (getAndPostHandler *GetAndPostHandler) HandlePost(
+func (gameHandler *gameEndpointHandler) HandlePost(
 	httpBodyDecoder *json.Decoder,
 	relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 1 {
@@ -58,9 +48,9 @@ func (getAndPostHandler *GetAndPostHandler) HandlePost(
 
 	switch relevantSegments[0] {
 	case "create-new-game":
-		return getAndPostHandler.handleNewGame(httpBodyDecoder, relevantSegments)
+		return gameHandler.handleNewGame(httpBodyDecoder, relevantSegments)
 	case "player-action":
-		return getAndPostHandler.handlePlayerAction(httpBodyDecoder, relevantSegments)
+		return gameHandler.handlePlayerAction(httpBodyDecoder, relevantSegments)
 	default:
 		return "URI segment " + relevantSegments[0] + " not valid", http.StatusNotFound
 	}
@@ -68,13 +58,13 @@ func (getAndPostHandler *GetAndPostHandler) HandlePost(
 
 // writeAvailableRulesets writes a JSON object into the HTTP response which has
 // the list of available rulesets as its "Rulesets" attribute.
-func (getAndPostHandler *GetAndPostHandler) writeAvailableRulesets() (interface{}, int) {
-	return endpoint.RulesetList{Rulesets: AvailableRulesets()}, http.StatusOK
+func (gameHandler *gameEndpointHandler) writeAvailableRulesets() (interface{}, int) {
+	return endpoint.RulesetList{Rulesets: game.AvailableRulesets()}, http.StatusOK
 }
 
 // writeTurnSummariesForPlayer writes a JSON object into the HTTP response which has
 // the list of turn summary objects as its "TurnSummaries" attribute.
-func (getAndPostHandler *GetAndPostHandler) writeTurnSummariesForPlayer(
+func (gameHandler *gameEndpointHandler) writeTurnSummariesForPlayer(
 	relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 1 {
 		return "Not enough segments in URI to determine player", http.StatusBadRequest
@@ -82,17 +72,18 @@ func (getAndPostHandler *GetAndPostHandler) writeTurnSummariesForPlayer(
 
 	playerIdentifier := relevantSegments[0]
 
-	_, identificationError := getAndPostHandler.playerCollection.Get(playerIdentifier)
+	playerName, identificationError :=
+		gameHandler.segmentTranslator.FromSegment(playerIdentifier)
 
 	if identificationError != nil {
 		return identificationError, http.StatusBadRequest
 	}
 
-	return TurnSummariesForFrontend(getAndPostHandler.gameCollection, playerIdentifier), http.StatusOK
+	return game.TurnSummariesForFrontend(gameHandler.gameCollection, playerName), http.StatusOK
 }
 
 // handleNewGame adds a new game to the map of game state objects.
-func (getAndPostHandler *GetAndPostHandler) handleNewGame(
+func (gameHandler *gameEndpointHandler) handleNewGame(
 	httpBodyDecoder *json.Decoder,
 	relevantSegments []string) (interface{}, int) {
 	var gameDefinition endpoint.GameDefinition
@@ -102,15 +93,16 @@ func (getAndPostHandler *GetAndPostHandler) handleNewGame(
 		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
 	}
 
-	gameIdentifier, addError :=
-		AddNew(
+	addError :=
+		game.AddNew(
 			gameDefinition,
-			getAndPostHandler.gameCollection,
-			getAndPostHandler.playerCollection)
+			gameHandler.gameCollection)
 
 	if addError != nil {
 		return addError, http.StatusBadRequest
 	}
+
+	gameIdentifier := gameHandler.segmentTranslator.ToSegment(gameDefinition.GameName)
 
 	if strings.Contains(gameIdentifier, "/") {
 		errorMessage := fmt.Sprintf(
@@ -124,7 +116,7 @@ func (getAndPostHandler *GetAndPostHandler) handleNewGame(
 
 // writeGameForPlayer writes a JSON representation of the current state of the game
 // with the given name for the player with the given name.
-func (getAndPostHandler *GetAndPostHandler) writeGameForPlayer(
+func (gameHandler *gameEndpointHandler) writeGameForPlayer(
 	relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 2 {
 		return "Not enough segments in URI to determine game name and player name", http.StatusBadRequest
@@ -133,7 +125,7 @@ func (getAndPostHandler *GetAndPostHandler) writeGameForPlayer(
 	gameIdentifier := relevantSegments[0]
 	playerIdentifier := relevantSegments[1]
 
-	gameState, isFound := ReadState(getAndPostHandler.gameCollection, gameIdentifier)
+	gameState, isFound := game.ReadState(gameHandler.gameCollection, gameIdentifier)
 
 	if !isFound {
 		errorMessage :=
@@ -147,11 +139,11 @@ func (getAndPostHandler *GetAndPostHandler) writeGameForPlayer(
 		return errorMessage, http.StatusBadRequest
 	}
 
-	return ForPlayer(gameState, playerIdentifier), http.StatusOK
+	return game.ForPlayer(gameState, playerIdentifier), http.StatusOK
 }
 
 // handlePlayerAction passes on the given player action to the relevant game.
-func (getAndPostHandler *GetAndPostHandler) handlePlayerAction(
+func (gameHandler *gameEndpointHandler) handlePlayerAction(
 	httpBodyDecoder *json.Decoder,
 	relevantSegments []string) (interface{}, int) {
 
@@ -163,9 +155,8 @@ func (getAndPostHandler *GetAndPostHandler) handlePlayerAction(
 	}
 
 	actionError :=
-		PerformAction(
-			getAndPostHandler.gameCollection,
-			getAndPostHandler.playerCollection,
+		game.PerformAction(
+			gameHandler.gameCollection,
 			playerAction)
 
 	if actionError != nil {

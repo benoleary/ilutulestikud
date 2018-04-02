@@ -23,7 +23,6 @@ func main() {
 			defaults.InitialPlayerNames(),
 			defaults.AvailableColors())
 	gameCollection := game.NewInMemoryCollection(&endpoint.Base32NameEncoder{})
-	gameGetAndPostHandler := game.NewGetAndPostHandler(playerCollection, gameCollection)
 
 	// We could load the allowed origin from a file, but this app is very specific to a set of fixed addresses.
 	serverState :=
@@ -31,7 +30,7 @@ func main() {
 			"http://localhost:4233",
 			&server.Base32Translator{},
 			playerCollection,
-			gameGetAndPostHandler)
+			gameCollection)
 	http.HandleFunc("/backend/", serverState.HandleBackend)
 	http.ListenAndServe(":8080", nil)
 }

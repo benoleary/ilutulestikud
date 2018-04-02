@@ -11,6 +11,10 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
+type readonlyPlayerProvider interface {
+	Get(playerName string) (player.ReadonlyState, error)
+}
+
 // ReadonlyState defines the interface for structs which should provide read-only information
 // which can completely describe the state of a game.
 type ReadonlyState interface {
@@ -134,7 +138,7 @@ func ReadState(gameCollection StateCollection, gameIdentifier string) (ReadonlyS
 // or returns an error.
 func PerformAction(
 	gameCollection StateCollection,
-	playerCollection *player.StateCollection,
+	playerCollection readonlyPlayerProvider,
 	playerAction endpoint.PlayerAction) error {
 	actingPlayer, playeridentificationError :=
 		playerCollection.Get(playerAction.PlayerIdentifier)

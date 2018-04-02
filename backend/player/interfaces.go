@@ -27,11 +27,11 @@ type StatePersister interface {
 	// including if the player is not registered.
 	updateColor(playerName string, chatColor string) error
 
-	// get should return the ReadOnly corresponding to the given player identifier if it
+	// get should return the read-only state corresponding to the given player name if it
 	// exists already along with an error which of course should be nil if there was no
 	// problem. If the player does not exist, a non-nil error should be returned along with
-	// a nil ReadOnly.
-	get(playerIdentifier string) (ReadonlyState, error)
+	// nil for the read-only state.
+	get(playerName string) (ReadonlyState, error)
 
 	// all should return a slice of all the State instances in the collection. The order
 	// is not mandated, and may even change with repeated calls to the same unchanged

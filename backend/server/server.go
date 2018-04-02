@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
@@ -37,11 +38,15 @@ type playerCollection interface {
 	AvailableChatColors() []string
 }
 
+type gameCollection interface {
+	// needs stuff
+}
+
 // State contains all the state to allow the backend to function.
 type State struct {
 	accessControlAllowedOrigin string
 	playerHandler              *playerEndpointHandler
-	gameHandler                httpGetAndPostHandler
+	gameHandler                *gameEndpointHandler
 }
 
 // New creates a new State object and returns a pointer to it, assuming that the
@@ -50,14 +55,17 @@ func New(
 	accessControlAllowedOrigin string,
 	segmentTranslator EndpointSegmentTranslator,
 	playerStateCollection playerCollection,
-	gameHandler httpGetAndPostHandler) *State {
+	gameStateCollection game.StateCollection) *State {
 	return &State{
 		accessControlAllowedOrigin: accessControlAllowedOrigin,
 		playerHandler: &playerEndpointHandler{
 			stateCollection:   playerStateCollection,
 			segmentTranslator: segmentTranslator,
 		},
-		gameHandler: gameHandler,
+		gameHandler: &gameEndpointHandler{
+			gameCollection:    gameStateCollection,
+			segmentTranslator: segmentTranslator,
+		},
 	}
 }
 
