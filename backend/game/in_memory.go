@@ -11,31 +11,29 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
-// InMemoryCollection stores inMemoryState objects as State objects. The games are
-// mapped to by their identifiers, as are the players.
-type InMemoryCollection struct {
+// InMemoryPersister stores inMemoryState objects as State objects. The games are
+// mapped to by their name, as are the players.
+type InMemoryPersister struct {
 	mutualExclusion       sync.Mutex
 	randomNumberGenerator *rand.Rand
 	gameStates            map[string]readAndWriteState
-	nameToIdentifier      endpoint.NameToIdentifier
 	gamesWithPlayers      map[string][]ReadonlyState
 }
 
-// NewInMemoryCollection creates a Collection around a map of games.
-func NewInMemoryCollection() *InMemoryCollection {
-	return &InMemoryCollection{
+// NewInMemoryPersister creates a game state persister around a map of games.
+func NewInMemoryPersister() *InMemoryPersister {
+	return &InMemoryPersister{
 		mutualExclusion:       sync.Mutex{},
 		randomNumberGenerator: rand.New(rand.NewSource(time.Now().Unix())),
 		gameStates:            make(map[string]readAndWriteState, 1),
-		nameToIdentifier:      nil,
 		gamesWithPlayers:      make(map[string][]ReadonlyState, 0),
 	}
 }
 
 // randomSeed provides an int64 which can be used as a seed for the
 // rand.NewSource(...) function.
-func (inMemoryCollection *InMemoryCollection) randomSeed() int64 {
-	return inMemoryCollection.randomNumberGenerator.Int63()
+func (inMemoryPersister *InMemoryPersister) randomSeed() int64 {
+	return inMemoryPersister.randomNumberGenerator.Int63()
 }
 
 // addGame adds an element to the collection which is a new object implementing
@@ -43,7 +41,7 @@ func (inMemoryCollection *InMemoryCollection) randomSeed() int64 {
 // identifier of the newly-created game, along with an error which of course is
 // nil if there was no problem. It returns an error if a game with the given name
 // already exists.
-func (inMemoryCollection *InMemoryCollection) addGame(
+func (inMemoryPersister *InMemoryPersister) addGame(
 	gameName string,
 	gameRuleset Ruleset,
 	playerStates []player.ReadonlyState,
@@ -52,8 +50,7 @@ func (inMemoryCollection *InMemoryCollection) addGame(
 		return fmt.Errorf("Game must have a name")
 	}
 
-	gameIdentifier := inMemoryCollection.nameToIdentifier.Identifier(gameName)
-	_, gameExists := inMemoryCollection.gameStates[gameIdentifier]
+	_, gameExists := inMemoryPersister.gameStates[gameName]
 
 	if gameExists {
 		return fmt.Errorf("Game %v already exists", gameName)
@@ -61,48 +58,46 @@ func (inMemoryCollection *InMemoryCollection) addGame(
 
 	newGame :=
 		newInMemoryState(
-			gameIdentifier,
 			gameName,
 			gameRuleset,
 			playerStates,
 			initialShuffle)
 
-	inMemoryCollection.mutualExclusion.Lock()
+	inMemoryPersister.mutualExclusion.Lock()
 
-	inMemoryCollection.gameStates[gameIdentifier] = newGame
+	inMemoryPersister.gameStates[gameName] = newGame
 
 	for _, playerState := range playerStates {
 		playerName := playerState.Name()
-		existingGamesWithPlayer := inMemoryCollection.gamesWithPlayers[playerName]
-		inMemoryCollection.gamesWithPlayers[playerName] =
+		existingGamesWithPlayer := inMemoryPersister.gamesWithPlayers[playerName]
+		inMemoryPersister.gamesWithPlayers[playerName] =
 			append(existingGamesWithPlayer, newGame.read())
 	}
 
-	inMemoryCollection.mutualExclusion.Unlock()
+	inMemoryPersister.mutualExclusion.Unlock()
 	return nil
 }
 
 // readAllWithPlayer returns a slice of all the ReadonlyState instances in the collection
 // which have the given player as a participant. The order is not consistent with repeated
 // calls, as it is defined by the entry set of a standard Golang map.
-func (inMemoryCollection *InMemoryCollection) readAllWithPlayer(
+func (inMemoryPersister *InMemoryPersister) readAllWithPlayer(
 	playerIdentifier string) []ReadonlyState {
-	return inMemoryCollection.gamesWithPlayers[playerIdentifier]
+	return inMemoryPersister.gamesWithPlayers[playerIdentifier]
 }
 
 // ReadGame returns the ReadonlyState corresponding to the given game identifier if
 // it exists already (or else nil) along with whether the game exists, analogously
 // to a standard Golang map.
-func (inMemoryCollection *InMemoryCollection) readAndWriteGame(
+func (inMemoryPersister *InMemoryPersister) readAndWriteGame(
 	gameIdentifier string) (readAndWriteState, bool) {
-	gameState, gameExists := inMemoryCollection.gameStates[gameIdentifier]
+	gameState, gameExists := inMemoryPersister.gameStates[gameIdentifier]
 	return gameState, gameExists
 }
 
 // inMemoryState is a struct meant to encapsulate all the state required for a single game to function.
 type inMemoryState struct {
 	mutualExclusion      sync.Mutex
-	gameIdentifier       string
 	gameName             string
 	gameRuleset          Ruleset
 	creationTime         time.Time
@@ -119,14 +114,12 @@ type inMemoryState struct {
 // using the given seed for the random number generator used to shuffle the deck
 // initially.
 func newInMemoryState(
-	gameIdentifier string,
 	gameName string,
 	gameRuleset Ruleset,
 	playerStates []player.ReadonlyState,
 	shuffledDeck []Card) readAndWriteState {
 	return &inMemoryState{
 		mutualExclusion:      sync.Mutex{},
-		gameIdentifier:       gameIdentifier,
 		gameName:             gameName,
 		gameRuleset:          gameRuleset,
 		creationTime:         time.Now(),
@@ -142,11 +135,6 @@ func newInMemoryState(
 // Read returns the gameState itself as a read-only object for the purposes of reading properties.
 func (gameState *inMemoryState) read() ReadonlyState {
 	return gameState
-}
-
-// Identifier returns the private gameIdentifier field.
-func (gameState *inMemoryState) Identifier() string {
-	return gameState.gameIdentifier
 }
 
 // Name returns the value of the private gameName string.

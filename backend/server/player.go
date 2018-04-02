@@ -71,17 +71,21 @@ func (playerHandler *playerEndpointHandler) writeRegisteredPlayers() (interface{
 		})
 	}
 
-	return endpoint.PlayerList{
+	endpointObject := endpoint.PlayerList{
 		Players: playerList,
-	}, http.StatusOK
+	}
+
+	return endpointObject, http.StatusOK
 }
 
 // writeAvailableColors writes a JSON object into the HTTP response which has
 // the list of strings as its "Colors" attribute.
 func (playerHandler *playerEndpointHandler) writeAvailableColors() (interface{}, int) {
-	return endpoint.ChatColorList{
+	endpointObject := endpoint.ChatColorList{
 		Colors: playerHandler.stateCollection.AvailableChatColors(),
-	}, http.StatusOK
+	}
+
+	return endpointObject, http.StatusOK
 }
 
 // handleNewPlayer adds the player defined by the JSON of the request's body to the list

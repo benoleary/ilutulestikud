@@ -3,7 +3,6 @@ package game
 import (
 	"fmt"
 	"math/rand"
-	"sort"
 
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/player"
@@ -164,53 +163,4 @@ func (gameCollection *StateCollection) AddNewWithGivenRandomSeed(
 		gameRuleset,
 		playerStates,
 		shuffledDeck)
-}
-
-// TurnSummariesForFrontend writes the turn summary information for each game which has
-// the given player into the relevant JSON object for the frontend.
-func (gameCollection *StateCollection) TurnSummariesForFrontend(playerName string) endpoint.TurnSummaryList {
-	gameList := gameCollection.statePersister.readAllWithPlayer(playerName)
-
-	sort.Sort(ByCreationTime(gameList))
-
-	numberOfGamesWithPlayer := len(gameList)
-
-	turnSummaries := make([]endpoint.TurnSummary, numberOfGamesWithPlayer)
-	for gameIndex := 0; gameIndex < numberOfGamesWithPlayer; gameIndex++ {
-		nameOfGame := gameList[gameIndex].Name()
-		gameTurn := gameList[gameIndex].Turn()
-
-		gameParticipants := gameList[gameIndex].Players()
-		numberOfParticipants := len(gameParticipants)
-
-		playerNamesInTurnOrder := make([]string, numberOfParticipants)
-
-		turnsUntilPlayer := 0
-		for playerIndex := 0; playerIndex < numberOfParticipants; playerIndex++ {
-			// Game turns begin with 1 rather than 0, so this sets the player names in order,
-			// wrapping index back to 0 when at the end of the list.
-			// E.g. turn 3, 5 players: playerNamesInTurnOrder will start with
-			// gameParticipants[2], then [3], then [4], then [0], then [1].
-			playerInTurnOrder :=
-				gameParticipants[(playerIndex+gameTurn-1)%numberOfParticipants]
-			playerNamesInTurnOrder[playerIndex] =
-				playerInTurnOrder.Name()
-
-			if playerName == playerInTurnOrder.Name() {
-				turnsUntilPlayer = playerIndex
-			}
-		}
-
-		turnSummaries[gameIndex] = endpoint.TurnSummary{
-			GameIdentifier:             gameList[gameIndex].Identifier(),
-			GameName:                   nameOfGame,
-			RulesetDescription:         gameList[gameIndex].Ruleset().FrontendDescription(),
-			CreationTimestampInSeconds: gameList[gameIndex].CreationTime().Unix(),
-			TurnNumber:                 gameTurn,
-			PlayerNamesInNextTurnOrder: playerNamesInTurnOrder,
-			IsPlayerTurn:               turnsUntilPlayer == 0,
-		}
-	}
-
-	return endpoint.TurnSummaryList{TurnSummaries: turnSummaries}
 }

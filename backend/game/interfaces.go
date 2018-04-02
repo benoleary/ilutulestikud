@@ -11,10 +11,6 @@ import (
 // ReadonlyState defines the interface for structs which should provide read-only information
 // which can completely describe the state of a game.
 type ReadonlyState interface {
-	// Identifier should return the identifier of the game for interaction between frontend
-	// and backend.
-	Identifier() string
-
 	// Name should return the name of the game as known to the players.
 	Name() string
 
@@ -65,21 +61,6 @@ type readAndWriteState interface {
 	performAction(actingPlayer player.ReadonlyState, playerAction endpoint.PlayerAction) error
 }
 
-// ForPlayer writes the relevant parts of the state of the game as should be known by the given
-// player into the relevant JSON object for the frontend.
-func ForPlayer(readonlyState ReadonlyState, playerIdentifier string) endpoint.GameView {
-	// The remaining attributes of the endpoint.GameView require some calculation based on the
-	// game's ruleset.
-	return endpoint.GameView{
-		ChatLog:                      readonlyState.ChatLog().ForFrontend(),
-		ScoreSoFar:                   readonlyState.Score(),
-		NumberOfReadyHints:           readonlyState.NumberOfReadyHints(),
-		NumberOfSpentHints:           MaximumNumberOfHints - readonlyState.NumberOfReadyHints(),
-		NumberOfMistakesStillAllowed: MaximumNumberOfMistakesAllowed - readonlyState.NumberOfMistakesMade(),
-		NumberOfMistakesMade:         readonlyState.NumberOfMistakesMade(),
-	}
-}
-
 // StatePersister defines the interface for structs which should be able to create objects
 // implementing the readAndWriteState interface encapsulating the state information for
 // individual games, and for tracking the games by their name.
@@ -109,25 +90,4 @@ type StatePersister interface {
 	// identifier if it exists already (or else nil) along with whether the game exists,
 	// analogously to a standard Golang map.
 	readAndWriteGame(gameIdentifier string) (readAndWriteState, bool)
-}
-
-// ByCreationTime implements sort interface for []ReadonlyState based on the return
-// from its CreationTime().
-type ByCreationTime []ReadonlyState
-
-// Len implements part of the sort interface for ByCreationTime.
-func (byCreationTime ByCreationTime) Len() int {
-	return len(byCreationTime)
-}
-
-// Swap implements part of the sort interface for ByCreationTime.
-func (byCreationTime ByCreationTime) Swap(firstIndex int, secondIndex int) {
-	byCreationTime[firstIndex], byCreationTime[secondIndex] =
-		byCreationTime[secondIndex], byCreationTime[firstIndex]
-}
-
-// Less implements part of the sort interface for ByCreationTime.
-func (byCreationTime ByCreationTime) Less(firstIndex int, secondIndex int) bool {
-	return byCreationTime[firstIndex].CreationTime().Before(
-		byCreationTime[secondIndex].CreationTime())
 }

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
@@ -20,7 +21,7 @@ type playerCollection interface {
 	Add(playerName string, chatColor string) error
 
 	// UpdateColor should update the given player with the given chat color.
-	UpdateColor(ulayerName string, chatColor string) error
+	UpdateColor(playerName string, chatColor string) error
 
 	// Get should return a read-only state for the identified player.
 	Get(playerIdentifier string) (player.ReadonlyState, error)
@@ -39,7 +40,19 @@ type playerCollection interface {
 }
 
 type gameCollection interface {
-	// needs stuff
+	// ReadState should return the read-only game state corresponding to the given name if it exists
+	// in the given collection already (or else nil) along with whether the game exists,
+	// analogously to a standard Golang map.
+	ReadState(gameName string) (game.ReadonlyState, bool)
+
+	// PerformAction should find the given game and perform the given action for its player,
+	// or return an error.
+	PerformAction(
+		playerAction endpoint.PlayerAction) error
+
+	// AddNew should add a new game to the collection based on the given arguments.
+	AddNew(
+		gameDefinition endpoint.GameDefinition) error
 }
 
 // State contains all the state to allow the backend to function.
@@ -55,7 +68,7 @@ func New(
 	accessControlAllowedOrigin string,
 	segmentTranslator EndpointSegmentTranslator,
 	playerStateCollection playerCollection,
-	gameStateCollection *game.StateCollection) *State {
+	gameStateCollection gameCollection) *State {
 	return &State{
 		accessControlAllowedOrigin: accessControlAllowedOrigin,
 		playerHandler: &playerEndpointHandler{
@@ -63,7 +76,7 @@ func New(
 			segmentTranslator: segmentTranslator,
 		},
 		gameHandler: &gameEndpointHandler{
-			gameCollection:    gameStateCollection,
+			stateCollection:   gameStateCollection,
 			segmentTranslator: segmentTranslator,
 		},
 	}
