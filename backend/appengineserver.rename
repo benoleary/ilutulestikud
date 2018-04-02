@@ -16,7 +16,11 @@ func main() {
 			playerPersister,
 			defaults.InitialPlayerNames(),
 			defaults.AvailableColors())
-	gameCollection := game.NewInMemoryCollection(&endpoint.Base32NameEncoder{})
+	gamePersister := game.NewInMemoryPersister()
+	gameCollection :=
+		game.NewCollection(
+			gamePersister,
+			playerCollection)
 
 	// We could load the allowed origin from a file, but this app is very specific to a set of fixed addresses.
 	serverState :=

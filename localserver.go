@@ -20,7 +20,7 @@ func main() {
 			playerPersister,
 			defaults.InitialPlayerNames(),
 			defaults.AvailableColors())
-	gamePersister := game.NewInMemoryCollection()
+	gamePersister := game.NewInMemoryPersister()
 	gameCollection :=
 		game.NewCollection(
 			gamePersister,

@@ -30,17 +30,51 @@ func NewCollection(
 	}
 }
 
-// ReadState returns the read-only game state corresponding to the given name if it exists
-// in the given collection already (or else nil) along with whether the game exists,
-// analogously to a standard Golang map.
-func (gameCollection *StateCollection) ReadState(gameName string) (ReadonlyState, bool) {
+// ViewState returns a view around the read-only game state corresponding to the
+// given name as seen by the given player. If the game does not exist or the
+// player is not a participant, it returns an error.
+func (gameCollection *StateCollection) ViewState(
+	gameName string,
+	playerName string) (*PlayerView, error) {
 	gameState, gameExists := gameCollection.statePersister.readAndWriteGame(gameName)
 
-	if gameState == nil {
-		return nil, false
+	if !gameExists {
+		gameDoesNotExistError :=
+			fmt.Errorf(
+				"Game %v does not exist, cannot be viewed by player %v",
+				gameName,
+				playerName)
+		return nil, gameDoesNotExistError
 	}
 
-	return gameState.read(), gameExists
+	return ViewForPlayer(gameState.read(), playerName)
+}
+
+// ViewAllWithPlayer wraps every read-only state given by the persister for the given player
+// in a view. It returns an error if there is an error in creating any of the player views.
+func (gameCollection *StateCollection) ViewAllWithPlayer(
+	playerName string) ([]*PlayerView, error) {
+	gameStates := gameCollection.statePersister.readAllWithPlayer(playerName)
+	numberOfGames := len(gameStates)
+
+	playerViews := make([]*PlayerView, numberOfGames)
+
+	for gameIndex := 0; gameIndex < numberOfGames; gameIndex++ {
+		playerView, participantError :=
+			ViewForPlayer(gameStates[gameIndex], playerName)
+
+		if participantError != nil {
+			overallError :=
+				fmt.Errorf(
+					"When trying to wrap views around read-only game states, encountered errror %v",
+					participantError)
+			return nil, overallError
+		}
+
+		playerViews[gameIndex] = playerView
+	}
+
+	return playerViews, nil
 }
 
 // PerformAction finds the given game and performs the given action for its player,
@@ -64,11 +98,11 @@ func (gameCollection *StateCollection) PerformAction(
 			playerAction.PlayerIdentifier)
 	}
 
-	if !gameState.read().HasPlayerAsParticipant(playerAction.PlayerIdentifier) {
-		return fmt.Errorf(
-			"Player %v is not a participant in game %v",
-			playerAction.PlayerIdentifier,
-			playerAction.GameIdentifier)
+	_, participantError :=
+		ViewForPlayer(gameState.read(), playerAction.PlayerIdentifier)
+
+	if participantError != nil {
+		return participantError
 	}
 
 	return gameState.performAction(actingPlayer, playerAction)

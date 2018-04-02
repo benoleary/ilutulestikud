@@ -30,10 +30,6 @@ type ReadonlyState interface {
 	// was created.
 	CreationTime() time.Time
 
-	// HasPlayerAsParticipant should return true if the given player identifier matches
-	// the identifier of any of the game's participating players.
-	HasPlayerAsParticipant(playerIdentifier string) bool
-
 	// ChatLog should return the chat log of the game at the current moment.
 	ChatLog() *chat.Log
 
@@ -82,12 +78,12 @@ type StatePersister interface {
 	// have the given player as a participant, where each game is given as a ReadonlyState
 	// instance.
 	// The order is not mandated, and may even change with repeated calls to the same
-	// unchanged Collection (analogously to the entry set of a standard Golang map, for
+	// unchanged persister (analogously to the entry set of a standard Golang map, for
 	// example), though of course an implementation may order the slice consistently.
-	readAllWithPlayer(playerIdentifier string) []ReadonlyState
+	readAllWithPlayer(playerName string) []ReadonlyState
 
 	// readAndWriteGame should return the readAndWriteState corresponding to the given game
-	// identifier if it exists already (or else nil) along with whether the game exists,
+	// name if it exists already (or else nil) along with whether the game exists,
 	// analogously to a standard Golang map.
-	readAndWriteGame(gameIdentifier string) (readAndWriteState, bool)
+	readAndWriteGame(gameName string) (readAndWriteState, bool)
 }

@@ -40,19 +40,25 @@ type playerCollection interface {
 }
 
 type gameCollection interface {
-	// ReadState should return the read-only game state corresponding to the given name if it exists
-	// in the given collection already (or else nil) along with whether the game exists,
-	// analogously to a standard Golang map.
-	ReadState(gameName string) (game.ReadonlyState, bool)
+	// ViewState should return a view around the read-only game state corresponding
+	// to the given name as seen by the given player. If the game does not exist or
+	// the player is not a participant, it should return an error.
+	ViewState(gameName string, playerName string) (*game.PlayerView, error)
+
+	// ViewAllWithPlayer should return a slice of read-only views on all the games in the
+	// collection which have the given player as a participant. It should return an
+	// error if there is a problem wrapping any of the read-only game states in a view.
+	// The order is not mandated, and may even change with repeated calls to the same
+	// unchanged collection (analogously to the entry set of a standard Golang map, for
+	// example), though of course an implementation may order the slice consistently.
+	ViewAllWithPlayer(playerName string) ([]*game.PlayerView, error)
 
 	// PerformAction should find the given game and perform the given action for its player,
 	// or return an error.
-	PerformAction(
-		playerAction endpoint.PlayerAction) error
+	PerformAction(playerAction endpoint.PlayerAction) error
 
 	// AddNew should add a new game to the collection based on the given arguments.
-	AddNew(
-		gameDefinition endpoint.GameDefinition) error
+	AddNew(gameDefinition endpoint.GameDefinition) error
 }
 
 // State contains all the state to allow the backend to function.
