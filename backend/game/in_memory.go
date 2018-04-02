@@ -22,12 +22,12 @@ type InMemoryCollection struct {
 }
 
 // NewInMemoryCollection creates a Collection around a map of games.
-func NewInMemoryCollection(nameToIdentifier endpoint.NameToIdentifier) *InMemoryCollection {
+func NewInMemoryCollection() *InMemoryCollection {
 	return &InMemoryCollection{
 		mutualExclusion:       sync.Mutex{},
 		randomNumberGenerator: rand.New(rand.NewSource(time.Now().Unix())),
 		gameStates:            make(map[string]readAndWriteState, 1),
-		nameToIdentifier:      nameToIdentifier,
+		nameToIdentifier:      nil,
 		gamesWithPlayers:      make(map[string][]ReadonlyState, 0),
 	}
 }
@@ -47,16 +47,16 @@ func (inMemoryCollection *InMemoryCollection) addGame(
 	gameName string,
 	gameRuleset Ruleset,
 	playerStates []player.ReadonlyState,
-	initialShuffle []Card) (string, error) {
+	initialShuffle []Card) error {
 	if gameName == "" {
-		return "", fmt.Errorf("Game must have a name")
+		return fmt.Errorf("Game must have a name")
 	}
 
 	gameIdentifier := inMemoryCollection.nameToIdentifier.Identifier(gameName)
 	_, gameExists := inMemoryCollection.gameStates[gameIdentifier]
 
 	if gameExists {
-		return "", fmt.Errorf("Game %v already exists", gameName)
+		return fmt.Errorf("Game %v already exists", gameName)
 	}
 
 	newGame :=
@@ -79,7 +79,7 @@ func (inMemoryCollection *InMemoryCollection) addGame(
 	}
 
 	inMemoryCollection.mutualExclusion.Unlock()
-	return gameIdentifier, nil
+	return nil
 }
 
 // readAllWithPlayer returns a slice of all the ReadonlyState instances in the collection

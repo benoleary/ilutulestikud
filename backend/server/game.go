@@ -13,7 +13,7 @@ import (
 // gameEndpointHandler is a struct meant to encapsulate all the state co-ordinating
 // interaction with all the games through the endpoints.
 type gameEndpointHandler struct {
-	gameCollection    game.StateCollection
+	gameCollection    *game.StateCollection
 	segmentTranslator EndpointSegmentTranslator
 }
 
@@ -79,7 +79,7 @@ func (gameHandler *gameEndpointHandler) writeTurnSummariesForPlayer(
 		return identificationError, http.StatusBadRequest
 	}
 
-	return game.TurnSummariesForFrontend(gameHandler.gameCollection, playerName), http.StatusOK
+	return gameHandler.gameCollection.TurnSummariesForFrontend(playerName), http.StatusOK
 }
 
 // handleNewGame adds a new game to the map of game state objects.
@@ -94,9 +94,8 @@ func (gameHandler *gameEndpointHandler) handleNewGame(
 	}
 
 	addError :=
-		game.AddNew(
-			gameDefinition,
-			gameHandler.gameCollection)
+		gameHandler.gameCollection.AddNew(
+			gameDefinition)
 
 	if addError != nil {
 		return addError, http.StatusBadRequest
@@ -125,7 +124,7 @@ func (gameHandler *gameEndpointHandler) writeGameForPlayer(
 	gameIdentifier := relevantSegments[0]
 	playerIdentifier := relevantSegments[1]
 
-	gameState, isFound := game.ReadState(gameHandler.gameCollection, gameIdentifier)
+	gameState, isFound := gameHandler.gameCollection.ReadState(gameIdentifier)
 
 	if !isFound {
 		errorMessage :=
@@ -155,8 +154,7 @@ func (gameHandler *gameEndpointHandler) handlePlayerAction(
 	}
 
 	actionError :=
-		game.PerformAction(
-			gameHandler.gameCollection,
+		gameHandler.gameCollection.PerformAction(
 			playerAction)
 
 	if actionError != nil {

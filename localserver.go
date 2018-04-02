@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/benoleary/ilutulestikud/backend/endpoint"
-
 	"github.com/benoleary/ilutulestikud/backend/defaults"
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/player"
@@ -22,7 +20,11 @@ func main() {
 			playerPersister,
 			defaults.InitialPlayerNames(),
 			defaults.AvailableColors())
-	gameCollection := game.NewInMemoryCollection(&endpoint.Base32NameEncoder{})
+	gamePersister := game.NewInMemoryCollection()
+	gameCollection :=
+		game.NewCollection(
+			gamePersister,
+			playerCollection)
 
 	// We could load the allowed origin from a file, but this app is very specific to a set of fixed addresses.
 	serverState :=

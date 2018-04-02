@@ -55,7 +55,7 @@ func New(
 	accessControlAllowedOrigin string,
 	segmentTranslator EndpointSegmentTranslator,
 	playerStateCollection playerCollection,
-	gameStateCollection game.StateCollection) *State {
+	gameStateCollection *game.StateCollection) *State {
 	return &State{
 		accessControlAllowedOrigin: accessControlAllowedOrigin,
 		playerHandler: &playerEndpointHandler{
