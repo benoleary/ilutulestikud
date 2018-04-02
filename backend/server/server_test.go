@@ -8,7 +8,7 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/server"
 )
 
-func prepareState(statusForGet int, statusForPost int) *server.State {
+func prepareState() *server.State {
 	// It is OK to set the player and game handlers to nil as this file just tests
 	// endpoints which are not covered by requests which would get validly redirected
 	// to either of the endpoint handlers.
@@ -47,13 +47,11 @@ func TestHandleBackend(unitTest *testing.T) {
 
 	testCases := []struct {
 		testName      string
-		serverState   *server.State
 		testArguments argumentStruct
 		expectedCode  expectedStruct
 	}{
 		{
-			testName:    "GET root",
-			serverState: prepareState(http.StatusOK, http.StatusOK),
+			testName: "GET root",
 			testArguments: argumentStruct{
 				requestMethod:                  http.MethodGet,
 				requestAddress:                 "/",
@@ -64,8 +62,7 @@ func TestHandleBackend(unitTest *testing.T) {
 			},
 		},
 		{
-			testName:    "GetBackend",
-			serverState: prepareState(http.StatusOK, http.StatusOK),
+			testName: "GetBackend",
 			testArguments: argumentStruct{
 				requestMethod:                  http.MethodGet,
 				requestAddress:                 "/backend",
@@ -76,8 +73,7 @@ func TestHandleBackend(unitTest *testing.T) {
 			},
 		},
 		{
-			testName:    "OptionsPlayer",
-			serverState: prepareState(http.StatusOK, http.StatusOK),
+			testName: "OptionsPlayer",
 			testArguments: argumentStruct{
 				requestMethod:                  http.MethodOptions,
 				requestAddress:                 "/backend/player/test/options/player",
@@ -88,8 +84,7 @@ func TestHandleBackend(unitTest *testing.T) {
 			},
 		},
 		{
-			testName:    "PutPlayer",
-			serverState: prepareState(http.StatusOK, http.StatusOK),
+			testName: "PutPlayer",
 			testArguments: argumentStruct{
 				requestMethod:                  http.MethodPut,
 				requestAddress:                 "/backend/player/test/put/player",
@@ -100,8 +95,18 @@ func TestHandleBackend(unitTest *testing.T) {
 			},
 		},
 		{
-			testName:    "Post nil body to player",
-			serverState: prepareState(http.StatusOK, http.StatusOK),
+			testName: "DeleteGame",
+			testArguments: argumentStruct{
+				requestMethod:                  http.MethodDelete,
+				requestAddress:                 "/backend/game/test/delete/game",
+				bodyIsNilRatherThanEmptyObject: false,
+			},
+			expectedCode: expectedStruct{
+				returnedCode: http.StatusBadRequest,
+			},
+		},
+		{
+			testName: "Post nil body to player",
 			testArguments: argumentStruct{
 				requestMethod:                  http.MethodPost,
 				requestAddress:                 "/backend/player/test/post/nil",
@@ -112,32 +117,7 @@ func TestHandleBackend(unitTest *testing.T) {
 			},
 		},
 		{
-			testName:    "GetInvalidGame",
-			serverState: prepareState(http.StatusBadRequest, http.StatusOK),
-			testArguments: argumentStruct{
-				requestMethod:                  http.MethodGet,
-				requestAddress:                 "/backend/game/test/get/game",
-				bodyIsNilRatherThanEmptyObject: false,
-			},
-			expectedCode: expectedStruct{
-				returnedCode: http.StatusBadRequest,
-			},
-		},
-		{
-			testName:    "PostInvalidGame",
-			serverState: prepareState(http.StatusOK, http.StatusBadRequest),
-			testArguments: argumentStruct{
-				requestMethod:                  http.MethodPost,
-				requestAddress:                 "/backend/game/test/post/game",
-				bodyIsNilRatherThanEmptyObject: false,
-			},
-			expectedCode: expectedStruct{
-				returnedCode: http.StatusBadRequest,
-			},
-		},
-		{
-			testName:    "GetInvalidSegment",
-			serverState: prepareState(http.StatusOK, http.StatusOK),
+			testName: "GetInvalidSegment",
 			testArguments: argumentStruct{
 				requestMethod:                  http.MethodGet,
 				requestAddress:                 "/backend/invalid/test/get/invalid",
@@ -148,8 +128,7 @@ func TestHandleBackend(unitTest *testing.T) {
 			},
 		},
 		{
-			testName:    "PostInvalidSegment",
-			serverState: prepareState(http.StatusOK, http.StatusOK),
+			testName: "PostInvalidSegment",
 			testArguments: argumentStruct{
 				requestMethod:                  http.MethodPost,
 				requestAddress:                 "/backend/invalid/test/post/invalid",
@@ -168,9 +147,11 @@ func TestHandleBackend(unitTest *testing.T) {
 				httpRequest.Body = nil
 			}
 
+			serverState := prepareState()
+
 			// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 			responseRecorder := httptest.NewRecorder()
-			testCase.serverState.HandleBackend(responseRecorder, httpRequest)
+			serverState.HandleBackend(responseRecorder, httpRequest)
 
 			if responseRecorder.Code != testCase.expectedCode.returnedCode {
 				unitTest.Errorf(
