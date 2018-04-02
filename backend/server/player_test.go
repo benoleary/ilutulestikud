@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/benoleary/ilutulestikud/backend/defaults"
@@ -14,8 +13,6 @@ import (
 )
 
 var colorsAvailableInTest []string = defaults.AvailableColors()
-
-var testSegmentTranslator server.EndpointSegmentTranslator = &server.Base32Translator{}
 
 type mockPlayerState struct {
 	name  string
@@ -51,31 +48,21 @@ var testPlayerStates []player.ReadonlyState = []player.ReadonlyState{
 var testPlayerList endpoint.PlayerList = endpoint.PlayerList{
 	Players: []endpoint.PlayerState{
 		endpoint.PlayerState{
-			Identifier: testSegmentTranslator.ToSegment(testPlayerStates[0].Name()),
+			Identifier: segmentTranslatorForTest().ToSegment(testPlayerStates[0].Name()),
 			Name:       testPlayerStates[0].Name(),
 			Color:      testPlayerStates[0].Color(),
 		},
 		endpoint.PlayerState{
-			Identifier: testSegmentTranslator.ToSegment(testPlayerStates[1].Name()),
+			Identifier: segmentTranslatorForTest().ToSegment(testPlayerStates[1].Name()),
 			Name:       testPlayerStates[1].Name(),
 			Color:      testPlayerStates[1].Color(),
 		},
 		endpoint.PlayerState{
-			Identifier: testSegmentTranslator.ToSegment(testPlayerStates[2].Name()),
+			Identifier: segmentTranslatorForTest().ToSegment(testPlayerStates[2].Name()),
 			Name:       testPlayerStates[2].Name(),
 			Color:      testPlayerStates[2].Color(),
 		},
 	},
-}
-
-type functionNameAndArgument struct {
-	FunctionName     string
-	FunctionArgument interface{}
-}
-
-type stringPair struct {
-	first  string
-	second string
 }
 
 type mockPlayerCollection struct {
@@ -87,7 +74,8 @@ type mockPlayerCollection struct {
 }
 
 func (mockCollection *mockPlayerCollection) recordFunctionAndArgument(
-	functionName string, functionArgument interface{}) {
+	functionName string,
+	functionArgument interface{}) {
 	mockCollection.FunctionsAndArgumentsReceived =
 		append(
 			mockCollection.FunctionsAndArgumentsReceived,
@@ -161,19 +149,19 @@ func (mockCollection *mockPlayerCollection) AvailableChatColors() []string {
 	return mockCollection.ReturnForAvailableChatColors
 }
 
-// newServer prepares a mock player collection and uses it to prepare a
+// newPlayerCollectionAndServer prepares a mock player collection and uses it to prepare a
 // server.State with the default endpoint segment translator for the tests,
 // in a consistent way for the tests of the player endpoints, returning the
 // mock collection and the server state.
-func newServer() (*mockPlayerCollection, *server.State) {
-	return newServerForTranslator(testSegmentTranslator)
+func newPlayerCollectionAndServer() (*mockPlayerCollection, *server.State) {
+	return newPlayerCollectionAndServerForTranslator(segmentTranslatorForTest())
 }
 
-// newServerForTranslator prepares a mock player collection and uses it to
+// newPlayerCollectionAndServerForTranslator prepares a mock player collection and uses it to
 // prepare a server.State with the given endpoint segment translator in a
 // consistent way for the tests of the player endpoints, returning the
 // mock collection and the server state.
-func newServerForTranslator(
+func newPlayerCollectionAndServerForTranslator(
 	segmentTranslator server.EndpointSegmentTranslator) (*mockPlayerCollection, *server.State) {
 	mockCollection := &mockPlayerCollection{}
 
@@ -187,11 +175,11 @@ func newServerForTranslator(
 	return mockCollection, serverState
 }
 
-func TestGetNoSegmentBadRequest(unitTest *testing.T) {
-	testIdentifier := "GET with empty list of relevant segments"
-	mockCollection, testServer := newServer()
+func TestGetPlayerNoFurtherSegmentBadRequest(unitTest *testing.T) {
+	testIdentifier := "GET with no segments after player"
+	mockCollection, testServer := newPlayerCollectionAndServer()
 
-	getResponse := server.MockGet(testServer, "/backend/player")
+	getResponse := mockGet(testServer, "/backend/player")
 
 	assertResponseIsCorrect(
 		unitTest,
@@ -202,16 +190,16 @@ func TestGetNoSegmentBadRequest(unitTest *testing.T) {
 
 	assertNoFunctionWasCalled(
 		unitTest,
-		mockCollection,
+		mockCollection.FunctionsAndArgumentsReceived,
 		testIdentifier)
 }
 
-func TestGetInvalidSegmentNotFound(unitTest *testing.T) {
-	testIdentifier := "GET invalid-segment"
-	mockCollection, testServer := newServer()
+func TestGetPlayerInvalidSegmentNotFound(unitTest *testing.T) {
+	testIdentifier := "GET player/invalid-segment"
+	mockCollection, testServer := newPlayerCollectionAndServer()
 
 	getResponse :=
-		server.MockGet(testServer, "/backend/player/invalid-segment")
+		mockGet(testServer, "/backend/player/invalid-segment")
 
 	assertResponseIsCorrect(
 		unitTest,
@@ -222,13 +210,13 @@ func TestGetInvalidSegmentNotFound(unitTest *testing.T) {
 
 	assertNoFunctionWasCalled(
 		unitTest,
-		mockCollection,
+		mockCollection.FunctionsAndArgumentsReceived,
 		testIdentifier)
 }
 
-func TestPostNoSegmentBadRequest(unitTest *testing.T) {
-	testIdentifier := "POST with empty list of relevant segments"
-	mockCollection, testServer := newServer()
+func TestPostPlayerNoFurtherSegmentBadRequest(unitTest *testing.T) {
+	testIdentifier := "POST with no segments after player"
+	mockCollection, testServer := newPlayerCollectionAndServer()
 
 	bodyObject := endpoint.PlayerState{
 		Name:  "Player Name",
@@ -236,7 +224,7 @@ func TestPostNoSegmentBadRequest(unitTest *testing.T) {
 	}
 
 	postResponse, encodingError :=
-		server.MockPost(testServer, "/backend/player", bodyObject)
+		mockPost(testServer, "/backend/player", bodyObject)
 
 	assertResponseIsCorrect(
 		unitTest,
@@ -247,13 +235,13 @@ func TestPostNoSegmentBadRequest(unitTest *testing.T) {
 
 	assertNoFunctionWasCalled(
 		unitTest,
-		mockCollection,
+		mockCollection.FunctionsAndArgumentsReceived,
 		testIdentifier)
 }
 
-func TestPostInvalidSegmentNotFound(unitTest *testing.T) {
-	testIdentifier := "POST invalid-segment"
-	mockCollection, testServer := newServer()
+func TestPostPlayerInvalidSegmentNotFound(unitTest *testing.T) {
+	testIdentifier := "POST player/invalid-segment"
+	mockCollection, testServer := newPlayerCollectionAndServer()
 
 	bodyObject := endpoint.PlayerState{
 		Name:  "Player Name",
@@ -261,7 +249,7 @@ func TestPostInvalidSegmentNotFound(unitTest *testing.T) {
 	}
 
 	postResponse, encodingError :=
-		server.MockPost(testServer, "/backend/player/invalid-segment", bodyObject)
+		mockPost(testServer, "/backend/player/invalid-segment", bodyObject)
 
 	assertResponseIsCorrect(
 		unitTest,
@@ -272,18 +260,18 @@ func TestPostInvalidSegmentNotFound(unitTest *testing.T) {
 
 	assertNoFunctionWasCalled(
 		unitTest,
-		mockCollection,
+		mockCollection.FunctionsAndArgumentsReceived,
 		testIdentifier)
 }
 
 func TestPlayerListDelivered(unitTest *testing.T) {
 	testIdentifier := "GET registered-players"
-	mockCollection, testServer := newServer()
+	mockCollection, testServer := newPlayerCollectionAndServer()
 
 	mockCollection.ReturnForAll = testPlayerStates
 
 	getResponse :=
-		server.MockGet(testServer, "/backend/player/registered-players")
+		mockGet(testServer, "/backend/player/registered-players")
 
 	assertResponseIsCorrect(
 		unitTest,
@@ -358,7 +346,7 @@ func TestPlayerListDelivered(unitTest *testing.T) {
 
 func TestAvailableColorListNotEmpty(unitTest *testing.T) {
 	testIdentifier := "GET available-colors"
-	mockCollection, testServer := newServer()
+	mockCollection, testServer := newPlayerCollectionAndServer()
 
 	expectedColors :=
 		[]string{
@@ -370,7 +358,7 @@ func TestAvailableColorListNotEmpty(unitTest *testing.T) {
 	mockCollection.ReturnForAvailableChatColors = expectedColors
 
 	getResponse :=
-		server.MockGet(testServer, "/backend/player/available-colors")
+		mockGet(testServer, "/backend/player/available-colors")
 
 	assertResponseIsCorrect(
 		unitTest,
@@ -449,12 +437,12 @@ func TestRejectInvalidNewPlayerWithMalformedRequest(unitTest *testing.T) {
 	// empty player names and colors.
 	bodyString := "{\"Identifier\" :\"Something\", \"Name\":}"
 
-	mockCollection, testServer := newServer()
+	mockCollection, testServer := newPlayerCollectionAndServer()
 
 	mockCollection.ErrorToReturn = errors.New("error")
 
 	postResponse :=
-		server.MockPostWithDirectBody(
+		mockPostWithDirectBody(
 			testServer,
 			"/backend/player/new-player",
 			bodyString)
@@ -468,13 +456,13 @@ func TestRejectInvalidNewPlayerWithMalformedRequest(unitTest *testing.T) {
 
 	assertNoFunctionWasCalled(
 		unitTest,
-		mockCollection,
+		mockCollection.FunctionsAndArgumentsReceived,
 		testIdentifier)
 }
 
 func TestRejectNewPlayerIfCollectionRejectsIt(unitTest *testing.T) {
 	testIdentifier := "Reject POST new-player if collection rejects it"
-	mockCollection, testServer := newServer()
+	mockCollection, testServer := newPlayerCollectionAndServer()
 
 	mockCollection.ErrorToReturn = errors.New("error")
 	mockCollection.ReturnForAll = testPlayerStates
@@ -485,7 +473,7 @@ func TestRejectNewPlayerIfCollectionRejectsIt(unitTest *testing.T) {
 	}
 
 	postResponse, encodingError :=
-		server.MockPost(testServer, "/backend/player/new-player", bodyObject)
+		mockPost(testServer, "/backend/player/new-player", bodyObject)
 
 	unitTest.Logf(
 		testIdentifier+"/object %v generated encoding error %v.",
@@ -519,18 +507,18 @@ func TestRejectNewPlayerIfIdentifierHasSegmentDelimiter(unitTest *testing.T) {
 
 	// We could use a no-operation translator so that it is clear that the test case has
 	// a '/', but this way ensures that a translation does happen.
-	mockCollection, testServer := newServerForTranslator(&server.Base64Translator{})
+	mockCollection, testServer := newPlayerCollectionAndServerForTranslator(&server.Base64Translator{})
 
 	mockCollection.ErrorToReturn = nil
 	mockCollection.ReturnForAll = testPlayerStates
 
 	bodyObject := endpoint.PlayerState{
-		Name:  server.BreaksBase64,
+		Name:  breaksBase64,
 		Color: "The color",
 	}
 
 	postResponse, encodingError :=
-		server.MockPost(testServer, "/backend/player/new-player", bodyObject)
+		mockPost(testServer, "/backend/player/new-player", bodyObject)
 
 	unitTest.Logf(
 		testIdentifier+"/object %v generated encoding error %v.",
@@ -561,7 +549,7 @@ func TestRejectNewPlayerIfIdentifierHasSegmentDelimiter(unitTest *testing.T) {
 
 func TestAcceptValidNewPlayer(unitTest *testing.T) {
 	testIdentifier := "POST new-player"
-	mockCollection, testServer := newServer()
+	mockCollection, testServer := newPlayerCollectionAndServer()
 
 	mockCollection.ErrorToReturn = nil
 	mockCollection.ReturnForAll = testPlayerStates
@@ -572,7 +560,7 @@ func TestAcceptValidNewPlayer(unitTest *testing.T) {
 	}
 
 	postResponse, encodingError :=
-		server.MockPost(testServer, "/backend/player/new-player", bodyObject)
+		mockPost(testServer, "/backend/player/new-player", bodyObject)
 
 	unitTest.Logf(
 		testIdentifier+"/object %v generated encoding error %v.",
@@ -614,12 +602,12 @@ func TestRejectInvalidUpdatePlayerWithMalformedRequest(unitTest *testing.T) {
 	// empty player names and colors.
 	bodyString := "{\"Identifier\" :\"Something\", \"Name\":}"
 
-	mockCollection, testServer := newServer()
+	mockCollection, testServer := newPlayerCollectionAndServer()
 
 	mockCollection.ErrorToReturn = errors.New("error")
 
 	postResponse :=
-		server.MockPostWithDirectBody(
+		mockPostWithDirectBody(
 			testServer,
 			"/backend/player/update-player",
 			bodyString)
@@ -633,13 +621,13 @@ func TestRejectInvalidUpdatePlayerWithMalformedRequest(unitTest *testing.T) {
 
 	assertNoFunctionWasCalled(
 		unitTest,
-		mockCollection,
+		mockCollection.FunctionsAndArgumentsReceived,
 		testIdentifier)
 }
 
 func TestRejectUpdatePlayerIfCollectionRejectsIt(unitTest *testing.T) {
 	testIdentifier := "Reject POST update-player if collection rejects it"
-	mockCollection, testServer := newServer()
+	mockCollection, testServer := newPlayerCollectionAndServer()
 
 	mockCollection.ErrorToReturn = errors.New("error")
 	mockCollection.ReturnForAll = testPlayerStates
@@ -650,7 +638,7 @@ func TestRejectUpdatePlayerIfCollectionRejectsIt(unitTest *testing.T) {
 	}
 
 	postResponse, encodingError :=
-		server.MockPost(testServer, "/backend/player/update-player", bodyObject)
+		mockPost(testServer, "/backend/player/update-player", bodyObject)
 
 	unitTest.Logf(
 		testIdentifier+"/object %v generated encoding error %v.",
@@ -681,7 +669,7 @@ func TestRejectUpdatePlayerIfCollectionRejectsIt(unitTest *testing.T) {
 
 func TestAcceptValidUpdatePlayer(unitTest *testing.T) {
 	testIdentifier := "POST update-player"
-	mockCollection, testServer := newServer()
+	mockCollection, testServer := newPlayerCollectionAndServer()
 
 	mockCollection.ErrorToReturn = nil
 	mockCollection.ReturnForAll = testPlayerStates
@@ -692,7 +680,7 @@ func TestAcceptValidUpdatePlayer(unitTest *testing.T) {
 	}
 
 	postResponse, encodingError :=
-		server.MockPost(testServer, "/backend/player/update-player", bodyObject)
+		mockPost(testServer, "/backend/player/update-player", bodyObject)
 
 	unitTest.Logf(
 		testIdentifier+"/object %v generated encoding error %v.",
@@ -726,10 +714,10 @@ func TestAcceptValidUpdatePlayer(unitTest *testing.T) {
 
 func TestResetPlayers(unitTest *testing.T) {
 	testIdentifier := "POST reset-players"
-	mockCollection, testServer := newServer()
+	mockCollection, testServer := newPlayerCollectionAndServer()
 
 	postResponse, encodingError :=
-		server.MockPost(testServer, "/backend/player/reset-players", nil)
+		mockPost(testServer, "/backend/player/reset-players", nil)
 
 	if encodingError != nil {
 		unitTest.Fatalf(
@@ -760,82 +748,4 @@ func TestResetPlayers(unitTest *testing.T) {
 		mockCollection.FunctionsAndArgumentsReceived,
 		expectedRecords,
 		testIdentifier)
-}
-
-func assertNoFunctionWasCalled(
-	unitTest *testing.T,
-	mockCollection *mockPlayerCollection,
-	testIdentifier string) {
-	if len(mockCollection.FunctionsAndArgumentsReceived) != 0 {
-		unitTest.Fatalf(
-			testIdentifier+": unexpectedly called player collection methods %v",
-			mockCollection.FunctionsAndArgumentsReceived)
-	}
-}
-
-func assertFunctionRecordIsCorrect(
-	unitTest *testing.T,
-	actualRecord functionNameAndArgument,
-	expectedRecord functionNameAndArgument,
-	testIdentifier string) {
-	if actualRecord != expectedRecord {
-		unitTest.Fatalf(
-			testIdentifier+"/function record mismatch: actual = %v, expected = %v",
-			actualRecord,
-			expectedRecord)
-	}
-}
-
-func assertFunctionRecordsAreCorrect(
-	unitTest *testing.T,
-	actualRecords []functionNameAndArgument,
-	expectedRecords []functionNameAndArgument,
-	testIdentifier string) {
-	expectedNumberOfRecords := len(expectedRecords)
-
-	if len(actualRecords) != expectedNumberOfRecords {
-		unitTest.Fatalf(
-			testIdentifier+"/function record list length mismatch: actual = %v, expected = %v",
-			actualRecords,
-			expectedRecords)
-	}
-
-	for recordIndex := 0; recordIndex < expectedNumberOfRecords; recordIndex++ {
-		actualRecord := actualRecords[recordIndex]
-		expectedRecord := expectedRecords[recordIndex]
-		if actualRecord != expectedRecord {
-			unitTest.Fatalf(
-				testIdentifier+
-					"/function record[%v] mismatch: actual = %v, expected = %v (list: actual = %v, expected = %v)",
-				recordIndex,
-				actualRecord,
-				expectedRecord,
-				actualRecords,
-				expectedRecords)
-		}
-	}
-}
-
-func assertResponseIsCorrect(
-	unitTest *testing.T,
-	testIdentifier string,
-	responseRecorder *httptest.ResponseRecorder,
-	encodingError error,
-	expectedCode int) {
-	if encodingError != nil {
-		unitTest.Fatalf(
-			testIdentifier+"/encoding error: %v",
-			encodingError)
-	}
-
-	if responseRecorder == nil {
-		unitTest.Fatalf(testIdentifier + "/endpoint returned nil response.")
-	}
-
-	if responseRecorder.Code != expectedCode {
-		unitTest.Fatalf(
-			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
-			expectedCode,
-			responseRecorder.Code)
-	}
 }

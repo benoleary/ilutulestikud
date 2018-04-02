@@ -23,10 +23,10 @@ func TestMockPostReturnsErrorForMalformedBody(unitTest *testing.T) {
 	// The json encoder is quite robust, but one way to trigger an error is to try
 	// to encode a function pointer.
 	_, decodingError :=
-		server.MockPost(
+		mockPost(
 			nil,
 			"/backend/irrelevant",
-			server.MockGet)
+			mockGet)
 
 	if decodingError == nil {
 		unitTest.Fatal("No decoding error")
