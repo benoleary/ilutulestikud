@@ -1,6 +1,7 @@
 package server_test
 
 import (
+	"encoding/json"
 	"net/http"
 	"testing"
 
@@ -189,4 +190,77 @@ func TestPostGameInvalidSegmentNotFound(unitTest *testing.T) {
 		unitTest,
 		mockCollection.FunctionsAndArgumentsReceived,
 		testIdentifier)
+}
+
+func TestAvailableRulesetsCorrectlyDelivered(unitTest *testing.T) {
+	testIdentifier := "GET available-rulesets"
+	mockCollection, testServer := newPlayerCollectionAndServer()
+
+	// This needs to change such that expectedRulesets is not an
+	// []endpoint.SelectableRuleset but rather a []game.Ruleset,
+	// and then the comparison should compare some
+	// endpoint.SelectableRuleset data members against the return
+	// values of the game.Ruleset functions.
+	expectedRulesets := game.AvailableRulesets()
+
+	getResponse :=
+		mockGet(testServer, "/backend/game/available-rulesets")
+
+	assertResponseIsCorrect(
+		unitTest,
+		testIdentifier,
+		getResponse,
+		nil,
+		http.StatusOK)
+
+	assertNoFunctionWasCalled(
+		unitTest,
+		mockCollection.FunctionsAndArgumentsReceived,
+		testIdentifier)
+
+	bodyDecoder := json.NewDecoder(getResponse.Body)
+
+	var responseRulesetList endpoint.RulesetList
+	parsingError := bodyDecoder.Decode(&responseRulesetList)
+	if parsingError != nil {
+		unitTest.Fatalf(
+			testIdentifier+"/error parsing JSON from HTTP response body: %v",
+			parsingError)
+	}
+
+	if responseRulesetList.Rulesets == nil {
+		unitTest.Fatalf(
+			testIdentifier+"/returned %v which has a nil list of rulesets.",
+			responseRulesetList)
+	}
+
+	if len(responseRulesetList.Rulesets) != len(expectedRulesets) {
+		unitTest.Fatalf(
+			testIdentifier+
+				"/returned %v which does not match the expected list of rulesets %v.",
+			responseRulesetList,
+			expectedRulesets)
+	}
+
+	// The list of expected rulesets contains no duplicates, so it suffices to compare lengths
+	// and that every expected ruleset is found.
+	for _, expectedRuleset := range expectedRulesets {
+		foundRuleset := false
+		for _, actualRuleset := range responseRulesetList.Rulesets {
+			if (actualRuleset.Identifier == expectedRuleset.Identifier) &&
+				(actualRuleset.Description == expectedRuleset.Description) {
+				foundRuleset = true
+			}
+		}
+
+		if !foundRuleset {
+			unitTest.Fatalf(
+				testIdentifier+
+					"/returned %v which does not match the expected list of rulesets %v"+
+					" (did not find %v).",
+				responseRulesetList,
+				expectedRulesets,
+				expectedRuleset)
+		}
+	}
 }

@@ -344,7 +344,7 @@ func TestPlayerListDelivered(unitTest *testing.T) {
 	}
 }
 
-func TestAvailableColorListNotEmpty(unitTest *testing.T) {
+func TestAvailableColorsCorrectlyDelivered(unitTest *testing.T) {
 	testIdentifier := "GET available-colors"
 	mockCollection, testServer := newPlayerCollectionAndServer()
 
