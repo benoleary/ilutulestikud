@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
@@ -61,7 +60,10 @@ type gameCollection interface {
 		chatMessage string) error
 
 	// AddNew should add a new game to the collection based on the given arguments.
-	AddNew(gameDefinition endpoint.GameDefinition) error
+	AddNew(
+		gameName string,
+		gameRuleset game.Ruleset,
+		playerNames []string) error
 }
 
 // State contains all the state to allow the backend to function.

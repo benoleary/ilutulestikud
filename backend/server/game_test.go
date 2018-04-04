@@ -14,6 +14,18 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/server"
 )
 
+// mockGameDefinition takes up to five players, not as an array so that
+// the default comparison works.
+type mockGameDefinition struct {
+	GameName           string
+	RulesetDescription string
+	FirstPlayerName    string
+	SecondPlayerName   string
+	ThirdPlayerName    string
+	FourthPlayerName   string
+	FifthPlayerName    string
+}
+
 type mockGameState struct {
 	mockName    string
 	mockPlayers []player.ReadonlyState
@@ -130,10 +142,38 @@ func (mockCollection *mockGameCollection) RecordChatMessage(
 
 // AddNew gets mocked.
 func (mockCollection *mockGameCollection) AddNew(
-	gameDefinition endpoint.GameDefinition) error {
+	gameName string,
+	gameRuleset game.Ruleset,
+	playerNames []string) error {
+	functionArgument := mockGameDefinition{
+		GameName:           gameName,
+		RulesetDescription: gameRuleset.FrontendDescription(),
+	}
+
+	numberOfPLayers := len(playerNames)
+
+	if numberOfPLayers > 0 {
+		functionArgument.FirstPlayerName = playerNames[0]
+	}
+
+	if numberOfPLayers > 1 {
+		functionArgument.SecondPlayerName = playerNames[1]
+	}
+	if numberOfPLayers > 2 {
+		functionArgument.ThirdPlayerName = playerNames[2]
+	}
+
+	if numberOfPLayers > 3 {
+		functionArgument.FourthPlayerName = playerNames[3]
+	}
+
+	if numberOfPLayers > 4 {
+		functionArgument.FifthPlayerName = playerNames[4]
+	}
+
 	mockCollection.recordFunctionAndArgument(
 		"AddNew",
-		gameDefinition)
+		functionArgument)
 	return mockCollection.ErrorToReturn
 }
 

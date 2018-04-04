@@ -141,9 +141,17 @@ func (gameHandler *gameEndpointHandler) handleNewGame(
 		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
 	}
 
+	gameRuleset, unknownRulesetError :=
+		game.RulesetFromIdentifier(gameDefinition.RulesetIdentifier)
+	if unknownRulesetError != nil {
+		return unknownRulesetError, http.StatusBadRequest
+	}
+
 	addError :=
 		gameHandler.stateCollection.AddNew(
-			gameDefinition)
+			gameDefinition.GameName,
+			gameRuleset,
+			gameDefinition.PlayerIdentifiers)
 
 	if addError != nil {
 		return addError, http.StatusBadRequest

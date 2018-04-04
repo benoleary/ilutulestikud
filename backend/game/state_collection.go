@@ -5,7 +5,6 @@ import (
 	"math/rand"
 	"sort"
 
-	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
@@ -120,10 +119,14 @@ func (gameCollection *StateCollection) RecordChatMessage(
 // given definition. It returns an error if a game with the given name already
 // exists, or if the definition includes invalid players.
 func (gameCollection *StateCollection) AddNew(
-	gameDefinition endpoint.GameDefinition) error {
+	gameName string,
+	gameRuleset Ruleset,
+	playerNames []string) error {
 
 	return gameCollection.AddNewWithGivenRandomSeed(
-		gameDefinition,
+		gameName,
+		gameRuleset,
+		playerNames,
 		gameCollection.statePersister.randomSeed())
 }
 
@@ -132,24 +135,17 @@ func (gameCollection *StateCollection) AddNew(
 // from the given definition. It returns an error if a game with the given name already
 // exists, or if the definition includes invalid players.
 func (gameCollection *StateCollection) AddNewWithGivenRandomSeed(
-	gameDefinition endpoint.GameDefinition,
+	gameName string,
+	gameRuleset Ruleset,
+	playerNames []string,
 	randomSeed int64) error {
-	if gameDefinition.GameName == "" {
+	if gameName == "" {
 		return fmt.Errorf("Game must have a name")
-	}
-
-	gameRuleset, unknownRulesetError :=
-		RulesetFromIdentifier(gameDefinition.RulesetIdentifier)
-	if unknownRulesetError != nil {
-		return fmt.Errorf(
-			"Problem identifying ruleset from identifier %v; error is: %v",
-			gameDefinition.RulesetIdentifier,
-			unknownRulesetError)
 	}
 
 	playerStates, playerError :=
 		createPlayerStates(
-			gameDefinition.PlayerIdentifiers,
+			playerNames,
 			gameRuleset,
 			gameCollection.playerProvider)
 
@@ -160,7 +156,7 @@ func (gameCollection *StateCollection) AddNewWithGivenRandomSeed(
 	shuffledDeck := createShuffledDeck(gameRuleset, randomSeed)
 
 	return gameCollection.statePersister.addGame(
-		gameDefinition.GameName,
+		gameName,
 		gameRuleset,
 		playerStates,
 		shuffledDeck)
