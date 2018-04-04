@@ -6,19 +6,18 @@ import (
 
 	"github.com/benoleary/ilutulestikud/backend/chat"
 	"github.com/benoleary/ilutulestikud/backend/chat/assertchat"
-	"github.com/benoleary/ilutulestikud/backend/endpoint"
 )
 
 func PrepareMessages(
 	numberOfMessages int,
 	playerNames []string,
-	chatColors []string) []endpoint.ChatLogMessage {
+	chatColors []string) []chat.Message {
 	numberOfPlayers := len(playerNames)
 	numberOfColors := len(chatColors)
-	preparedMessages := make([]endpoint.ChatLogMessage, numberOfMessages)
+	preparedMessages := make([]chat.Message, numberOfMessages)
 	for messageIndex := 0; messageIndex < numberOfMessages; messageIndex++ {
 		preparedMessages[messageIndex] =
-			endpoint.ChatLogMessage{
+			chat.Message{
 				PlayerName:  playerNames[messageIndex%numberOfPlayers],
 				ChatColor:   chatColors[messageIndex%numberOfColors],
 				MessageText: fmt.Sprintf("Test message %v", messageIndex),
@@ -28,11 +27,11 @@ func PrepareMessages(
 	return preparedMessages
 }
 
-func TestLogForFrontendAfterAppending(unitTest *testing.T) {
+func TestSortedLogAfterAppending(unitTest *testing.T) {
 	playerNames := []string{"Player One", "Player Two"}
 	chatColors := []string{"red", "green", "blue"}
 	type testArguments struct {
-		messagesToAppend []endpoint.ChatLogMessage
+		messagesToAppend []chat.Message
 	}
 
 	testCases := []struct {
@@ -42,7 +41,7 @@ func TestLogForFrontendAfterAppending(unitTest *testing.T) {
 		{
 			name: "No messages",
 			arguments: testArguments{
-				messagesToAppend: []endpoint.ChatLogMessage{},
+				messagesToAppend: []chat.Message{},
 			},
 		},
 		{
@@ -82,7 +81,7 @@ func TestLogForFrontendAfterAppending(unitTest *testing.T) {
 					chatMessage.MessageText)
 			}
 
-			loggedMessages := chatLog.ForFrontend()
+			loggedMessages := chatLog.Sorted()
 
 			assertchat.LogIsCorrect(
 				unitTest,

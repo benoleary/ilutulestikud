@@ -174,18 +174,44 @@ func (gameHandler *gameEndpointHandler) writeGameForPlayer(
 	}
 
 	gameIdentifier := relevantSegments[0]
+	gameName, gameIdentificationError :=
+		gameHandler.segmentTranslator.FromSegment(gameIdentifier)
+
+	if gameIdentificationError != nil {
+		return gameIdentificationError, http.StatusBadRequest
+	}
+
 	playerIdentifier := relevantSegments[1]
+	playerName, playerIdentificationError :=
+		gameHandler.segmentTranslator.FromSegment(playerIdentifier)
+
+	if playerIdentificationError != nil {
+		return playerIdentificationError, http.StatusBadRequest
+	}
 
 	gameView, viewError :=
-		gameHandler.stateCollection.ViewState(gameIdentifier, playerIdentifier)
+		gameHandler.stateCollection.ViewState(gameName, playerName)
 
 	if viewError != nil {
 		return viewError, http.StatusBadRequest
 	}
 
+	chatMessages := gameView.ChatLog().Sorted()
+	numberOfMessages := len(chatMessages)
+	chatLogForFrontend := make([]endpoint.ChatLogMessage, numberOfMessages)
+	for messageIndex := 0; messageIndex < numberOfMessages; messageIndex++ {
+		chatMessage := chatMessages[messageIndex]
+		chatLogForFrontend[messageIndex] = endpoint.ChatLogMessage{
+			TimestampInSeconds: chatMessage.CreationTime.Unix(),
+			PlayerName:         chatMessage.PlayerName,
+			ChatColor:          chatMessage.ChatColor,
+			MessageText:        chatMessage.MessageText,
+		}
+	}
+
 	endpointObject :=
 		endpoint.GameView{
-			ChatLog:                      gameView.ChatLog().ForFrontend(),
+			ChatLog:                      chatLogForFrontend,
 			ScoreSoFar:                   gameView.Score(),
 			NumberOfReadyHints:           gameView.NumberOfReadyHints(),
 			NumberOfSpentHints:           gameView.NumberOfSpentHints(),

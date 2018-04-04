@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/benoleary/ilutulestikud/backend/chat"
-	"github.com/benoleary/ilutulestikud/backend/endpoint"
 )
 
 // LogIsCorrect fails the given unit test if the given slices do not match,
@@ -14,8 +13,8 @@ import (
 func LogIsCorrect(
 	unitTest *testing.T,
 	testIdentifier string,
-	expectedWithoutEmpties []endpoint.ChatLogMessage,
-	actualWithEmpties []endpoint.ChatLogMessage) {
+	expectedWithoutEmpties []chat.Message,
+	actualWithEmpties []chat.Message) {
 	if len(actualWithEmpties) != chat.LogSize {
 		unitTest.Fatalf(
 			testIdentifier+" - log did not have correct size: expected %v messages, but log was %v",

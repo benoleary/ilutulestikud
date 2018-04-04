@@ -3,15 +3,13 @@ package chat
 import (
 	"sync"
 	"time"
-
-	"github.com/benoleary/ilutulestikud/backend/endpoint"
 )
 
 // LogSize gives the size of the list of the last chat messages.
 const LogSize = 8
 
-// message is a struct to hold the details of a single chat message.
-type message struct {
+// Message is a struct to hold the details of a single chat message.
+type Message struct {
 	CreationTime time.Time
 	PlayerName   string
 	ChatColor    string
@@ -20,31 +18,27 @@ type message struct {
 
 // Log implements sort.Interface for []*State based on the creationTime field.
 type Log struct {
-	messageList     []message
+	messageList     []Message
 	indexOfOldest   int
 	mutualExclusion sync.Mutex
 }
 
 // NewLog makes a new Log with a fixed number of messages.
 func NewLog() *Log {
-	return &Log{messageList: make([]message, LogSize), indexOfOldest: 0}
+	return &Log{messageList: make([]Message, LogSize), indexOfOldest: 0}
 }
 
-// ForFrontend creates a JSON object to represent the Log for the front-end.
-func (log *Log) ForFrontend() []endpoint.ChatLogMessage {
-	messagesForFrontend := make([]endpoint.ChatLogMessage, LogSize)
+// Sorted returns the messages in the log starting with the oldest in a simple
+// array, in order by timestamp.
+func (log *Log) Sorted() []Message {
+	sortedMessages := make([]Message, LogSize)
 	for messageIndex := 0; messageIndex < LogSize; messageIndex++ {
 		// We take the relevant message indexed with the oldest message at 0, wrapping
 		// around if newer messages occupy earlier spots in the actual array.
-		logMessage := log.messageList[(messageIndex+log.indexOfOldest)%LogSize]
-		messageForFrontend := &messagesForFrontend[messageIndex]
-		messageForFrontend.TimestampInSeconds = logMessage.CreationTime.Unix()
-		messageForFrontend.PlayerName = logMessage.PlayerName
-		messageForFrontend.ChatColor = logMessage.ChatColor
-		messageForFrontend.MessageText = logMessage.MessageText
+		sortedMessages[messageIndex] = log.messageList[(messageIndex+log.indexOfOldest)%LogSize]
 	}
 
-	return messagesForFrontend
+	return sortedMessages
 }
 
 // AppendNewMessage adds the given message as the newest message, over-writing
