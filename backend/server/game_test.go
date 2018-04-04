@@ -196,12 +196,7 @@ func TestAvailableRulesetsCorrectlyDelivered(unitTest *testing.T) {
 	testIdentifier := "GET available-rulesets"
 	mockCollection, testServer := newPlayerCollectionAndServer()
 
-	// This needs to change such that expectedRulesets is not an
-	// []endpoint.SelectableRuleset but rather a []game.Ruleset,
-	// and then the comparison should compare some
-	// endpoint.SelectableRuleset data members against the return
-	// values of the game.Ruleset functions.
-	expectedRulesets := game.AvailableRulesets()
+	expectedRulesetIdentifiers := game.ValidRulesetIdentifiers()
 
 	getResponse :=
 		mockGet(testServer, "/backend/game/available-rulesets")
@@ -234,21 +229,32 @@ func TestAvailableRulesetsCorrectlyDelivered(unitTest *testing.T) {
 			responseRulesetList)
 	}
 
-	if len(responseRulesetList.Rulesets) != len(expectedRulesets) {
+	if len(responseRulesetList.Rulesets) != len(expectedRulesetIdentifiers) {
 		unitTest.Fatalf(
 			testIdentifier+
-				"/returned %v which does not match the expected list of rulesets %v.",
+				"/returned %v which does not match the expected list of ruleset identifiers %v.",
 			responseRulesetList,
-			expectedRulesets)
+			expectedRulesetIdentifiers)
 	}
 
 	// The list of expected rulesets contains no duplicates, so it suffices to compare lengths
 	// and that every expected ruleset is found.
-	for _, expectedRuleset := range expectedRulesets {
+	for _, expectedRulesetIdentifier := range expectedRulesetIdentifiers {
+		expectedRuleset, identificationError := game.RulesetFromIdentifier(expectedRulesetIdentifier)
+		if identificationError != nil {
+			unitTest.Fatalf(
+				testIdentifier+
+					"/valid ruleset identifier %v produced an error when fetching ruleset: %v",
+				expectedRulesetIdentifier,
+				identificationError)
+		}
+
 		foundRuleset := false
 		for _, actualRuleset := range responseRulesetList.Rulesets {
-			if (actualRuleset.Identifier == expectedRuleset.Identifier) &&
-				(actualRuleset.Description == expectedRuleset.Description) {
+			if (actualRuleset.Identifier == expectedRulesetIdentifier) &&
+				(actualRuleset.Description == expectedRuleset.FrontendDescription()) &&
+				(actualRuleset.MinimumNumberOfPlayers == expectedRuleset.MinimumNumberOfPlayers()) &&
+				(actualRuleset.MaximumNumberOfPlayers == expectedRuleset.MaximumNumberOfPlayers()) {
 				foundRuleset = true
 			}
 		}
@@ -256,10 +262,10 @@ func TestAvailableRulesetsCorrectlyDelivered(unitTest *testing.T) {
 		if !foundRuleset {
 			unitTest.Fatalf(
 				testIdentifier+
-					"/returned %v which does not match the expected list of rulesets %v"+
+					"/returned %v which does not match the expected list of ruleset identifiers %v"+
 					" (did not find %v).",
 				responseRulesetList,
-				expectedRulesets,
+				expectedRulesetIdentifiers,
 				expectedRuleset)
 		}
 	}

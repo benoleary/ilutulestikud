@@ -63,8 +63,27 @@ func (gameHandler *gameEndpointHandler) HandlePost(
 // writeAvailableRulesets writes a JSON object into the HTTP response which has
 // the list of available rulesets as its "Rulesets" attribute.
 func (gameHandler *gameEndpointHandler) writeAvailableRulesets() (interface{}, int) {
+	availableRulesetIdentifiers := game.ValidRulesetIdentifiers()
+
+	selectableRulesets := make([]endpoint.SelectableRuleset, 0)
+
+	for _, rulesetIdentifier := range availableRulesetIdentifiers {
+		// There definitely will not be an error from RulesetFromIdentifier if we
+		// iterate only over the valid identifiers.
+		availableRuleset, _ := game.RulesetFromIdentifier(rulesetIdentifier)
+		selectableRuleset :=
+			endpoint.SelectableRuleset{
+				Identifier:             rulesetIdentifier,
+				Description:            availableRuleset.FrontendDescription(),
+				MinimumNumberOfPlayers: availableRuleset.MinimumNumberOfPlayers(),
+				MaximumNumberOfPlayers: availableRuleset.MaximumNumberOfPlayers(),
+			}
+
+		selectableRulesets = append(selectableRulesets, selectableRuleset)
+	}
+
 	endpointObject := endpoint.RulesetList{
-		Rulesets: game.AvailableRulesets(),
+		Rulesets: selectableRulesets,
 	}
 
 	return endpointObject, http.StatusOK

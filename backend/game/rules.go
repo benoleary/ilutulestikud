@@ -2,7 +2,6 @@ package game
 
 import (
 	"fmt"
-	"github.com/benoleary/ilutulestikud/backend/endpoint"
 )
 
 // This file contains the definition of an interface for rulesets,
@@ -65,33 +64,13 @@ const (
 	WithRainbowAsCompoundIdentifier = iota
 )
 
-func validRulesetIdentifiers() []int {
+// ValidRulesetIdentifiers returns the list of identifiers of valid rulesets.
+func ValidRulesetIdentifiers() []int {
 	return []int{
 		StandardWithoutRainbowIdentifier,
 		WithRainbowAsSeparateIdentifier,
 		WithRainbowAsCompoundIdentifier,
 	}
-}
-
-// AvailableRulesets returns the list of identifiers with descriptions
-// representing the rulesets which are available for creating games.
-func AvailableRulesets() []endpoint.SelectableRuleset {
-	availableRulesets := make([]endpoint.SelectableRuleset, 0)
-	for _, rulesetIdentifier := range validRulesetIdentifiers() {
-		// There definitely will not be an error from RulesetFromIdentifier if we
-		// iterate only over the valid identifiers.
-		availableRuleset, _ := RulesetFromIdentifier(rulesetIdentifier)
-		availableRulesets = append(
-			availableRulesets,
-			endpoint.SelectableRuleset{
-				Identifier:             rulesetIdentifier,
-				Description:            availableRuleset.FrontendDescription(),
-				MinimumNumberOfPlayers: availableRuleset.MinimumNumberOfPlayers(),
-				MaximumNumberOfPlayers: availableRuleset.MaximumNumberOfPlayers(),
-			})
-	}
-
-	return availableRulesets
 }
 
 // RulesetFromIdentifier returns the appropriate ruleset for the identifier.
