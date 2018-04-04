@@ -270,3 +270,42 @@ func TestAvailableRulesetsCorrectlyDelivered(unitTest *testing.T) {
 		}
 	}
 }
+
+func TestGetAllGamesWithPlayerNoFurtherSegmentBadRequest(unitTest *testing.T) {
+	testIdentifier := "GET with no segments after all-games-with-player"
+	mockCollection, testServer := newGameCollectionAndServer()
+
+	getResponse := mockGet(testServer, "/backend/game/all-games-with-player")
+
+	assertResponseIsCorrect(
+		unitTest,
+		testIdentifier,
+		getResponse,
+		nil,
+		http.StatusBadRequest)
+
+	assertNoFunctionWasCalled(
+		unitTest,
+		mockCollection.FunctionsAndArgumentsReceived,
+		testIdentifier)
+}
+
+func TestGetAllGamesWithPlayerInvalidPlayerIdentifierBadRequest(unitTest *testing.T) {
+	testIdentifier := "GET all-games-with-player with invalid identifier"
+	mockCollection, testServer := newGameCollectionAndServer()
+
+	// The character '+' is not a valid base-32 character.
+	getResponse := mockGet(testServer, "/backend/game/all-games-with-player/++++")
+
+	assertResponseIsCorrect(
+		unitTest,
+		testIdentifier,
+		getResponse,
+		nil,
+		http.StatusBadRequest)
+
+	assertNoFunctionWasCalled(
+		unitTest,
+		mockCollection.FunctionsAndArgumentsReceived,
+		testIdentifier)
+}
