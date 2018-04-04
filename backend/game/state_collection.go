@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 	"math/rand"
+	"sort"
 
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/player"
@@ -52,10 +53,13 @@ func (gameCollection *StateCollection) ViewState(
 
 // ViewAllWithPlayer wraps every read-only state given by the persister for the given player
 // in a view. It returns an error if there is an error in creating any of the player views.
+// The views are ordered by creation timestamp, oldest first.
 func (gameCollection *StateCollection) ViewAllWithPlayer(
 	playerName string) ([]*PlayerView, error) {
 	gameStates := gameCollection.statePersister.readAllWithPlayer(playerName)
 	numberOfGames := len(gameStates)
+
+	sort.Sort(ByCreationTime(gameStates))
 
 	playerViews := make([]*PlayerView, numberOfGames)
 
@@ -77,35 +81,38 @@ func (gameCollection *StateCollection) ViewAllWithPlayer(
 	return playerViews, nil
 }
 
-// PerformAction finds the given game and performs the given action for its player,
-// or returns an error.
-func (gameCollection *StateCollection) PerformAction(
-	playerAction endpoint.PlayerAction) error {
-	actingPlayer, playeridentificationError :=
-		gameCollection.playerProvider.Get(playerAction.PlayerIdentifier)
+// RecordChatMessage finds the given game and records the given chat message from the
+// given player, or returns an error.
+func (gameCollection *StateCollection) RecordChatMessage(
+	gameName string,
+	playerName string,
+	chatMessage string) error {
+	chattingPlayer, playerIdentificationError :=
+		gameCollection.playerProvider.Get(playerName)
 
-	if playeridentificationError != nil {
-		return playeridentificationError
+	if playerIdentificationError != nil {
+		return playerIdentificationError
 	}
 
 	gameState, isFound :=
-		gameCollection.statePersister.readAndWriteGame(playerAction.GameIdentifier)
+		gameCollection.statePersister.readAndWriteGame(gameName)
 
 	if !isFound {
 		return fmt.Errorf(
-			"Game %v does not exist, cannot perform action from player %v",
-			playerAction.GameIdentifier,
-			playerAction.PlayerIdentifier)
+			"Game %v does not exist, cannot record chat message from player %v",
+			gameName,
+			playerName)
 	}
 
-	_, participantError :=
-		ViewForPlayer(gameState.read(), playerAction.PlayerIdentifier)
+	_, participantError := ViewForPlayer(gameState.read(), playerName)
 
 	if participantError != nil {
 		return participantError
 	}
 
-	return gameState.performAction(actingPlayer, playerAction)
+	// No error is returned when recording a chat message.
+	gameState.recordChatMessage(chattingPlayer, chatMessage)
+	return nil
 }
 
 // AddNew prepares a new shuffled deck using a random seed taken from the given
@@ -131,7 +138,8 @@ func (gameCollection *StateCollection) AddNewWithGivenRandomSeed(
 		return fmt.Errorf("Game must have a name")
 	}
 
-	gameRuleset, unknownRulesetError := RulesetFromIdentifier(gameDefinition.RulesetIdentifier)
+	gameRuleset, unknownRulesetError :=
+		RulesetFromIdentifier(gameDefinition.RulesetIdentifier)
 	if unknownRulesetError != nil {
 		return fmt.Errorf(
 			"Problem identifying ruleset from identifier %v; error is: %v",
@@ -139,43 +147,76 @@ func (gameCollection *StateCollection) AddNewWithGivenRandomSeed(
 			unknownRulesetError)
 	}
 
+	playerStates, playerError :=
+		createPlayerStates(
+			gameDefinition.PlayerIdentifiers,
+			gameRuleset,
+			gameCollection.playerProvider)
+
+	if playerError != nil {
+		return playerError
+	}
+
+	shuffledDeck := createShuffledDeck(gameRuleset, randomSeed)
+
+	return gameCollection.statePersister.addGame(
+		gameDefinition.GameName,
+		gameRuleset,
+		playerStates,
+		shuffledDeck)
+}
+
+func createPlayerStates(
+	playerNames []string,
+	gameRuleset Ruleset,
+	playerProvider readonlyPlayerProvider) ([]player.ReadonlyState, error) {
 	// A nil slice still has a length of 0, so this is OK.
-	numberOfPlayers := len(gameDefinition.PlayerIdentifiers)
+	numberOfPlayers := len(playerNames)
 
 	if numberOfPlayers < gameRuleset.MinimumNumberOfPlayers() {
-		return fmt.Errorf(
-			"Game must have at least %v players",
-			gameRuleset.MinimumNumberOfPlayers())
+		tooFewError :=
+			fmt.Errorf(
+				"Game must have at least %v players",
+				gameRuleset.MinimumNumberOfPlayers())
+		return nil, tooFewError
 	}
 
 	if numberOfPlayers > gameRuleset.MaximumNumberOfPlayers() {
-		return fmt.Errorf(
-			"Game must have no more than %v players",
-			gameRuleset.MaximumNumberOfPlayers())
+		tooManyError :=
+			fmt.Errorf(
+				"Game must have no more than %v players",
+				gameRuleset.MaximumNumberOfPlayers())
+		return nil, tooManyError
 	}
 
-	playerIdentifiers := make(map[string]bool, 0)
+	playerNameMap := make(map[string]bool, 0)
 
 	playerStates := make([]player.ReadonlyState, numberOfPlayers)
 	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
-		playerIdentifier := gameDefinition.PlayerIdentifiers[playerIndex]
-		playerState, identificationError := gameCollection.playerProvider.Get(playerIdentifier)
+		playerName := playerNames[playerIndex]
+		playerState, identificationError := playerProvider.Get(playerName)
 
 		if identificationError != nil {
-			return identificationError
+			return nil, identificationError
 		}
 
-		if playerIdentifiers[playerIdentifier] {
-			return fmt.Errorf(
-				"Player with identifier %v appears more than once in the list of players",
-				playerIdentifier)
+		if playerNameMap[playerName] {
+			degenerateNameError :=
+				fmt.Errorf(
+					"Player with name %v appears more than once in the list of players",
+					playerName)
+			return nil, degenerateNameError
 		}
 
-		playerIdentifiers[playerIdentifier] = true
+		playerNameMap[playerName] = true
 
 		playerStates[playerIndex] = playerState
 	}
 
+	return playerStates, nil
+}
+
+func createShuffledDeck(gameRuleset Ruleset, randomSeed int64) []Card {
 	randomNumberGenerator := rand.New(rand.NewSource(randomSeed))
 
 	shuffledDeck := gameRuleset.FullCardset()
@@ -192,9 +233,26 @@ func (gameCollection *StateCollection) AddNewWithGivenRandomSeed(
 			shuffledDeck[secondShuffleIndex], shuffledDeck[firstShuffleIndex]
 	}
 
-	return gameCollection.statePersister.addGame(
-		gameDefinition.GameName,
-		gameRuleset,
-		playerStates,
-		shuffledDeck)
+	return shuffledDeck
+}
+
+// ByCreationTime implements sort interface for []ReadonlyState based on the return
+// from its CreationTime(). It is exported for ease of testing.
+type ByCreationTime []ReadonlyState
+
+// Len implements part of the sort interface for ByCreationTime.
+func (byCreationTime ByCreationTime) Len() int {
+	return len(byCreationTime)
+}
+
+// Swap implements part of the sort interface for ByCreationTime.
+func (byCreationTime ByCreationTime) Swap(firstIndex int, secondIndex int) {
+	byCreationTime[firstIndex], byCreationTime[secondIndex] =
+		byCreationTime[secondIndex], byCreationTime[firstIndex]
+}
+
+// Less implements part of the sort interface for ByCreationTime.
+func (byCreationTime ByCreationTime) Less(firstIndex int, secondIndex int) bool {
+	return byCreationTime[firstIndex].CreationTime().Before(
+		byCreationTime[secondIndex].CreationTime())
 }

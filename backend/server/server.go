@@ -53,9 +53,12 @@ type gameCollection interface {
 	// example), though of course an implementation may order the slice consistently.
 	ViewAllWithPlayer(playerName string) ([]*game.PlayerView, error)
 
-	// PerformAction should find the given game and perform the given action for its player,
-	// or return an error.
-	PerformAction(playerAction endpoint.PlayerAction) error
+	// RecordChatMessage should find the given game and record the given chat message
+	// from the given player, or return an error.
+	RecordChatMessage(
+		gameName string,
+		playerName string,
+		chatMessage string) error
 
 	// AddNew should add a new game to the collection based on the given arguments.
 	AddNew(gameDefinition endpoint.GameDefinition) error

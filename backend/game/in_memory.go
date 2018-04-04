@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/benoleary/ilutulestikud/backend/chat"
-	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
@@ -178,19 +177,14 @@ func (gameState *inMemoryState) HasPlayerAsParticipant(playerName string) bool {
 	return false
 }
 
-// performAction should perform the given action for its player or return an error,
-// but right now it only performs the action to record a chat message.
-func (gameState *inMemoryState) performAction(
-	actingPlayer player.ReadonlyState, playerAction endpoint.PlayerAction) error {
-	if playerAction.ActionType == "chat" {
-		gameState.chatLog.AppendNewMessage(
-			actingPlayer.Name(),
-			actingPlayer.Color(),
-			playerAction.ChatMessage)
-		return nil
-	}
-
-	return fmt.Errorf("Unknown action: %v", playerAction.ActionType)
+// recordChatMessage records a chat message from the given player.
+func (gameState *inMemoryState) recordChatMessage(
+	actingPlayer player.ReadonlyState,
+	chatMessage string) {
+	gameState.chatLog.AppendNewMessage(
+		actingPlayer.Name(),
+		actingPlayer.Color(),
+		chatMessage)
 }
 
 // ChatLog returns the chat log of the game at the current moment.

@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/benoleary/ilutulestikud/backend/chat"
-	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
@@ -53,8 +52,8 @@ type readAndWriteState interface {
 	// properties.
 	read() ReadonlyState
 
-	// performAction should perform the given action for its player or return an error.
-	performAction(actingPlayer player.ReadonlyState, playerAction endpoint.PlayerAction) error
+	// recordChatMessage should record a chat message from the given player.
+	recordChatMessage(actingPlayer player.ReadonlyState, chatMessage string)
 }
 
 // StatePersister defines the interface for structs which should be able to create objects

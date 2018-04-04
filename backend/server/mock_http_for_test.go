@@ -30,6 +30,12 @@ type stringPair struct {
 	second string
 }
 
+type stringTriple struct {
+	first  string
+	second string
+	third  string
+}
+
 // segmentTranslatorForTest returns the standard base-32 translator.
 func segmentTranslatorForTest() server.EndpointSegmentTranslator {
 	return &server.Base32Translator{}

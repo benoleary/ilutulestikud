@@ -117,12 +117,14 @@ func (mockCollection *mockGameCollection) ViewAllWithPlayer(
 	return mockCollection.ReturnForViewAllWithPlayer, mockCollection.ErrorToReturn
 }
 
-// PerformAction gets mocked.
-func (mockCollection *mockGameCollection) PerformAction(
-	playerAction endpoint.PlayerAction) error {
+// RecordChatMessage gets mocked.
+func (mockCollection *mockGameCollection) RecordChatMessage(
+	gameName string,
+	playerName string,
+	chatMessage string) error {
 	mockCollection.recordFunctionAndArgument(
-		"PerformAction",
-		playerAction)
+		"RecordChatMessage",
+		stringTriple{first: gameName, second: playerName, third: chatMessage})
 	return mockCollection.ErrorToReturn
 }
 
@@ -803,4 +805,118 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 			responseGameView,
 			testView)
 	}
+}
+func TestRejectInvalidChatWithMalformedRequest(unitTest *testing.T) {
+	testIdentifier := "Reject invalid POST record-chat-message with malformed JSON body"
+
+	// There is no point testing with valid JSON objects which do not correspond
+	// to the expected JSON object, as the JSON will just be parsed with empty
+	// strings for the missing attributes and extra attributes will just be
+	// ignored. The tests of the player state collection can cover the cases of
+	// empty player names and colors.
+	bodyString := "{\"PlayerName\" :\"Something\", \"GameName\":}"
+
+	mockCollection, testServer := newGameCollectionAndServer()
+
+	mockCollection.ErrorToReturn = errors.New("error")
+
+	postResponse :=
+		mockPostWithDirectBody(
+			testServer,
+			"/backend/game/record-chat-message",
+			bodyString)
+
+	assertResponseIsCorrect(
+		unitTest,
+		testIdentifier,
+		postResponse,
+		nil,
+		http.StatusBadRequest)
+
+	assertNoFunctionWasCalled(
+		unitTest,
+		mockCollection.FunctionsAndArgumentsReceived,
+		testIdentifier)
+}
+
+func TestRejectChatIfCollectionRejectsIt(unitTest *testing.T) {
+	testIdentifier := "Reject POST record-chat-message if collection rejects it"
+	mockCollection, testServer := newGameCollectionAndServer()
+
+	mockCollection.ErrorToReturn = errors.New("error")
+
+	bodyObject := endpoint.PlayerChatMessage{
+		GameName:    "Test game",
+		PlayerName:  "A. Player Name",
+		ChatMessage: "Blah blah blah",
+	}
+
+	postResponse, encodingError :=
+		mockPost(testServer, "/backend/game/record-chat-message", bodyObject)
+
+	unitTest.Logf(
+		testIdentifier+"/object %v generated encoding error %v.",
+		bodyObject,
+		encodingError)
+
+	assertResponseIsCorrect(
+		unitTest,
+		testIdentifier,
+		postResponse,
+		encodingError,
+		http.StatusBadRequest)
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "RecordChatMessage",
+			FunctionArgument: stringTriple{first: bodyObject.GameName, second: bodyObject.PlayerName, third: bodyObject.ChatMessage},
+		},
+		testIdentifier)
+}
+
+func TestAcceptValidChat(unitTest *testing.T) {
+	testIdentifier := "POST record-chat-message"
+	mockCollection, testServer := newGameCollectionAndServer()
+
+	bodyObject := endpoint.PlayerChatMessage{
+		GameName:    "Test game",
+		PlayerName:  "A. Player Name",
+		ChatMessage: "Blah blah blah",
+	}
+
+	postResponse, encodingError :=
+		mockPost(testServer, "/backend/game/record-chat-message", bodyObject)
+
+	unitTest.Logf(
+		testIdentifier+"/object %v generated encoding error %v.",
+		bodyObject,
+		encodingError)
+
+	assertResponseIsCorrect(
+		unitTest,
+		testIdentifier,
+		postResponse,
+		encodingError,
+		http.StatusOK)
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "RecordChatMessage",
+			FunctionArgument: stringTriple{first: bodyObject.GameName, second: bodyObject.PlayerName, third: bodyObject.ChatMessage},
+		},
+		testIdentifier)
 }

@@ -10,10 +10,6 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/game"
 )
 
-// ByCreationTime implements sort interface for []game.ReadonlyState based on the return
-// from its CreationTime().
-type ByCreationTime []game.ReadonlyState
-
 // gameEndpointHandler is a struct meant to encapsulate all the state co-ordinating
 // interaction with all the games through the endpoints.
 type gameEndpointHandler struct {
@@ -53,8 +49,8 @@ func (gameHandler *gameEndpointHandler) HandlePost(
 	switch relevantSegments[0] {
 	case "create-new-game":
 		return gameHandler.handleNewGame(httpBodyDecoder, relevantSegments)
-	case "player-action":
-		return gameHandler.handlePlayerAction(httpBodyDecoder, relevantSegments)
+	case "record-chat-message":
+		return gameHandler.handleRecordChatMessage(httpBodyDecoder, relevantSegments)
 	default:
 		return "URI segment " + relevantSegments[0] + " not valid", http.StatusNotFound
 	}
@@ -222,42 +218,26 @@ func (gameHandler *gameEndpointHandler) writeGameForPlayer(
 	return endpointObject, http.StatusOK
 }
 
-// handlePlayerAction passes on the given player action to the relevant game.
-func (gameHandler *gameEndpointHandler) handlePlayerAction(
+// handleRecordChatMessage passes on the given chat message to the relevant game.
+func (gameHandler *gameEndpointHandler) handleRecordChatMessage(
 	httpBodyDecoder *json.Decoder,
 	relevantSegments []string) (interface{}, int) {
+	var playerChatMessage endpoint.PlayerChatMessage
 
-	var playerAction endpoint.PlayerAction
-
-	parsingError := httpBodyDecoder.Decode(&playerAction)
+	parsingError := httpBodyDecoder.Decode(&playerChatMessage)
 	if parsingError != nil {
 		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
 	}
 
 	actionError :=
-		gameHandler.stateCollection.PerformAction(
-			playerAction)
+		gameHandler.stateCollection.RecordChatMessage(
+			playerChatMessage.GameName,
+			playerChatMessage.PlayerName,
+			playerChatMessage.ChatMessage)
 
 	if actionError != nil {
 		return actionError, http.StatusBadRequest
 	}
 
 	return "OK", http.StatusOK
-}
-
-// Len implements part of the sort interface for ByCreationTime.
-func (byCreationTime ByCreationTime) Len() int {
-	return len(byCreationTime)
-}
-
-// Swap implements part of the sort interface for ByCreationTime.
-func (byCreationTime ByCreationTime) Swap(firstIndex int, secondIndex int) {
-	byCreationTime[firstIndex], byCreationTime[secondIndex] =
-		byCreationTime[secondIndex], byCreationTime[firstIndex]
-}
-
-// Less implements part of the sort interface for ByCreationTime.
-func (byCreationTime ByCreationTime) Less(firstIndex int, secondIndex int) bool {
-	return byCreationTime[firstIndex].CreationTime().Before(
-		byCreationTime[secondIndex].CreationTime())
 }

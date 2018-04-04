@@ -1,6 +1,6 @@
 package endpoint
 
-// Types emitted by player.GetAndPostHandler:
+// Types emitted by server.playerEndpointHandler:
 
 // PlayerList ensures that the PlayerState list is encapsulated within a single JSON object.
 type PlayerList struct {
@@ -12,7 +12,7 @@ type ChatColorList struct {
 	Colors []string
 }
 
-// Types emitted by game.GetAndPostHandler:
+// Types emitted by server.gameEndpointHandler:
 
 // SelectableRuleset contains the information required to enable a player to select a ruleset,
 // plus the pertinent information from the ruleset to allow the frontend to form a valid request
