@@ -846,14 +846,15 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 			testView)
 	}
 }
+
 func TestRejectInvalidChatWithMalformedRequest(unitTest *testing.T) {
 	testIdentifier := "Reject invalid POST record-chat-message with malformed JSON body"
 
 	// There is no point testing with valid JSON objects which do not correspond
 	// to the expected JSON object, as the JSON will just be parsed with empty
 	// strings for the missing attributes and extra attributes will just be
-	// ignored. The tests of the player state collection can cover the cases of
-	// empty player names and colors.
+	// ignored. The tests of the game state collection can cover the cases of
+	// empty attributes.
 	bodyString := "{\"PlayerName\" :\"Something\", \"GameName\":}"
 
 	mockCollection, testServer := newGameCollectionAndServer()
@@ -957,6 +958,245 @@ func TestAcceptValidChat(unitTest *testing.T) {
 		functionNameAndArgument{
 			FunctionName:     "RecordChatMessage",
 			FunctionArgument: stringTriple{first: bodyObject.GameName, second: bodyObject.PlayerName, third: bodyObject.ChatMessage},
+		},
+		testIdentifier)
+}
+
+func TestRejectInvalidNewGameWithMalformedRequest(unitTest *testing.T) {
+	testIdentifier := "Reject invalid POST create-new-game with malformed JSON body"
+
+	// There is no point testing with valid JSON objects which do not correspond
+	// to the expected JSON object, as the JSON will just be parsed with empty
+	// strings for the missing attributes and extra attributes will just be
+	// ignored. The tests of the game state collection can cover the cases of
+	// empty attributes.
+	bodyString := "{\"GameName\" :\"Something\", \"PlayerIdentifiers\":}"
+
+	mockCollection, testServer := newGameCollectionAndServer()
+
+	mockCollection.ErrorToReturn = errors.New("error")
+
+	postResponse :=
+		mockPostWithDirectBody(
+			testServer,
+			"/backend/game/create-new-game",
+			bodyString)
+
+	assertResponseIsCorrect(
+		unitTest,
+		testIdentifier,
+		postResponse,
+		nil,
+		http.StatusBadRequest)
+
+	assertNoFunctionWasCalled(
+		unitTest,
+		mockCollection.FunctionsAndArgumentsReceived,
+		testIdentifier)
+}
+
+func TestRejectNewGameWithInvalidRulesetIdentifier(unitTest *testing.T) {
+	testIdentifier := "Reject POST create-new-game with invalid ruleset identifier"
+	mockCollection, testServer := newGameCollectionAndServer()
+
+	// All the valid ruleset identifiers should be > 0.
+	bodyObject := endpoint.GameDefinition{
+		GameName:          "test game",
+		RulesetIdentifier: -1,
+		PlayerNames:       []string{"Player One", "Player Two"},
+	}
+
+	postResponse, encodingError :=
+		mockPost(testServer, "/backend/game/create-new-game", bodyObject)
+
+	unitTest.Logf(
+		testIdentifier+"/object %v generated encoding error %v.",
+		bodyObject,
+		encodingError)
+
+	assertResponseIsCorrect(
+		unitTest,
+		testIdentifier,
+		postResponse,
+		nil,
+		http.StatusBadRequest)
+
+	assertNoFunctionWasCalled(
+		unitTest,
+		mockCollection.FunctionsAndArgumentsReceived,
+		testIdentifier)
+}
+
+func TestRejectNewGameIfCollectionRejectsIt(unitTest *testing.T) {
+	testIdentifier := "Reject POST create-new-game if collection rejects it"
+	mockCollection, testServer := newGameCollectionAndServer()
+
+	mockCollection.ErrorToReturn = errors.New("error")
+
+	bodyObject := endpoint.GameDefinition{
+		GameName:          "test game",
+		RulesetIdentifier: game.ValidRulesetIdentifiers()[0],
+		PlayerNames:       []string{"Player One", "Player Two"},
+	}
+
+	expectedRuleset, rulesetError :=
+		game.RulesetFromIdentifier(bodyObject.RulesetIdentifier)
+
+	if rulesetError != nil {
+		unitTest.Fatalf(
+			testIdentifier+"/error when getting valid expected ruleset: %v",
+			rulesetError)
+	}
+
+	expectedFunctionArgument :=
+		mockGameDefinition{
+			GameName:           bodyObject.GameName,
+			RulesetDescription: expectedRuleset.FrontendDescription(),
+			FirstPlayerName:    bodyObject.PlayerNames[0],
+			SecondPlayerName:   bodyObject.PlayerNames[1],
+		}
+
+	postResponse, encodingError :=
+		mockPost(testServer, "/backend/game/create-new-game", bodyObject)
+
+	unitTest.Logf(
+		testIdentifier+"/object %v generated encoding error %v.",
+		bodyObject,
+		encodingError)
+
+	assertResponseIsCorrect(
+		unitTest,
+		testIdentifier,
+		postResponse,
+		encodingError,
+		http.StatusBadRequest)
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "AddNew",
+			FunctionArgument: expectedFunctionArgument,
+		},
+		testIdentifier)
+}
+
+func TestRejectNewGameIfIdentifierIncludesSegmentDelimiter(unitTest *testing.T) {
+	testIdentifier := "Reject POST create-new-game if identifier includes segment delimiter"
+	mockCollection, testServer :=
+		newGameCollectionAndServerForTranslator(&server.NoOperationTranslator{})
+
+	bodyObject := endpoint.GameDefinition{
+		GameName:          "name/which/cannot/work/as/identifier",
+		RulesetIdentifier: game.ValidRulesetIdentifiers()[0],
+		PlayerNames:       []string{"Player One", "Player Two"},
+	}
+
+	expectedRuleset, rulesetError :=
+		game.RulesetFromIdentifier(bodyObject.RulesetIdentifier)
+
+	if rulesetError != nil {
+		unitTest.Fatalf(
+			testIdentifier+"/error when getting valid expected ruleset: %v",
+			rulesetError)
+	}
+
+	expectedFunctionArgument :=
+		mockGameDefinition{
+			GameName:           bodyObject.GameName,
+			RulesetDescription: expectedRuleset.FrontendDescription(),
+			FirstPlayerName:    bodyObject.PlayerNames[0],
+			SecondPlayerName:   bodyObject.PlayerNames[1],
+		}
+
+	postResponse, encodingError :=
+		mockPost(testServer, "/backend/game/create-new-game", bodyObject)
+
+	unitTest.Logf(
+		testIdentifier+"/object %v generated encoding error %v.",
+		bodyObject,
+		encodingError)
+
+	assertResponseIsCorrect(
+		unitTest,
+		testIdentifier,
+		postResponse,
+		encodingError,
+		http.StatusBadRequest)
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "AddNew",
+			FunctionArgument: expectedFunctionArgument,
+		},
+		testIdentifier)
+}
+
+func TestAcceptValidNewGame(unitTest *testing.T) {
+	testIdentifier := "POST record-chat-message"
+	mockCollection, testServer := newGameCollectionAndServer()
+
+	bodyObject := endpoint.GameDefinition{
+		GameName:          "test game",
+		RulesetIdentifier: game.ValidRulesetIdentifiers()[0],
+		PlayerNames:       []string{"Player One", "Player Two"},
+	}
+
+	expectedRuleset, rulesetError :=
+		game.RulesetFromIdentifier(bodyObject.RulesetIdentifier)
+
+	if rulesetError != nil {
+		unitTest.Fatalf(
+			testIdentifier+"/error when getting valid expected ruleset: %v",
+			rulesetError)
+	}
+
+	expectedFunctionArgument :=
+		mockGameDefinition{
+			GameName:           bodyObject.GameName,
+			RulesetDescription: expectedRuleset.FrontendDescription(),
+			FirstPlayerName:    bodyObject.PlayerNames[0],
+			SecondPlayerName:   bodyObject.PlayerNames[1],
+		}
+
+	postResponse, encodingError :=
+		mockPost(testServer, "/backend/game/create-new-game", bodyObject)
+
+	unitTest.Logf(
+		testIdentifier+"/object %v generated encoding error %v.",
+		bodyObject,
+		encodingError)
+
+	assertResponseIsCorrect(
+		unitTest,
+		testIdentifier,
+		postResponse,
+		encodingError,
+		http.StatusOK)
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "AddNew",
+			FunctionArgument: expectedFunctionArgument,
 		},
 		testIdentifier)
 }

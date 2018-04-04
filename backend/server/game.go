@@ -151,7 +151,7 @@ func (gameHandler *gameEndpointHandler) handleNewGame(
 		gameHandler.stateCollection.AddNew(
 			gameDefinition.GameName,
 			gameRuleset,
-			gameDefinition.PlayerIdentifiers)
+			gameDefinition.PlayerNames)
 
 	if addError != nil {
 		return addError, http.StatusBadRequest

@@ -6,7 +6,7 @@ package endpoint
 type GameDefinition struct {
 	GameName          string
 	RulesetIdentifier int
-	PlayerIdentifiers []string
+	PlayerNames       []string
 }
 
 // PlayerChatMessage is a struct to hold a single chat message from a player to a game.
