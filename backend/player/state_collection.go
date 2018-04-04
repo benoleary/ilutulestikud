@@ -31,6 +31,16 @@ func NewCollection(
 	return newCollection
 }
 
+// All just wraps around the all function of the internal collection.
+func (stateCollection *StateCollection) All() []ReadonlyState {
+	return stateCollection.statePersister.all()
+}
+
+// Get just wraps around the get function of the internal collection.
+func (stateCollection *StateCollection) Get(playerName string) (ReadonlyState, error) {
+	return stateCollection.statePersister.get(playerName)
+}
+
 // AvailableChatColors returns a deep copy of state collection's chat color slice.
 func (stateCollection *StateCollection) AvailableChatColors() []string {
 	return deepCopyStringSlice(stateCollection.availableChatColors)
@@ -59,16 +69,6 @@ func (stateCollection *StateCollection) UpdateColor(
 	playerName string,
 	chatColor string) error {
 	return stateCollection.statePersister.updateColor(playerName, chatColor)
-}
-
-// All just wraps around the all function of the internal collection.
-func (stateCollection *StateCollection) All() []ReadonlyState {
-	return stateCollection.statePersister.all()
-}
-
-// Get just wraps around the get function of the internal collection.
-func (stateCollection *StateCollection) Get(playerName string) (ReadonlyState, error) {
-	return stateCollection.statePersister.get(playerName)
 }
 
 // Reset calls the reset of the internal collection then adds the initial players again.

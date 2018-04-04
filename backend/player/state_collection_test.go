@@ -6,26 +6,141 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/benoleary/ilutulestikud/backend/endpoint"
+	"github.com/benoleary/ilutulestikud/backend/defaults"
+	"github.com/benoleary/ilutulestikud/backend/player"
 )
+
+var colorsAvailableInTest []string = defaults.AvailableColors()
+var defaultTestPlayerNames []string = []string{"Player One", "Player Two", "Player Three"}
+
+type persisterAndDescription struct {
+	PlayerPersister      player.StatePersister
+	PersisterDescription string
+}
+
+type collectionAndDescription struct {
+	PlayerCollection      *player.StateCollection
+	CollectionDescription string
+}
+
+func prepareCollections(
+	initialPlayerNames []string,
+	availableColors []string) []collectionAndDescription {
+	statePersisters := []persisterAndDescription{
+		persisterAndDescription{
+			PlayerPersister:      player.NewInMemoryPersister(),
+			PersisterDescription: "in-memory persister",
+		},
+	}
+
+	numberOfPersisters := len(statePersisters)
+
+	stateCollections := make([]collectionAndDescription, numberOfPersisters)
+
+	for persisterIndex := 0; persisterIndex < numberOfPersisters; persisterIndex++ {
+		statePersister := statePersisters[persisterIndex]
+		stateCollection :=
+			player.NewCollection(
+				statePersister.PlayerPersister,
+				initialPlayerNames,
+				availableColors)
+		stateCollections[persisterIndex] = collectionAndDescription{
+			PlayerCollection:      stateCollection,
+			CollectionDescription: "collection around " + statePersister.PersisterDescription,
+		}
+	}
+
+	return stateCollections
+}
+
+func TestEmptyAvailableColors(unitTest *testing.T) {
+	collectionTypes :=
+		prepareCollections(defaultTestPlayerNames, []string{})
+
+	for _, collectionType := range collectionTypes {
+		unitTest.Run(collectionType.CollectionDescription, func(unitTest *testing.T) {
+			availableColors := collectionType.PlayerCollection.AvailableChatColors()
+
+			if len(availableColors) != 0 {
+				unitTest.Fatalf(
+					"AvailableChatColors() when set up with empty list returned non-empty list %v",
+					availableColors)
+			}
+		})
+	}
+}
+
+func TestNonemptyAvailableColors(unitTest *testing.T) {
+	collectionTypes :=
+		prepareCollections(defaultTestPlayerNames, colorsAvailableInTest)
+
+	for _, collectionType := range collectionTypes {
+		unitTest.Run(collectionType.CollectionDescription, func(unitTest *testing.T) {
+			availableColors := collectionType.PlayerCollection.AvailableChatColors()
+
+			numberOfExpectedColors := len(colorsAvailableInTest)
+
+			if len(availableColors) != numberOfExpectedColors {
+				unitTest.Fatalf(
+					"AvailableChatColors() set up with %v returned list %v which has wrong size",
+					colorsAvailableInTest,
+					availableColors)
+			}
+
+			for colorIndex := 0; colorIndex < numberOfExpectedColors; colorIndex++ {
+				if availableColors[colorIndex] != colorsAvailableInTest[colorIndex] {
+					unitTest.Fatalf(
+						"AvailableChatColors() set up with %v returned list %v which did not match in element %v",
+						colorsAvailableInTest,
+						availableColors,
+						colorIndex)
+				}
+			}
+		})
+	}
+}
+
+func TestReturnErrorWhenPlayerNotFoundInternally(unitTest *testing.T) {
+	collectionTypes :=
+		prepareCollections(defaultTestPlayerNames, colorsAvailableInTest)
+
+	for _, collectionType := range collectionTypes {
+		unitTest.Run(collectionType.CollectionDescription, func(unitTest *testing.T) {
+			invalidName := "Not A. Participant"
+			playerState, identificationError :=
+				collectionType.PlayerCollection.Get(invalidName)
+
+			if identificationError == nil {
+				unitTest.Fatalf(
+					"Get(unknown player name %v) did not return an error, did return player state %v",
+					invalidName,
+					playerState)
+			}
+		})
+	}
+}
 
 // just copy-paste dumps of old player.getAndPostHandler tests, need to be adapted.
 
-func TestReturnErrorWhenPlayerNotFoundInternally(unitTest *testing.T) {
-	playerCollection, _ := newCollectionAndHandler()
-
-	invalidIdentifier := "not a valid identifier"
-	internalPlayer, internalIdentificationError :=
-		playerCollection.Get(invalidIdentifier)
-
-	if internalIdentificationError == nil {
-		unitTest.Fatalf(
-			"Internal get of invalid player identifier %v did not return an error, did return player state %v",
-			invalidIdentifier,
-			internalPlayer)
-	}
-}
 func TestRejectNewPlayerWithExistingName(unitTest *testing.T) {
+	collectionTypes :=
+		prepareCollections(defaultTestPlayerNames, colorsAvailableInTest)
+
+	for _, collectionType := range collectionTypes {
+		unitTest.Run(collectionType.CollectionDescription, func(unitTest *testing.T) {
+			invalidName := "Not A. Participant"
+			playerState, identificationError :=
+				collectionType.PlayerCollection.Get(invalidName)
+
+			if identificationError == nil {
+				unitTest.Fatalf(
+					"Get(unknown player name %v) did not return an error, did return player state %v",
+					invalidName,
+					playerState)
+			}
+		})
+	}
+
 	playerName := "A. Player Name"
 	firstBodyObject := endpoint.PlayerState{
 		Name:  playerName,
