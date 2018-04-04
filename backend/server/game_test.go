@@ -2,17 +2,73 @@ package server_test
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"testing"
+	"time"
 
+	"github.com/benoleary/ilutulestikud/backend/chat"
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/game"
+	"github.com/benoleary/ilutulestikud/backend/player"
 	"github.com/benoleary/ilutulestikud/backend/server"
 )
+
+type mockGameState struct {
+	mockName    string
+	mockPlayers []player.ReadonlyState
+	mockTurn    int
+}
+
+// Name gets mocked.
+func (mockGame mockGameState) Name() string {
+	return mockGame.mockName
+}
+
+// Ruleset gets mocked.
+func (mockGame mockGameState) Ruleset() game.Ruleset {
+	return nil
+}
+
+// Players gets mocked.
+func (mockGame mockGameState) Players() []player.ReadonlyState {
+	return mockGame.mockPlayers
+}
+
+// Turn gets mocked.
+func (mockGame mockGameState) Turn() int {
+	return mockGame.mockTurn
+}
+
+// CreationTime gets mocked.
+func (mockGame mockGameState) CreationTime() time.Time {
+	return time.Now()
+}
+
+// ChatLog gets mocked.
+func (mockGame mockGameState) ChatLog() *chat.Log {
+	return nil
+}
+
+// Score gets mocked.
+func (mockGame mockGameState) Score() int {
+	return 1
+}
+
+// NumberOfReadyHints gets mocked.
+func (mockGame mockGameState) NumberOfReadyHints() int {
+	return 2
+}
+
+// NumberOfMistakesMade gets mocked.
+func (mockGame mockGameState) NumberOfMistakesMade() int {
+	return 3
+}
 
 type mockGameCollection struct {
 	FunctionsAndArgumentsReceived []functionNameAndArgument
 	ErrorToReturn                 error
+	ReturnForViewAllWithPlayer    []*game.PlayerView
 }
 
 func (mockCollection *mockGameCollection) recordFunctionAndArgument(
@@ -56,7 +112,7 @@ func (mockCollection *mockGameCollection) ViewAllWithPlayer(
 	mockCollection.recordFunctionAndArgument(
 		"ViewAllWithPlayer",
 		playerName)
-	return nil, mockCollection.ErrorToReturn
+	return mockCollection.ReturnForViewAllWithPlayer, mockCollection.ErrorToReturn
 }
 
 // PerformAction gets mocked.
@@ -308,4 +364,212 @@ func TestGetAllGamesWithPlayerInvalidPlayerIdentifierBadRequest(unitTest *testin
 		unitTest,
 		mockCollection.FunctionsAndArgumentsReceived,
 		testIdentifier)
+}
+
+func TestGetAllGamesWithPlayerRejectedIfCollectionRejectsIt(unitTest *testing.T) {
+	testIdentifier := "GET all-games-with-player rejected by collection"
+	mockCollection, testServer := newGameCollectionAndServer()
+
+	mockCollection.ErrorToReturn = errors.New("error")
+
+	mockPlayerName := "Mock Mock"
+	mockPlayerIdentifier := segmentTranslatorForTest().ToSegment(mockPlayerName)
+
+	getResponse := mockGet(testServer, "/backend/game/all-games-with-player/"+mockPlayerIdentifier)
+
+	assertResponseIsCorrect(
+		unitTest,
+		testIdentifier,
+		getResponse,
+		nil,
+		http.StatusBadRequest)
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "ViewAllWithPlayer",
+			FunctionArgument: mockPlayerName,
+		},
+		testIdentifier)
+}
+
+func TestGetAllGamesWithPlayerWhenEmptyList(unitTest *testing.T) {
+	testIdentifier := "GET all-games-with-player with invalid identifier"
+	mockCollection, testServer := newGameCollectionAndServer()
+
+	mockCollection.ReturnForViewAllWithPlayer = make([]*game.PlayerView, 0)
+
+	mockPlayerName := "Mock Mock"
+	mockPlayerIdentifier := segmentTranslatorForTest().ToSegment(mockPlayerName)
+
+	getResponse := mockGet(testServer, "/backend/game/all-games-with-player/"+mockPlayerIdentifier)
+
+	assertResponseIsCorrect(
+		unitTest,
+		testIdentifier,
+		getResponse,
+		nil,
+		http.StatusOK)
+
+	bodyDecoder := json.NewDecoder(getResponse.Body)
+
+	var responseTurnSummaryList endpoint.TurnSummaryList
+	parsingError := bodyDecoder.Decode(&responseTurnSummaryList)
+	if parsingError != nil {
+		unitTest.Fatalf(
+			testIdentifier+"/error parsing JSON from HTTP response body: %v",
+			parsingError)
+	}
+
+	if len(responseTurnSummaryList.TurnSummaries) != 0 {
+		unitTest.Fatalf(
+			testIdentifier+"/empty game view list did not produce empty turn summary list: %v",
+			responseTurnSummaryList)
+	}
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "ViewAllWithPlayer",
+			FunctionArgument: mockPlayerName,
+		},
+		testIdentifier)
+}
+
+func TestGetAllGamesWithPlayerWhenThreeGames(unitTest *testing.T) {
+	testIdentifier := "GET all-games-with-player with invalid identifier"
+	mockCollection, testServer := newGameCollectionAndServer()
+
+	firstTestGame := &mockGameState{
+		mockName:    "first test game",
+		mockPlayers: testPlayerStates,
+		mockTurn:    1,
+	}
+
+	firstTestView, errorForFirstView :=
+		game.ViewForPlayer(firstTestGame, testPlayerStates[0].Name())
+
+	if errorForFirstView != nil {
+		unitTest.Fatalf(
+			testIdentifier+"/error when creating view on first game: %v",
+			errorForFirstView)
+	}
+
+	secondTestGame := &mockGameState{
+		mockName:    "second test game",
+		mockPlayers: testPlayerStates,
+		mockTurn:    2,
+	}
+
+	secondTestView, errorForSecondView :=
+		game.ViewForPlayer(secondTestGame, testPlayerStates[1].Name())
+
+	if errorForSecondView != nil {
+		unitTest.Fatalf(
+			testIdentifier+"/error when creating view on second game: %v",
+			errorForSecondView)
+	}
+
+	thirdTestGame := &mockGameState{
+		mockName:    "third test game",
+		mockPlayers: testPlayerStates,
+		mockTurn:    3,
+	}
+
+	thirdTestView, errorForThirdView :=
+		game.ViewForPlayer(thirdTestGame, testPlayerStates[2].Name())
+
+	if errorForThirdView != nil {
+		unitTest.Fatalf(
+			testIdentifier+"/error when creating view on third game: %v",
+			errorForThirdView)
+	}
+
+	expectedViews := []*game.PlayerView{
+		firstTestView,
+		secondTestView,
+		thirdTestView,
+	}
+
+	mockCollection.ReturnForViewAllWithPlayer = expectedViews
+
+	mockPlayerName := "Mock Mock"
+	mockPlayerIdentifier := segmentTranslatorForTest().ToSegment(mockPlayerName)
+
+	getResponse := mockGet(testServer, "/backend/game/all-games-with-player/"+mockPlayerIdentifier)
+
+	assertResponseIsCorrect(
+		unitTest,
+		testIdentifier,
+		getResponse,
+		nil,
+		http.StatusOK)
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "ViewAllWithPlayer",
+			FunctionArgument: mockPlayerName,
+		},
+		testIdentifier)
+
+	bodyDecoder := json.NewDecoder(getResponse.Body)
+
+	var responseTurnSummaryList endpoint.TurnSummaryList
+	parsingError := bodyDecoder.Decode(&responseTurnSummaryList)
+	if parsingError != nil {
+		unitTest.Fatalf(
+			testIdentifier+"/error parsing JSON from HTTP response body: %v",
+			parsingError)
+	}
+
+	if len(responseTurnSummaryList.TurnSummaries) != len(expectedViews) {
+		unitTest.Fatalf(
+			testIdentifier+"/game view list %v did not produce turn summary list %v with same number of elements",
+			expectedViews,
+			responseTurnSummaryList)
+	}
+
+	// The list of expected players contains no duplicates, so it suffices to compare lengths
+	// and that every expected players is found.
+	for _, expectedView := range expectedViews {
+		foundGame := false
+		for _, actualTurnSummary := range responseTurnSummaryList.TurnSummaries {
+			expectedIdentifier := segmentTranslatorForTest().ToSegment(expectedView.GameName())
+			_, expectedIsPlayerTurn := expectedView.CurrentTurnOrder()
+			if (actualTurnSummary.GameIdentifier == expectedIdentifier) &&
+				(actualTurnSummary.GameName == expectedView.GameName()) &&
+				(actualTurnSummary.IsPlayerTurn == expectedIsPlayerTurn) {
+				foundGame = true
+			}
+		}
+
+		if !foundGame {
+			unitTest.Fatalf(
+				testIdentifier+
+					"/returned %v which does not match the expected list of games %v"+
+					" (did not find %v).",
+				responseTurnSummaryList.TurnSummaries,
+				expectedViews,
+				expectedView)
+		}
+	}
 }

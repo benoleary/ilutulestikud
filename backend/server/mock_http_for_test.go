@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/benoleary/ilutulestikud/backend/player"
 	"github.com/benoleary/ilutulestikud/backend/server"
 )
 
@@ -32,6 +33,37 @@ type stringPair struct {
 // segmentTranslatorForTest returns the standard base-32 translator.
 func segmentTranslatorForTest() server.EndpointSegmentTranslator {
 	return &server.Base32Translator{}
+}
+
+type mockPlayerState struct {
+	name  string
+	color string
+}
+
+// Name returns the private name field.
+func (playerState *mockPlayerState) Name() string {
+	return playerState.name
+}
+
+// Color returns the private color field.
+func (playerState *mockPlayerState) Color() string {
+	return playerState.color
+}
+
+var testPlayerStates []player.ReadonlyState = []player.ReadonlyState{
+	&mockPlayerState{
+		name:  "Player One",
+		color: colorsAvailableInTest[0],
+	},
+	// Player Two has the same color as Player One
+	&mockPlayerState{
+		name:  "Player Two",
+		color: colorsAvailableInTest[0],
+	},
+	&mockPlayerState{
+		name:  "Player Three",
+		color: colorsAvailableInTest[1],
+	},
 }
 
 // mockGet creates a mock HTTP GET request and sends it to the given

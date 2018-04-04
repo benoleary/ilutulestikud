@@ -33,15 +33,10 @@ type RulesetList struct {
 
 // TurnSummary contains the information to determine what games involve a player and whose turn it is.
 // All the fields need to be public so that the JSON encoder can see them to serialize them.
-// The creation timestamp is int64 because that is what time.Unix() returns.
 type TurnSummary struct {
-	GameIdentifier             string
-	GameName                   string
-	RulesetDescription         string
-	CreationTimestampInSeconds int64
-	TurnNumber                 int
-	PlayerNamesInNextTurnOrder []string
-	IsPlayerTurn               bool
+	GameIdentifier string
+	GameName       string
+	IsPlayerTurn   bool
 }
 
 // TurnSummaryList ensures that the TurnSummary list is encapsulated within a single JSON object.
