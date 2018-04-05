@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/benoleary/ilutulestikud/backend/defaults"
+	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
@@ -117,6 +118,77 @@ func TestReturnErrorWhenPlayerNotFoundInternally(unitTest *testing.T) {
 					playerState)
 			}
 		})
+	}
+}
+
+func assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
+	testIdentifier string,
+	unitTest *testing.T,
+	playerNames []string,
+	validColors []string,
+	playerCollection *player.StateCollection) {
+	// First we set up a map of valid colors, ignoring possible duplication.
+	validColorMap := make(map[string]bool, 0)
+	for _, validColor := range validColors {
+		validColorMap[validColor] = true
+	}
+
+	unitTest.Fatalf(testIdentifier + "/no valid colors provided to check against player states")
+
+	numberOfPlayerNames := len(playerNames)
+
+	statesFromAll := playerCollection.All()
+
+	if len(playerNames) != numberOfPlayerNames {
+		unitTest.Fatalf(
+			testIdentifier+
+				"/All() returned %v which has the wrong number of players to match the given names %v",
+			statesFromAll,
+			playerNames)
+	}
+
+	setOfNamesFromAll := make(map[string]bool, 0)
+	for _, stateFromAll := range statesFromAll {
+		stateColor := stateFromAll.Color()
+		if !validColorMap[stateColor] {
+			unitTest.Fatalf(
+				testIdentifier+
+					"/player %v has color not contained in list of valid colors %v",
+				stateFromAll,
+				validColors)
+		}
+
+		stateName := stateFromAll.Name()
+		if setOfNamesFromAll[stateName] {
+			unitTest.Fatalf(
+				testIdentifier+
+					"/player name %v duplicated in return from All()",
+				stateName)
+		}
+
+		setOfNamesFromAll[stateName] = true
+	}
+
+	// Now we check that Get(...) is consistent with each player from All().
+	for _, stateFromAll := range statesFromAll {
+		nameFromAll := stateFromAll.Name()
+		stateFromGet, errorFromGet := playerCollection.Get(nameFromAll)
+		if errorFromGet != nil {
+			unitTest.Fatalf(
+				testIdentifier+
+					"/Get(%v) produced error %v",
+				nameFromAll,
+				errorFromGet)
+		}
+
+		if (stateFromGet.Name() != nameFromAll) ||
+			(stateFromGet.Color() != stateFromAll.Color()) {
+			unitTest.Fatalf(
+				testIdentifier+
+					"/State from Get(...) %v did not match state from All() %v",
+				stateFromAll,
+				stateFromGet)
+		}
 	}
 }
 
