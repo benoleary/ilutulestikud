@@ -14,6 +14,15 @@ import (
 var colorsAvailableInTest []string = defaults.AvailableColors()
 var defaultTestPlayerNames []string = []string{"Player One", "Player Two", "Player Three"}
 
+func mapStringsToTrue(stringsToMap []string) map[string]bool {
+	stringMap := make(map[string]bool, 0)
+	for _, stringToMap := range stringsToMap {
+		stringMap[stringToMap] = true
+	}
+
+	return stringMap
+}
+
 type persisterAndDescription struct {
 	PlayerPersister      player.StatePersister
 	PersisterDescription string
@@ -54,12 +63,74 @@ func prepareCollections(
 	return stateCollections
 }
 
+func TestAllCorrectlyReturnsInitialPlayers(unitTest *testing.T) {
+	testCases := []struct {
+		testName           string
+		initialPlayerNames []string
+	}{
+		{
+			testName:           "Nil initial player list",
+			initialPlayerNames: nil,
+		},
+		{
+			testName:           "Empty initial player list",
+			initialPlayerNames: []string{},
+		},
+		{
+			testName:           "Default initial player list",
+			initialPlayerNames: defaultTestPlayerNames,
+		},
+	}
+
+	for _, testCase := range testCases {
+		collectionTypes :=
+			prepareCollections(defaultTestPlayerNames, colorsAvailableInTest)
+
+		for _, collectionType := range collectionTypes {
+			testIdentifier := testCase.testName + "/" + collectionType.CollectionDescription
+
+			unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+				assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
+					testIdentifier,
+					unitTest,
+					testCase.initialPlayerNames,
+					colorsAvailableInTest,
+					collectionType.PlayerCollection)
+			})
+		}
+	}
+}
+
+func TestReturnErrorWhenPlayerNotFoundInternally(unitTest *testing.T) {
+	collectionTypes :=
+		prepareCollections(defaultTestPlayerNames, colorsAvailableInTest)
+
+	for _, collectionType := range collectionTypes {
+		testIdentifier := "Get(unknown player)/" + collectionType.CollectionDescription
+
+		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			invalidName := "Not A. Participant"
+			playerState, errorFromGet :=
+				collectionType.PlayerCollection.Get(invalidName)
+
+			if errorFromGet == nil {
+				unitTest.Fatalf(
+					"Get(unknown player name %v) did not return an error, did return player state %v",
+					invalidName,
+					playerState)
+			}
+		})
+	}
+}
+
 func TestEmptyAvailableColors(unitTest *testing.T) {
 	collectionTypes :=
 		prepareCollections(defaultTestPlayerNames, []string{})
 
 	for _, collectionType := range collectionTypes {
-		unitTest.Run(collectionType.CollectionDescription, func(unitTest *testing.T) {
+		testIdentifier := "Empty available colors/" + collectionType.CollectionDescription
+
+		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
 			availableColors := collectionType.PlayerCollection.AvailableChatColors()
 
 			if len(availableColors) != 0 {
@@ -76,7 +147,9 @@ func TestNonemptyAvailableColors(unitTest *testing.T) {
 		prepareCollections(defaultTestPlayerNames, colorsAvailableInTest)
 
 	for _, collectionType := range collectionTypes {
-		unitTest.Run(collectionType.CollectionDescription, func(unitTest *testing.T) {
+		testIdentifier := "Non-empty available colors/" + collectionType.CollectionDescription
+
+		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
 			availableColors := collectionType.PlayerCollection.AvailableChatColors()
 
 			numberOfExpectedColors := len(colorsAvailableInTest)
@@ -101,23 +174,438 @@ func TestNonemptyAvailableColors(unitTest *testing.T) {
 	}
 }
 
-func TestReturnErrorWhenPlayerNotFoundInternally(unitTest *testing.T) {
+func TestRejectNewPlayerWithNoName(unitTest *testing.T) {
+	collectionTypes :=
+		prepareCollections(defaultTestPlayerNames, colorsAvailableInTest)
+	playerName := ""
+	chatColor := colorsAvailableInTest[0]
+
+	for _, collectionType := range collectionTypes {
+		testIdentifier :=
+			"Reject Add(player with no name)/" + collectionType.CollectionDescription
+
+		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			errorFromAdd :=
+				collectionType.PlayerCollection.Add(playerName, chatColor)
+
+			// We check that the collection still produces valid states.
+			assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
+				testIdentifier,
+				unitTest,
+				defaultTestPlayerNames,
+				colorsAvailableInTest,
+				collectionType.PlayerCollection)
+
+			// If there was no error, then something went wrong.
+			if errorFromAdd == nil {
+				unitTest.Fatalf(
+					"Add(%v, %v) did not produce an error",
+					playerName,
+					chatColor)
+			}
+
+			// We check that the player was not added.
+			playerState, errorFromGet :=
+				collectionType.PlayerCollection.Get(playerName)
+
+			// If there was no error, then something went wrong.
+			if errorFromGet == nil {
+				unitTest.Fatalf(
+					"Get(%v) did not produce an error",
+					playerName)
+			}
+		})
+	}
+}
+
+func TestAddNewPlayerWithInvalidColor(unitTest *testing.T) {
+	collectionTypes :=
+		prepareCollections(defaultTestPlayerNames, colorsAvailableInTest)
+	playerName := "A. New Player"
+	invalidColor := "Not a valid color"
+
+	for _, collectionType := range collectionTypes {
+		testIdentifier :=
+			"Reject Add(player with invalid color)/" + collectionType.CollectionDescription
+
+		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			errorFromAdd :=
+				collectionType.PlayerCollection.Add(playerName, invalidColor)
+
+			// We check that the collection still produces valid states.
+			assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
+				testIdentifier,
+				unitTest,
+				defaultTestPlayerNames,
+				colorsAvailableInTest,
+				collectionType.PlayerCollection)
+
+			// If there was no error, then something went wrong.
+			if errorFromAdd == nil {
+				unitTest.Fatalf(
+					"Add(%v, %v) did not produce an error",
+					playerName,
+					invalidColor)
+			}
+
+			// We check that the player was not added.
+			playerState, errorFromGet :=
+				collectionType.PlayerCollection.Get(playerName)
+
+			// If there was no error, then something went wrong.
+			if errorFromGet == nil {
+				unitTest.Fatalf(
+					"Get(%v) did not produce an error",
+					playerName)
+			}
+		})
+	}
+}
+
+func TestRejectAddPlayerWithExistingName(unitTest *testing.T) {
 	collectionTypes :=
 		prepareCollections(defaultTestPlayerNames, colorsAvailableInTest)
 
 	for _, collectionType := range collectionTypes {
-		unitTest.Run(collectionType.CollectionDescription, func(unitTest *testing.T) {
-			invalidName := "Not A. Participant"
-			playerState, identificationError :=
-				collectionType.PlayerCollection.Get(invalidName)
+		for _, playerName := range defaultTestPlayerNames {
+			testIdentifier :=
+				"Reject Add(player with existing name)/" + collectionType.CollectionDescription
 
-			if identificationError == nil {
+			unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+				initialState := getStateAndAssertNoError(
+					testIdentifier+"/Get(initial player)",
+					unitTest,
+					playerName,
+					collectionType.PlayerCollection)
+
+				errorFromAddWithNoColor := collectionType.PlayerCollection.Add(playerName, "")
+
+				// We check that the collection still produces valid states.
+				assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
+					testIdentifier,
+					unitTest,
+					defaultTestPlayerNames,
+					colorsAvailableInTest,
+					collectionType.PlayerCollection)
+
+				// If there was no error, then something went wrong.
+				if errorFromAddWithNoColor == nil {
+					unitTest.Fatalf(
+						"Add(%v, [empty string for color]) did not produce an error",
+						playerName)
+				}
+
+				// We check that the player is unchanged.
+				existingStateAfterAddWithNoColor := getStateAndAssertNoError(
+					testIdentifier+"/Get(initial player)",
+					unitTest,
+					playerName,
+					collectionType.PlayerCollection)
+
+				if (existingStateAfterAddWithNoColor.Name() != existingStateAfterAddWithNoColor.Name()) ||
+					(existingStateAfterAddWithNoColor.Color() != existingStateAfterAddWithNoColor.Color()) {
+					unitTest.Fatalf(
+						"Add(existing player %v, empty color string) changed the player state from %v to %v",
+						playerName,
+						initialState,
+						existingStateAfterAddWithNoColor)
+				}
+
+				newColor := colorsAvailableInTest[0]
+				if newColor == initialState.Color() {
+					newColor = colorsAvailableInTest[1]
+				}
+
+				errorFromAddWithNewColor := collectionType.PlayerCollection.Add(playerName, newColor)
+
+				// We check that the collection still produces valid states.
+				assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
+					testIdentifier,
+					unitTest,
+					defaultTestPlayerNames,
+					colorsAvailableInTest,
+					collectionType.PlayerCollection)
+
+				// If there was no error, then something went wrong.
+				if errorFromAddWithNewColor != nil {
+					unitTest.Fatalf(
+						"Add(%v, %v) did not produce an error",
+						playerName,
+						newColor)
+				}
+
+				// We check that the player is unchanged.
+				existingStateAfterAddWithNewColor := getStateAndAssertNoError(
+					testIdentifier+"/Get(initial player)",
+					unitTest,
+					playerName,
+					collectionType.PlayerCollection)
+
+				if (existingStateAfterAddWithNewColor.Name() != initialState.Name()) ||
+					(existingStateAfterAddWithNewColor.Color() != initialState.Color()) {
+					unitTest.Fatalf(
+						"Add(existing player %v, new color %v) changed the player state from %v to %v",
+						playerName,
+						newColor,
+						initialState,
+						existingStateAfterAddWithNewColor)
+				}
+			})
+		}
+	}
+}
+
+func TestAddPlayerWithValidColorAndTestGet(unitTest *testing.T) {
+	collectionTypes :=
+		prepareCollections(defaultTestPlayerNames, colorsAvailableInTest)
+
+	chatColor := colorsAvailableInTest[1]
+
+	testCases := []struct {
+		testName   string
+		playerName string
+	}{
+		{
+			testName:   "Simple ASCII",
+			playerName: "New Player",
+		},
+		{
+			testName:   "Non-ASCII and punctuation",
+			playerName: "?ß@äô#\"'\"\\\\\\",
+		},
+		{
+			testName:   "Slashes",
+			playerName: "/Slashes/are/reserved/for/parsing/URI/segments/",
+		},
+	}
+
+	for _, collectionType := range collectionTypes {
+		for _, testCase := range testCases {
+			testIdentifier :=
+				collectionType.CollectionDescription +
+					"/Add(" + testCase.playerName + ", with valid color) and Get(same player)"
+
+			unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+				errorFromAdd :=
+					collectionType.PlayerCollection.Add(testCase.playerName, chatColor)
+
+				if errorFromAdd != nil {
+					unitTest.Fatalf(
+						"Add(%v, %v) produced an error %v",
+						testCase.playerName,
+						chatColor,
+						errorFromAdd)
+				}
+
+				// We check that the collection still produces valid states.
+				assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
+					testIdentifier,
+					unitTest,
+					defaultTestPlayerNames,
+					colorsAvailableInTest,
+					collectionType.PlayerCollection)
+
+				// We check that the player can be retrieved.
+				newState := getStateAndAssertNoError(
+					testIdentifier+"/Retrieve with Get(...)",
+					unitTest,
+					testCase.playerName,
+					collectionType.PlayerCollection)
+
+				newStateHasValidColor := mapStringsToTrue(colorsAvailableInTest)[newState.Color()]
+				if newState.Color() != chatColor {
+					unitTest.Fatalf(
+						"Add(%v, %v) then Get(%v) produced a state %v which does not have the correct color",
+						testCase.playerName,
+						chatColor,
+						testCase.playerName,
+						newState)
+				}
+			})
+		}
+	}
+}
+
+func TestAddPlayerWithNoColorAndTestGetHasValidColor(unitTest *testing.T) {
+	collectionTypes :=
+		prepareCollections(defaultTestPlayerNames, colorsAvailableInTest)
+
+	testCases := []struct {
+		testName   string
+		playerName string
+	}{
+		{
+			testName:   "Simple ASCII",
+			playerName: "New Player",
+		},
+		{
+			testName:   "Non-ASCII and punctuation",
+			playerName: "?ß@äô#\"'\"\\\\\\",
+		},
+		{
+			testName:   "Slashes",
+			playerName: "/Slashes/are/reserved/for/parsing/URI/segments/",
+		},
+	}
+
+	for _, collectionType := range collectionTypes {
+		for _, testCase := range testCases {
+			testIdentifier :=
+				collectionType.CollectionDescription +
+					"/Add(" + testCase.playerName + ", with no color) and Get(same player)"
+
+			unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+				errorFromAdd := collectionType.PlayerCollection.Add(testCase.playerName, "")
+
+				if errorFromAdd != nil {
+					unitTest.Fatalf(
+						"Add(%v, [empty string for color]) produced an error %v",
+						testCase.playerName,
+						errorFromAdd)
+				}
+
+				// We check that the collection still produces valid states.
+				assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
+					testIdentifier,
+					unitTest,
+					defaultTestPlayerNames,
+					colorsAvailableInTest,
+					collectionType.PlayerCollection)
+
+				// We check that the player can be retrieved.
+				newState := getStateAndAssertNoError(
+					testIdentifier+"/Get(newly-added player)",
+					unitTest,
+					testCase.playerName,
+					collectionType.PlayerCollection)
+
+				newStateHasValidColor := mapStringsToTrue(colorsAvailableInTest)[newState.Color()]
+				if !newStateHasValidColor {
+					unitTest.Fatalf(
+						"Add(%v, [empty string for color]) then Get(%v) produced a state %v which does not have a color in the list %v",
+						testCase.playerName,
+						newState,
+						testCase.playerName,
+						colorsAvailableInTest)
+				}
+			})
+		}
+	}
+}
+
+func TestRejectUpdateInvalidPlayer(unitTest *testing.T) {
+	collectionTypes :=
+		prepareCollections(defaultTestPlayerNames, colorsAvailableInTest)
+
+	playerName := "Not A. Participant"
+	chatColor := colorsAvailableInTest[0]
+
+	for _, collectionType := range collectionTypes {
+		testIdentifier :=
+			"UpdateColor(valid player, invalid color)/" + collectionType.CollectionDescription
+
+		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			errorFromUpdate :=
+				collectionType.PlayerCollection.UpdateColor(playerName, chatColor)
+
+			if errorFromUpdate == nil {
 				unitTest.Fatalf(
-					"Get(unknown player name %v) did not return an error, did return player state %v",
-					invalidName,
-					playerState)
+					"UpdateColor(%v, %v) did not produce an error",
+					playerName,
+					chatColor)
+			}
+
+			// We check that the collection still produces valid states.
+			assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
+				testIdentifier,
+				unitTest,
+				defaultTestPlayerNames,
+				colorsAvailableInTest,
+				collectionType.PlayerCollection)
+
+			// We check that the player was not added.
+			playerState, errorFromGet :=
+				collectionType.PlayerCollection.Get(playerName)
+
+			// If there was no error, then something went wrong.
+			if errorFromGet == nil {
+				unitTest.Fatalf(
+					"Get(%v) did not produce an error",
+					playerName)
 			}
 		})
+	}
+}
+
+func TestRejectUpdatePlayerWithInvalidColor(unitTest *testing.T) {
+	collectionTypes :=
+		prepareCollections(defaultTestPlayerNames, colorsAvailableInTest)
+
+	testCases := []struct {
+		testName   string
+		playerName string
+		chatColor  string
+	}{
+		{
+			testName:   "Valid player but missing color",
+			playerName: defaultTestPlayerNames[0],
+			chatColor:  "",
+		},
+		{
+			testName:   "Valid player but invalid color",
+			playerName: defaultTestPlayerNames[1],
+			chatColor:  "not a color",
+		},
+	}
+
+	for _, collectionType := range collectionTypes {
+		for _, testCase := range testCases {
+			testIdentifier :=
+				testCase.testName + "/" + collectionType.CollectionDescription
+
+			unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+				// We save the state to later check that the color was not changed.
+				initialState := getStateAndAssertNoError(
+					testIdentifier+"/Get(valid player) before update",
+					unitTest,
+					testCase.playerName,
+					collectionType.PlayerCollection)
+
+				errorFromUpdate :=
+					collectionType.PlayerCollection.UpdateColor(testCase.playerName, testCase.chatColor)
+
+				if errorFromUpdate == nil {
+					unitTest.Fatalf(
+						"UpdateColor(%v, %v) did not produce an error",
+						testCase.playerName,
+						testCase.chatColor)
+				}
+
+				// We check that the collection still produces valid states.
+				assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
+					testIdentifier,
+					unitTest,
+					defaultTestPlayerNames,
+					colorsAvailableInTest,
+					collectionType.PlayerCollection)
+
+				// We check that the player can be retrieved.
+				stateAfterUpdate := getStateAndAssertNoError(
+					testIdentifier+"/Get(same player) after update",
+					unitTest,
+					testCase.playerName,
+					collectionType.PlayerCollection)
+
+				if stateAfterUpdate.Color() != initialState.Color() {
+					unitTest.Fatalf(
+						"UpdateColor(%v, %v) changed the state from %v to %v",
+						testCase.playerName,
+						testCase.chatColor,
+						initialState,
+						stateAfterUpdate)
+				}
+			})
+		}
 	}
 }
 
@@ -128,10 +616,7 @@ func assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
 	validColors []string,
 	playerCollection *player.StateCollection) {
 	// First we set up a map of valid colors, ignoring possible duplication.
-	validColorMap := make(map[string]bool, 0)
-	for _, validColor := range validColors {
-		validColorMap[validColor] = true
-	}
+	validColorMap := mapStringsToTrue(validColors)
 
 	unitTest.Fatalf(testIdentifier + "/no valid colors provided to check against player states")
 
@@ -192,148 +677,31 @@ func assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
 	}
 }
 
-// just copy-paste dumps of old player.getAndPostHandler tests, need to be adapted.
-
-func TestRejectNewPlayerWithExistingName(unitTest *testing.T) {
-	collectionTypes :=
-		prepareCollections(defaultTestPlayerNames, colorsAvailableInTest)
-
-	for _, collectionType := range collectionTypes {
-		unitTest.Run(collectionType.CollectionDescription, func(unitTest *testing.T) {
-			invalidName := "Not A. Participant"
-			playerState, identificationError :=
-				collectionType.PlayerCollection.Get(invalidName)
-
-			if identificationError == nil {
-				unitTest.Fatalf(
-					"Get(unknown player name %v) did not return an error, did return player state %v",
-					invalidName,
-					playerState)
-			}
-		})
-	}
-
-	playerName := "A. Player Name"
-	firstBodyObject := endpoint.PlayerState{
-		Name:  playerName,
-		Color: "First color",
-	}
-
-	firstBytesBuffer := new(bytes.Buffer)
-	json.NewEncoder(firstBytesBuffer).Encode(firstBodyObject)
-
-	_, playerHandler := newCollectionAndHandler()
-	_, validRegistrationCode :=
-		playerHandler.HandlePost(json.NewDecoder(firstBytesBuffer), []string{"new-player"})
-
-	if validRegistrationCode != http.StatusOK {
+func getStateAndAssertNoError(
+	testIdentifier string,
+	unitTest *testing.T,
+	playerName string,
+	playerCollection *player.StateCollection) player.ReadonlyState {
+	playerState, errorGettingState :=
+		playerCollection.Get(playerName)
+	if errorGettingState != nil {
 		unitTest.Fatalf(
-			"POST new-player with valid JSON %v did not return expected HTTP code %v, instead was %v.",
-			firstBodyObject,
-			http.StatusOK,
-			validRegistrationCode)
-	}
-
-	secondBodyObject := endpoint.PlayerState{
-		Name:  playerName,
-		Color: "Second color",
-	}
-
-	secondBytesBuffer := new(bytes.Buffer)
-	json.NewEncoder(secondBytesBuffer).Encode(secondBodyObject)
-
-	_, invalidRegistrationCode :=
-		playerHandler.HandlePost(json.NewDecoder(secondBytesBuffer), []string{"new-player"})
-
-	if invalidRegistrationCode != http.StatusBadRequest {
-		unitTest.Fatalf(
-			"POST new-player with valid JSON %v but second request for same player name %v"+
-				" did not return expected HTTP code %v, instead was %v.",
-			secondBodyObject,
+			testIdentifier+"/Get(%v) produced an error %v",
 			playerName,
-			http.StatusBadRequest,
-			invalidRegistrationCode)
+			errorGettingState)
 	}
+
+	if playerState.Name() != playerName {
+		unitTest.Fatalf(
+			testIdentifier+"/Get(%v) produced player with different name %v",
+			playerName,
+			playerState)
+	}
+
+	return playerState
 }
 
-func TestRegisterAndRetrieveNewPlayer(unitTest *testing.T) {
-	type testArguments struct {
-		playerName string
-		chatColor  string
-	}
-
-	testCases := []struct {
-		name      string
-		arguments testArguments
-	}{
-		{
-			name: "Ascii only, with color",
-			arguments: testArguments{
-				playerName: "Easy Test Name",
-				chatColor:  "Plain color",
-			},
-		},
-		{
-			name: "Ascii only, no color",
-			arguments: testArguments{
-				playerName: "Easy Test Name",
-			},
-		},
-		{
-			name: "Punctuation and non-standard characters",
-			arguments: testArguments{
-				playerName: "?ß@äô#\"'\"",
-				chatColor:  "\\\\\\",
-			},
-		},
-		{
-			name: "URI segment delimiter",
-			arguments: testArguments{
-				playerName: "/Slashes/are/reserved/for/parsing/URI/segments/",
-				chatColor:  "irrelevant",
-			},
-		},
-		{
-			name: "Produces identifier with '/' in base64",
-			arguments: testArguments{
-				playerName: breaksBase64,
-				chatColor:  breaksBase64,
-			},
-		},
-	}
-
-	for _, testCase := range testCases {
-		unitTest.Run(testCase.name, func(unitTest *testing.T) {
-			playerCollection, playerHandler := newCollectionAndHandler()
-
-			bytesBuffer := new(bytes.Buffer)
-			json.NewEncoder(bytesBuffer).Encode(endpoint.PlayerState{
-				Name:  testCase.arguments.playerName,
-				Color: testCase.arguments.chatColor,
-			})
-
-			// First we add the new player.
-			postInterface, postCode :=
-				playerHandler.HandlePost(json.NewDecoder(bytesBuffer), []string{"new-player"})
-
-			// Then we check that the POST returned a valid response.
-			assertAtLeastOnePlayerReturnedInList(
-				unitTest,
-				postCode,
-				postInterface,
-				"POST new-player")
-
-			// Finally we check that the player was registered properly.
-			assertPlayerIsCorrectExternallyAndInternally(
-				unitTest,
-				playerCollection,
-				playerHandler,
-				testCase.arguments.playerName,
-				testCase.arguments.chatColor,
-				"Register new player")
-		})
-	}
-}
+// just copy-paste dumps of old player.getAndPostHandler tests, need to be adapted.
 
 func TestRejectInvalidUpdatePlayer(unitTest *testing.T) {
 	endpointPlayer := endpoint.PlayerState{

@@ -16,6 +16,18 @@ type ReadonlyState interface {
 // objects by their identifier, which is the player name encoded in a way compatible with
 // the identifier being a segment of a URI with '/' as a delimiter.
 type StatePersister interface {
+	// all should return a slice of all the State instances in the collection. The order
+	// is not mandated, and may even change with repeated calls to the same unchanged
+	// Collection (analogously to the entry set of a standard Golang map, for example),
+	// though of course an implementation may order the slice consistently.
+	all() []ReadonlyState
+
+	// get should return the read-only state corresponding to the given player name if it
+	// exists already along with an error which of course should be nil if there was no
+	// problem. If the player does not exist, a non-nil error should be returned along with
+	// nil for the read-only state.
+	get(playerName string) (ReadonlyState, error)
+
 	// add should add an element to the collection which is a new object implementing
 	// the ReadonlyState interface with information given by the arguments. If there was
 	// no problem, the returned error should be nil. It should return an error if the
@@ -26,18 +38,6 @@ type StatePersister interface {
 	// This should be thread-safe. It should return an error if there was a problem,
 	// including if the player is not registered.
 	updateColor(playerName string, chatColor string) error
-
-	// get should return the read-only state corresponding to the given player name if it
-	// exists already along with an error which of course should be nil if there was no
-	// problem. If the player does not exist, a non-nil error should be returned along with
-	// nil for the read-only state.
-	get(playerName string) (ReadonlyState, error)
-
-	// all should return a slice of all the State instances in the collection. The order
-	// is not mandated, and may even change with repeated calls to the same unchanged
-	// Collection (analogously to the entry set of a standard Golang map, for example),
-	// though of course an implementation may order the slice consistently.
-	all() []ReadonlyState
 
 	// reset should remove all players.
 	reset()
