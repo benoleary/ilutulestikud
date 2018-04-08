@@ -609,6 +609,49 @@ func TestRejectUpdatePlayerWithInvalidColor(unitTest *testing.T) {
 	}
 }
 
+func TestUpdateAllPlayersToFirstColor(unitTest *testing.T) {
+	collectionTypes :=
+		prepareCollections(defaultTestPlayerNames, colorsAvailableInTest)
+
+	firstColor := colorsAvailableInTest[0]
+
+	for _, collectionType := range collectionTypes {
+		for _, playerName := range defaultTestPlayerNames {
+			testIdentifier :=
+				"Update player to first color/" + collectionType.CollectionDescription
+
+			unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+				errorFromAddWithNoColor := collectionType.PlayerCollection.UpdateColor(playerName, firstColor)
+
+				// We check that the collection still produces valid states.
+				assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
+					testIdentifier,
+					unitTest,
+					defaultTestPlayerNames,
+					colorsAvailableInTest,
+					collectionType.PlayerCollection)
+
+				// We check that the player has the correct color.
+				updatedState := getStateAndAssertNoError(
+					testIdentifier+"/Get(updated player)",
+					unitTest,
+					playerName,
+					collectionType.PlayerCollection)
+
+				if (updatedState.Name() != playerName) ||
+					(updatedState.Color() != firstColor) {
+					unitTest.Fatalf(
+						"UpdateColor(%v, %v) then Get(%v) produced state %v",
+						playerName,
+						firstColor,
+						playerName,
+						updatedState)
+				}
+			})
+		}
+	}
+}
+
 func assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
 	testIdentifier string,
 	unitTest *testing.T,
@@ -702,217 +745,6 @@ func getStateAndAssertNoError(
 }
 
 // just copy-paste dumps of old player.getAndPostHandler tests, need to be adapted.
-
-func TestRejectInvalidUpdatePlayer(unitTest *testing.T) {
-	endpointPlayer := endpoint.PlayerState{
-		Name:  "Test Player",
-		Color: "Test color",
-	}
-
-	type testArguments struct {
-		bodyObject interface{}
-	}
-
-	type expectedReturns struct {
-		codeFromPost int
-	}
-
-	testCases := []struct {
-		name      string
-		arguments testArguments
-		expected  expectedReturns
-	}{
-		{
-			name: "Nil object",
-			arguments: testArguments{
-				bodyObject: nil,
-			},
-			expected: expectedReturns{
-				codeFromPost: http.StatusBadRequest,
-			},
-		},
-		{
-			name: "Wrong object",
-			arguments: testArguments{
-				bodyObject: &endpoint.ChatColorList{
-					Colors: []string{"Player 1", "Player 2"},
-				},
-			},
-			expected: expectedReturns{
-				codeFromPost: http.StatusBadRequest,
-			},
-		},
-	}
-
-	for _, testCase := range testCases {
-		unitTest.Run(testCase.name, func(unitTest *testing.T) {
-			_, playerHandler := newCollectionAndHandler()
-
-			registrationBytesBuffer := new(bytes.Buffer)
-			json.NewEncoder(registrationBytesBuffer).Encode(endpointPlayer)
-
-			// First we add the player.
-			playerHandler.HandlePost(json.NewDecoder(registrationBytesBuffer), []string{"new-player"})
-
-			// We do not check that the POST succeeded, nor that return list is correct, nor do we check
-			// that the player was correctly register: these are all covered by another test.
-
-			// Now we try to update the player.
-			updateBytesBuffer := new(bytes.Buffer)
-			if testCase.arguments.bodyObject != nil {
-				json.NewEncoder(updateBytesBuffer).Encode(testCase.arguments.bodyObject)
-			}
-
-			_, postCode :=
-				playerHandler.HandlePost(json.NewDecoder(updateBytesBuffer), []string{"update-player"})
-
-			if postCode != http.StatusBadRequest {
-				unitTest.Fatalf(
-					"POST update-player with invalid JSON %v did not return expected HTTP code %v, instead was %v.",
-					testCase.arguments.bodyObject,
-					http.StatusBadRequest,
-					postCode)
-			}
-		})
-	}
-}
-
-func TestUpdatePlayer(unitTest *testing.T) {
-	playerName := "Test Player"
-	originalColor := "white"
-	newColor := "grey"
-
-	type testArguments struct {
-		playerName string
-		chatColor  string
-	}
-
-	type expectedReturns struct {
-		codeFromPost      int
-		codeFromGet       int
-		playerAfterUpdate *endpoint.PlayerState
-	}
-
-	testCases := []struct {
-		name      string
-		arguments testArguments
-		expected  expectedReturns
-	}{
-		{
-			name: "Non-existent player",
-			arguments: testArguments{
-				playerName: "Non-existent player",
-				chatColor:  newColor,
-			},
-			expected: expectedReturns{
-				codeFromPost:      http.StatusBadRequest,
-				codeFromGet:       http.StatusNotFound,
-				playerAfterUpdate: nil,
-			},
-		},
-		{
-			name: "No-op with empty color",
-			arguments: testArguments{
-				playerName: playerName,
-				chatColor:  "",
-			},
-			expected: expectedReturns{
-				codeFromPost: http.StatusOK,
-				codeFromGet:  http.StatusOK,
-				playerAfterUpdate: &endpoint.PlayerState{
-					Name:  playerName,
-					Color: originalColor,
-				},
-			},
-		},
-		{
-			name: "Simple color change",
-			arguments: testArguments{
-				playerName: playerName,
-				chatColor:  newColor,
-			},
-			expected: expectedReturns{
-				codeFromPost: http.StatusOK,
-				codeFromGet:  http.StatusOK,
-				playerAfterUpdate: &endpoint.PlayerState{
-					Name:  playerName,
-					Color: newColor,
-				},
-			},
-		},
-	}
-
-	for _, testCase := range testCases {
-		unitTest.Run(testCase.name, func(unitTest *testing.T) {
-			playerCollection, playerHandler := newCollectionAndHandler()
-
-			registrationBytesBuffer := new(bytes.Buffer)
-			json.NewEncoder(registrationBytesBuffer).Encode(endpoint.PlayerState{
-				Name:  playerName,
-				Color: originalColor,
-			})
-
-			// First we add the player.
-			registrationInterface, registratonCode :=
-				playerHandler.HandlePost(json.NewDecoder(registrationBytesBuffer), []string{"new-player"})
-
-			// Checks that the POST succeeded and that the return list is correct are covered by other
-			// tests, but we need to parse the response to find the identifier generated for the new
-			// player.
-			playerList := assertAtLeastOnePlayerReturnedInList(
-				unitTest,
-				registratonCode,
-				registrationInterface,
-				"POST to create new player before updating")
-
-			playerIdentifier := testCase.arguments.playerName
-			for _, playerState := range playerList.Players {
-				if playerState.Name == testCase.arguments.playerName {
-					playerIdentifier = playerState.Identifier
-				}
-			}
-
-			// Now we update the player.
-			updateBytesBuffer := new(bytes.Buffer)
-			json.NewEncoder(updateBytesBuffer).Encode(endpoint.PlayerState{
-				Identifier: playerIdentifier,
-				Name:       testCase.arguments.playerName,
-				Color:      testCase.arguments.chatColor,
-			})
-
-			updateInterface, updateCode :=
-				playerHandler.HandlePost(json.NewDecoder(updateBytesBuffer), []string{"update-player"})
-
-			if updateCode != testCase.expected.codeFromPost {
-				unitTest.Fatalf(
-					"POST update-player did not return expected HTTP code %v, instead was %v.",
-					testCase.expected.codeFromPost,
-					updateCode)
-			}
-
-			// We check that we get a valid response body only when we expect a valid response code.
-			if testCase.expected.codeFromPost == http.StatusOK {
-				assertAtLeastOnePlayerReturnedInList(
-					unitTest,
-					updateCode,
-					updateInterface,
-					"POST update-player")
-			}
-
-			// If the test expects a valid player to have been updated, we check that it really is
-			// there and is as expected.
-			if testCase.expected.playerAfterUpdate != nil {
-				assertPlayerIsCorrectExternallyAndInternally(
-					unitTest,
-					playerCollection,
-					playerHandler,
-					testCase.expected.playerAfterUpdate.Name,
-					testCase.expected.playerAfterUpdate.Color,
-					"Update valid player")
-			}
-		})
-	}
-}
 
 func TestResetPlayers(unitTest *testing.T) {
 	initialPlayers := []string{"Initial One", "Initial Two"}
