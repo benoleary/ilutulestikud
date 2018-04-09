@@ -15,11 +15,16 @@ type StateCollection struct {
 }
 
 // NewCollection creates a new StateCollection around the given StatePersister and list
-// of chat colors, giving default colors to the initial players.
+// of chat colors, giving default colors to the initial players. It returns nil and an
+// error if given no chat colors.
 func NewCollection(
 	statePersister StatePersister,
 	initialPlayerNames []string,
-	availableColors []string) *StateCollection {
+	availableColors []string) (*StateCollection, error) {
+	if len(availableColors) <= 0 {
+		return nil, fmt.Errorf("Chat color list must have at least one color")
+	}
+
 	newCollection := &StateCollection{
 		statePersister:      statePersister,
 		initialPlayerNames:  initialPlayerNames,
@@ -28,7 +33,7 @@ func NewCollection(
 
 	newCollection.addInitialPlayers()
 
-	return newCollection
+	return newCollection, nil
 }
 
 // All just wraps around the all function of the internal collection.
