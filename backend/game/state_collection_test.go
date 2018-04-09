@@ -15,6 +15,9 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
+var playerNamesAvailableInTest []string = []string{"A", "B", "C", "D", "E", "F", "G"}
+var testRuleset Ruleset := game.StandardWithoutRainbowRuleset
+
 type mockGameState struct {
 	MockGameName     string
 	MockCreationTime time.Time
@@ -32,7 +35,7 @@ func (gameState *mockGameState) Name() string {
 
 // Ruleset gets mocked.
 func (gameState *mockGameState) Ruleset() Ruleset {
-	return -1
+	return testRuleset
 }
 
 // Players gets mocked.
@@ -121,11 +124,10 @@ type collectionAndDescription struct {
 	CollectionDescription string
 }
 
-func prepareCollections(
-	unitTest *testing.T) []collectionAndDescription {
+func prepareCollections(unitTest *testing.T) []collectionAndDescription {
 		chatColor := defaults.AvailableColors()[0]
 		mockPlayerMap := make(map[string]*mockPlayerState, 0)
-		for _, mockPlayerName := range []string{"A", "B", "C", "D", "E", "F", "G"} {
+		for _, mockPlayerName := range playerNamesAvailableInTest {
 			mockPlayerMap[mockPlayerName] = &mockPlayerState{
 	MockName :mockPlayerName,
 	MockColor :chatColor,
@@ -199,244 +201,194 @@ func TestOrderByCreationTime(unitTest *testing.T) {
 	}
 }
 
-// just dumps of old endpoint handler tests below here.
-
 func TestRejectInvalidNewGame(unitTest *testing.T) {
-	type testArguments struct {
-		bodyObject interface{}
-	}
+	validGameName := "Test game"
 
-	type expectedReturns struct {
-		codeFromPost int
+	validPlayerNameList :=
+	 []string{
+		playerNamesAvailableInTest[0],
+		playerNamesAvailableInTest[1],
+		playerNamesAvailableInTest[2],
 	}
 
 	testCases := []struct {
-		name      string
-		arguments testArguments
-		expected  expectedReturns
+		testName      string
+		gameName string
+		playerNames []string
 	}{
 		{
-			name: "Nil object",
-			arguments: testArguments{
-				bodyObject: nil,
-			},
-			expected: expectedReturns{
-				codeFromPost: http.StatusBadRequest,
+			testName: "Empty game name",
+			gameName:          "",
+			playerNames: validPlayerNameList,
+		},
+		{
+			testName: "Nil players",
+			gameName:      validGameName,
+			playerNames: nil,
+		},
+		{
+			testName: "No players",
+			gameName:      validGameName,
+			playerNames: []string{},
+		},
+		{
+			testName: "Too few players",
+			gameName:      validGameName,
+			playerNames: []string{
+				playerNamesAvailableInTest[0],
 			},
 		},
 		{
-			name: "Wrong object",
-			arguments: testArguments{
-				bodyObject: &endpoint.ChatColorList{
-					Colors: []string{"x", "y"},
-				},
-			},
-			expected: expectedReturns{
-				codeFromPost: http.StatusBadRequest,
+			testName: "Too many players",
+			gameName:      validGameName,
+			playerNames: playerNamesAvailableInTest
+		},
+		{
+			testName: "Repeated player",
+			gameName:      validGameName,
+			playerNames: []string{
+				playerNamesAvailableInTest[2],
+				playerNamesAvailableInTest[1],
+				playerNamesAvailableInTest[1],
+				playerNamesAvailableInTest[3],
 			},
 		},
 		{
-			name: "Non-existent ruleset",
-			arguments: testArguments{
-				bodyObject: &endpoint.GameDefinition{
-					GameName: "Test game",
-					// This relies on 0 being the ruleset identifier for "no ruleset selected".
-					RulesetIdentifier: 0,
-					PlayerIdentifiers: []string{
-						// We use the same set of player names here as used to set up the game.Collection.
-						testPlayerIdentifier(0),
-						testPlayerIdentifier(1),
-						"I am not registered!",
-						testPlayerIdentifier(2),
-					},
-				},
-			},
-			expected: expectedReturns{
-				codeFromPost: http.StatusBadRequest,
-			},
-		},
-		{
-			name: "Nil players",
-			arguments: testArguments{
-				bodyObject: &endpoint.GameDefinition{
-					GameName:          "Test game",
-					RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
-				},
-			},
-			expected: expectedReturns{
-				codeFromPost: http.StatusBadRequest,
-			},
-		},
-		{
-			name: "No players",
-			arguments: testArguments{
-				bodyObject: &endpoint.GameDefinition{
-					GameName:          "Test game",
-					RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
-					PlayerIdentifiers: make([]string, 0),
-				},
-			},
-			expected: expectedReturns{
-				codeFromPost: http.StatusBadRequest,
-			},
-		},
-		{
-			name: "Too few players",
-			arguments: testArguments{
-				bodyObject: &endpoint.GameDefinition{
-					GameName:          "Test game",
-					RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
-					// We use the same set of player names here as used to set up the game.Collection
-					// as well as the name encoding.
-					PlayerIdentifiers: []string{testPlayerIdentifier(1)},
-				},
-			},
-			expected: expectedReturns{
-				codeFromPost: http.StatusBadRequest,
-			},
-		},
-		{
-			name: "Too many players",
-			arguments: testArguments{
-				bodyObject: &endpoint.GameDefinition{
-					GameName:          "Test game",
-					RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
-					// We use the same set of player names here as used to set up the game.Collection
-					// as well as the name encoding.
-					PlayerIdentifiers: []string{
-						testPlayerIdentifier(0),
-						testPlayerIdentifier(1),
-						testPlayerIdentifier(2),
-						testPlayerIdentifier(3),
-						testPlayerIdentifier(4),
-						testPlayerIdentifier(5),
-					},
-				},
-			},
-			expected: expectedReturns{
-				codeFromPost: http.StatusBadRequest,
-			},
-		},
-		{
-			name: "Repeated player",
-			arguments: testArguments{
-				bodyObject: &endpoint.GameDefinition{
-					GameName:          "Test game",
-					RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
-					PlayerIdentifiers: []string{
-						// We use the same set of player names here as used to set up the game.Collection
-						// as well as the name encoding.
-						testPlayerIdentifier(0),
-						testPlayerIdentifier(1),
-						testPlayerIdentifier(1),
-						testPlayerIdentifier(2),
-					},
-				},
-			},
-			expected: expectedReturns{
-				codeFromPost: http.StatusBadRequest,
-			},
-		},
-		{
-			name: "Unregistered player",
-			arguments: testArguments{
-				bodyObject: &endpoint.GameDefinition{
-					GameName:          "Test game",
-					RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
-					PlayerIdentifiers: []string{
-						// We use the same set of player names here as used to set up the game.Collection.
-						testPlayerIdentifier(0),
-						testPlayerIdentifier(1),
-						"I am not registered!",
-						testPlayerIdentifier(2),
-					},
-				},
-			},
-			expected: expectedReturns{
-				codeFromPost: http.StatusBadRequest,
+			testName: "Unregistered player",
+			gameName:      validGameName,
+			playerNames: []string{
+				playerNamesAvailableInTest[2],
+				playerNamesAvailableInTest[1],
+				"Not A. Registered Player",
+				playerNamesAvailableInTest[3],
 			},
 		},
 	}
 
 	for _, testCase := range testCases {
-		unitTest.Run(testCase.name, func(unitTest *testing.T) {
-			bytesBuffer := new(bytes.Buffer)
-			if testCase.arguments.bodyObject != nil {
-				json.NewEncoder(bytesBuffer).Encode(testCase.arguments.bodyObject)
-			}
+		collectionTypes := prepareCollections(unitTest)
 
-			_, _, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
-			_, postCode :=
-				gameHandler.HandlePost(json.NewDecoder(bytesBuffer), []string{"create-new-game"})
+		for _, collectionType := range collectionTypes {
+			testIdentifier := testCase.testName + "/" + collectionType.CollectionDescription
 
-			if postCode != http.StatusBadRequest {
-				unitTest.Fatalf(
-					"POST create-new-game with invalid JSON %v did not return expected HTTP code %v, instead was %v.",
-					testCase.arguments.bodyObject,
-					http.StatusBadRequest,
-					postCode)
-			}
+		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			errorFromAdd := collectionType.GameCollection.AddNew(
+				testCase.gameName,
+				testRuleset,
+				testCase.playerNames)
+
+				if errorFromAdd == nil {
+					unitTest.Fatalf(
+						"AddNew(game name %v, standard ruleset, player names %v) did not return an error",
+						testCase.gameName,
+						testCase.playerNames)
+				}
 		})
 	}
 }
 
 func TestRejectNewGameWithExistingName(unitTest *testing.T) {
-	playerNames := testPlayerNames()
-	nameToIdentifier, _, _, gameHandler := setUpHandlerAndRequirements(playerNames)
-
-	rulesetIdentifier := game.StandardWithoutRainbowIdentifier
+	collectionTypes := prepareCollections(unitTest)
 
 	gameName := "Test game"
-	firstBodyObject := &endpoint.GameDefinition{
-		GameName:          gameName,
-		RulesetIdentifier: rulesetIdentifier,
-		PlayerIdentifiers: []string{
-			nameToIdentifier.Identifier(playerNames[1]),
-			nameToIdentifier.Identifier(playerNames[2]),
-			nameToIdentifier.Identifier(playerNames[3]),
-		},
-	}
 
-	firstBytesBuffer := new(bytes.Buffer)
-	json.NewEncoder(firstBytesBuffer).Encode(firstBodyObject)
+	for _, collectionType := range collectionTypes {
+		testIdentifier := "Reject new game with existing name/" + collectionType.CollectionDescription
+		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			initialGamePlayerNames := []string{
+				playerNamesAvailableInTest[0],
+				playerNamesAvailableInTest[1],
+				playerNamesAvailableInTest[2],
+			})
 
-	_, validRegistrationCode :=
-		gameHandler.HandlePost(json.NewDecoder(firstBytesBuffer), []string{"create-new-game"})
+	errorFromInitialAdd := collectionType.GameCollection.AddNew(
+		gameName,
+		testRuleset,
+		initialGamePlayerNames)
+		
+		if errorFromInitialAdd != nil {
+			unitTest.Fatalf(
+				"First AddNew(game name %v, standard ruleset, player names %v) produced an error: %v",
+				gameName,
+				initialGamePlayerNames,
+				errorFromInitialAdd)
+		}
 
-	if validRegistrationCode != http.StatusOK {
-		unitTest.Fatalf(
-			"POST create-new-game with valid JSON %v did not return expected HTTP code %v, instead was %v.",
-			firstBodyObject,
-			http.StatusOK,
-			validRegistrationCode)
-	}
+		invalidGamePlayerNames := []string{
+			playerNamesAvailableInTest[3],
+			playerNamesAvailableInTest[2],
+			playerNamesAvailableInTest[4],
+		})
 
-	secondBodyObject := endpoint.GameDefinition{
-		GameName:          gameName,
-		RulesetIdentifier: rulesetIdentifier,
-		PlayerIdentifiers: []string{
-			nameToIdentifier.Identifier(playerNames[1]),
-			nameToIdentifier.Identifier(playerNames[3]),
-			nameToIdentifier.Identifier(playerNames[4]),
-		},
-	}
+	errorFromInvalidAdd := collectionType.GameCollection.AddNew(
+		gameName,
+		testRuleset,
+		invalidGamePlayerNames)
 
-	secondBytesBuffer := new(bytes.Buffer)
-	json.NewEncoder(secondBytesBuffer).Encode(secondBodyObject)
-
-	_, invalidRegistrationCode :=
-		gameHandler.HandlePost(json.NewDecoder(secondBytesBuffer), []string{"create-new-game"})
-
-	if invalidRegistrationCode != http.StatusBadRequest {
-		unitTest.Fatalf(
-			"POST create-new-game with valid JSON %v but second request for same game name %v"+
-				" did not return expected HTTP code %v, instead was %v.",
-			gameName,
-			secondBodyObject,
-			http.StatusBadRequest,
-			invalidRegistrationCode)
-	}
+		if errorFromInvalidAdd == nil {
+			unitTest.Fatalf(
+				"Second AddNew(same game name %v, standard ruleset, player names %v) did not return an error",
+				gameName,
+				invalidGamePlayerNames)
+		}
+	})
 }
+}
+
+func TestRegisterAndRetrieveNewGame(unitTest *testing.T) {
+	collectionTypes := prepareCollections(unitTest)
+
+	gameName := "Test game"
+
+	for _, collectionType := range collectionTypes {
+		testIdentifier := "Add new game and retrieve it by name/" + collectionType.CollectionDescription
+		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			playerNames := []string{
+				playerNamesAvailableInTest[0],
+				playerNamesAvailableInTest[1],
+				playerNamesAvailableInTest[2],
+			})
+
+	errorFromInitialAdd := collectionType.GameCollection.AddNew(
+		gameName,
+		testRuleset,
+		initialGamePlayerNames)
+		
+		if errorFromInitialAdd != nil {
+			unitTest.Fatalf(
+				"AddNew(game name %v, standard ruleset, player names %v) produced an error: %v",
+				gameName,
+				playerNames,
+				errorFromInitialAdd)
+		}
+
+viewingPlayer := playerNames[0]
+	playerView, errorFromView :=
+	 collectionType.GameCollection.ViewState(
+		gameName,
+		viewingPlayer) 
+
+		if errorFromView != nil {
+			unitTest.Fatalf(
+				"ViewState(same game name %v, player name %v) produced an error: %v",
+				gameName,
+				viewingPlayer,
+				errorFromView)
+		}
+
+		if playerView.GameName() != gameName {
+			unitTest.Fatalf(
+				"ViewState(same game name %v, player name %v) produced an incorrect view %v",
+				gameName,
+				viewingPlayer,
+				playerView)
+		}
+	})
+}
+}
+
+// just dumps of old endpoint handler tests below here.
+
 
 func TestRegisterAndRetrieveNewGame(unitTest *testing.T) {
 	playerList := []string{"a", "b", "c"}
@@ -1173,156 +1125,4 @@ func TestRejectInvalidPlayerAction(unitTest *testing.T) {
 			}
 		})
 	}
-}
-
-func TestThreePlayersChatting(unitTest *testing.T) {
-	playerNames := []string{"a", "b", "c", "d", "e"}
-
-	nameToIdentifier, playerCollection, _, gameHandler := setUpHandlerAndRequirements(playerNames)
-	playerIdentifiers := make([]string, len(playerNames))
-	for playerIndex, playerName := range playerNames {
-		playerIdentifiers[playerIndex] = nameToIdentifier.Identifier(playerName)
-	}
-
-	viewingPlayerName := playerNames[1]
-	viewingPlayerIdentifier := playerIdentifiers[1]
-
-	gameName := "test game"
-	creationBytesBuffer := new(bytes.Buffer)
-	json.NewEncoder(creationBytesBuffer).Encode(
-		endpoint.GameDefinition{
-			GameName:          gameName,
-			RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
-			PlayerIdentifiers: []string{
-				playerIdentifiers[2],
-				playerIdentifiers[3],
-				viewingPlayerIdentifier,
-			},
-		})
-
-	creationResponse, creationCode :=
-		gameHandler.HandlePost(json.NewDecoder(creationBytesBuffer), []string{"create-new-game"})
-	unitTest.Logf("Response to POST create-new-game: %v", creationResponse)
-
-	// We only check that the response code was OK, as other tests check that the game is correctly created.
-	if creationCode != http.StatusOK {
-		unitTest.Fatalf(
-			"POST create-new-game setting up test game did not return expected HTTP code %v, instead was %v.",
-			http.StatusOK,
-			creationCode)
-	}
-
-	gameIdentifier := nameToIdentifier.Identifier(gameName)
-
-	chatMessages := []endpoint.ChatLogMessage{
-		endpoint.ChatLogMessage{
-			PlayerName:  viewingPlayerName,
-			ChatColor:   "red",
-			MessageText: "hello",
-		},
-		endpoint.ChatLogMessage{
-			PlayerName:  playerNames[2],
-			ChatColor:   "green",
-			MessageText: "Hi!",
-		},
-		endpoint.ChatLogMessage{
-			PlayerName:  playerNames[3],
-			ChatColor:   "blue",
-			MessageText: "o/",
-		},
-		endpoint.ChatLogMessage{
-			PlayerName:  viewingPlayerName,
-			ChatColor:   "white",
-			MessageText: ":)",
-		},
-	}
-
-	// At first, there should be no chat.
-	assertGetChatLogIsCorrect(
-		unitTest,
-		"Three players chatting test",
-		gameHandler,
-		gameIdentifier,
-		viewingPlayerIdentifier,
-		[]endpoint.ChatLogMessage{})
-
-	for messageCount := 0; messageCount < len(chatMessages); messageCount++ {
-		chatMessage := chatMessages[messageCount]
-		playerIdentifier := nameToIdentifier.Identifier(chatMessage.PlayerName)
-
-		playerUpdateError :=
-			playerCollection.UpdateFromPresentAttributes(
-				endpoint.PlayerState{
-					Identifier: playerIdentifier,
-					Color:      chatMessage.ChatColor,
-				})
-		if playerUpdateError != nil {
-			unitTest.Fatalf(
-				"Internal update produced error: %v).",
-				playerUpdateError)
-		}
-
-		actionBytesBuffer := new(bytes.Buffer)
-		json.NewEncoder(actionBytesBuffer).Encode(endpoint.PlayerAction{
-			PlayerIdentifier: playerIdentifier,
-			GameIdentifier:   gameIdentifier,
-			ActionType:       "chat",
-			ChatMessage:      chatMessage.MessageText,
-		})
-
-		actionResponse, actionCode :=
-			gameHandler.HandlePost(json.NewDecoder(actionBytesBuffer), []string{"player-action"})
-
-		unitTest.Logf("Response to POST player-action: %v", actionResponse)
-
-		if actionCode != http.StatusOK {
-			unitTest.Fatalf(
-				"POST player-action with body %v did not return expected HTTP code %v, instead was %v.",
-				chatMessages[messageCount],
-				http.StatusOK,
-				actionCode)
-		}
-
-		assertGetChatLogIsCorrect(
-			unitTest,
-			"Three players chatting test",
-			gameHandler,
-			gameIdentifier,
-			viewingPlayerIdentifier,
-			chatMessages[:messageCount+1])
-	}
-}
-
-func assertGetChatLogIsCorrect(
-	unitTest *testing.T,
-	testIdentifier string,
-	gameHandler *game.GetAndPostHandler,
-	gameIdentifier string,
-	playerIdentifier string,
-	expectedMessages []endpoint.ChatLogMessage) {
-	getInterface, getCode :=
-		gameHandler.HandleGet([]string{"game-as-seen-by-player", gameIdentifier, playerIdentifier})
-	if getCode != http.StatusOK {
-		unitTest.Fatalf(
-			testIdentifier+": GET game-as-seen-by-player/%v/%v did not return expected HTTP code %v, instead was %v.",
-			gameIdentifier,
-			playerIdentifier,
-			http.StatusOK,
-			getCode)
-	}
-
-	playerKnowledge, isTypeCorrect := getInterface.(endpoint.GameView)
-	if !isTypeCorrect {
-		unitTest.Fatalf(
-			testIdentifier+": GET game-as-seen-by-player/%v/%v did not return expected endpoint.PlayerKnowledge, instead was %v.",
-			gameIdentifier,
-			playerIdentifier,
-			getInterface)
-	}
-
-	assertchat.LogIsCorrect(
-		unitTest,
-		testIdentifier,
-		expectedMessages,
-		playerKnowledge.ChatLog)
 }

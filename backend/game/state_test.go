@@ -1,6 +1,9 @@
 package game_test
 
 import (
+	"bytes"
+	"encoding/json"
+	"net/http"
 	"testing"
 
 	"github.com/benoleary/ilutulestikud/backend/chat/assertchat"
@@ -327,4 +330,158 @@ func AssertThatMechanicalGameStateIsCorrect(
 			actualView.ThisPlayerHand,
 			expectedNumberOfVisibleHands)
 	}
+}
+
+// just dumps of old endpoint handler tests below here.
+
+func TestThreePlayersChatting(unitTest *testing.T) {
+	playerNames := []string{"a", "b", "c", "d", "e"}
+
+	nameToIdentifier, playerCollection, _, gameHandler := setUpHandlerAndRequirements(playerNames)
+	playerIdentifiers := make([]string, len(playerNames))
+	for playerIndex, playerName := range playerNames {
+		playerIdentifiers[playerIndex] = nameToIdentifier.Identifier(playerName)
+	}
+
+	viewingPlayerName := playerNames[1]
+	viewingPlayerIdentifier := playerIdentifiers[1]
+
+	gameName := "test game"
+	creationBytesBuffer := new(bytes.Buffer)
+	json.NewEncoder(creationBytesBuffer).Encode(
+		endpoint.GameDefinition{
+			GameName:          gameName,
+			RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
+			PlayerIdentifiers: []string{
+				playerIdentifiers[2],
+				playerIdentifiers[3],
+				viewingPlayerIdentifier,
+			},
+		})
+
+	creationResponse, creationCode :=
+		gameHandler.HandlePost(json.NewDecoder(creationBytesBuffer), []string{"create-new-game"})
+	unitTest.Logf("Response to POST create-new-game: %v", creationResponse)
+
+	// We only check that the response code was OK, as other tests check that the game is correctly created.
+	if creationCode != http.StatusOK {
+		unitTest.Fatalf(
+			"POST create-new-game setting up test game did not return expected HTTP code %v, instead was %v.",
+			http.StatusOK,
+			creationCode)
+	}
+
+	gameIdentifier := nameToIdentifier.Identifier(gameName)
+
+	chatMessages := []endpoint.ChatLogMessage{
+		endpoint.ChatLogMessage{
+			PlayerName:  viewingPlayerName,
+			ChatColor:   "red",
+			MessageText: "hello",
+		},
+		endpoint.ChatLogMessage{
+			PlayerName:  playerNames[2],
+			ChatColor:   "green",
+			MessageText: "Hi!",
+		},
+		endpoint.ChatLogMessage{
+			PlayerName:  playerNames[3],
+			ChatColor:   "blue",
+			MessageText: "o/",
+		},
+		endpoint.ChatLogMessage{
+			PlayerName:  viewingPlayerName,
+			ChatColor:   "white",
+			MessageText: ":)",
+		},
+	}
+
+	// At first, there should be no chat.
+	assertGetChatLogIsCorrect(
+		unitTest,
+		"Three players chatting test",
+		gameHandler,
+		gameIdentifier,
+		viewingPlayerIdentifier,
+		[]endpoint.ChatLogMessage{})
+
+	for messageCount := 0; messageCount < len(chatMessages); messageCount++ {
+		chatMessage := chatMessages[messageCount]
+		playerIdentifier := nameToIdentifier.Identifier(chatMessage.PlayerName)
+
+		playerUpdateError :=
+			playerCollection.UpdateFromPresentAttributes(
+				endpoint.PlayerState{
+					Identifier: playerIdentifier,
+					Color:      chatMessage.ChatColor,
+				})
+		if playerUpdateError != nil {
+			unitTest.Fatalf(
+				"Internal update produced error: %v).",
+				playerUpdateError)
+		}
+
+		actionBytesBuffer := new(bytes.Buffer)
+		json.NewEncoder(actionBytesBuffer).Encode(endpoint.PlayerAction{
+			PlayerIdentifier: playerIdentifier,
+			GameIdentifier:   gameIdentifier,
+			ActionType:       "chat",
+			ChatMessage:      chatMessage.MessageText,
+		})
+
+		actionResponse, actionCode :=
+			gameHandler.HandlePost(json.NewDecoder(actionBytesBuffer), []string{"player-action"})
+
+		unitTest.Logf("Response to POST player-action: %v", actionResponse)
+
+		if actionCode != http.StatusOK {
+			unitTest.Fatalf(
+				"POST player-action with body %v did not return expected HTTP code %v, instead was %v.",
+				chatMessages[messageCount],
+				http.StatusOK,
+				actionCode)
+		}
+
+		assertGetChatLogIsCorrect(
+			unitTest,
+			"Three players chatting test",
+			gameHandler,
+			gameIdentifier,
+			viewingPlayerIdentifier,
+			chatMessages[:messageCount+1])
+	}
+}
+
+func assertGetChatLogIsCorrect(
+	unitTest *testing.T,
+	testIdentifier string,
+	gameHandler *game.GetAndPostHandler,
+	gameIdentifier string,
+	playerIdentifier string,
+	expectedMessages []endpoint.ChatLogMessage) {
+	getInterface, getCode :=
+		gameHandler.HandleGet([]string{"game-as-seen-by-player", gameIdentifier, playerIdentifier})
+	if getCode != http.StatusOK {
+		unitTest.Fatalf(
+			testIdentifier+": GET game-as-seen-by-player/%v/%v did not return expected HTTP code %v, instead was %v.",
+			gameIdentifier,
+			playerIdentifier,
+			http.StatusOK,
+			getCode)
+	}
+
+	playerKnowledge, isTypeCorrect := getInterface.(endpoint.GameView)
+	if !isTypeCorrect {
+		unitTest.Fatalf(
+			testIdentifier+": GET game-as-seen-by-player/%v/%v did not return expected endpoint.PlayerKnowledge, instead was %v.",
+			gameIdentifier,
+			playerIdentifier,
+			getInterface)
+	}
+
+	assertchat.LogIsCorrect(
+		unitTest,
+		testIdentifier,
+		expectedMessages,
+		playerKnowledge.ChatLog)
 }
