@@ -9,9 +9,11 @@ import (
 // list of chat colors which are available to players, and providing default colors if
 // player definitions do not contain specific colors.
 type StateCollection struct {
-	statePersister      StatePersister
-	initialPlayerNames  []string
-	availableChatColors []string
+	statePersister     StatePersister
+	initialPlayerNames []string
+	chatColorSlice     []string
+	chatColorMap       map[string]bool
+	numberOfColors     int
 }
 
 // NewCollection creates a new StateCollection around the given StatePersister and list
@@ -25,10 +27,27 @@ func NewCollection(
 		return nil, fmt.Errorf("Chat color list must have at least one color")
 	}
 
+	// We keep a map of colors to validity to both remove duplicate colors and
+	// to make it easy to check if a color is valid when updating players.
+	colorMap := make(map[string]bool, 0)
+	for _, chatColor := range availableColors {
+		colorMap[chatColor] = true
+	}
+
+	uniqueColors := make([]string, 0)
+
+	for uniqueColor, isColorAvailable := range colorMap {
+		if isColorAvailable {
+			uniqueColors = append(uniqueColors, uniqueColor)
+		}
+	}
+
 	newCollection := &StateCollection{
-		statePersister:      statePersister,
-		initialPlayerNames:  initialPlayerNames,
-		availableChatColors: deepCopyStringSlice(availableColors),
+		statePersister:     statePersister,
+		initialPlayerNames: initialPlayerNames,
+		chatColorSlice:     uniqueColors,
+		chatColorMap:       colorMap,
+		numberOfColors:     len(uniqueColors),
 	}
 
 	newCollection.addInitialPlayers()
@@ -48,7 +67,11 @@ func (stateCollection *StateCollection) Get(playerName string) (ReadonlyState, e
 
 // AvailableChatColors returns a deep copy of state collection's chat color slice.
 func (stateCollection *StateCollection) AvailableChatColors() []string {
-	return deepCopyStringSlice(stateCollection.availableChatColors)
+	numberOfColors := len(stateCollection.chatColorSlice)
+	deepCopy := make([]string, numberOfColors)
+	copy(deepCopy, stateCollection.chatColorSlice)
+
+	return deepCopy
 }
 
 // Add ensures that the player definition has a chat color before wrapping around
@@ -62,17 +85,30 @@ func (stateCollection *StateCollection) Add(
 
 	if chatColor == "" {
 		playerCount := len(stateCollection.statePersister.all())
-		numberOfColors := len(stateCollection.availableChatColors)
-		chatColor = stateCollection.availableChatColors[playerCount%numberOfColors]
+		colorIndex := playerCount % stateCollection.numberOfColors
+		chatColor = stateCollection.chatColorSlice[colorIndex]
+	} else if !stateCollection.chatColorMap[chatColor] {
+		return fmt.Errorf(
+			"Chat color %v is not in list of valid colors %v",
+			chatColor,
+			stateCollection.chatColorSlice)
 	}
 
 	return stateCollection.statePersister.add(playerName, chatColor)
 }
 
-// UpdateColor just wraps around the updateColor function of the internal collection.
+// UpdateColor checks the validity of the color then wraps around the updateColor
+// function of the internal collection.
 func (stateCollection *StateCollection) UpdateColor(
 	playerName string,
 	chatColor string) error {
+	if !stateCollection.chatColorMap[chatColor] {
+		return fmt.Errorf(
+			"Chat color %v is not in list of valid colors %v",
+			chatColor,
+			stateCollection.chatColorSlice)
+	}
+
 	return stateCollection.statePersister.updateColor(playerName, chatColor)
 }
 
@@ -80,13 +116,6 @@ func (stateCollection *StateCollection) UpdateColor(
 func (stateCollection *StateCollection) Reset() {
 	stateCollection.statePersister.reset()
 	stateCollection.addInitialPlayers()
-}
-
-func deepCopyStringSlice(stringsToCopy []string) []string {
-	deepCopy := make([]string, len(stringsToCopy))
-	copy(deepCopy, stringsToCopy)
-
-	return deepCopy
 }
 
 func (stateCollection *StateCollection) addInitialPlayers() {

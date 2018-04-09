@@ -174,13 +174,15 @@ func TestNonemptyAvailableColors(unitTest *testing.T) {
 					availableColors)
 			}
 
+			expectedColorMap := mapStringsToTrue(colorsAvailableInTest)
+
 			for colorIndex := 0; colorIndex < numberOfExpectedColors; colorIndex++ {
-				if availableColors[colorIndex] != colorsAvailableInTest[colorIndex] {
+				if !expectedColorMap[availableColors[colorIndex]] {
 					unitTest.Fatalf(
-						"AvailableChatColors() set up with %v returned list %v which did not match in element %v",
+						"AvailableChatColors() set up with %v returned list %v which had unexpected color %v",
 						colorsAvailableInTest,
 						availableColors,
-						colorIndex)
+						availableColors[colorIndex])
 				}
 			}
 		})
@@ -342,7 +344,7 @@ func TestRejectAddPlayerWithExistingName(unitTest *testing.T) {
 					collectionType.PlayerCollection)
 
 				// If there was no error, then something went wrong.
-				if errorFromAddWithNewColor != nil {
+				if errorFromAddWithNewColor == nil {
 					unitTest.Fatalf(
 						"Add(%v, %v) did not produce an error",
 						playerName,
