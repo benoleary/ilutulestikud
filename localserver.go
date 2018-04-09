@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/benoleary/ilutulestikud/backend/defaults"
@@ -15,11 +16,18 @@ func main() {
 
 	// This main function just injects hard-coded dependencies.
 	playerPersister := player.NewInMemoryPersister()
-	playerCollection :=
+	playerCollection, errorCreatingPlayerCollection :=
 		player.NewCollection(
 			playerPersister,
 			defaults.InitialPlayerNames(),
 			defaults.AvailableColors())
+
+	if errorCreatingPlayerCollection != nil {
+		log.Fatalf(
+			"Error when creating player collection: %v",
+			errorCreatingPlayerCollection)
+	}
+
 	gamePersister := game.NewInMemoryPersister()
 	gameCollection :=
 		game.NewCollection(

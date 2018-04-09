@@ -775,9 +775,11 @@ func assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
 	validColors []string,
 	playerCollection *player.StateCollection) {
 	// First we set up a map of valid colors, ignoring possible duplication.
-	validColorMap := mapStringsToTrue(validColors)
+	if len(validColors) <= 0 {
+		unitTest.Fatalf(testIdentifier + "/no valid colors provided to check against player states")
+	}
 
-	unitTest.Fatalf(testIdentifier + "/no valid colors provided to check against player states")
+	validColorMap := mapStringsToTrue(validColors)
 
 	numberOfPlayerNames := len(playerNames)
 
