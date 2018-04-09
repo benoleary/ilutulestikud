@@ -80,40 +80,6 @@ func (gameCollection *StateCollection) ViewAllWithPlayer(
 	return playerViews, nil
 }
 
-// RecordChatMessage finds the given game and records the given chat message from the
-// given player, or returns an error.
-func (gameCollection *StateCollection) RecordChatMessage(
-	gameName string,
-	playerName string,
-	chatMessage string) error {
-	chattingPlayer, playerIdentificationError :=
-		gameCollection.playerProvider.Get(playerName)
-
-	if playerIdentificationError != nil {
-		return playerIdentificationError
-	}
-
-	gameState, isFound :=
-		gameCollection.statePersister.readAndWriteGame(gameName)
-
-	if !isFound {
-		return fmt.Errorf(
-			"Game %v does not exist, cannot record chat message from player %v",
-			gameName,
-			playerName)
-	}
-
-	_, participantError := ViewForPlayer(gameState.read(), playerName)
-
-	if participantError != nil {
-		return participantError
-	}
-
-	// No error is returned when recording a chat message.
-	gameState.recordChatMessage(chattingPlayer, chatMessage)
-	return nil
-}
-
 // AddNew prepares a new shuffled deck using a random seed taken from the given
 // collection, and uses it to create a new game in the given collection from the
 // given definition. It returns an error if a game with the given name already
@@ -122,7 +88,6 @@ func (gameCollection *StateCollection) AddNew(
 	gameName string,
 	gameRuleset Ruleset,
 	playerNames []string) error {
-
 	return gameCollection.AddNewWithGivenRandomSeed(
 		gameName,
 		gameRuleset,
@@ -160,6 +125,40 @@ func (gameCollection *StateCollection) AddNewWithGivenRandomSeed(
 		gameRuleset,
 		playerStates,
 		shuffledDeck)
+}
+
+// RecordChatMessage finds the given game and records the given chat message from the
+// given player, or returns an error.
+func (gameCollection *StateCollection) RecordChatMessage(
+	gameName string,
+	playerName string,
+	chatMessage string) error {
+	chattingPlayer, playerIdentificationError :=
+		gameCollection.playerProvider.Get(playerName)
+
+	if playerIdentificationError != nil {
+		return playerIdentificationError
+	}
+
+	gameState, isFound :=
+		gameCollection.statePersister.readAndWriteGame(gameName)
+
+	if !isFound {
+		return fmt.Errorf(
+			"Game %v does not exist, cannot record chat message from player %v",
+			gameName,
+			playerName)
+	}
+
+	_, participantError := ViewForPlayer(gameState.read(), playerName)
+
+	if participantError != nil {
+		return participantError
+	}
+
+	// No error is returned when recording a chat message.
+	gameState.recordChatMessage(chattingPlayer, chatMessage)
+	return nil
 }
 
 func createPlayerStates(

@@ -38,7 +38,6 @@ type mockPlayerCollection struct {
 	FunctionsAndArgumentsReceived []functionNameAndArgument
 	ErrorToReturn                 error
 	ReturnForAll                  []player.ReadonlyState
-	ReturnForGet                  player.ReadonlyState
 	ReturnForAvailableChatColors  []string
 }
 
@@ -100,7 +99,7 @@ func (mockCollection *mockPlayerCollection) Get(playerIdentifier string) (player
 	mockCollection.recordFunctionAndArgument(
 		"playerIdentifier",
 		playerIdentifier)
-	return mockCollection.ReturnForGet, mockCollection.ErrorToReturn
+	return nil, mockCollection.ErrorToReturn
 }
 
 // Reset gets mocked.

@@ -146,12 +146,12 @@ func (gameState *inMemoryState) Ruleset() Ruleset {
 	return gameState.gameRuleset
 }
 
-// Name returns a slice of the private participatingPlayers array.
+// Players returns a slice of the private participatingPlayers array.
 func (gameState *inMemoryState) Players() []player.ReadonlyState {
 	return gameState.participatingPlayers
 }
 
-// Name returns the value of the private turnNumber int.
+// Turn returns the value of the private turnNumber int.
 func (gameState *inMemoryState) Turn() int {
 	return gameState.turnNumber
 }

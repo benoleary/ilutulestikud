@@ -1,9 +1,7 @@
 package game_test
 
 import (
-	"sort"
 	"testing"
-	"time"
 
 	"github.com/benoleary/ilutulestikud/backend/chat/assertchat"
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
@@ -80,51 +78,6 @@ func prepareImplementations(
 	}
 
 	return gameStates, gameRuleset
-}
-
-func TestOrderByCreationTime(unitTest *testing.T) {
-	playerNames := []string{"Player One", "Player Two", "Player Three"}
-
-	earlyGameStates, _ := prepareImplementations(
-		unitTest,
-		"Early game",
-		game.StandardWithoutRainbowIdentifier,
-		playerNames)
-
-	time.Sleep(100 * time.Millisecond)
-
-	lateGameStates, _ := prepareImplementations(
-		unitTest,
-		"Late game",
-		game.StandardWithoutRainbowIdentifier,
-		playerNames)
-
-	for stateIndex := 0; stateIndex < len(lateGameStates); stateIndex++ {
-		gameList := game.ByCreationTime([]game.ReadonlyState{
-			lateGameStates[stateIndex],
-			earlyGameStates[stateIndex],
-		})
-
-		if !gameList[1].CreationTime().Before(gameList[0].CreationTime()) {
-			unitTest.Fatalf(
-				"Game states for state index %v were not differentiable by creation time: early at %v; late at %v",
-				stateIndex,
-				gameList[1].CreationTime(),
-				gameList[0].CreationTime())
-		}
-
-		sort.Sort(gameList)
-
-		if (gameList[0].Name() != earlyGameStates[stateIndex].Name()) ||
-			(gameList[1].Name() != lateGameStates[stateIndex].Name()) {
-			unitTest.Fatalf(
-				"Game states were not sorted: expected names [%v, %v], instead had [%v, %v]",
-				earlyGameStates[stateIndex].Name(),
-				lateGameStates[stateIndex].Name(),
-				gameList[0].Name(),
-				gameList[1].Name())
-		}
-	}
 }
 
 func TestInitialState(unitTest *testing.T) {

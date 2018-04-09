@@ -4,53 +4,87 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"sort"
 	"testing"
+	"time"
 
 	"github.com/benoleary/ilutulestikud/backend/chat/assertchat"
-	"github.com/benoleary/ilutulestikud/backend/defaults"
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/game/assertgame"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
-const breaksBase64 = "\\/\\\\\\?" // This should unescape to \/\\\? in the tests.
-
-type nameToName struct {
+type mockGameState struct {
+	MockGameName     string
+	MockCreationTime time.Time
 }
 
-func testPlayerNames() []string {
-	return []string{"a", "b", "c", "d", "e", "f", "g"}
+// Read gets mocked.
+func (gameState *mockGameState) read() ReadonlyState {
+	return gameState
 }
 
-func testNameToIdentifier() endpoint.NameToIdentifier {
-	return &endpoint.Base32NameEncoder{}
+// Name gets mocked.
+func (gameState *mockGameState) Name() string {
+	return gameState.MockGameName
 }
 
-func testPlayerIdentifier(playerIndex int) string {
-	// Terribly inefficient, but it is the easiest way to be consistent in the tests.
-	nameToIdentifier := &endpoint.Base32NameEncoder{}
-	return nameToIdentifier.Identifier(testPlayerNames()[playerIndex])
+// Ruleset gets mocked.
+func (gameState *mockGameState) Ruleset() Ruleset {
+	return -1
 }
 
-func setUpHandlerAndRequirements(registeredPlayers []string) (
-	endpoint.NameToIdentifier, player.StatePersister, game.StateCollection, *game.GetAndPostHandler) {
-	return setUpHandlerAndRequirementsWithIdentifier(testNameToIdentifier(), registeredPlayers)
+// Players gets mocked.
+func (gameState *mockGameState) Players() []player.ReadonlyState {
+	return nil
 }
 
-func setUpHandlerAndRequirementsWithIdentifier(
-	nameToIdentifier endpoint.NameToIdentifier,
-	registeredPlayers []string) (
-	endpoint.NameToIdentifier, player.StatePersister, game.StateCollection, *game.GetAndPostHandler) {
-	playerCollection :=
-		player.NewInMemoryPersister(
-			nameToIdentifier,
-			registeredPlayers,
-			defaults.AvailableColors())
-	gameCollection := game.NewInMemoryCollection(nameToIdentifier)
-	gameHandler := game.NewGetAndPostHandler(playerCollection, gameCollection)
-	return nameToIdentifier, playerCollection, gameCollection, gameHandler
+// Turn gets mocked.
+func (gameState *mockGameState) Turn() int {
+	return -2
 }
+
+// CreationTime gets mocked.
+func (gameState *mockGameState) CreationTime() time.Time {
+	return gameState.MockCreationTime
+}
+
+// HasPlayerAsParticipant gets mocked.
+func (gameState *mockGameState) HasPlayerAsParticipant(playerName string) bool {
+	return false
+}
+
+type mockPlayerState struct {
+	MockName string
+	MockColor string
+}
+
+// Name gets mocked.
+func (mockPlayer *mockPlayerState) Name() string {
+	return mockPlayer.MockName
+}
+
+// Color gets mocked.
+func (mockPlayer *mockPlayerState) Color() string {
+return mockPlayer.MockColor
+}
+
+type mockPlayerProvider struct {
+	mockPlayers map[string]*mockPlayerState
+}
+
+func (mockProvider *mockPlayerProvider) Get(
+	playerName string) (player.ReadonlyState, error) {
+		mockPlayer, isInMap := mockPlayers[playerName]
+
+		if !isInMap {
+			return nil, fmt.Errorf("not in map")
+		}
+
+		return mockPlayer, nil
+	}
+
 
 func GetAvailableRulesets(unitTest *testing.T) []endpoint.SelectableRuleset {
 	availableRulesets := game.AvailableRulesets()
@@ -77,67 +111,95 @@ func DescriptionOfRuleset(unitTest *testing.T, rulesetIdentifier int) string {
 	return foundRuleset.FrontendDescription()
 }
 
-func TestGetNoSegmentBadRequest(unitTest *testing.T) {
-	_, _, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
-	_, actualCode := gameHandler.HandleGet(make([]string, 0))
-
-	if actualCode != http.StatusBadRequest {
-		unitTest.Fatalf(
-			"GET with empty list of relevant segments did not return expected HTTP code %v, instead was %v.",
-			http.StatusBadRequest,
-			actualCode)
-	}
+type persisterAndDescription struct {
+	GamePersister      game.StatePersister
+	PersisterDescription string
 }
 
-func TestGetInvalidSegmentNotFound(unitTest *testing.T) {
-	_, _, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
-	_, actualCode := gameHandler.HandleGet([]string{"invalid-segment"})
-
-	if actualCode != http.StatusNotFound {
-		unitTest.Fatalf(
-			"GET invalid-segment did not return expected HTTP code %v, instead was %v.",
-			http.StatusNotFound,
-			actualCode)
-	}
+type collectionAndDescription struct {
+	GameCollection      *game.StateCollection
+	CollectionDescription string
 }
 
-func TestPostNoSegmentBadRequest(unitTest *testing.T) {
-	_, _, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
-	bytesBuffer := new(bytes.Buffer)
-	json.NewEncoder(bytesBuffer).Encode(endpoint.GameDefinition{
-		GameName:          "Game name",
-		RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
-		PlayerIdentifiers: []string{"Player One", "Player Two"},
+func prepareCollections(
+	unitTest *testing.T) []collectionAndDescription {
+		chatColor := defaults.AvailableColors()[0]
+		mockPlayerMap := make(map[string]*mockPlayerState, 0)
+		for _, mockPlayerName := range []string{"A", "B", "C", "D", "E", "F", "G"} {
+			mockPlayerMap[mockPlayerName] = &mockPlayerState{
+	MockName :mockPlayerName,
+	MockColor :chatColor,
+			}
+		}
+
+	mockProvider := &mockPlayerProvider{
+			mockPlayers :mockPlayerMap
+		}
+
+	statePersisters := []persisterAndDescription{
+		persisterAndDescription{
+			GamePersister:      game.NewInMemoryPersister(),
+			PersisterDescription: "in-memory persister",
+		},
+	}
+
+	numberOfPersisters := len(statePersisters)
+
+	stateCollections := make([]collectionAndDescription, numberOfPersisters)
+
+	for persisterIndex := 0; persisterIndex < numberOfPersisters; persisterIndex++ {
+		gamePersister := statePersisters[persisterIndex]
+		stateCollection :=
+			game.NewCollection(
+				statePersister.GamePersister,
+				mockProvider)
+		stateCollections[persisterIndex] = collectionAndDescription{
+			PlayerCollection:      stateCollection,
+			CollectionDescription: "collection around " + statePersister.PersisterDescription,
+		}
+	}
+
+	return stateCollections
+}
+
+func TestOrderByCreationTime(unitTest *testing.T) {
+	mockGames := game.ByCreationTime([]game.ReadonlyState{
+		&mockGameState{
+			MockGameName:     "Far future",
+			MockCreationTime: time.Now().Add(100 * time.Second),
+		},
+		&mockGameState{
+			MockGameName:     "Far past",
+			MockCreationTime: time.Now().Add(-100 * time.Second),
+		},
+		&mockGameState{
+			MockGameName:     "Near future",
+			MockCreationTime: time.Now().Add(1 * time.Second),
+		},
+		&mockGameState{
+			MockGameName:     "Near past",
+			MockCreationTime: time.Now().Add(-1 * time.Second),
+		},
 	})
 
-	_, actualCode := gameHandler.HandlePost(json.NewDecoder(bytesBuffer), make([]string, 0))
+		sort.Sort(mockGames)
 
-	if actualCode != http.StatusBadRequest {
-		unitTest.Fatalf(
-			"POST with empty list of relevant segments did not return expected HTTP code %v, instead was %v.",
-			http.StatusBadRequest,
-			actualCode)
+		if (mockGames[0].Name() != mockGames[1].Name()) ||
+			(mockGames[1].Name() != mockGames[3].Name()) ||
+			(mockGames[2].Name() != mockGames[2].Name()) ||
+			(mockGames[3].Name() != mockGames[0].Name()) {
+			unitTest.Fatalf(
+				"Game states were not sorted: expected names [%v, %v, %v, %v], instead had %v",
+				mockGames[1].Name(),
+				mockGames[3].Name(),
+				mockGames[2].Name(),
+				mockGames[0].Name(),
+				mockGames)
+		}
 	}
 }
 
-func TestPostInvalidSegmentNotFound(unitTest *testing.T) {
-	_, _, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
-	bytesBuffer := new(bytes.Buffer)
-	json.NewEncoder(bytesBuffer).Encode(endpoint.GameDefinition{
-		GameName:          "Game name",
-		RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
-		PlayerIdentifiers: []string{"Player One", "Player Two"},
-	})
-
-	_, actualCode := gameHandler.HandlePost(json.NewDecoder(bytesBuffer), []string{"invalid-segment"})
-
-	if actualCode != http.StatusNotFound {
-		unitTest.Fatalf(
-			"POST invalid-segment did not return expected HTTP code %v, instead was %v.",
-			http.StatusNotFound,
-			actualCode)
-	}
-}
+// just dumps of old endpoint handler tests below here.
 
 func TestRejectInvalidNewGame(unitTest *testing.T) {
 	type testArguments struct {
@@ -318,41 +380,6 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 	}
 }
 
-func TestRejectNewGameWithNameWhichBreaksEncoding(unitTest *testing.T) {
-	// We need a special kind of name and encoding.
-	gameName := breaksBase64
-	playerNames := testPlayerNames()
-	nameToIdentifier, _, _, gameHandler := setUpHandlerAndRequirementsWithIdentifier(
-		&endpoint.Base64NameEncoder{},
-		playerNames)
-
-	bodyObject := endpoint.GameDefinition{
-		GameName:          gameName,
-		RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
-		PlayerIdentifiers: []string{
-			nameToIdentifier.Identifier(playerNames[1]),
-			nameToIdentifier.Identifier(playerNames[3]),
-			nameToIdentifier.Identifier(playerNames[4]),
-		},
-	}
-
-	bytesBuffer := new(bytes.Buffer)
-	json.NewEncoder(bytesBuffer).Encode(bodyObject)
-
-	_, invalidRegistrationCode :=
-		gameHandler.HandlePost(json.NewDecoder(bytesBuffer), []string{"create-new-game"})
-
-	if invalidRegistrationCode != http.StatusBadRequest {
-		unitTest.Fatalf(
-			"POST create-new-game with valid JSON %v but with encoding-breaking game name %v"+
-				" did not return expected HTTP code %v, instead was %v.",
-			bodyObject,
-			gameName,
-			http.StatusBadRequest,
-			invalidRegistrationCode)
-	}
-}
-
 func TestRejectNewGameWithExistingName(unitTest *testing.T) {
 	playerNames := testPlayerNames()
 	nameToIdentifier, _, _, gameHandler := setUpHandlerAndRequirements(playerNames)
@@ -521,18 +548,6 @@ func TestRegisterAndRetrieveNewGame(unitTest *testing.T) {
 	}
 }
 
-func TestRejectGetTurnSummariesWithoutPlayer(unitTest *testing.T) {
-	_, _, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
-	_, actualCode := gameHandler.HandleGet([]string{"all-games-with-player"})
-
-	if actualCode != http.StatusBadRequest {
-		unitTest.Fatalf(
-			"GET all-games-with-player without player did not return expected HTTP code %v, instead was %v.",
-			http.StatusBadRequest,
-			actualCode)
-	}
-}
-
 func TestRejectGetTurnSummariesWithInvalidPlayer(unitTest *testing.T) {
 	nameToIdentifier, _, _, gameHandler := setUpHandlerAndRequirements(testPlayerNames())
 	playerIdentifier := nameToIdentifier.Identifier("Unregistered Player")
@@ -592,45 +607,6 @@ func TestRejectGetGameForPlayerWithInvalidGame(unitTest *testing.T) {
 			"GET game-as-seen-by-player/%v/%v without player did not return expected HTTP code %v, instead was %v.",
 			incorrectGameIdentifier,
 			playerIdentifier,
-			http.StatusBadRequest,
-			getCode)
-	}
-}
-
-func TestRejectGetGameForPlayerWithoutPlayer(unitTest *testing.T) {
-	playerNames := testPlayerNames()
-	nameToIdentifier, _, _, gameHandler := setUpHandlerAndRequirements(playerNames)
-	gameName := "Test game"
-	gameIdentifier := nameToIdentifier.Identifier(gameName)
-
-	bytesBuffer := new(bytes.Buffer)
-	json.NewEncoder(bytesBuffer).Encode(endpoint.GameDefinition{
-		GameName:          gameName,
-		RulesetIdentifier: game.StandardWithoutRainbowIdentifier,
-		PlayerIdentifiers: []string{
-			nameToIdentifier.Identifier(playerNames[1]),
-			nameToIdentifier.Identifier(playerNames[2]),
-			nameToIdentifier.Identifier(playerNames[3]),
-		},
-	})
-
-	_, postCode :=
-		gameHandler.HandlePost(json.NewDecoder(bytesBuffer), []string{"create-new-game"})
-
-	// We only check that the POST returned a valid response.
-	if postCode != http.StatusOK {
-		unitTest.Fatalf(
-			"POST create-new-game did not return expected HTTP code %v, instead was %v.",
-			http.StatusOK,
-			postCode)
-	}
-
-	_, getCode := gameHandler.HandleGet([]string{"game-as-seen-by-player", gameIdentifier})
-
-	if getCode != http.StatusBadRequest {
-		unitTest.Fatalf(
-			"GET game-as-seen-by-player/%v without player did not return expected HTTP code %v, instead was %v.",
-			gameIdentifier,
 			http.StatusBadRequest,
 			getCode)
 	}
