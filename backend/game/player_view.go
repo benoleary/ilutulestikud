@@ -18,7 +18,9 @@ type PlayerView struct {
 // the given player is a participant, returning a pointer to the view.
 // If the player is not a participant, it returns nil along with an
 // error.
-func ViewForPlayer(stateOfGame ReadonlyState, nameOfPlayer string) (*PlayerView, error) {
+func ViewForPlayer(
+	stateOfGame ReadonlyState,
+	nameOfPlayer string) (*PlayerView, error) {
 	gameParticipants := stateOfGame.Players()
 	for _, gameParticipant := range gameParticipants {
 		if gameParticipant.Name() == nameOfPlayer {
@@ -32,7 +34,8 @@ func ViewForPlayer(stateOfGame ReadonlyState, nameOfPlayer string) (*PlayerView,
 		}
 	}
 
-	// If we have not yet returned a pointer, then the player was not a participant.
+	// If we have not yet returned a pointer, then the player was not a
+	// participant.
 	notFoundError :=
 		fmt.Errorf(
 			"No player with name %v is a participant in game %v",

@@ -148,7 +148,7 @@ func TestInitialState(unitTest *testing.T) {
 				gameState := gameStates[stateIndex]
 				participatingPlayers := gameState.Players()
 
-				AssertThatParticipantsAreCorrect(
+				assertThatParticipantsAreCorrect(
 					unitTest,
 					testCase.arguments.initialPlayerNames,
 					participatingPlayers)
