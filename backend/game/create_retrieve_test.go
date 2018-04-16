@@ -352,53 +352,128 @@ func TestRejectNewGameWithExistingName(unitTest *testing.T) {
 	}
 }
 
-func TestRegisterAndRetrieveNewGame(unitTest *testing.T) {
+func TestRegisterAndRetrieveNewGames(unitTest *testing.T) {
 	collectionTypes := prepareCollections(unitTest)
 
-	gameName := "Test game"
-
-	for _, collectionType := range collectionTypes {
-		testIdentifier := "Add new game and retrieve it by name/" + collectionType.CollectionDescription
-		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			playerNames := []string{
+	gamesToAddInSequence := []struct {
+		gameName    string
+		playerNames []string
+	}{
+		{
+			gameName: "Test game 01",
+			playerNames: []string{
+				playerNamesAvailableInTest[2],
+				playerNamesAvailableInTest[1],
+				playerNamesAvailableInTest[3],
+			},
+		},
+		{
+			gameName: "Test game 02",
+			playerNames: []string{
+				playerNamesAvailableInTest[1],
+				playerNamesAvailableInTest[3],
+			},
+		},
+		{
+			gameName: "Test game 03",
+			playerNames: []string{
 				playerNamesAvailableInTest[0],
 				playerNamesAvailableInTest[1],
+				playerNamesAvailableInTest[3],
+			},
+		},
+		{
+			gameName: "Test game 04",
+			playerNames: []string{
 				playerNamesAvailableInTest[2],
-			}
+				playerNamesAvailableInTest[4],
+				playerNamesAvailableInTest[0],
+				playerNamesAvailableInTest[1],
+				playerNamesAvailableInTest[3],
+			},
+		},
+	}
 
-			errorFromInitialAdd := collectionType.GameCollection.AddNew(
-				gameName,
-				testRuleset,
-				playerNames)
+	for _, collectionType := range collectionTypes {
+		testIdentifier := "Add new games and retrieve them by name/" + collectionType.CollectionDescription
 
-			if errorFromInitialAdd != nil {
-				unitTest.Fatalf(
-					"AddNew(game name %v, standard ruleset, player names %v) produced an error: %v",
-					gameName,
-					playerNames,
-					errorFromInitialAdd)
-			}
+		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			gamesForPlayerMap := make(map[string][]string, 0)
 
-			viewingPlayer := playerNames[0]
-			playerView, errorFromView :=
-				collectionType.GameCollection.ViewState(
-					gameName,
-					viewingPlayer)
+			for _, gameToAdd := range gamesToAddInSequence {
+				for _, playerName := range gameToAdd.playerNames {
+					gamesForPlayerMap[playerName] =
+						append(gamesForPlayerMap[playerName], gameToAdd.gameName)
+				}
 
-			if errorFromView != nil {
-				unitTest.Fatalf(
-					"ViewState(same game name %v, player name %v) produced an error: %v",
-					gameName,
-					viewingPlayer,
-					errorFromView)
-			}
+				errorFromInitialAdd := collectionType.GameCollection.AddNew(
+					gameToAdd.gameName,
+					testRuleset,
+					gameToAdd.playerNames)
 
-			if playerView.GameName() != gameName {
-				unitTest.Fatalf(
-					"ViewState(same game name %v, player name %v) produced an incorrect view %v",
-					gameName,
-					viewingPlayer,
-					playerView)
+				if errorFromInitialAdd != nil {
+					unitTest.Fatalf(
+						"AddNew(game name %v, standard ruleset, player names %v) produced an error: %v",
+						gameToAdd.gameName,
+						gameToAdd.playerNames,
+						errorFromInitialAdd)
+				}
+
+				viewingPlayer := gameToAdd.playerNames[0]
+				playerView, errorFromView :=
+					collectionType.GameCollection.ViewState(
+						gameToAdd.gameName,
+						viewingPlayer)
+
+				if errorFromView != nil {
+					unitTest.Fatalf(
+						"ViewState(same game name %v, player name %v) produced an error: %v",
+						gameToAdd.gameName,
+						viewingPlayer,
+						errorFromView)
+				}
+
+				assertStateSummaryFunctionsAreCorrect(
+					unitTest,
+					gameToAdd.gameName,
+					gameToAdd.playerNames,
+					playerView,
+					"ViewState(game name "+gameToAdd.gameName+", player name "+viewingPlayer+")")
+
+				// Now we check that all games for each player can be seen by that player.
+				for _, playerName := range playerNamesAvailableInTest {
+					gamesForPlayer, errorFromViewAll :=
+						collectionType.GameCollection.ViewAllWithPlayer(playerName)
+
+					if errorFromViewAll != nil {
+						unitTest.Fatalf(
+							"ViewAllWithPlayer(player name %v) produced an error: %v",
+							playerName,
+							errorFromViewAll)
+					}
+
+					expectedGameNames, _ := gamesForPlayerMap[playerName]
+					expectedNumberOfGames := len(expectedGameNames)
+					if len(gamesForPlayer) != expectedNumberOfGames {
+						unitTest.Fatalf(
+							"Expected game names %v, but ViewAllWithPlayer(player name %v) returned %v",
+							expectedGameNames,
+							playerName,
+							gamesForPlayer)
+					}
+
+					// Since the games should be ordered by creation time, the slices should match
+					// element by element.
+					for gameIndex := 0; gameIndex < expectedNumberOfGames; gameIndex++ {
+						if gamesForPlayer[gameIndex].GameName() != expectedGameNames[gameIndex] {
+							unitTest.Fatalf(
+								"Expected game names %v, but ViewAllWithPlayer(player name %v) returned %v",
+								expectedGameNames,
+								playerName,
+								gamesForPlayer)
+						}
+					}
+				}
 			}
 		})
 	}
@@ -408,22 +483,22 @@ func assertStateSummaryFunctionsAreCorrect(
 	unitTest *testing.T,
 	expectedGameName string,
 	expectedPlayers []string,
-	actualGame game.ReadonlyState,
+	actualGameView *game.PlayerView,
 	testIdentifier string) {
-	if actualGame.Name() != expectedGameName {
+	if actualGameView.GameName() != expectedGameName {
 		unitTest.Fatalf(
 			testIdentifier+": game %v was found but had name %v.",
 			expectedGameName,
-			actualGame.Name())
+			actualGameView.GameName())
 	}
 
-	actualPlayers := actualGame.Players()
+	actualPlayers, viewingPlayerGoesNext := actualGameView.CurrentTurnOrder()
 	playerSlicesMatch := (len(actualPlayers) == len(expectedPlayers))
 
 	if playerSlicesMatch {
 		for playerIndex := 0; playerIndex < len(actualPlayers); playerIndex++ {
 			playerSlicesMatch =
-				(actualPlayers[playerIndex].Name() == expectedPlayers[playerIndex])
+				(actualPlayers[playerIndex] == expectedPlayers[playerIndex])
 			if !playerSlicesMatch {
 				break
 			}
