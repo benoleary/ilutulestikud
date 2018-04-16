@@ -12,12 +12,6 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/server"
 )
 
-// breaksBase64 is a string which encodes in base 64 to a string which contains
-// a '/' character, which should in turn break the system which expects to be able
-// to parse identifiers from URI segments delimited by the '/' character.
-// It should unescape to \/\\\? as a literal.
-const breaksBase64 = "\\/\\\\\\?"
-
 // functionNameAndArgument is for the mock collections to use to record what was
 // asked of them.
 type functionNameAndArgument struct {

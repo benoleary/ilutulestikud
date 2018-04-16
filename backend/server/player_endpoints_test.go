@@ -480,6 +480,12 @@ func TestRejectNewPlayerIfIdentifierHasSegmentDelimiter(unitTest *testing.T) {
 	mockCollection.ErrorToReturn = nil
 	mockCollection.ReturnForAll = testPlayerStates
 
+	// breaksBase64 is a string which encodes in base 64 to a string which contains
+	// a '/' character, which should in turn break the system which expects to be able
+	// to parse identifiers from URI segments delimited by the '/' character.
+	// It should unescape to \/\\\? as a literal.
+	breaksBase64 := "\\/\\\\\\?"
+
 	bodyObject := endpoint.PlayerState{
 		Name:  breaksBase64,
 		Color: "The color",
