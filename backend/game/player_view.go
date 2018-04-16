@@ -47,9 +47,9 @@ func (playerView *PlayerView) GameName() string {
 	return playerView.gameState.Name()
 }
 
-// ChatLog just wraps around the read-only game state's ChatLog function.
-func (playerView *PlayerView) ChatLog() *chat.Log {
-	return playerView.gameState.ChatLog()
+// SortedChatLog sorts the read-only game state's ChatLog and returns the sorted log.
+func (playerView *PlayerView) SortedChatLog() []chat.Message {
+	return playerView.gameState.ChatLog().Sorted()
 }
 
 // Score just wraps around the read-only game state's Score function.

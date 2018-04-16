@@ -200,7 +200,7 @@ func (gameHandler *gameEndpointHandler) writeGameForPlayer(
 		return viewError, http.StatusBadRequest
 	}
 
-	chatMessages := gameView.ChatLog().Sorted()
+	chatMessages := gameView.SortedChatLog()
 	numberOfMessages := len(chatMessages)
 	chatLogForFrontend := make([]endpoint.ChatLogMessage, numberOfMessages)
 	for messageIndex := 0; messageIndex < numberOfMessages; messageIndex++ {
