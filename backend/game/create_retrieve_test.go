@@ -440,6 +440,18 @@ func TestRegisterAndRetrieveNewGames(unitTest *testing.T) {
 					playerView,
 					"ViewState(game name "+gameToAdd.gameName+", player name "+viewingPlayer+")")
 
+				// We check that an unknown player causes an error when trying to view games.
+				unknownPlayerName := "A. Player"
+				gamesForUnknownPlayer, errorFromUnknownViewAll :=
+					collectionType.GameCollection.ViewAllWithPlayer(unknownPlayerName)
+
+				if errorFromUnknownViewAll == nil {
+					unitTest.Fatalf(
+						"ViewAllWithPlayer(player name %v) did not produce an error as expected, instead gave %v",
+						unknownPlayerName,
+						gamesForUnknownPlayer)
+				}
+
 				// Now we check that all games for each player can be seen by that player.
 				for _, playerName := range playerNamesAvailableInTest {
 					gamesForPlayer, errorFromViewAll :=
