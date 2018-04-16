@@ -8,7 +8,6 @@ import (
 
 	"github.com/benoleary/ilutulestikud/backend/chat"
 	"github.com/benoleary/ilutulestikud/backend/defaults"
-	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
@@ -97,7 +96,7 @@ type mockPlayerProvider struct {
 
 func (mockProvider *mockPlayerProvider) Get(
 	playerName string) (player.ReadonlyState, error) {
-	mockPlayer, isInMap := mockPlayers[playerName]
+	mockPlayer, isInMap := mockProvider.mockPlayers[playerName]
 
 	if !isInMap {
 		return nil, fmt.Errorf("not in map")
@@ -106,16 +105,16 @@ func (mockProvider *mockPlayerProvider) Get(
 	return mockPlayer, nil
 }
 
-func GetAvailableRulesets(unitTest *testing.T) []endpoint.SelectableRuleset {
-	availableRulesets := game.AvailableRulesets()
+func GetAvailableRulesetIdentifiers(unitTest *testing.T) []int {
+	availableRulesetIdentifiers := game.ValidRulesetIdentifiers()
 
-	if len(availableRulesets) < 1 {
+	if len(availableRulesetIdentifiers) < 1 {
 		unitTest.Fatalf(
-			"At least one ruleset must be available for tests: game.AvailableRulesets() returned %v",
-			availableRulesets)
+			"At least one ruleset identifier must be available for tests: game.ValidRulesetIdentifiers() returned %v",
+			availableRulesetIdentifiers)
 	}
 
-	return availableRulesets
+	return availableRulesetIdentifiers
 }
 
 func DescriptionOfRuleset(unitTest *testing.T, rulesetIdentifier int) string {
@@ -170,11 +169,11 @@ func prepareCollections(unitTest *testing.T) []collectionAndDescription {
 		gamePersister := statePersisters[persisterIndex]
 		stateCollection :=
 			game.NewCollection(
-				statePersister.GamePersister,
+				gamePersister.GamePersister,
 				mockProvider)
 		stateCollections[persisterIndex] = collectionAndDescription{
-			PlayerCollection:      stateCollection,
-			CollectionDescription: "collection around " + statePersister.PersisterDescription,
+			GameCollection:        stateCollection,
+			CollectionDescription: "collection around " + gamePersister.PersisterDescription,
 		}
 	}
 
@@ -370,7 +369,7 @@ func TestRegisterAndRetrieveNewGame(unitTest *testing.T) {
 			errorFromInitialAdd := collectionType.GameCollection.AddNew(
 				gameName,
 				testRuleset,
-				initialGamePlayerNames)
+				playerNames)
 
 			if errorFromInitialAdd != nil {
 				unitTest.Fatalf(
