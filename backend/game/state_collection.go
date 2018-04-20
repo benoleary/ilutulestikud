@@ -88,22 +88,24 @@ func (gameCollection *StateCollection) AddNew(
 	gameName string,
 	gameRuleset Ruleset,
 	playerNames []string) error {
-	return gameCollection.AddNewWithGivenRandomSeed(
+	shuffledDeck :=
+		createShuffledDeck(gameRuleset, gameCollection.statePersister.randomSeed())
+
+	return gameCollection.AddNewWithGivenDeck(
 		gameName,
 		gameRuleset,
 		playerNames,
-		gameCollection.statePersister.randomSeed())
+		shuffledDeck)
 }
 
-// AddNewWithGivenRandomSeed prepares a new shuffled deck using the given seed for
-// a random number generator, and uses it to create a new game in the given collection
-// from the given definition. It returns an error if a game with the given name already
-// exists, or if the definition includes invalid players.
-func (gameCollection *StateCollection) AddNewWithGivenRandomSeed(
+// AddNewWithGivenDeck creates a new game in the given collection from the given
+// definition and the given deck. It returns an error if a game with the given name
+// already exists, or if the definition includes invalid players.
+func (gameCollection *StateCollection) AddNewWithGivenDeck(
 	gameName string,
 	gameRuleset Ruleset,
 	playerNames []string,
-	randomSeed int64) error {
+	shuffledDeck []Card) error {
 	if gameName == "" {
 		return fmt.Errorf("Game must have a name")
 	}
@@ -117,8 +119,6 @@ func (gameCollection *StateCollection) AddNewWithGivenRandomSeed(
 	if playerError != nil {
 		return playerError
 	}
-
-	shuffledDeck := createShuffledDeck(gameRuleset, randomSeed)
 
 	return gameCollection.statePersister.addGame(
 		gameName,
@@ -216,16 +216,16 @@ func createShuffledDeck(gameRuleset Ruleset, randomSeed int64) []Card {
 
 	shuffledDeck := gameRuleset.FullCardset()
 
-	numberOfCards := len(shuffledDeck)
+	// Good ol' Fisher-Yates!
+	numberOfUnshuffledCards := len(shuffledDeck)
+	for numberOfUnshuffledCards > 0 {
+		indexToMove := randomNumberGenerator.Intn(numberOfUnshuffledCards)
 
-	// This is probably excessive.
-	numberOfShuffles := 8 * numberOfCards
-
-	for shuffleCount := 0; shuffleCount < numberOfShuffles; shuffleCount++ {
-		firstShuffleIndex := randomNumberGenerator.Intn(numberOfCards)
-		secondShuffleIndex := randomNumberGenerator.Intn(numberOfCards)
-		shuffledDeck[firstShuffleIndex], shuffledDeck[secondShuffleIndex] =
-			shuffledDeck[secondShuffleIndex], shuffledDeck[firstShuffleIndex]
+		// We decrement now so that we can use it as the index of the destination
+		// of the card chosen to be moved.
+		numberOfUnshuffledCards--
+		shuffledDeck[numberOfUnshuffledCards], shuffledDeck[indexToMove] =
+			shuffledDeck[indexToMove], shuffledDeck[numberOfUnshuffledCards]
 	}
 
 	return shuffledDeck
