@@ -9,142 +9,81 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
-func prepareImplementations(
-	unitTest *testing.T,
-	gameName string,
-	rulesetIdentifier int,
-	playerNames []string) ([]game.ReadonlyState, game.Ruleset) {
-	gameRuleset, identifierError := game.RulesetFromIdentifier(rulesetIdentifier)
-
-	if identifierError != nil {
-		unitTest.Fatalf(
-			"Unable to get valid ruleset for identifier %v: error is %v",
-			rulesetIdentifier,
-			identifierError)
-	}
-
-	if len(playerNames) < gameRuleset.MinimumNumberOfPlayers() {
-		unitTest.Fatalf(
-			"Not enough players: %v",
-			playerNames)
-	}
-
-	if len(playerNames) > gameRuleset.MaximumNumberOfPlayers() {
-		unitTest.Fatalf(
-			"Too many players: %v",
-			playerNames)
-	}
-
-	nameToIdentifier := &endpoint.Base32NameEncoder{}
-	playerCollection := player.NewInMemoryPersister(nameToIdentifier, playerNames, []string{"red", "green", "blue"})
-	gameCollections := []game.StateCollection{
-		game.NewInMemoryCollection(nameToIdentifier),
-	}
-
-	playerIdentifiers := make([]string, len(playerNames))
-	for playerIndex, playerName := range playerNames {
-		playerIdentifiers[playerIndex] = nameToIdentifier.Identifier(playerName)
-	}
-
-	gameDefinition := endpoint.GameDefinition{
-		GameName:          gameName,
-		RulesetIdentifier: rulesetIdentifier,
-		PlayerIdentifiers: playerIdentifiers,
-	}
-
-	gameStates := make([]game.ReadonlyState, len(gameCollections))
-
-	for collectionIndex, gameCollection := range gameCollections {
-		gameIdentifier, addError :=
-			game.AddNew(gameDefinition, gameCollection, playerCollection)
-
-		if addError != nil {
-			unitTest.Fatalf(
-				"Error when trying to add game for collection index %v: %v",
-				collectionIndex,
-				addError)
-		}
-
-		addedGame, gameExists := game.ReadState(gameCollection, gameIdentifier)
-		if !gameExists {
-			unitTest.Fatalf(
-				"Error when trying to find identifier %v for game for collection index %v: gameCollection = %v",
-				gameIdentifier,
-				collectionIndex,
-				gameCollection)
-		}
-
-		gameStates[collectionIndex] = addedGame
-	}
-
-	return gameStates, gameRuleset
-}
-
 func TestInitialState(unitTest *testing.T) {
-	type testArguments struct {
-		initialPlayerNames []string
-		rulesetIdentifier  int
-	}
+	gameName := "test game"
 
 	testCases := []struct {
-		name      string
-		arguments testArguments
+		testName      string
+		playerNames []string
+		rulesetIdentifier  int
 	}{
 		{
-			name: "Two players, no rainbow",
-			arguments: testArguments{
-				initialPlayerNames: []string{"Player One", "Player Two"},
+			nametestNameOfTest: "Two players, no rainbow",
+			playerNames: []string{"Player One", "Player Two"},
 				rulesetIdentifier:  game.StandardWithoutRainbowIdentifier,
-			},
 		},
 		{
-			name: "Three players, no rainbow",
-			arguments: testArguments{
+			testName: "Three players, no rainbow",
 				initialPlayerNames: []string{"Player One", "Player Two", "Player Three"},
 				rulesetIdentifier:  game.StandardWithoutRainbowIdentifier,
-			},
 		},
 		{
-			name: "Four players, no rainbow",
-			arguments: testArguments{
-				initialPlayerNames: []string{"Player One", "Player Two", "Player Three", "Player Four"},
+			testName: "Four players, no rainbow",
+			playerNames: []string{"Player One", "Player Two", "Player Three", "Player Four"},
 				rulesetIdentifier:  game.StandardWithoutRainbowIdentifier,
-			},
 		},
 		{
-			name: "Five players, no rainbow",
-			arguments: testArguments{
+			testName: "Five players, no rainbow",
 				initialPlayerNames: []string{"Player One", "Player Two", "Player Three", "Player Four", "Player Five"},
 				rulesetIdentifier:  game.StandardWithoutRainbowIdentifier,
-			},
 		},
 		{
-			name: "Two players, with rainbow (as separate, but doesn't matter for initial state)",
-			arguments: testArguments{
-				initialPlayerNames: []string{"Player One", "Player Two"},
+			testName: "Two players, with rainbow (as separate, but doesn't matter for initial state)",
+			playerNames: []string{"Player One", "Player Two"},
 				rulesetIdentifier:  game.WithRainbowAsSeparateIdentifier,
-			},
 		},
 		{
-			name: "Five players, with rainbow (as compound, but doesn't matter for initial state)",
-			arguments: testArguments{
-				initialPlayerNames: []string{"Player One", "Player Two", "Player Three", "Player Four", "Player Five"},
+			testName: "Five players, with rainbow (as compound, but doesn't matter for initial state)",
+			playerNames: []string{"Player One", "Player Two", "Player Three", "Player Four", "Player Five"},
 				rulesetIdentifier:  game.WithRainbowAsCompoundIdentifier,
-			},
 		},
 	}
 
 	for _, testCase := range testCases {
-		unitTest.Run(testCase.name, func(unitTest *testing.T) {
-			gameStates, gameRuleset := prepareImplementations(
-				unitTest,
-				"Test game",
-				testCase.arguments.rulesetIdentifier,
-				testCase.arguments.initialPlayerNames)
+		collectionTypes := prepareCollections(unitTest)
 
-			numberOfPlayers := len(testCase.arguments.initialPlayerNames)
+		for _, collectionType := range collectionTypes {
+			testIdentifier := testCase.testName + "/" + collectionType.CollectionDescription
 
-			for stateIndex := 0; stateIndex < len(gameStates); stateIndex++ {
+			unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+				testRuleset, errorFromRuleset := game.RulesetFromIdentifier(testCase.rulesetIdentifier)
+
+				if errorFromRuleset != nil {
+					unitTest.Fatalf(
+						"game.RulesetFromIdentifier(ruleset identifier %v) produced an error: %v",
+						testCase.rulesetIdentifier,
+						errorFromRuleset)
+				}
+
+				errorFromAdd :=
+					collectionType.GameCollection.AddNew(
+						gameName,
+						testRuleset,
+						testCase.playerNames)
+
+				if errorFromAdd != nil {
+					unitTest.Fatalf(
+						"AddNew(game name %v, ruleset %v, player names %v) produced an error: %v",
+						gameName,
+						testRuleset,
+						testCase.playerNames)
+				}
+
+				assertGameIsNotIncorrect()
+
+
+				numberOfPlayers := len(testCase.arguments.initialPlayerNames)
+
 				gameState := gameStates[stateIndex]
 				participatingPlayers := gameState.Players()
 
@@ -204,6 +143,7 @@ func TestInitialState(unitTest *testing.T) {
 			}
 		})
 	}
+	}
 }
 
 func assertThatParticipantsAreCorrect(
@@ -243,6 +183,16 @@ func assertThatParticipantsAreCorrect(
 		}
 	}
 }
+
+assertGameIsNotIncorrect(
+	testIdentifier string,
+	unitTest *testing.T,
+	playerNamesInTurnOrder []string,
+	gameRuleset game.Ruleset,
+	stuff like cards remaining in deck, cards in discard pile, cards in played area, etc.
+	actualView game.PlayerView) {
+		check players first, then grab some stuff from  assertThatMechanicalGameStateIsCorrect below.
+	}
 
 func assertThatMechanicalGameStateIsCorrect(
 	identifyingLabel string,
