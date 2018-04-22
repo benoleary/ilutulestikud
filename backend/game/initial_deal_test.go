@@ -79,72 +79,21 @@ func TestInitialState(unitTest *testing.T) {
 						testCase.playerNames)
 				}
 
-				assertGameIsNotIncorrect()
+				assertVisibleCardsAreConsistentWithRuleset()
 
-
-				numberOfPlayers := len(testCase.arguments.initialPlayerNames)
-
-				gameState := gameStates[stateIndex]
-				participatingPlayers := gameState.Players()
-
-				assertThatParticipantsAreCorrect(
-					unitTest,
-					testCase.arguments.initialPlayerNames,
-					participatingPlayers)
-
-				viewingPlayer := participatingPlayers[0]
-
-				gameView := game.ForPlayer(gameState, viewingPlayer.Identifier())
-
-				assertchat.LogIsCorrect(
-					unitTest,
-					testCase.name,
-					[]endpoint.ChatLogMessage{},
-					gameView.ChatLog,
-				)
-
-				numberOfCardsPerHand := gameRuleset.NumberOfCardsInPlayerHand(numberOfPlayers)
-				expectedNumberOfCardsInPlayerHands :=
-					numberOfPlayers * numberOfCardsPerHand
-				colorSuits := gameRuleset.ColorSuits()
-				sequenceIndices := gameRuleset.SequenceIndices()
-				numberOfCardsInTotal := len(colorSuits) * len(sequenceIndices)
-				expectedNumberOfCardsInDeck := numberOfCardsInTotal - expectedNumberOfCardsInPlayerHands
-
-				expectedVisibleHands := make([]endpoint.VisibleHand, numberOfPlayers)
-
-				// We start from index 1 as player 0 is the viewing player.
-				for playerIndex := 1; playerIndex < numberOfPlayers; playerIndex++ {
-					expectedVisibleHands[playerIndex] = endpoint.VisibleHand{
-						PlayerIdentifier: participatingPlayers[playerIndex].Identifier(),
-						PlayerName:       participatingPlayers[playerIndex].Name(),
-						HandCards:        make([]endpoint.VisibleCard, numberOfCardsPerHand),
-					}
-				}
-
-				assertThatMechanicalGameStateIsCorrect(
-					"Initial state",
-					unitTest,
-					len(testCase.arguments.initialPlayerNames),
-					gameRuleset,
-					endpoint.GameView{
-						ScoreSoFar:                   0,
-						NumberOfReadyHints:           game.MaximumNumberOfHints,
-						NumberOfSpentHints:           0,
-						NumberOfMistakesStillAllowed: game.MaximumNumberOfMistakesAllowed,
-						NumberOfMistakesMade:         0,
-						NumberOfCardsLeftInDeck:      expectedNumberOfCardsInDeck,
-						PlayedCards:                  [][]endpoint.VisibleCard{},
-						DiscardedCards:               [][]endpoint.VisibleCard{},
-						ThisPlayerHand:               make([]endpoint.CardFromBehind, numberOfCardsPerHand),
-						OtherPlayerHands:             expectedVisibleHands,
-					},
-					gameView)
-			}
-		})
-	}
+				// deck
+				// sequnces
+				// discards
+				// score
+				// turn
+				// hints
+				// mistakes
+				// player order
+			})
+		}
 	}
 }
+
 
 func assertThatParticipantsAreCorrect(
 	unitTest *testing.T,
@@ -184,14 +133,17 @@ func assertThatParticipantsAreCorrect(
 	}
 }
 
-assertGameIsNotIncorrect(
+// assertVisibleCardsAreConsistentWithRuleset checks that the set of cards which can
+// be seen by the players as a group is not in contradiction to the cards of the
+// ruleset - i.e. that the cards played + cards discarded + cards in hands is a subset
+// of the cards of the ruleset.
+assertVisibleCardsAreConsistentWithRuleset(
 	testIdentifier string,
 	unitTest *testing.T,
-	playerNamesInTurnOrder []string,
 	gameRuleset game.Ruleset,
-	stuff like cards remaining in deck, cards in discard pile, cards in played area, etc.
 	actualView game.PlayerView) {
-		check players first, then grab some stuff from  assertThatMechanicalGameStateIsCorrect below.
+		// We prepare the maximum number of copies of any card.
+		map[]
 	}
 
 func assertThatMechanicalGameStateIsCorrect(
