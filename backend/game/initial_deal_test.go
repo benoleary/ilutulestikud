@@ -65,8 +65,10 @@ func TestInitialState(unitTest *testing.T) {
 						errorFromRuleset)
 				}
 
+
+
 				errorFromAdd :=
-					collectionType.GameCollection.AddNew(
+					collectionType.GameCollection.AddNewWithGivenDeck(
 						gameName,
 						testRuleset,
 						testCase.playerNames)
@@ -79,7 +81,7 @@ func TestInitialState(unitTest *testing.T) {
 						testCase.playerNames)
 				}
 
-				assertVisibleCardsAreConsistentWithRuleset()
+				assertHandsAreCorrect()
 
 				// deck
 				// sequnces

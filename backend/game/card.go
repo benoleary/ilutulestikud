@@ -1,7 +1,11 @@
 package game
 
-// Card should encapsulate the read-only state of a single card.
-type Card interface {
+import (
+	"math/rand"
+)
+
+// ReadonlyCard should encapsulate the read-only state of a single card.
+type ReadonlyCard interface {
 	// ColorSuit should be the suit of the card, which should be contained
 	// in the set of color suits of the game's ruleset.
 	ColorSuit() string
@@ -22,4 +26,22 @@ func (singleCard *simpleCard) ColorSuit() string {
 
 func (singleCard *simpleCard) SequenceIndex() int {
 	return singleCard.sequenceIndex
+}
+
+// ShuffleDeck shuffles the given cards in place (using the Fisher-Yates
+// algorithm).
+func ShuffleDeck(cardsToShuffle []ReadonlyCard, randomSeed int64) {
+	randomNumberGenerator := rand.New(rand.NewSource(randomSeed))
+
+	// Good ol' Fisher-Yates!
+	numberOfUnshuffledCards := len(cardsToShuffle)
+	for numberOfUnshuffledCards > 0 {
+		indexToMove := randomNumberGenerator.Intn(numberOfUnshuffledCards)
+
+		// We decrement now so that we can use it as the index of the destination
+		// of the card chosen to be moved.
+		numberOfUnshuffledCards--
+		cardsToShuffle[numberOfUnshuffledCards], cardsToShuffle[indexToMove] =
+			cardsToShuffle[indexToMove], cardsToShuffle[numberOfUnshuffledCards]
+	}
 }

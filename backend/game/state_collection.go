@@ -2,7 +2,6 @@ package game
 
 import (
 	"fmt"
-	"math/rand"
 	"sort"
 
 	"github.com/benoleary/ilutulestikud/backend/player"
@@ -88,14 +87,20 @@ func (gameCollection *StateCollection) AddNew(
 	gameName string,
 	gameRuleset Ruleset,
 	playerNames []string) error {
-	shuffledDeck :=
-		createShuffledDeck(gameRuleset, gameCollection.statePersister.randomSeed())
+	rulesetCards := gameRuleset.FullCardset()
+	initialDeck := make([]Card, len(rulesetCards))
+
+	// We make a copy just to ensure that we don't influence the ruleset by
+	// shuffling its cards in place.
+	copy(initialDeck, rulesetCards)
+
+	ShuffleDeck(initialDeck, gameCollection.statePersister.randomSeed())
 
 	return gameCollection.AddNewWithGivenDeck(
 		gameName,
 		gameRuleset,
 		playerNames,
-		shuffledDeck)
+		initialDeck)
 }
 
 // AddNewWithGivenDeck creates a new game in the given collection from the given
@@ -209,26 +214,6 @@ func createPlayerStates(
 	}
 
 	return playerStates, nil
-}
-
-func createShuffledDeck(gameRuleset Ruleset, randomSeed int64) []Card {
-	randomNumberGenerator := rand.New(rand.NewSource(randomSeed))
-
-	shuffledDeck := gameRuleset.FullCardset()
-
-	// Good ol' Fisher-Yates!
-	numberOfUnshuffledCards := len(shuffledDeck)
-	for numberOfUnshuffledCards > 0 {
-		indexToMove := randomNumberGenerator.Intn(numberOfUnshuffledCards)
-
-		// We decrement now so that we can use it as the index of the destination
-		// of the card chosen to be moved.
-		numberOfUnshuffledCards--
-		shuffledDeck[numberOfUnshuffledCards], shuffledDeck[indexToMove] =
-			shuffledDeck[indexToMove], shuffledDeck[numberOfUnshuffledCards]
-	}
-
-	return shuffledDeck
 }
 
 // ByCreationTime implements sort interface for []ReadonlyState based on the return

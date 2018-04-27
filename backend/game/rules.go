@@ -93,6 +93,17 @@ func RulesetFromIdentifier(rulesetIdentifier int) (Ruleset, error) {
 	}
 }
 
+// CopyCardset returns a copy of the full cardset of the ruleset.
+func CopyCardset(cardsetSource Ruleset) []Card {
+	sourceCardset := cardsetSource.FullCardset()
+
+	copyCardset := make([]Card, len(sourceCardset))
+
+	copy(copyCardset, sourceCardset)
+
+	return copyCardset
+}
+
 // StandardWithoutRainbowRuleset represents the standard ruleset, which does
 // not include the rainbow color suit.
 type StandardWithoutRainbowRuleset struct {
