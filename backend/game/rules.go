@@ -27,7 +27,7 @@ type Ruleset interface {
 
 	// FullCardset should return an array populated with every card which should be present
 	// for a game under the ruleset, including duplicates.
-	FullCardset() []Card
+	FullCardset() []ReadonlyCard
 
 	// NumberOfCardsInPlayerHand should return the number of cards held
 	// in a player's hand, dependent on the number of players in the game.
@@ -94,10 +94,10 @@ func RulesetFromIdentifier(rulesetIdentifier int) (Ruleset, error) {
 }
 
 // CopyCardset returns a copy of the full cardset of the ruleset.
-func CopyCardset(cardsetSource Ruleset) []Card {
+func CopyCardset(cardsetSource Ruleset) []ReadonlyCard {
 	sourceCardset := cardsetSource.FullCardset()
 
-	copyCardset := make([]Card, len(sourceCardset))
+	copyCardset := make([]ReadonlyCard, len(sourceCardset))
 
 	copy(copyCardset, sourceCardset)
 
@@ -116,12 +116,12 @@ func (standardRuleset *StandardWithoutRainbowRuleset) FrontendDescription() stri
 
 // FullCardset returns an array populated with every card which should be present
 // for a game under the ruleset, including duplicates.
-func (standardRuleset *StandardWithoutRainbowRuleset) FullCardset() []Card {
+func (standardRuleset *StandardWithoutRainbowRuleset) FullCardset() []ReadonlyCard {
 	colorSuits := standardRuleset.ColorSuits()
 	numberOfColors := len(colorSuits)
 	sequenceIndices := standardRuleset.SequenceIndices()
 	numberOfIndices := len(sequenceIndices)
-	fullCardset := make([]Card, 0, numberOfColors*numberOfIndices)
+	fullCardset := make([]ReadonlyCard, 0, numberOfColors*numberOfIndices)
 
 	for _, colorSuit := range colorSuits {
 		for _, sequenceIndex := range sequenceIndices {
@@ -194,15 +194,15 @@ type RainbowAsSeparateSuitRuleset struct {
 	BasisRules *StandardWithoutRainbowRuleset
 }
 
-// FrontendDescription describes the ruleset with rainbow cards which are a separate suit
-// which behaves like the standard suits.
+// FrontendDescription describes the ruleset with rainbow cards which are a separate
+// suit which behaves like the standard suits.
 func (separateRainbow *RainbowAsSeparateSuitRuleset) FrontendDescription() string {
 	return "with rainbow, hints as separate color"
 }
 
 // FullCardset returns an array populated with every card which should be present
 // for a game under the ruleset, including duplicates.
-func (separateRainbow *RainbowAsSeparateSuitRuleset) FullCardset() []Card {
+func (separateRainbow *RainbowAsSeparateSuitRuleset) FullCardset() []ReadonlyCard {
 	fullCardset := separateRainbow.BasisRules.FullCardset()
 	sequenceIndices := separateRainbow.SequenceIndices()
 
@@ -259,16 +259,16 @@ type RainbowAsCompoundSuitRuleset struct {
 }
 
 // FrontendDescription describes the ruleset with rainbow cards which are a separate suit
-// which behaves differently from the standard suits, in the sense that it is not directly a color which
-// can be given as a hint, but rather every hint for a standard color will also identify a rainbow card
-// as a card of that standard color.
+// which behaves differently from the standard suits, in the sense that it is not directly
+// a color which can be given as a hint, but rather every hint for a standard color will
+// also identify a rainbow card as a card of that standard color.
 func (compoundRainbow *RainbowAsCompoundSuitRuleset) FrontendDescription() string {
 	return "with rainbow, hints as every color"
 }
 
 // FullCardset returns an array populated with every card which should be present
 // for a game under the ruleset, including duplicates.
-func (compoundRainbow *RainbowAsCompoundSuitRuleset) FullCardset() []Card {
+func (compoundRainbow *RainbowAsCompoundSuitRuleset) FullCardset() []ReadonlyCard {
 	return compoundRainbow.BasisRainbow.FullCardset()
 }
 

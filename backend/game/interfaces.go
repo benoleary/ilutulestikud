@@ -43,6 +43,23 @@ type ReadonlyState interface {
 	// NumberOfMistakesMade should return the total number of cards which have been played
 	// incorrectly.
 	NumberOfMistakesMade() int
+
+	// DeckSize should return the number of cards left to draw from the deck.
+	DeckSize() int
+
+	// PlayedCards should return a map of color suit names to sequences of cards which were
+	// played correctly for that suit.
+	PlayedCards() map[string][]ReadonlyCard
+
+	// DiscardedCards should return a map of color suit names to sequences of cards which were
+	// discarded for that suit or played incorrectly.
+	DiscardedCards() map[string][]ReadonlyCard
+
+	// VisibleHands should return a map of player names to sequences of cards which are in the
+	// hands of the players who are not the viewing player.
+	VisibleHands() map[string][]ReadonlyCard
+
+	// Need something for the hand of the viewing player.
 }
 
 // readAndWriteState defines the interface for structs which should encapsulate the state of
@@ -71,7 +88,7 @@ type StatePersister interface {
 		gameName string,
 		gameRuleset Ruleset,
 		playerStates []player.ReadonlyState,
-		initialShuffle []Card) error
+		initialShuffle []ReadonlyCard) error
 
 	// readAllWithPlayer should return a slice of all the games in the collection which
 	// have the given player as a participant, where each game is given as a ReadonlyState

@@ -44,7 +44,7 @@ func (inMemoryPersister *InMemoryPersister) addGame(
 	gameName string,
 	gameRuleset Ruleset,
 	playerStates []player.ReadonlyState,
-	initialShuffle []Card) error {
+	initialShuffle []ReadonlyCard) error {
 	if gameName == "" {
 		return fmt.Errorf("Game must have a name")
 	}
@@ -106,7 +106,7 @@ type inMemoryState struct {
 	currentScore         int
 	numberOfReadyHints   int
 	numberOfMistakesMade int
-	undrawnDeck          []Card
+	undrawnDeck          []ReadonlyCard
 }
 
 // newInMemoryState creates a new game given the required information,
@@ -116,7 +116,7 @@ func newInMemoryState(
 	gameName string,
 	gameRuleset Ruleset,
 	playerStates []player.ReadonlyState,
-	shuffledDeck []Card) readAndWriteState {
+	shuffledDeck []ReadonlyCard) readAndWriteState {
 	return &inMemoryState{
 		mutualExclusion:      sync.Mutex{},
 		gameName:             gameName,

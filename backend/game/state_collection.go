@@ -87,12 +87,7 @@ func (gameCollection *StateCollection) AddNew(
 	gameName string,
 	gameRuleset Ruleset,
 	playerNames []string) error {
-	rulesetCards := gameRuleset.FullCardset()
-	initialDeck := make([]Card, len(rulesetCards))
-
-	// We make a copy just to ensure that we don't influence the ruleset by
-	// shuffling its cards in place.
-	copy(initialDeck, rulesetCards)
+	initialDeck := CopyCardset(gameRuleset)
 
 	ShuffleDeck(initialDeck, gameCollection.statePersister.randomSeed())
 
@@ -110,7 +105,7 @@ func (gameCollection *StateCollection) AddNewWithGivenDeck(
 	gameName string,
 	gameRuleset Ruleset,
 	playerNames []string,
-	shuffledDeck []Card) error {
+	shuffledDeck []ReadonlyCard) error {
 	if gameName == "" {
 		return fmt.Errorf("Game must have a name")
 	}

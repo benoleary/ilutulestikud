@@ -65,13 +65,16 @@ func TestInitialState(unitTest *testing.T) {
 						errorFromRuleset)
 				}
 
+				gameDeck := CopyCardset(gameRuleset)
 
+				ShuffleDeck(gameDeck, gameCollection.statePersister.randomSeed())
 
 				errorFromAdd :=
 					collectionType.GameCollection.AddNewWithGivenDeck(
 						gameName,
 						testRuleset,
-						testCase.playerNames)
+						testCase.playerNames,
+						gameDeck)
 
 				if errorFromAdd != nil {
 					unitTest.Fatalf(
@@ -80,6 +83,13 @@ func TestInitialState(unitTest *testing.T) {
 						testRuleset,
 						testCase.playerNames)
 				}
+
+
+				firstPlayerView :=
+					collectionType.GameCollection.ViewState(gameName, testCase.playerNames[0])
+				secondPlayerView :=
+						collectionType.GameCollection.ViewState(gameName, testCase.playerNames[1])
+
 
 				assertHandsAreCorrect()
 
@@ -95,6 +105,11 @@ func TestInitialState(unitTest *testing.T) {
 		}
 	}
 }
+
+func assertHandsAreCorrect(
+	unitTest *testing.T,
+	playerNames []string,
+	participatingPlayers []player.ReadonlyState) {
 
 
 func assertThatParticipantsAreCorrect(
