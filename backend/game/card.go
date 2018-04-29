@@ -15,23 +15,29 @@ type ReadonlyCard interface {
 	SequenceIndex() int
 }
 
-type simpleCard struct {
-	colorSuit     string
-	sequenceIndex int
+// OrderedCardset bundles typical operations on ordered sets of cards which
+// represent the actions typically performed on physical sets of cards for
+// the game.
+type OrderedCardset struct {
+	cardList []ReadonlyCard
 }
 
-func (singleCard *simpleCard) ColorSuit() string {
-	return singleCard.colorSuit
+// ReplaceCard should do something.
+func (orderedCardset OrderedCardset) ReplaceCard(cardIndex int, cardToInsert ReadonlyCard) (ReadonlyCard, error) {
+	// something
 }
 
-func (singleCard *simpleCard) SequenceIndex() int {
-	return singleCard.sequenceIndex
+// RemoveCard removes the card with the given index from the list and returns
+// it, or nil and an error are not enough cards.
+func (orderedCardset OrderedCardset) RemoveCard(cardIndex int) (ReadonlyCard, error) {
+	// something
 }
 
-// ShuffleDeck shuffles the given cards in place (using the Fisher-Yates
+// ShuffleCards shuffles the cards in place (using the Fisher-Yates
 // algorithm).
-func ShuffleDeck(cardsToShuffle []ReadonlyCard, randomSeed int64) {
+func (orderedCardset OrderedCardset) ShuffleCards(randomSeed int64) {
 	randomNumberGenerator := rand.New(rand.NewSource(randomSeed))
+	cardsToShuffle := orderedCardset.cardList
 
 	// Good ol' Fisher-Yates!
 	numberOfUnshuffledCards := len(cardsToShuffle)
@@ -44,4 +50,17 @@ func ShuffleDeck(cardsToShuffle []ReadonlyCard, randomSeed int64) {
 		cardsToShuffle[numberOfUnshuffledCards], cardsToShuffle[indexToMove] =
 			cardsToShuffle[indexToMove], cardsToShuffle[numberOfUnshuffledCards]
 	}
+}
+
+type simpleCard struct {
+	colorSuit     string
+	sequenceIndex int
+}
+
+func (singleCard *simpleCard) ColorSuit() string {
+	return singleCard.colorSuit
+}
+
+func (singleCard *simpleCard) SequenceIndex() int {
+	return singleCard.sequenceIndex
 }
