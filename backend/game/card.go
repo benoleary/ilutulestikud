@@ -15,23 +15,12 @@ type ReadonlyCard interface {
 	SequenceIndex() int
 }
 
-// OrderedCardset bundles typical operations on ordered sets of cards which
-// represent the actions typically performed on physical sets of cards for
-// the game.
-type OrderedCardset struct {
-	cardList []ReadonlyCard
-}
-
-// ReplaceCard should do something.
-func (orderedCardset OrderedCardset) ReplaceCard(cardIndex int, cardToInsert ReadonlyCard) (ReadonlyCard, error) {
-	// something
-}
-
-// RemoveCard removes the card with the given index from the list and returns
-// it, or nil and an error are not enough cards.
-func (orderedCardset OrderedCardset) RemoveCard(cardIndex int) (ReadonlyCard, error) {
-	// something
-}
+OK, I need:
+CardDeck (gives out card at [0], sets own [0] to nil, re-sets slice over array, something for when empty)
+DiscardArea (stores ordered lists of cards per suit (does sorting), ensures only ruleset suits allowed)
+PlayedArea (stores ordered lists of cards per suit (only allows increasing sequences), ensures only ruleset suits allowed, in charge of whether play is legal)
+PlayerHand (stores inferred cards (shown when viewer is not holder), gives out ReadonlyCard in exchange for substitute (in charge of wrapping in InferredCard), something when out of cards in deck)
+InferredCard (has ReadonlyCard, has list of possible suits, has list of possible indices)
 
 // ShuffleCards shuffles the cards in place (using the Fisher-Yates
 // algorithm).
