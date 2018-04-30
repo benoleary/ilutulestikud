@@ -5,20 +5,7 @@ import (
 )
 
 // This file contains the definition of an interface for rulesets,
-// along with some implementations of the interface, and some
-// interface-independent constants which are common to all the
-// rulesets. These could of course be replaced by interface
-// functions which return the same constants across the various
-// implementations, but that's just busywork for no gain.
-
-// MaximumNumberOfHints is the maximum number of hints which can be
-// ready to use in a game at any time.
-const MaximumNumberOfHints = 8
-
-// MaximumNumberOfMistakesAllowed is the maximum number of mistakes
-// that can be made without the game ending (i.e. the game ends on the
-// third mistake).
-const MaximumNumberOfMistakesAllowed = 2
+// along with some implementations of the interface.
 
 // Ruleset should encapsulate the set of rules for a game as functions.
 type Ruleset interface {
@@ -45,6 +32,14 @@ type Ruleset interface {
 
 	// MaximumNumberOfPlayers should return the maximum number of players allowed for a game.
 	MaximumNumberOfPlayers() int
+
+	// MaximumNumberOfHints should return the maximum number of hints which can be available
+	// at any instant.
+	MaximumNumberOfHints() int
+
+	// MaximumNumberOfMistakesAllowed should return the maximum number of mistakes which can
+	// be made without the game ending (i.e. the game ends on the next mistake after that).
+	MaximumNumberOfMistakesAllowed() int
 }
 
 const (
@@ -91,17 +86,6 @@ func RulesetFromIdentifier(rulesetIdentifier int) (Ruleset, error) {
 	default:
 		return nil, fmt.Errorf("Ruleset identifier %v not recognized", rulesetIdentifier)
 	}
-}
-
-// CopyCardset returns a copy of the full cardset of the ruleset.
-func CopyCardset(cardsetSource Ruleset) []ReadonlyCard {
-	sourceCardset := cardsetSource.FullCardset()
-
-	copyCardset := make([]ReadonlyCard, len(sourceCardset))
-
-	copy(copyCardset, sourceCardset)
-
-	return copyCardset
 }
 
 // StandardWithoutRainbowRuleset represents the standard ruleset, which does
@@ -184,7 +168,21 @@ func (standardRuleset *StandardWithoutRainbowRuleset) MaximumNumberOfPlayers() i
 	return 5
 }
 
-// RainbowSuit gives the name of the special suit for the variation rulesets.
+// MaximumNumberOfHints returns the maximum number of hints which can be available at
+// any instant.
+func (standardRuleset *StandardWithoutRainbowRuleset) MaximumNumberOfHints() int {
+	return 8
+}
+
+// MaximumNumberOfMistakesAllowed should return the maximum number of mistakes which
+// can be made without the game ending (i.e. the game ends on the next mistake after
+// that).
+func (standardRuleset *StandardWithoutRainbowRuleset) MaximumNumberOfMistakesAllowed() int {
+	return 2
+}
+
+// RainbowSuit gives the name of the special suit for the variation rulesets. It is
+// exported for ease of testing.
 const RainbowSuit = "rainbow"
 
 // RainbowAsSeparateSuitRuleset represents the ruleset which includes the rainbow

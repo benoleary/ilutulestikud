@@ -15,10 +15,63 @@ type ReadonlyCard interface {
 	SequenceIndex() int
 }
 
+type CardDeck struct {
+	cardsInDeck []ReadonlyCard
+}
+
+// DrawFromTop returns the first card in the deck and removes the reference
+// to it from the deck.
+func (cardDeck *CardDeck) DrawFromTop() (*ReadonlyCard, error) {
+	if len(cardDeck.cardsInDeck) <= 0 {
+		return nil, fmt.Errorf("No cards left to draw")
+	}
+
+	drawnCard := cardDeck.cardsInDeck[0]
+	cardDeck.cardsInDeck[0] = nil
+	cardDeck.cardsInDeck = cardDeck.cardsInDeck[1:]
+
+	return drawnCard
+}
+
+// Ruleset has to manipulate this.
+type DiscardArea struct {
+	discardedCards map[string][]ReadonlyCard
+}
+
+// Ruleset has to manipulate this.
+func (discardArea DiscardArea) AddToPile(discardedCard ReadonlyCard) {
+	colorPile, _ := discardArea.discardedCards[discardedCard.ColorSuit()]
+	sort.Sort(BySequenceIndex(colorPile))
+	discardArea.discardedCards[discardedCard.ColorSuit()] =
+		append(colorPile, discardedCard)
+}
+
+// Ruleset has to manipulate this.
+type PlayedArea struct {
+	playedCards map[string][]ReadonlyCard
+}
+
+func NewDeckAndAreas(sourceCardset []ReadonlyCard) (*CardDeck, *DiscardArea, *PlayedArea) {
+	copyCardset := make([]ReadonlyCard, len(sourceCardset))
+	copy(copyCardset, sourceCardset)
+
+	cardDeck := &CardDeck{
+		cardsInDeck: copyCardset,
+	}
+
+	discardArea := &DiscardArea{
+		discardedCards: make(map[string][]ReadonlyCard, 0),
+	}
+
+	playedArea := &PlayedArea{
+		discardedCards: make(map[string][]ReadonlyCard, 0),
+	}
+
+	return cardDeck, discardArea, playedArea
+}
+
 OK, I need:
-CardDeck (gives out card at [0], sets own [0] to nil, re-sets slice over array, something for when empty)
-DiscardArea (stores ordered lists of cards per suit (does sorting), ensures only ruleset suits allowed)
-PlayedArea (stores ordered lists of cards per suit (only allows increasing sequences), ensures only ruleset suits allowed, in charge of whether play is legal)
+PlayedArea (stores ordered lists of cards per suit (only allows increasing sequences))
 PlayerHand (stores inferred cards (shown when viewer is not holder), gives out ReadonlyCard in exchange for substitute (in charge of wrapping in InferredCard), something when out of cards in deck)
 InferredCard (has ReadonlyCard, has list of possible suits, has list of possible indices)
 
@@ -39,6 +92,27 @@ func (orderedCardset OrderedCardset) ShuffleCards(randomSeed int64) {
 		cardsToShuffle[numberOfUnshuffledCards], cardsToShuffle[indexToMove] =
 			cardsToShuffle[indexToMove], cardsToShuffle[numberOfUnshuffledCards]
 	}
+}
+
+// BySequenceIndex implements sort interface for []ReadonlyCard based on the return
+// from its SequenceIndex(), ignoring its ColorSuit(). It is exported for ease of
+// testing.
+type BySequenceIndex []ReadonlyCard
+
+// Len implements part of the sort interface for BySequenceIndex.
+func (bySequenceIndex BySequenceIndex) Len() int {
+	return len(bySequenceIndex)
+}
+
+// Swap implements part of the sort interface for BySequenceIndex.
+func (bySequenceIndex BySequenceIndex) Swap(firstIndex int, secondIndex int) {
+	bySequenceIndex[firstIndex], bySequenceIndex[secondIndex] =
+	bySequenceIndex[secondIndex], bySequenceIndex[firstIndex]
+}
+
+// Less implements part of the sort interface for BySequenceIndex.
+func (bySequenceIndex BySequenceIndex) Less(firstIndex int, secondIndex int) bool {
+	return bySequenceIndex[firstIndex].SequenceIndex() < bySequenceIndex[secondIndex].SequenceIndex()
 }
 
 type simpleCard struct {
