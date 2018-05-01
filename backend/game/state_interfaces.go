@@ -32,8 +32,8 @@ type ReadonlyState interface {
 	// ChatLog should return the chat log of the game at the current moment.
 	ChatLog() *chat.Log
 
-	// Score should return the total score of the cards which have been correctly played in the
-	// game so far.
+	// Score should return the total score of the cards which have been correctly played in
+	// the game so far.
 	Score() int
 
 	// NumberOfReadyHints should return the total number of hints which are available to be
@@ -47,30 +47,46 @@ type ReadonlyState interface {
 	// DeckSize should return the number of cards left to draw from the deck.
 	DeckSize() int
 
-	// PlayedCards should return a map of color suit names to sequences of cards which were
-	// played correctly for that suit.
-	PlayedCards() map[string][]ReadonlyCard
+	// LastPlayedForColor should return the last card which has been played correctly for
+	// the given color suit.
+	LastPlayedForColor(colorSuit string) ReadonlyCard
 
-	// DiscardedCards should return a map of color suit names to sequences of cards which were
-	// discarded for that suit or played incorrectly.
-	DiscardedCards() map[string][]ReadonlyCard
+	// NumberOfDiscardedCards should return the number of cards with the given suit and index
+	// which were discarded or played incorrectly.
+	NumberOfDiscardedCards(colorSuit string, sequenceIndex int) int
 
-	// VisibleHands should return a map of player names to sequences of cards which are in the
-	// hands of the players who are not the viewing player.
-	VisibleHands() map[string][]ReadonlyCard
+	// VisibleCardInHand should return the card held by the given player in the given position.
+	VisibleCardInHand(holdingPlayerName string, indexInHand int) ReadonlyCard
 
-	// Need something for the hand of the viewing player.
+	// InferredCardInHand should return the inferred information about the card held by the
+	// given player in the given position.
+	InferredCardInHand(holdingPlayerName string, indexInHand int) InferredCard
 }
 
-// readAndWriteState defines the interface for structs which should encapsulate the state of
+// ReadAndWriteState defines the interface for structs which should encapsulate the state of
 // a single game.
-type readAndWriteState interface {
+type ReadAndWriteState interface {
 	// Read should return the state as a read-only object for the purposes of reading
 	// properties.
-	read() ReadonlyState
+	Read() ReadonlyState
 
-	// recordChatMessage should record a chat message from the given player.
-	recordChatMessage(actingPlayer player.ReadonlyState, chatMessage string)
+	// RecordChatMessage should record a chat message from the given player.
+	RecordChatMessage(actingPlayer player.ReadonlyState, chatMessage string) error
+
+	// ReplaceCardInHand should replace the card at the given index in the hand of the given
+	// player with the given replacement card, and return the card which has just been
+	// replaced.
+	ReplaceCardInHand(
+		holdingPlayerName string,
+		indexInHand int,
+		replacementCard ReadonlyCard) (ReadonlyCard, error)
+
+	// AddCardToPlayedSequence should add the given card to the appropriate sequence of played
+	// cards.
+	AddCardToPlayedSequence(discardedCard ReadonlyCard) error
+
+	// AddCardToDiscardPile should add the given card to the pile of discarded cards.
+	AddCardToDiscardPile(discardedCard ReadonlyCard) error
 }
 
 // StatePersister defines the interface for structs which should be able to create objects
