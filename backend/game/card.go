@@ -35,31 +35,10 @@ func ShuffleInPlace(cardsToShuffle []ReadonlyCard, randomSeed int64) {
 
 		// We decrement now so that we can use it as the index of the destination
 		// of the card chosen to be moved.
-		numberOfUnshuffledCards -= 1
+		numberOfUnshuffledCards--
 		cardsToShuffle[numberOfUnshuffledCards], cardsToShuffle[indexToMove] =
 			cardsToShuffle[indexToMove], cardsToShuffle[numberOfUnshuffledCards]
 	}
-}
-
-// BySequenceIndex implements sort interface for []ReadonlyCard based on the return
-// from its SequenceIndex(), ignoring its ColorSuit(). It is exported for ease of
-// testing.
-type BySequenceIndex []ReadonlyCard
-
-// Len implements part of the sort interface for BySequenceIndex.
-func (bySequenceIndex BySequenceIndex) Len() int {
-	return len(bySequenceIndex)
-}
-
-// Swap implements part of the sort interface for BySequenceIndex.
-func (bySequenceIndex BySequenceIndex) Swap(firstIndex int, secondIndex int) {
-	bySequenceIndex[firstIndex], bySequenceIndex[secondIndex] =
-		bySequenceIndex[secondIndex], bySequenceIndex[firstIndex]
-}
-
-// Less implements part of the sort interface for BySequenceIndex.
-func (bySequenceIndex BySequenceIndex) Less(firstIndex int, secondIndex int) bool {
-	return bySequenceIndex[firstIndex].SequenceIndex() < bySequenceIndex[secondIndex].SequenceIndex()
 }
 
 type simpleCard struct {

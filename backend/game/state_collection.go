@@ -87,9 +87,9 @@ func (gameCollection *StateCollection) AddNew(
 	gameName string,
 	gameRuleset Ruleset,
 	playerNames []string) error {
-	initialDeck := CopyCardset(gameRuleset)
+	initialDeck := gameRuleset.CopyOfFullCardset()
 
-	ShuffleDeck(initialDeck, gameCollection.statePersister.randomSeed())
+	ShuffleInPlace(initialDeck, gameCollection.statePersister.randomSeed())
 
 	return gameCollection.AddNewWithGivenDeck(
 		gameName,
