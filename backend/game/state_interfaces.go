@@ -20,17 +20,17 @@ type ReadonlyState interface {
 	// which they have their first turns.
 	Players() []player.ReadonlyState
 
-	// Turn should given the number of the turn (with thfirst turn being 1 rather than 0) which
-	// is the current turn in the game (assuming 1 turn per player, not 1 turn being when all
-	// players have acted and play returns to the first player).
-	Turn() int
-
 	// CreationTime should return the time object describing the time at which the state
 	// was created.
 	CreationTime() time.Time
 
 	// ChatLog should return the chat log of the game at the current moment.
 	ChatLog() *chat.Log
+
+	// Turn should given the number of the turn (with thfirst turn being 1 rather than 0) which
+	// is the current turn in the game (assuming 1 turn per player, not 1 turn being when all
+	// players have acted and play returns to the first player).
+	Turn() int
 
 	// Score should return the total score of the cards which have been correctly played in
 	// the game so far.
@@ -48,9 +48,8 @@ type ReadonlyState interface {
 	DeckSize() int
 
 	// LastPlayedForColor should return the last card which has been played correctly for
-	// the given color suit, along with a bool which is true if a card has indeed been played
-	// for that suit, analogously to a standard Go map.
-	LastPlayedForColor(colorSuit string) (ReadonlyCard, bool)
+	// the given color suit. If no card has been played, it should return nil.
+	LastPlayedForColor(colorSuit string) ReadonlyCard
 
 	// NumberOfDiscardedCards should return the number of cards with the given suit and index
 	// which were discarded or played incorrectly.

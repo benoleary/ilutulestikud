@@ -152,11 +152,6 @@ func (gameState *inMemoryState) Players() []player.ReadonlyState {
 	return gameState.participatingPlayers
 }
 
-// Turn returns the value of the private turnNumber int.
-func (gameState *inMemoryState) Turn() int {
-	return gameState.turnNumber
-}
-
 // CreationTime returns the value of the private time object describing the time at
 // which the state was created.
 func (gameState *inMemoryState) CreationTime() time.Time {
@@ -166,6 +161,11 @@ func (gameState *inMemoryState) CreationTime() time.Time {
 // ChatLog returns the chat log of the game at the current moment.
 func (gameState *inMemoryState) ChatLog() *chat.Log {
 	return gameState.chatLog
+}
+
+// Turn returns the value of the private turnNumber int.
+func (gameState *inMemoryState) Turn() int {
+	return gameState.turnNumber
 }
 
 // Score returns the total score of the cards which have been correctly played in the
@@ -192,11 +192,16 @@ func (gameState *inMemoryState) DeckSize() int {
 }
 
 // LastPlayedForColor returns the last card which has been played correctly for the
-// given color suit, along with a bool which is true if a card has indeed been played
-// for that suit, analogously to a standard Go map.
-func (gameState *inMemoryState) LastPlayedForColor(colorSuit string) (ReadonlyCard, bool) {
+// given color suit, unless no card has yet been played for that suit, in which case
+// nil is returned.
+func (gameState *inMemoryState) LastPlayedForColor(colorSuit string) ReadonlyCard {
 	lastPlayedCard, hasCardBeenPlayedForColor := gameState.lastPlayedCardForColor[colorSuit]
-	return lastPlayedCard, hasCardBeenPlayedForColor
+
+	if !hasCardBeenPlayedForColor {
+		return nil
+	}
+
+	return lastPlayedCard
 }
 
 // NumberOfDiscardedCards returns the number of cards with the given suit and index

@@ -13,39 +13,39 @@ func TestInitialState(unitTest *testing.T) {
 	gameName := "test game"
 
 	testCases := []struct {
-		testName      string
-		playerNames []string
-		rulesetIdentifier  int
+		testName          string
+		playerNames       []string
+		rulesetIdentifier int
 	}{
 		{
 			nametestNameOfTest: "Two players, no rainbow",
-			playerNames: []string{"Player One", "Player Two"},
-				rulesetIdentifier:  game.StandardWithoutRainbowIdentifier,
+			playerNames:        []string{"Player One", "Player Two"},
+			rulesetIdentifier:  game.StandardWithoutRainbowIdentifier,
 		},
 		{
-			testName: "Three players, no rainbow",
-				initialPlayerNames: []string{"Player One", "Player Two", "Player Three"},
-				rulesetIdentifier:  game.StandardWithoutRainbowIdentifier,
+			testName:           "Three players, no rainbow",
+			initialPlayerNames: []string{"Player One", "Player Two", "Player Three"},
+			rulesetIdentifier:  game.StandardWithoutRainbowIdentifier,
 		},
 		{
-			testName: "Four players, no rainbow",
-			playerNames: []string{"Player One", "Player Two", "Player Three", "Player Four"},
-				rulesetIdentifier:  game.StandardWithoutRainbowIdentifier,
+			testName:          "Four players, no rainbow",
+			playerNames:       []string{"Player One", "Player Two", "Player Three", "Player Four"},
+			rulesetIdentifier: game.StandardWithoutRainbowIdentifier,
 		},
 		{
-			testName: "Five players, no rainbow",
-				initialPlayerNames: []string{"Player One", "Player Two", "Player Three", "Player Four", "Player Five"},
-				rulesetIdentifier:  game.StandardWithoutRainbowIdentifier,
+			testName:           "Five players, no rainbow",
+			initialPlayerNames: []string{"Player One", "Player Two", "Player Three", "Player Four", "Player Five"},
+			rulesetIdentifier:  game.StandardWithoutRainbowIdentifier,
 		},
 		{
-			testName: "Two players, with rainbow (as separate, but doesn't matter for initial state)",
-			playerNames: []string{"Player One", "Player Two"},
-				rulesetIdentifier:  game.WithRainbowAsSeparateIdentifier,
+			testName:          "Two players, with rainbow (as separate, but doesn't matter for initial state)",
+			playerNames:       []string{"Player One", "Player Two"},
+			rulesetIdentifier: game.WithRainbowAsSeparateIdentifier,
 		},
 		{
-			testName: "Five players, with rainbow (as compound, but doesn't matter for initial state)",
-			playerNames: []string{"Player One", "Player Two", "Player Three", "Player Four", "Player Five"},
-				rulesetIdentifier:  game.WithRainbowAsCompoundIdentifier,
+			testName:          "Five players, with rainbow (as compound, but doesn't matter for initial state)",
+			playerNames:       []string{"Player One", "Player Two", "Player Three", "Player Four", "Player Five"},
+			rulesetIdentifier: game.WithRainbowAsCompoundIdentifier,
 		},
 	}
 
@@ -87,10 +87,13 @@ func TestInitialState(unitTest *testing.T) {
 				firstPlayerView :=
 					collectionType.GameCollection.ViewState(gameName, testCase.playerNames[0])
 				secondPlayerView :=
-						collectionType.GameCollection.ViewState(gameName, testCase.playerNames[1])
+					collectionType.GameCollection.ViewState(gameName, testCase.playerNames[1])
 
-
-				assertHandsAreCorrect()
+				assertHandsAreCorrect(
+					unitTest,
+					testCase.playerNames,
+					firstPlayerView,
+					secondPlayerView)
 
 				// deck
 				// sequnces
@@ -108,9 +111,12 @@ func TestInitialState(unitTest *testing.T) {
 func assertHandsAreCorrect(
 	unitTest *testing.T,
 	playerNames []string,
-	participatingPlayers []player.ReadonlyState) {
-	}
+	firstPlayerView game.PlayerView,
+	secondPlayerView game.PlayerView) {
+	// We use the second player's view to directly check the hand of the first
+	// player, then use the first player's view to check all the other hands.
 
+}
 
 func assertThatParticipantsAreCorrect(
 	unitTest *testing.T,
@@ -149,19 +155,6 @@ func assertThatParticipantsAreCorrect(
 		}
 	}
 }
-
-// assertVisibleCardsAreConsistentWithRuleset checks that the set of cards which can
-// be seen by the players as a group is not in contradiction to the cards of the
-// ruleset - i.e. that the cards played + cards discarded + cards in hands is a subset
-// of the cards of the ruleset.
-assertVisibleCardsAreConsistentWithRuleset(
-	testIdentifier string,
-	unitTest *testing.T,
-	gameRuleset game.Ruleset,
-	actualView game.PlayerView) {
-		// We prepare the maximum number of copies of any card.
-		map[]
-	}
 
 func assertThatMechanicalGameStateIsCorrect(
 	identifyingLabel string,
