@@ -65,9 +65,9 @@ func TestInitialState(unitTest *testing.T) {
 						errorFromRuleset)
 				}
 
-				gameDeck := CopyCardset(gameRuleset)
+				gameDeck := gameRuleset.CopyOfFullCardset()
 
-				ShuffleDeck(gameDeck, gameCollection.statePersister.randomSeed())
+				game.ShuffleInPlace(gameDeck, gameCollection.statePersister.randomSeed())
 
 				errorFromAdd :=
 					collectionType.GameCollection.AddNewWithGivenDeck(
@@ -83,7 +83,6 @@ func TestInitialState(unitTest *testing.T) {
 						testRuleset,
 						testCase.playerNames)
 				}
-
 
 				firstPlayerView :=
 					collectionType.GameCollection.ViewState(gameName, testCase.playerNames[0])
@@ -110,6 +109,7 @@ func assertHandsAreCorrect(
 	unitTest *testing.T,
 	playerNames []string,
 	participatingPlayers []player.ReadonlyState) {
+	}
 
 
 func assertThatParticipantsAreCorrect(
