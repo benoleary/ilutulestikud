@@ -5,10 +5,12 @@ import (
 )
 
 // ActionExecutor encapsulates the write functions on a game's state
-// which update the state based on player actions.
+// which update the state based on player actions, according to the
+// game's ruleset.
 type ActionExecutor struct {
-	gameState  readAndWriteState
-	playerName string
+	gameRuleset Ruleset
+	gameState   ReadAndWriteState
+	playerName  string
 }
 
 // ExecutorForPlayer creates a ActionExecutor around the given game
@@ -16,15 +18,16 @@ type ActionExecutor struct {
 // the executor. If the player is not a participant, it returns nil
 // along with an error.
 func ExecutorForPlayer(
-	stateOfGame readAndWriteState,
+	stateOfGame ReadAndWriteState,
 	nameOfPlayer string) (*ActionExecutor, error) {
-	gameParticipants := stateOfGame.read().Players()
+	gameParticipants := stateOfGame.Read().Players()
 	for _, gameParticipant := range gameParticipants {
 		if gameParticipant.Name() == nameOfPlayer {
 			actionExecutor :=
 				&ActionExecutor{
-					gameState:  stateOfGame,
-					playerName: nameOfPlayer,
+					gameRuleset: stateOfGame.Read().Ruleset(),
+					gameState:   stateOfGame,
+					playerName:  nameOfPlayer,
 				}
 
 			return actionExecutor, nil
@@ -37,7 +40,7 @@ func ExecutorForPlayer(
 		fmt.Errorf(
 			"No player with name %v is a participant in game %v",
 			nameOfPlayer,
-			stateOfGame.read().Name())
+			stateOfGame.Read().Name())
 
 	return nil, notFoundError
 }

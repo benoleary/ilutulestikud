@@ -15,71 +15,18 @@ type ReadonlyCard interface {
 	SequenceIndex() int
 }
 
-type CardDeck struct {
-	cardsInDeck []ReadonlyCard
+// InferredCard encapsulates the information known to a player about a card
+// held by that player.
+type InferredCard struct {
+	underlyingCard  ReadonlyCard
+	possibleColors  []string
+	possibleIndices []int
 }
 
-// DrawFromTop returns the first card in the deck and removes the reference
-// to it from the deck.
-func (cardDeck *CardDeck) DrawFromTop() (*ReadonlyCard, error) {
-	if len(cardDeck.cardsInDeck) <= 0 {
-		return nil, fmt.Errorf("No cards left to draw")
-	}
-
-	drawnCard := cardDeck.cardsInDeck[0]
-	cardDeck.cardsInDeck[0] = nil
-	cardDeck.cardsInDeck = cardDeck.cardsInDeck[1:]
-
-	return drawnCard
-}
-
-// Ruleset has to manipulate this.
-type DiscardArea struct {
-	discardedCards map[string][]ReadonlyCard
-}
-
-// Ruleset has to manipulate this.
-func (discardArea DiscardArea) AddToPile(discardedCard ReadonlyCard) {
-	colorPile, _ := discardArea.discardedCards[discardedCard.ColorSuit()]
-	sort.Sort(BySequenceIndex(colorPile))
-	discardArea.discardedCards[discardedCard.ColorSuit()] =
-		append(colorPile, discardedCard)
-}
-
-// Ruleset has to manipulate this.
-type PlayedArea struct {
-	playedCards map[string][]ReadonlyCard
-}
-
-func NewDeckAndAreas(sourceCardset []ReadonlyCard) (*CardDeck, *DiscardArea, *PlayedArea) {
-	copyCardset := make([]ReadonlyCard, len(sourceCardset))
-	copy(copyCardset, sourceCardset)
-
-	cardDeck := &CardDeck{
-		cardsInDeck: copyCardset,
-	}
-
-	discardArea := &DiscardArea{
-		discardedCards: make(map[string][]ReadonlyCard, 0),
-	}
-
-	playedArea := &PlayedArea{
-		discardedCards: make(map[string][]ReadonlyCard, 0),
-	}
-
-	return cardDeck, discardArea, playedArea
-}
-
-OK, I need:
-PlayedArea (stores ordered lists of cards per suit (only allows increasing sequences))
-PlayerHand (stores inferred cards (shown when viewer is not holder), gives out ReadonlyCard in exchange for substitute (in charge of wrapping in InferredCard), something when out of cards in deck)
-InferredCard (has ReadonlyCard, has list of possible suits, has list of possible indices)
-
-// ShuffleCards shuffles the cards in place (using the Fisher-Yates
+// ShuffleInPlace shuffles the given cards in place (using the Fisher-Yates
 // algorithm).
-func (orderedCardset OrderedCardset) ShuffleCards(randomSeed int64) {
+func ShuffleInPlace(cardsToShuffle []ReadonlyCard, randomSeed int64) {
 	randomNumberGenerator := rand.New(rand.NewSource(randomSeed))
-	cardsToShuffle := orderedCardset.cardList
 
 	// Good ol' Fisher-Yates!
 	numberOfUnshuffledCards := len(cardsToShuffle)
@@ -88,7 +35,7 @@ func (orderedCardset OrderedCardset) ShuffleCards(randomSeed int64) {
 
 		// We decrement now so that we can use it as the index of the destination
 		// of the card chosen to be moved.
-		numberOfUnshuffledCards--
+		numberOfUnshuffledCards -= 1
 		cardsToShuffle[numberOfUnshuffledCards], cardsToShuffle[indexToMove] =
 			cardsToShuffle[indexToMove], cardsToShuffle[numberOfUnshuffledCards]
 	}
@@ -107,7 +54,7 @@ func (bySequenceIndex BySequenceIndex) Len() int {
 // Swap implements part of the sort interface for BySequenceIndex.
 func (bySequenceIndex BySequenceIndex) Swap(firstIndex int, secondIndex int) {
 	bySequenceIndex[firstIndex], bySequenceIndex[secondIndex] =
-	bySequenceIndex[secondIndex], bySequenceIndex[firstIndex]
+		bySequenceIndex[secondIndex], bySequenceIndex[firstIndex]
 }
 
 // Less implements part of the sort interface for BySequenceIndex.

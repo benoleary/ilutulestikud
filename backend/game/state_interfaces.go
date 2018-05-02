@@ -48,19 +48,20 @@ type ReadonlyState interface {
 	DeckSize() int
 
 	// LastPlayedForColor should return the last card which has been played correctly for
-	// the given color suit.
-	LastPlayedForColor(colorSuit string) ReadonlyCard
+	// the given color suit, along with a bool which is true if a card has indeed been played
+	// for that suit, analogously to a standard Go map.
+	LastPlayedForColor(colorSuit string) (ReadonlyCard, bool)
 
 	// NumberOfDiscardedCards should return the number of cards with the given suit and index
 	// which were discarded or played incorrectly.
 	NumberOfDiscardedCards(colorSuit string, sequenceIndex int) int
 
 	// VisibleCardInHand should return the card held by the given player in the given position.
-	VisibleCardInHand(holdingPlayerName string, indexInHand int) ReadonlyCard
+	VisibleCardInHand(holdingPlayerName string, indexInHand int) (ReadonlyCard, error)
 
 	// InferredCardInHand should return the inferred information about the card held by the
 	// given player in the given position.
-	InferredCardInHand(holdingPlayerName string, indexInHand int) InferredCard
+	InferredCardInHand(holdingPlayerName string, indexInHand int) (InferredCard, error)
 }
 
 // ReadAndWriteState defines the interface for structs which should encapsulate the state of
@@ -73,6 +74,10 @@ type ReadAndWriteState interface {
 	// RecordChatMessage should record a chat message from the given player.
 	RecordChatMessage(actingPlayer player.ReadonlyState, chatMessage string) error
 
+	// DrawCard should return the top-most card of the deck, or nil and an error if there are
+	// no cards left.
+	DrawCard() (ReadonlyCard, error)
+
 	// ReplaceCardInHand should replace the card at the given index in the hand of the given
 	// player with the given replacement card, and return the card which has just been
 	// replaced.
@@ -83,7 +88,7 @@ type ReadAndWriteState interface {
 
 	// AddCardToPlayedSequence should add the given card to the appropriate sequence of played
 	// cards.
-	AddCardToPlayedSequence(discardedCard ReadonlyCard) error
+	AddCardToPlayedSequence(playedCard ReadonlyCard) error
 
 	// AddCardToDiscardPile should add the given card to the pile of discarded cards.
 	AddCardToDiscardPile(discardedCard ReadonlyCard) error
