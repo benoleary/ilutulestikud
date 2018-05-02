@@ -78,6 +78,35 @@ func (mockGame mockGameState) NumberOfMistakesMade() int {
 	return 3
 }
 
+// DeckSize gets mocked.
+func (mockGame mockGameState) DeckSize() int {
+	return 4
+}
+
+// LastPlayedForColor gets mocked.
+func (mockGame mockGameState) LastPlayedForColor(colorSuit string) (game.ReadonlyCard, bool) {
+	return nil, false
+}
+
+// NumberOfDiscardedCards gets mocked.
+func (mockGame mockGameState) NumberOfDiscardedCards(colorSuit string, sequenceIndex int) int {
+	return 5
+}
+
+// VisibleCardInHand gets mocked.
+func (mockGame mockGameState) VisibleCardInHand(
+	holdingPlayerName string,
+	indexInHand int) (game.ReadonlyCard, error) {
+	return nil, nil
+}
+
+// InferredCardInHand gets mocked.
+func (mockGame mockGameState) InferredCardInHand(
+	holdingPlayerName string,
+	indexInHand int) (game.InferredCard, error) {
+	return game.InferredCard{}, nil
+}
+
 type mockGameCollection struct {
 	FunctionsAndArgumentsReceived []functionNameAndArgument
 	ErrorToReturn                 error
