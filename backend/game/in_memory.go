@@ -128,7 +128,7 @@ func newInMemoryState(
 		participatingPlayers:   playerStates,
 		chatLog:                chat.NewLog(),
 		turnNumber:             1,
-		numberOfReadyHints:     MaximumNumberOfHints,
+		numberOfReadyHints:     gameRuleset.MaximumNumberOfHints(),
 		numberOfMistakesMade:   0,
 		undrawnDeck:            shuffledDeck,
 		lastPlayedCardForColor: make(map[string]ReadonlyCard, 0),
@@ -195,7 +195,8 @@ func (gameState *inMemoryState) DeckSize() int {
 // given color suit, along with a bool which is true if a card has indeed been played
 // for that suit, analogously to a standard Go map.
 func (gameState *inMemoryState) LastPlayedForColor(colorSuit string) (ReadonlyCard, bool) {
-	return gameState.lastPlayedCardForColor[colorSuit]
+	lastPlayedCard, hasCardBeenPlayedForColor := gameState.lastPlayedCardForColor[colorSuit]
+	return lastPlayedCard, hasCardBeenPlayedForColor
 }
 
 // NumberOfDiscardedCards returns the number of cards with the given suit and index
@@ -234,28 +235,29 @@ func (gameState *inMemoryState) VisibleCardInHand(
 func (gameState *inMemoryState) InferredCardInHand(
 	holdingPlayerName string,
 	indexInHand int) (InferredCard, error) {
-	return nil, fmt.Errorf("not implemented yet")
+	return InferredCard{}, fmt.Errorf("not implemented yet")
 }
 
-// Read returns the gameState itself as a read-only object for the purposes of reading
+// read returns the gameState itself as a read-only object for the purposes of reading
 // properties.
-func (gameState *inMemoryState) Read() ReadonlyState {
+func (gameState *inMemoryState) read() ReadonlyState {
 	return gameState
 }
 
-// RecordChatMessage records a chat message from the given player.
-func (gameState *inMemoryState) RecordChatMessage(
+// recordChatMessage records a chat message from the given player.
+func (gameState *inMemoryState) recordChatMessage(
 	actingPlayer player.ReadonlyState,
-	chatMessage string) {
+	chatMessage string) error {
 	gameState.chatLog.AppendNewMessage(
 		actingPlayer.Name(),
 		actingPlayer.Color(),
 		chatMessage)
+	return nil
 }
 
-// DrawCard returns the top-most card of the deck, or nil and an error if there are no
+// drawCard returns the top-most card of the deck, or nil and an error if there are no
 // cards left.
-func (gameState *inMemoryState) DrawCard() (ReadonlyCard, error) {
+func (gameState *inMemoryState) drawCard() (ReadonlyCard, error) {
 	if len(gameState.undrawnDeck) <= 0 {
 		return nil, fmt.Errorf("No cards left to draw")
 	}
@@ -264,13 +266,13 @@ func (gameState *inMemoryState) DrawCard() (ReadonlyCard, error) {
 	gameState.undrawnDeck[0] = nil
 	gameState.undrawnDeck = gameState.undrawnDeck[1:]
 
-	return drawnCard
+	return drawnCard, nil
 }
 
-// ReplaceCardInHand replaces the card at the given index in the hand of the given
+// replaceCardInHand replaces the card at the given index in the hand of the given
 // player with the given replacement card, and returns the card which has just been
 // replaced.
-func (gameState *inMemoryState) ReplaceCardInHand(
+func (gameState *inMemoryState) replaceCardInHand(
 	holdingPlayerName string,
 	indexInHand int,
 	replacementCard ReadonlyCard) (ReadonlyCard, error) {
@@ -289,38 +291,25 @@ func (gameState *inMemoryState) ReplaceCardInHand(
 	}
 
 	cardBeingReplaced := playerHand[indexInHand]
-	playerHand[indexInHand] := replacementCard
+	playerHand[indexInHand] = replacementCard
 
 	return cardBeingReplaced, nil
 }
 
-// AddCardToPlayedSequence adds the given card to the appropriate sequence of played
+// addCardToPlayedSequence adds the given card to the appropriate sequence of played
 // cards (by just over-writing what was the top-most card of the sequence).
-func (gameState *inMemoryState) AddCardToPlayedSequence(playedCard ReadonlyCard) error {
+func (gameState *inMemoryState) addCardToPlayedSequence(playedCard ReadonlyCard) error {
 	gameState.lastPlayedCardForColor[playedCard.ColorSuit()] = playedCard
+	return nil
 }
 
-// AddCardToDiscardPile adds the given card to the pile of discarded cards (by just
+// addCardToDiscardPile adds the given card to the pile of discarded cards (by just
 // incrementing the number of copies of that card marked as discarded). This assumes
 // that the given card was emitted by an instance of inMemoryState and so is a
 // simpleCard instance, as each key of the map so far has been. If it is not, no error
 // is returned, and the number of copies of that implementation gets incremented.
-func (gameState *inMemoryState) AddCardToDiscardPile(discardedCard ReadonlyCard) error {
-	discardedCopiesUntilNow, _ := gameStatediscardedCards.discardedCards[discardedCard]
-	gameStatediscardedCards.discardedCards[discardedCard] = discardedCopiesUntilNow + 1
-}
-
-// HasPlayerAsParticipant returns true if the given player name matches the name of
-// any of the game's participating players.
-// This could be done with using a map[string]bool for player name mapped to whether
-// or not the player is a participant, but it's more effort to set up the map than
-// would be gained in performance here.
-func (gameState *inMemoryState) HasPlayerAsParticipant(playerName string) bool {
-	for _, participatingPlayer := range gameState.participatingPlayers {
-		if participatingPlayer.Name() == playerName {
-			return true
-		}
-	}
-
-	return false
+func (gameState *inMemoryState) addCardToDiscardPile(discardedCard ReadonlyCard) error {
+	discardedCopiesUntilNow, _ := gameState.discardedCards[discardedCard]
+	gameState.discardedCards[discardedCard] = discardedCopiesUntilNow + 1
+	return nil
 }

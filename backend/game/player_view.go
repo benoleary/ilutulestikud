@@ -69,13 +69,15 @@ func (playerView *PlayerView) NumberOfReadyHints() int {
 // NumberOfSpentHints just subtracts the read-only game state's
 // NumberOfReadyHints function's return value from the constant maximum.
 func (playerView *PlayerView) NumberOfSpentHints() int {
-	return MaximumNumberOfHints - playerView.gameState.NumberOfReadyHints()
+	maximumNumber := playerView.gameState.Ruleset().MaximumNumberOfHints()
+	return maximumNumber - playerView.gameState.NumberOfReadyHints()
 }
 
 // NumberOfMistakesStillAllowed just subtracts the read-only game state's
 // NumberOfMistakesMade function's return value from the constant maximum.
 func (playerView *PlayerView) NumberOfMistakesStillAllowed() int {
-	return MaximumNumberOfMistakesAllowed - playerView.gameState.NumberOfMistakesMade()
+	maximumNumber := playerView.gameState.Ruleset().MaximumNumberOfHints()
+	return maximumNumber - playerView.gameState.NumberOfMistakesMade()
 }
 
 // NumberOfMistakesMade just wraps around the read-only game state's

@@ -249,6 +249,19 @@ func (separateRainbow *RainbowAsSeparateSuitRuleset) MaximumNumberOfPlayers() in
 	return separateRainbow.BasisRules.MaximumNumberOfPlayers()
 }
 
+// MaximumNumberOfHints returns the maximum number of hints which can be available at
+// any instant.
+func (separateRainbow *RainbowAsSeparateSuitRuleset) MaximumNumberOfHints() int {
+	return separateRainbow.BasisRules.MaximumNumberOfHints()
+}
+
+// MaximumNumberOfMistakesAllowed returns the maximum number of mistakes which can be
+// made without the game ending (i.e. the game ends on the next mistake after
+// that).
+func (separateRainbow *RainbowAsSeparateSuitRuleset) MaximumNumberOfMistakesAllowed() int {
+	return separateRainbow.BasisRules.MaximumNumberOfMistakesAllowed()
+}
+
 // RainbowAsCompoundSuitRuleset represents the ruleset which includes the rainbow
 // color suit as another suit which, however, counts as all the other suits for
 // hints. Most of the functions are the same.
@@ -303,4 +316,17 @@ func (compoundRainbow *RainbowAsCompoundSuitRuleset) MinimumNumberOfPlayers() in
 // MaximumNumberOfPlayers returns the maximum number of players allowed for a game.
 func (compoundRainbow *RainbowAsCompoundSuitRuleset) MaximumNumberOfPlayers() int {
 	return compoundRainbow.BasisRainbow.MaximumNumberOfPlayers()
+}
+
+// MaximumNumberOfHints returns the maximum number of hints which can be available at
+// any instant.
+func (compoundRainbow *RainbowAsCompoundSuitRuleset) MaximumNumberOfHints() int {
+	return compoundRainbow.BasisRainbow.MaximumNumberOfHints()
+}
+
+// MaximumNumberOfMistakesAllowed returns the maximum number of mistakes which can be
+// made without the game ending (i.e. the game ends on the next mistake after
+// that).
+func (compoundRainbow *RainbowAsCompoundSuitRuleset) MaximumNumberOfMistakesAllowed() int {
+	return compoundRainbow.BasisRainbow.MaximumNumberOfMistakesAllowed()
 }

@@ -64,34 +64,34 @@ type ReadonlyState interface {
 	InferredCardInHand(holdingPlayerName string, indexInHand int) (InferredCard, error)
 }
 
-// ReadAndWriteState defines the interface for structs which should encapsulate the state of
+// readAndWriteState defines the interface for structs which should encapsulate the state of
 // a single game.
-type ReadAndWriteState interface {
-	// Read should return the state as a read-only object for the purposes of reading
+type readAndWriteState interface {
+	// read should return the state as a read-only object for the purposes of reading
 	// properties.
-	Read() ReadonlyState
+	read() ReadonlyState
 
-	// RecordChatMessage should record a chat message from the given player.
-	RecordChatMessage(actingPlayer player.ReadonlyState, chatMessage string) error
+	// recordChatMessage should record a chat message from the given player.
+	recordChatMessage(actingPlayer player.ReadonlyState, chatMessage string) error
 
-	// DrawCard should return the top-most card of the deck, or nil and an error if there are
+	// drawCard should return the top-most card of the deck, or nil and an error if there are
 	// no cards left.
-	DrawCard() (ReadonlyCard, error)
+	drawCard() (ReadonlyCard, error)
 
-	// ReplaceCardInHand should replace the card at the given index in the hand of the given
+	// replaceCardInHand should replace the card at the given index in the hand of the given
 	// player with the given replacement card, and return the card which has just been
 	// replaced.
-	ReplaceCardInHand(
+	replaceCardInHand(
 		holdingPlayerName string,
 		indexInHand int,
 		replacementCard ReadonlyCard) (ReadonlyCard, error)
 
-	// AddCardToPlayedSequence should add the given card to the appropriate sequence of played
+	// addCardToPlayedSequence should add the given card to the appropriate sequence of played
 	// cards.
-	AddCardToPlayedSequence(playedCard ReadonlyCard) error
+	addCardToPlayedSequence(playedCard ReadonlyCard) error
 
-	// AddCardToDiscardPile should add the given card to the pile of discarded cards.
-	AddCardToDiscardPile(discardedCard ReadonlyCard) error
+	// addCardToDiscardPile should add the given card to the pile of discarded cards.
+	addCardToDiscardPile(discardedCard ReadonlyCard) error
 }
 
 // StatePersister defines the interface for structs which should be able to create objects
