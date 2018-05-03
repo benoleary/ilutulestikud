@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/benoleary/ilutulestikud/backend/server"
-	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
 
 // mockGet creates a mock HTTP GET request and sends it to the given

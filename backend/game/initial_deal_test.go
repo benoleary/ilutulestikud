@@ -3,7 +3,6 @@ package game_test
 import (
 	"testing"
 
-	"github.com/benoleary/ilutulestikud/backend/chat/assertchat"
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/player"

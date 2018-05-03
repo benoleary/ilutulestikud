@@ -235,7 +235,9 @@ func TestPostPlayerEmptyFutherSegmentSliceBadRequest(unitTest *testing.T) {
 	mockCollection, testHandler := newPlayerCollectionAndHandler()
 
 	_, responseCode :=
-		testHandler.HandlePost(decoderAroundDefaultPlayer(unitTest, testIdentifier), nil)
+		testHandler.HandlePost(
+			decoderAroundDefaultPlayer(unitTest, testIdentifier),
+			[]string{})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -255,7 +257,9 @@ func TestPostPlayerInvalidSegmentNotFound(unitTest *testing.T) {
 	mockCollection, testHandler := newPlayerCollectionAndHandler()
 
 	_, responseCode :=
-		testHandler.HandlePost(decoderAroundDefaultPlayer(unitTest, testIdentifier), nil)
+		testHandler.HandlePost(
+			decoderAroundDefaultPlayer(unitTest, testIdentifier),
+			[]string{"invalid-segment"})
 
 	if responseCode != http.StatusNotFound {
 		unitTest.Fatalf(
@@ -441,10 +445,10 @@ func TestRejectInvalidNewPlayerWithMalformedRequest(unitTest *testing.T) {
 	// empty player names and colors.
 	bodyString := "{\"Identifier\" :\"Something\", \"Name\":}"
 
-	json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
+	bodyDecoder := json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
 
 	_, responseCode :=
-		testHandler.HandlePost(decoderAroundDefaultPlayer(unitTest, testIdentifier), []string{"new-player"})
+		testHandler.HandlePost(bodyDecoder, []string{"new-player"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -599,12 +603,9 @@ func TestRejectInvalidUpdatePlayerWithMalformedRequest(unitTest *testing.T) {
 	// empty player names and colors.
 	bodyString := "{\"Identifier\" :\"Something\", \"Name\":}"
 
-	json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
+	bodyDecoder := json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
 
-	_, responseCode :=
-		testHandler.HandlePost(
-			decoderAroundDefaultPlayer(unitTest, testIdentifier),
-			[]string{"update-player"})
+	_, responseCode := testHandler.HandlePost(bodyDecoder, []string{"update-player"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(

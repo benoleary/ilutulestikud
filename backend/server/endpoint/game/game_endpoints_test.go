@@ -6,6 +6,7 @@ package game_test
 // github.com/benoleary/ilutulestikud/backend/game package must be imported for the purposes of
 // comparisons within the tests.
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -694,7 +695,7 @@ func TestGetGameForPlayerNoFurtherSegmentBadRequest(unitTest *testing.T) {
 	testIdentifier := "GET with no segments after game-as-seen-by-player"
 	mockCollection, testHandler := newGameCollectionAndHandler()
 
-	returnedInterface, responseCode :=
+	_, responseCode :=
 		testHandler.HandleGet([]string{"game-as-seen-by-player"})
 
 	if responseCode != http.StatusBadRequest {
@@ -717,7 +718,7 @@ func TestGetGameForPlayerOnlyGameSegmentBadRequest(unitTest *testing.T) {
 	mockGameName := "Mock game"
 	mockGameIdentifier := segmentTranslatorForTest().ToSegment(mockGameName)
 
-	returnedInterface, responseCode :=
+	_, responseCode :=
 		testHandler.HandleGet([]string{"game-as-seen-by-player", mockGameIdentifier})
 
 	if responseCode != http.StatusBadRequest {
@@ -735,7 +736,7 @@ func TestGetGameForPlayerOnlyGameSegmentBadRequest(unitTest *testing.T) {
 
 func TestGetGameForPlayerInvalidGameIdentifierBadRequest(unitTest *testing.T) {
 	testIdentifier := "GET game-as-seen-by-player with invalid game identifier"
-	mockCollection, testServer := newGameCollectionAndServer()
+	mockCollection, testHandler := newGameCollectionAndHandler()
 
 	mockPlayerName := "Mock Player"
 	mockPlayerIdentifier := segmentTranslatorForTest().ToSegment(mockPlayerName)
@@ -743,14 +744,15 @@ func TestGetGameForPlayerInvalidGameIdentifierBadRequest(unitTest *testing.T) {
 	// The character '+' is not a valid base-32 character.
 	mockGameIdentifier := "+++"
 
-	getResponse := mockGet(testServer, "/backend/game/game-as-seen-by-player/"+mockGameIdentifier+"/"+mockPlayerIdentifier)
+	_, responseCode :=
+		testHandler.HandleGet([]string{"game-as-seen-by-player", mockGameIdentifier, mockPlayerIdentifier})
 
-	assertResponseIsCorrect(
-		unitTest,
-		testIdentifier,
-		getResponse,
-		nil,
-		http.StatusBadRequest)
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
 
 	assertNoFunctionWasCalled(
 		unitTest,
@@ -760,7 +762,7 @@ func TestGetGameForPlayerInvalidGameIdentifierBadRequest(unitTest *testing.T) {
 
 func TestGetGameForPlayerInvalidPlayerIdentifierBadRequest(unitTest *testing.T) {
 	testIdentifier := "GET game-as-seen-by-player with invalid game identifier"
-	mockCollection, testServer := newGameCollectionAndServer()
+	mockCollection, testHandler := newGameCollectionAndHandler()
 
 	// The character '+' is not a valid base-32 character.
 	mockPlayerIdentifier := "+++"
@@ -768,14 +770,15 @@ func TestGetGameForPlayerInvalidPlayerIdentifierBadRequest(unitTest *testing.T) 
 	mockGameName := "Mock game"
 	mockGameIdentifier := segmentTranslatorForTest().ToSegment(mockGameName)
 
-	getResponse := mockGet(testServer, "/backend/game/game-as-seen-by-player/"+mockGameIdentifier+"/"+mockPlayerIdentifier)
+	_, responseCode :=
+		testHandler.HandleGet([]string{"game-as-seen-by-player", mockGameIdentifier, mockPlayerIdentifier})
 
-	assertResponseIsCorrect(
-		unitTest,
-		testIdentifier,
-		getResponse,
-		nil,
-		http.StatusBadRequest)
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
 
 	assertNoFunctionWasCalled(
 		unitTest,
@@ -785,7 +788,7 @@ func TestGetGameForPlayerInvalidPlayerIdentifierBadRequest(unitTest *testing.T) 
 
 func TestGetGameForPlayerRejectedIfCollectionRejectsIt(unitTest *testing.T) {
 	testIdentifier := "GET game-as-seen-by-player rejected by collection"
-	mockCollection, testServer := newGameCollectionAndServer()
+	mockCollection, testHandler := newGameCollectionAndHandler()
 
 	mockCollection.ErrorToReturn = errors.New("error")
 
@@ -794,14 +797,15 @@ func TestGetGameForPlayerRejectedIfCollectionRejectsIt(unitTest *testing.T) {
 	mockGameName := "Mock game"
 	mockGameIdentifier := segmentTranslatorForTest().ToSegment(mockGameName)
 
-	getResponse := mockGet(testServer, "/backend/game/game-as-seen-by-player/"+mockGameIdentifier+"/"+mockPlayerIdentifier)
+	_, responseCode :=
+		testHandler.HandleGet([]string{"game-as-seen-by-player", mockGameIdentifier, mockPlayerIdentifier})
 
-	assertResponseIsCorrect(
-		unitTest,
-		testIdentifier,
-		getResponse,
-		nil,
-		http.StatusBadRequest)
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
 
 	functionRecord :=
 		mockCollection.getFirstAndEnsureOnly(
@@ -820,7 +824,7 @@ func TestGetGameForPlayerRejectedIfCollectionRejectsIt(unitTest *testing.T) {
 
 func TestGetGameForPlayer(unitTest *testing.T) {
 	testIdentifier := "GET game-as-seen-by-player"
-	mockCollection, testServer := newGameCollectionAndServer()
+	mockCollection, testHandler := newGameCollectionAndHandler()
 
 	chattingPlayer := testPlayerStates[0]
 	playerName := chattingPlayer.Name()
@@ -837,7 +841,7 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 	}
 
 	testView, viewError :=
-		game.ViewForPlayer(testGame, playerName)
+		game_state.ViewForPlayer(testGame, playerName)
 	if viewError != nil {
 		unitTest.Fatalf(
 			testIdentifier+"/error when creating view on test game: %v",
@@ -850,14 +854,15 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 	mockGameName := "Mock game"
 	mockGameIdentifier := segmentTranslatorForTest().ToSegment(mockGameName)
 
-	getResponse := mockGet(testServer, "/backend/game/game-as-seen-by-player/"+mockGameIdentifier+"/"+mockPlayerIdentifier)
+	returnedInterface, responseCode :=
+		testHandler.HandleGet([]string{"game-as-seen-by-player", mockGameIdentifier, mockPlayerIdentifier})
 
-	assertResponseIsCorrect(
-		unitTest,
-		testIdentifier,
-		getResponse,
-		nil,
-		http.StatusOK)
+	if responseCode != http.StatusOK {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusOK,
+			responseCode)
+	}
 
 	functionRecord :=
 		mockCollection.getFirstAndEnsureOnly(
@@ -873,14 +878,12 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 		},
 		testIdentifier)
 
-	bodyDecoder := json.NewDecoder(getResponse.Body)
+	responseGameView, isInterfaceCorrect := returnedInterface.(endpoint.GameView)
 
-	var responseGameView endpoint.GameView
-	parsingError := bodyDecoder.Decode(&responseGameView)
-	if parsingError != nil {
+	if !isInterfaceCorrect {
 		unitTest.Fatalf(
-			testIdentifier+"/error parsing JSON from HTTP response body: %v",
-			parsingError)
+			testIdentifier+"/received %v instead of expected endpoint.GameView",
+			returnedInterface)
 	}
 
 	expectedMessages := expectedChatLog.Sorted()
@@ -923,6 +926,8 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 
 func TestRejectInvalidChatWithMalformedRequest(unitTest *testing.T) {
 	testIdentifier := "Reject invalid POST record-chat-message with malformed JSON body"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockCollection.ErrorToReturn = errors.New("error")
 
 	// There is no point testing with valid JSON objects which do not correspond
 	// to the expected JSON object, as the JSON will just be parsed with empty
@@ -931,22 +936,17 @@ func TestRejectInvalidChatWithMalformedRequest(unitTest *testing.T) {
 	// empty attributes.
 	bodyString := "{\"PlayerName\" :\"Something\", \"GameName\":}"
 
-	mockCollection, testServer := newGameCollectionAndServer()
+	bodyDecoder := json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
 
-	mockCollection.ErrorToReturn = errors.New("error")
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"record-chat-message"})
 
-	postResponse :=
-		mockPostWithDirectBody(
-			testServer,
-			"/backend/game/record-chat-message",
-			bodyString)
-
-	assertResponseIsCorrect(
-		unitTest,
-		testIdentifier,
-		postResponse,
-		nil,
-		http.StatusBadRequest)
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
 
 	assertNoFunctionWasCalled(
 		unitTest,
@@ -956,8 +956,7 @@ func TestRejectInvalidChatWithMalformedRequest(unitTest *testing.T) {
 
 func TestRejectChatIfCollectionRejectsIt(unitTest *testing.T) {
 	testIdentifier := "Reject POST record-chat-message if collection rejects it"
-	mockCollection, testServer := newGameCollectionAndServer()
-
+	mockCollection, testHandler := newGameCollectionAndHandler()
 	mockCollection.ErrorToReturn = errors.New("error")
 
 	bodyObject := endpoint.PlayerChatMessage{
@@ -966,20 +965,17 @@ func TestRejectChatIfCollectionRejectsIt(unitTest *testing.T) {
 		ChatMessage: "Blah blah blah",
 	}
 
-	postResponse, encodingError :=
-		mockPost(testServer, "/backend/game/record-chat-message", bodyObject)
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
-	unitTest.Logf(
-		testIdentifier+"/object %v generated encoding error %v.",
-		bodyObject,
-		encodingError)
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"record-chat-message"})
 
-	assertResponseIsCorrect(
-		unitTest,
-		testIdentifier,
-		postResponse,
-		encodingError,
-		http.StatusBadRequest)
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
 
 	functionRecord :=
 		mockCollection.getFirstAndEnsureOnly(
@@ -998,7 +994,7 @@ func TestRejectChatIfCollectionRejectsIt(unitTest *testing.T) {
 
 func TestAcceptValidChat(unitTest *testing.T) {
 	testIdentifier := "POST record-chat-message"
-	mockCollection, testServer := newGameCollectionAndServer()
+	mockCollection, testHandler := newGameCollectionAndHandler()
 
 	bodyObject := endpoint.PlayerChatMessage{
 		GameName:    "Test game",
@@ -1006,20 +1002,17 @@ func TestAcceptValidChat(unitTest *testing.T) {
 		ChatMessage: "Blah blah blah",
 	}
 
-	postResponse, encodingError :=
-		mockPost(testServer, "/backend/game/record-chat-message", bodyObject)
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
-	unitTest.Logf(
-		testIdentifier+"/object %v generated encoding error %v.",
-		bodyObject,
-		encodingError)
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"record-chat-message"})
 
-	assertResponseIsCorrect(
-		unitTest,
-		testIdentifier,
-		postResponse,
-		encodingError,
-		http.StatusOK)
+	if responseCode != http.StatusOK {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusOK,
+			responseCode)
+	}
 
 	functionRecord :=
 		mockCollection.getFirstAndEnsureOnly(
@@ -1038,6 +1031,8 @@ func TestAcceptValidChat(unitTest *testing.T) {
 
 func TestRejectInvalidNewGameWithMalformedRequest(unitTest *testing.T) {
 	testIdentifier := "Reject invalid POST create-new-game with malformed JSON body"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockCollection.ErrorToReturn = errors.New("error")
 
 	// There is no point testing with valid JSON objects which do not correspond
 	// to the expected JSON object, as the JSON will just be parsed with empty
@@ -1046,22 +1041,16 @@ func TestRejectInvalidNewGameWithMalformedRequest(unitTest *testing.T) {
 	// empty attributes.
 	bodyString := "{\"GameName\" :\"Something\", \"PlayerIdentifiers\":}"
 
-	mockCollection, testServer := newGameCollectionAndServer()
+	bodyDecoder := json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
 
-	mockCollection.ErrorToReturn = errors.New("error")
+	_, responseCode := testHandler.HandlePost(bodyDecoder, []string{"create-new-game"})
 
-	postResponse :=
-		mockPostWithDirectBody(
-			testServer,
-			"/backend/game/create-new-game",
-			bodyString)
-
-	assertResponseIsCorrect(
-		unitTest,
-		testIdentifier,
-		postResponse,
-		nil,
-		http.StatusBadRequest)
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
 
 	assertNoFunctionWasCalled(
 		unitTest,
@@ -1071,7 +1060,7 @@ func TestRejectInvalidNewGameWithMalformedRequest(unitTest *testing.T) {
 
 func TestRejectNewGameWithInvalidRulesetIdentifier(unitTest *testing.T) {
 	testIdentifier := "Reject POST create-new-game with invalid ruleset identifier"
-	mockCollection, testServer := newGameCollectionAndServer()
+	mockCollection, testHandler := newGameCollectionAndHandler()
 
 	// All the valid ruleset identifiers should be > 0.
 	bodyObject := endpoint.GameDefinition{
@@ -1080,20 +1069,17 @@ func TestRejectNewGameWithInvalidRulesetIdentifier(unitTest *testing.T) {
 		PlayerNames:       []string{"Player One", "Player Two"},
 	}
 
-	postResponse, encodingError :=
-		mockPost(testServer, "/backend/game/create-new-game", bodyObject)
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
-	unitTest.Logf(
-		testIdentifier+"/object %v generated encoding error %v.",
-		bodyObject,
-		encodingError)
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"create-new-game"})
 
-	assertResponseIsCorrect(
-		unitTest,
-		testIdentifier,
-		postResponse,
-		nil,
-		http.StatusBadRequest)
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
 
 	assertNoFunctionWasCalled(
 		unitTest,
@@ -1103,18 +1089,29 @@ func TestRejectNewGameWithInvalidRulesetIdentifier(unitTest *testing.T) {
 
 func TestRejectNewGameIfCollectionRejectsIt(unitTest *testing.T) {
 	testIdentifier := "Reject POST create-new-game if collection rejects it"
-	mockCollection, testServer := newGameCollectionAndServer()
-
+	mockCollection, testHandler := newGameCollectionAndHandler()
 	mockCollection.ErrorToReturn = errors.New("error")
 
 	bodyObject := endpoint.GameDefinition{
 		GameName:          "test game",
-		RulesetIdentifier: game.ValidRulesetIdentifiers()[0],
+		RulesetIdentifier: game_state.ValidRulesetIdentifiers()[0],
 		PlayerNames:       []string{"Player One", "Player Two"},
 	}
 
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"create-new-game"})
+
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
+
 	expectedRuleset, rulesetError :=
-		game.RulesetFromIdentifier(bodyObject.RulesetIdentifier)
+		game_state.RulesetFromIdentifier(bodyObject.RulesetIdentifier)
 
 	if rulesetError != nil {
 		unitTest.Fatalf(
@@ -1129,21 +1126,6 @@ func TestRejectNewGameIfCollectionRejectsIt(unitTest *testing.T) {
 			FirstPlayerName:    bodyObject.PlayerNames[0],
 			SecondPlayerName:   bodyObject.PlayerNames[1],
 		}
-
-	postResponse, encodingError :=
-		mockPost(testServer, "/backend/game/create-new-game", bodyObject)
-
-	unitTest.Logf(
-		testIdentifier+"/object %v generated encoding error %v.",
-		bodyObject,
-		encodingError)
-
-	assertResponseIsCorrect(
-		unitTest,
-		testIdentifier,
-		postResponse,
-		encodingError,
-		http.StatusBadRequest)
 
 	functionRecord :=
 		mockCollection.getFirstAndEnsureOnly(
@@ -1162,17 +1144,29 @@ func TestRejectNewGameIfCollectionRejectsIt(unitTest *testing.T) {
 
 func TestRejectNewGameIfIdentifierIncludesSegmentDelimiter(unitTest *testing.T) {
 	testIdentifier := "Reject POST create-new-game if identifier includes segment delimiter"
-	mockCollection, testServer :=
-		newGameCollectionAndServerForTranslator(&parsing.NoOperationTranslator{})
+	mockCollection, testHandler :=
+		newGameCollectionAndHandlerForTranslator(&parsing.NoOperationTranslator{})
 
 	bodyObject := endpoint.GameDefinition{
 		GameName:          "name/which/cannot/work/as/identifier",
-		RulesetIdentifier: game.ValidRulesetIdentifiers()[0],
+		RulesetIdentifier: game_state.ValidRulesetIdentifiers()[0],
 		PlayerNames:       []string{"Player One", "Player Two"},
 	}
 
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"create-new-game"})
+
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
+
 	expectedRuleset, rulesetError :=
-		game.RulesetFromIdentifier(bodyObject.RulesetIdentifier)
+		game_state.RulesetFromIdentifier(bodyObject.RulesetIdentifier)
 
 	if rulesetError != nil {
 		unitTest.Fatalf(
@@ -1187,21 +1181,6 @@ func TestRejectNewGameIfIdentifierIncludesSegmentDelimiter(unitTest *testing.T) 
 			FirstPlayerName:    bodyObject.PlayerNames[0],
 			SecondPlayerName:   bodyObject.PlayerNames[1],
 		}
-
-	postResponse, encodingError :=
-		mockPost(testServer, "/backend/game/create-new-game", bodyObject)
-
-	unitTest.Logf(
-		testIdentifier+"/object %v generated encoding error %v.",
-		bodyObject,
-		encodingError)
-
-	assertResponseIsCorrect(
-		unitTest,
-		testIdentifier,
-		postResponse,
-		encodingError,
-		http.StatusBadRequest)
 
 	functionRecord :=
 		mockCollection.getFirstAndEnsureOnly(
@@ -1220,16 +1199,28 @@ func TestRejectNewGameIfIdentifierIncludesSegmentDelimiter(unitTest *testing.T) 
 
 func TestAcceptValidNewGame(unitTest *testing.T) {
 	testIdentifier := "POST record-chat-message"
-	mockCollection, testServer := newGameCollectionAndServer()
+	mockCollection, testHandler := newGameCollectionAndHandler()
 
 	bodyObject := endpoint.GameDefinition{
 		GameName:          "test game",
-		RulesetIdentifier: game.ValidRulesetIdentifiers()[0],
+		RulesetIdentifier: game_state.ValidRulesetIdentifiers()[0],
 		PlayerNames:       []string{"Player One", "Player Two"},
 	}
 
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"create-new-game"})
+
+	if responseCode != http.StatusOK {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusOK,
+			responseCode)
+	}
+
 	expectedRuleset, rulesetError :=
-		game.RulesetFromIdentifier(bodyObject.RulesetIdentifier)
+		game_state.RulesetFromIdentifier(bodyObject.RulesetIdentifier)
 
 	if rulesetError != nil {
 		unitTest.Fatalf(
@@ -1244,21 +1235,6 @@ func TestAcceptValidNewGame(unitTest *testing.T) {
 			FirstPlayerName:    bodyObject.PlayerNames[0],
 			SecondPlayerName:   bodyObject.PlayerNames[1],
 		}
-
-	postResponse, encodingError :=
-		mockPost(testServer, "/backend/game/create-new-game", bodyObject)
-
-	unitTest.Logf(
-		testIdentifier+"/object %v generated encoding error %v.",
-		bodyObject,
-		encodingError)
-
-	assertResponseIsCorrect(
-		unitTest,
-		testIdentifier,
-		postResponse,
-		encodingError,
-		http.StatusOK)
 
 	functionRecord :=
 		mockCollection.getFirstAndEnsureOnly(
