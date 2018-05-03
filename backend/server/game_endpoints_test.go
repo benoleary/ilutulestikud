@@ -12,7 +12,7 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/player"
 	"github.com/benoleary/ilutulestikud/backend/server"
-	"github.com/benoleary/ilutulestikud/backend/server/endpoint_parsing"
+	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
 
 // mockGameDefinition takes up to five players, not as an array so that
@@ -220,7 +220,7 @@ func newGameCollectionAndServer() (*mockGameCollection, *server.State) {
 // in a consistent way for the tests of the game endpoints, returning the mock
 // collection and the server state.
 func newGameCollectionAndServerForTranslator(
-	segmentTranslator endpoint_parsing.SegmentTranslator) (*mockGameCollection, *server.State) {
+	segmentTranslator parsing.SegmentTranslator) (*mockGameCollection, *server.State) {
 	mockCollection := &mockGameCollection{}
 
 	serverState :=
@@ -1119,7 +1119,7 @@ func TestRejectNewGameIfCollectionRejectsIt(unitTest *testing.T) {
 func TestRejectNewGameIfIdentifierIncludesSegmentDelimiter(unitTest *testing.T) {
 	testIdentifier := "Reject POST create-new-game if identifier includes segment delimiter"
 	mockCollection, testServer :=
-		newGameCollectionAndServerForTranslator(&endpoint_parsing.NoOperationTranslator{})
+		newGameCollectionAndServerForTranslator(&parsing.NoOperationTranslator{})
 
 	bodyObject := endpoint.GameDefinition{
 		GameName:          "name/which/cannot/work/as/identifier",

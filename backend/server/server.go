@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/benoleary/ilutulestikud/backend/server/endpoint_parsing"
+	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
 
 // State contains all the state to allow the backend to function.
@@ -19,7 +19,7 @@ type State struct {
 // given handlers are consistent.
 func New(
 	accessControlAllowedOrigin string,
-	segmentTranslator endpoint_parsing.SegmentTranslator,
+	segmentTranslator parsing.SegmentTranslator,
 	playerStateCollection playerCollection,
 	gameStateCollection gameCollection) *State {
 	return &State{

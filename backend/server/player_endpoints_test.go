@@ -10,7 +10,7 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/player"
 	"github.com/benoleary/ilutulestikud/backend/server"
-	"github.com/benoleary/ilutulestikud/backend/server/endpoint_parsing"
+	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
 
 var colorsAvailableInTest []string = defaults.AvailableColors()
@@ -131,7 +131,7 @@ func newPlayerCollectionAndServer() (*mockPlayerCollection, *server.State) {
 // consistent way for the tests of the player endpoints, returning the
 // mock collection and the server state.
 func newPlayerCollectionAndServerForTranslator(
-	segmentTranslator endpoint_parsing.SegmentTranslator) (
+	segmentTranslator parsing.SegmentTranslator) (
 	*mockPlayerCollection, *server.State) {
 	mockCollection := &mockPlayerCollection{}
 
@@ -478,7 +478,7 @@ func TestRejectNewPlayerIfIdentifierHasSegmentDelimiter(unitTest *testing.T) {
 	// We could use a no-operation translator so that it is clear that the test case has
 	// a '/', but this way ensures that a translation does happen.
 	mockCollection, testServer :=
-		newPlayerCollectionAndServerForTranslator(&endpoint_parsing.Base64Translator{})
+		newPlayerCollectionAndServerForTranslator(&parsing.Base64Translator{})
 
 	mockCollection.ErrorToReturn = nil
 	mockCollection.ReturnForAll = testPlayerStates
