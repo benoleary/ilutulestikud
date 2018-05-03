@@ -13,7 +13,7 @@ import (
 )
 
 // segmentTranslatorForTest returns the standard base-32 translator.
-func segmentTranslatorForTest() endpoint_parsing.EndpointSegmentTranslator {
+func segmentTranslatorForTest() endpoint_parsing.SegmentTranslator {
 	return &endpoint_parsing.Base32Translator{}
 }
 

@@ -19,7 +19,7 @@ type State struct {
 // given handlers are consistent.
 func New(
 	accessControlAllowedOrigin string,
-	segmentTranslator endpoint_parsing.EndpointSegmentTranslator,
+	segmentTranslator endpoint_parsing.SegmentTranslator,
 	playerStateCollection playerCollection,
 	gameStateCollection gameCollection) *State {
 	return &State{

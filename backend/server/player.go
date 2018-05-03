@@ -15,7 +15,7 @@ import (
 // It implements github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
 type playerEndpointHandler struct {
 	stateCollection   playerCollection
-	segmentTranslator endpoint_parsing.EndpointSegmentTranslator
+	segmentTranslator endpoint_parsing.SegmentTranslator
 }
 
 // HandleGet parses an HTTP GET request and responds with the appropriate function.

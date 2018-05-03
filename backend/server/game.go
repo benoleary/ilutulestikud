@@ -15,7 +15,7 @@ import (
 // interaction with all the games through the endpoints.
 type gameEndpointHandler struct {
 	stateCollection   gameCollection
-	segmentTranslator endpoint_parsing.EndpointSegmentTranslator
+	segmentTranslator endpoint_parsing.SegmentTranslator
 }
 
 // HandleGet parses an HTTP GET request and responds with the appropriate function.

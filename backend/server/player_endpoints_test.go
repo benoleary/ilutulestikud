@@ -131,7 +131,7 @@ func newPlayerCollectionAndServer() (*mockPlayerCollection, *server.State) {
 // consistent way for the tests of the player endpoints, returning the
 // mock collection and the server state.
 func newPlayerCollectionAndServerForTranslator(
-	segmentTranslator endpoint_parsing.EndpointSegmentTranslator) (
+	segmentTranslator endpoint_parsing.SegmentTranslator) (
 	*mockPlayerCollection, *server.State) {
 	mockCollection := &mockPlayerCollection{}
 

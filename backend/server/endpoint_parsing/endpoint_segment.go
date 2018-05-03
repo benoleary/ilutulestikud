@@ -5,12 +5,12 @@ import (
 	"encoding/base64"
 )
 
-// EndpointSegmentTranslator defines the interface for structs which should be
-// able to encode a name as an identifier to be a segment in a URI, in a way so
-// that it does not generate problematic characters for URIs (especially '/').
-type EndpointSegmentTranslator interface {
-	// ToSegment should return the name encoded as an identifier for interaction between
-	// frontend and backend.
+// SegmentTranslator defines the interface for structs which should be able to encode
+// a name as an identifier to be a segment in a URI, in a way so that it does not
+// generate problematic characters for URIs (especially '/').
+type SegmentTranslator interface {
+	// ToSegment should return the name encoded as an identifier for interaction
+	// between frontend and backend.
 	ToSegment(nameToEncode string) string
 
 	// FromSegment should return the name decoded from an identifier for interaction

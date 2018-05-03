@@ -207,20 +207,20 @@ func (mockCollection *mockGameCollection) AddNew(
 	return mockCollection.ErrorToReturn
 }
 
-// newGameCollectionAndServer prepares a mock game collection and uses it to prepare a
-// server.State with the default endpoint segment translator for the tests,
-// in a consistent way for the tests of the player endpoints, returning the
-// mock collection and the server state.
+// newGameCollectionAndServer prepares a mock game collection and uses it to
+// prepare a server.State with the default endpoint segment translator for
+// the tests, in a consistent way for the tests of the player endpoints,
+// returning the mock collection and the server state.
 func newGameCollectionAndServer() (*mockGameCollection, *server.State) {
 	return newGameCollectionAndServerForTranslator(segmentTranslatorForTest())
 }
 
-// newGameCollectionAndServerForTranslator prepares a mock game collection and uses it to
-// prepare a server.State with the given endpoint segment translator in a
-// consistent way for the tests of the game endpoints, returning the
-// mock collection and the server state.
+// newGameCollectionAndServerForTranslator prepares a mock game collection and
+// uses it to prepare a server.State with the given endpoint segment translator
+// in a consistent way for the tests of the game endpoints, returning the mock
+// collection and the server state.
 func newGameCollectionAndServerForTranslator(
-	segmentTranslator endpoint_parsing.EndpointSegmentTranslator) (*mockGameCollection, *server.State) {
+	segmentTranslator endpoint_parsing.SegmentTranslator) (*mockGameCollection, *server.State) {
 	mockCollection := &mockGameCollection{}
 
 	serverState :=

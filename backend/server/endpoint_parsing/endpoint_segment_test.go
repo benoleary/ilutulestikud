@@ -9,7 +9,7 @@ import (
 func TestDecodedEncodingIsInvariant(unitTest *testing.T) {
 	testCases := []struct {
 		testName            string
-		translatorReference endpoint_parsing.EndpointSegmentTranslator
+		translatorReference endpoint_parsing.SegmentTranslator
 	}{
 		{
 			testName:            "Base32",
@@ -54,7 +54,7 @@ func TestDecodingStringWithInvalidCharacterProducesError(unitTest *testing.T) {
 	// does not have any disallowed characters.
 	testCases := []struct {
 		testName            string
-		translatorReference endpoint_parsing.EndpointSegmentTranslator
+		translatorReference endpoint_parsing.SegmentTranslator
 	}{
 		{
 			testName:            "Base32",
