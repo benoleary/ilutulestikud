@@ -72,17 +72,11 @@ func ValidRulesetIdentifiers() []int {
 func RulesetFromIdentifier(rulesetIdentifier int) (Ruleset, error) {
 	switch rulesetIdentifier {
 	case StandardWithoutRainbowIdentifier:
-		return &StandardWithoutRainbowRuleset{}, nil
+		return StandardWithoutRainbowRuleset{}, nil
 	case WithRainbowAsSeparateIdentifier:
-		return &RainbowAsSeparateSuitRuleset{
-			BasisRules: &StandardWithoutRainbowRuleset{},
-		}, nil
+		return RainbowAsSeparateSuitRuleset{}, nil
 	case WithRainbowAsCompoundIdentifier:
-		return &RainbowAsCompoundSuitRuleset{
-			BasisRainbow: &RainbowAsSeparateSuitRuleset{
-				BasisRules: &StandardWithoutRainbowRuleset{},
-			},
-		}, nil
+		return RainbowAsCompoundSuitRuleset{}, nil
 	default:
 		return nil, fmt.Errorf("Ruleset identifier %v not recognized", rulesetIdentifier)
 	}
@@ -94,13 +88,13 @@ type StandardWithoutRainbowRuleset struct {
 }
 
 // FrontendDescription describes the standard ruleset.
-func (standardRuleset *StandardWithoutRainbowRuleset) FrontendDescription() string {
+func (standardRuleset StandardWithoutRainbowRuleset) FrontendDescription() string {
 	return "standard (without rainbow cards)"
 }
 
 // CopyOfFullCardset returns an array populated with every card which should be present
 // for a game under the ruleset, including duplicates.
-func (standardRuleset *StandardWithoutRainbowRuleset) CopyOfFullCardset() []ReadonlyCard {
+func (standardRuleset StandardWithoutRainbowRuleset) CopyOfFullCardset() []ReadonlyCard {
 	colorSuits := standardRuleset.ColorSuits()
 	numberOfColors := len(colorSuits)
 	sequenceIndices := standardRuleset.SequenceIndices()
@@ -121,7 +115,7 @@ func (standardRuleset *StandardWithoutRainbowRuleset) CopyOfFullCardset() []Read
 
 // NumberOfCardsInPlayerHand returns the number of cards held in a player's
 // hand, dependent on the number of players in the game.
-func (standardRuleset *StandardWithoutRainbowRuleset) NumberOfCardsInPlayerHand(
+func (standardRuleset StandardWithoutRainbowRuleset) NumberOfCardsInPlayerHand(
 	numberOfPlayers int) int {
 	if numberOfPlayers <= 3 {
 		return 5
@@ -131,7 +125,7 @@ func (standardRuleset *StandardWithoutRainbowRuleset) NumberOfCardsInPlayerHand(
 }
 
 // ColorSuits returns the set of colors used as suits.
-func (standardRuleset *StandardWithoutRainbowRuleset) ColorSuits() []string {
+func (standardRuleset StandardWithoutRainbowRuleset) ColorSuits() []string {
 	return []string{
 		"red",
 		"green",
@@ -143,13 +137,13 @@ func (standardRuleset *StandardWithoutRainbowRuleset) ColorSuits() []string {
 
 // SequenceIndices returns all the indices for the cards, per card so
 // including repetitions of indices, as they should be played per suit.
-func (standardRuleset *StandardWithoutRainbowRuleset) SequenceIndices() []int {
+func (standardRuleset StandardWithoutRainbowRuleset) SequenceIndices() []int {
 	return []int{1, 1, 1, 2, 2, 3, 3, 4, 4, 5}
 }
 
 // PointsPerCard returns the points value of a card with the given
 // sequence index.
-func (standardRuleset *StandardWithoutRainbowRuleset) PointsPerCard(
+func (standardRuleset StandardWithoutRainbowRuleset) PointsPerCard(
 	cardSequenceIndex int) int {
 	if cardSequenceIndex >= 5 {
 		return 2 * cardSequenceIndex
@@ -159,25 +153,25 @@ func (standardRuleset *StandardWithoutRainbowRuleset) PointsPerCard(
 }
 
 // MinimumNumberOfPlayers returns the minimum number of players needed for a game.
-func (standardRuleset *StandardWithoutRainbowRuleset) MinimumNumberOfPlayers() int {
+func (standardRuleset StandardWithoutRainbowRuleset) MinimumNumberOfPlayers() int {
 	return 2
 }
 
 // MaximumNumberOfPlayers returns the maximum number of players allowed for a game.
-func (standardRuleset *StandardWithoutRainbowRuleset) MaximumNumberOfPlayers() int {
+func (standardRuleset StandardWithoutRainbowRuleset) MaximumNumberOfPlayers() int {
 	return 5
 }
 
 // MaximumNumberOfHints returns the maximum number of hints which can be available at
 // any instant.
-func (standardRuleset *StandardWithoutRainbowRuleset) MaximumNumberOfHints() int {
+func (standardRuleset StandardWithoutRainbowRuleset) MaximumNumberOfHints() int {
 	return 8
 }
 
 // MaximumNumberOfMistakesAllowed should return the maximum number of mistakes which
 // can be made without the game ending (i.e. the game ends on the next mistake after
 // that).
-func (standardRuleset *StandardWithoutRainbowRuleset) MaximumNumberOfMistakesAllowed() int {
+func (standardRuleset StandardWithoutRainbowRuleset) MaximumNumberOfMistakesAllowed() int {
 	return 2
 }
 
@@ -189,19 +183,19 @@ const RainbowSuit = "rainbow"
 // color suit as just another suit which is separate for the purposes of hints as
 // well.
 type RainbowAsSeparateSuitRuleset struct {
-	BasisRules *StandardWithoutRainbowRuleset
+	StandardWithoutRainbowRuleset
 }
 
 // FrontendDescription describes the ruleset with rainbow cards which are a separate
 // suit which behaves like the standard suits.
-func (separateRainbow *RainbowAsSeparateSuitRuleset) FrontendDescription() string {
+func (separateRainbow RainbowAsSeparateSuitRuleset) FrontendDescription() string {
 	return "with rainbow, hints as separate color"
 }
 
 // CopyOfFullCardset returns an array populated with every card which should be present
 // for a game under the ruleset, including duplicates.
-func (separateRainbow *RainbowAsSeparateSuitRuleset) CopyOfFullCardset() []ReadonlyCard {
-	fullCardset := separateRainbow.BasisRules.CopyOfFullCardset()
+func (separateRainbow RainbowAsSeparateSuitRuleset) CopyOfFullCardset() []ReadonlyCard {
+	fullCardset := separateRainbow.StandardWithoutRainbowRuleset.CopyOfFullCardset()
 	sequenceIndices := separateRainbow.SequenceIndices()
 
 	for _, sequenceIndex := range sequenceIndices {
@@ -214,119 +208,22 @@ func (separateRainbow *RainbowAsSeparateSuitRuleset) CopyOfFullCardset() []Reado
 	return fullCardset
 }
 
-// NumberOfCardsInPlayerHand returns the number of cards held in a player's
-// hand, dependent on the number of players in the game.
-func (separateRainbow *RainbowAsSeparateSuitRuleset) NumberOfCardsInPlayerHand(
-	numberOfPlayers int) int {
-	return separateRainbow.BasisRules.NumberOfCardsInPlayerHand(numberOfPlayers)
-}
-
 // ColorSuits returns the set of colors used as suits.
-func (separateRainbow *RainbowAsSeparateSuitRuleset) ColorSuits() []string {
-	return append(separateRainbow.BasisRules.ColorSuits(), RainbowSuit)
-}
-
-// SequenceIndices returns all the indices for the cards, per card so
-// including repetitions of indices, as they should be played per suit.
-func (separateRainbow *RainbowAsSeparateSuitRuleset) SequenceIndices() []int {
-	return separateRainbow.BasisRules.SequenceIndices()
-}
-
-// PointsPerCard returns the points value of a card with the given
-// sequence index.
-func (separateRainbow *RainbowAsSeparateSuitRuleset) PointsPerCard(
-	cardSequenceIndex int) int {
-	return separateRainbow.BasisRules.PointsPerCard(cardSequenceIndex)
-}
-
-// MinimumNumberOfPlayers returns the minimum number of players needed for a game.
-func (separateRainbow *RainbowAsSeparateSuitRuleset) MinimumNumberOfPlayers() int {
-	return separateRainbow.BasisRules.MinimumNumberOfPlayers()
-}
-
-// MaximumNumberOfPlayers returns the maximum number of players allowed for a game.
-func (separateRainbow *RainbowAsSeparateSuitRuleset) MaximumNumberOfPlayers() int {
-	return separateRainbow.BasisRules.MaximumNumberOfPlayers()
-}
-
-// MaximumNumberOfHints returns the maximum number of hints which can be available at
-// any instant.
-func (separateRainbow *RainbowAsSeparateSuitRuleset) MaximumNumberOfHints() int {
-	return separateRainbow.BasisRules.MaximumNumberOfHints()
-}
-
-// MaximumNumberOfMistakesAllowed returns the maximum number of mistakes which can be
-// made without the game ending (i.e. the game ends on the next mistake after
-// that).
-func (separateRainbow *RainbowAsSeparateSuitRuleset) MaximumNumberOfMistakesAllowed() int {
-	return separateRainbow.BasisRules.MaximumNumberOfMistakesAllowed()
+func (separateRainbow RainbowAsSeparateSuitRuleset) ColorSuits() []string {
+	return append(separateRainbow.StandardWithoutRainbowRuleset.ColorSuits(), RainbowSuit)
 }
 
 // RainbowAsCompoundSuitRuleset represents the ruleset which includes the rainbow
 // color suit as another suit which, however, counts as all the other suits for
 // hints. Most of the functions are the same.
 type RainbowAsCompoundSuitRuleset struct {
-	BasisRainbow *RainbowAsSeparateSuitRuleset
+	RainbowAsSeparateSuitRuleset
 }
 
 // FrontendDescription describes the ruleset with rainbow cards which are a separate suit
 // which behaves differently from the standard suits, in the sense that it is not directly
 // a color which can be given as a hint, but rather every hint for a standard color will
 // also identify a rainbow card as a card of that standard color.
-func (compoundRainbow *RainbowAsCompoundSuitRuleset) FrontendDescription() string {
+func (compoundRainbow RainbowAsCompoundSuitRuleset) FrontendDescription() string {
 	return "with rainbow, hints as every color"
-}
-
-// CopyOfFullCardset returns an array populated with every card which should be present
-// for a game under the ruleset, including duplicates.
-func (compoundRainbow *RainbowAsCompoundSuitRuleset) CopyOfFullCardset() []ReadonlyCard {
-	return compoundRainbow.BasisRainbow.CopyOfFullCardset()
-}
-
-// NumberOfCardsInPlayerHand returns the number of cards held in a player's
-// hand, dependent on the number of players in the game.
-func (compoundRainbow *RainbowAsCompoundSuitRuleset) NumberOfCardsInPlayerHand(
-	numberOfPlayers int) int {
-	return compoundRainbow.BasisRainbow.NumberOfCardsInPlayerHand(numberOfPlayers)
-}
-
-// ColorSuits returns the set of colors used as suits.
-func (compoundRainbow *RainbowAsCompoundSuitRuleset) ColorSuits() []string {
-	return compoundRainbow.BasisRainbow.ColorSuits()
-}
-
-// SequenceIndices returns all the indices for the cards, per card so
-// including repetitions of indices, as they should be played per suit.
-func (compoundRainbow *RainbowAsCompoundSuitRuleset) SequenceIndices() []int {
-	return compoundRainbow.BasisRainbow.SequenceIndices()
-}
-
-// PointsPerCard returns the points value of a card with the given
-// sequence index.
-func (compoundRainbow *RainbowAsCompoundSuitRuleset) PointsPerCard(
-	cardSequenceIndex int) int {
-	return compoundRainbow.BasisRainbow.PointsPerCard(cardSequenceIndex)
-}
-
-// MinimumNumberOfPlayers returns the minimum number of players needed for a game.
-func (compoundRainbow *RainbowAsCompoundSuitRuleset) MinimumNumberOfPlayers() int {
-	return compoundRainbow.BasisRainbow.MinimumNumberOfPlayers()
-}
-
-// MaximumNumberOfPlayers returns the maximum number of players allowed for a game.
-func (compoundRainbow *RainbowAsCompoundSuitRuleset) MaximumNumberOfPlayers() int {
-	return compoundRainbow.BasisRainbow.MaximumNumberOfPlayers()
-}
-
-// MaximumNumberOfHints returns the maximum number of hints which can be available at
-// any instant.
-func (compoundRainbow *RainbowAsCompoundSuitRuleset) MaximumNumberOfHints() int {
-	return compoundRainbow.BasisRainbow.MaximumNumberOfHints()
-}
-
-// MaximumNumberOfMistakesAllowed returns the maximum number of mistakes which can be
-// made without the game ending (i.e. the game ends on the next mistake after
-// that).
-func (compoundRainbow *RainbowAsCompoundSuitRuleset) MaximumNumberOfMistakesAllowed() int {
-	return compoundRainbow.BasisRainbow.MaximumNumberOfMistakesAllowed()
 }
