@@ -1,4 +1,4 @@
-package server_test
+package player_test
 
 import (
 	"github.com/benoleary/ilutulestikud/backend/defaults"

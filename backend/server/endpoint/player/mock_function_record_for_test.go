@@ -1,8 +1,12 @@
-package server_test
+package player_test
 
 import (
 	"testing"
 )
+
+// This file is duplicated as both the player and game packages make use of
+// it for their tests, but it should not be exported as part of non-test code,
+// yet it is impossible to import test-only packages.
 
 // functionNameAndArgument is for the mock collections to use to record what was
 // asked of them.
