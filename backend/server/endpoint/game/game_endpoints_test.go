@@ -14,11 +14,17 @@ import (
 
 	"github.com/benoleary/ilutulestikud/backend/chat"
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
-	"github.com/benoleary/ilutulestikud/backend/game"
+	game_state "github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/player"
 	"github.com/benoleary/ilutulestikud/backend/server"
+	game_endpoint "github.com/benoleary/ilutulestikud/backend/server/endpoint/game"
 	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
+
+// segmentTranslatorForTest returns the standard base-32 translator.
+func segmentTranslatorForTest() parsing.SegmentTranslator {
+	return &parsing.Base32Translator{}
+}
 
 // mockGameDefinition takes up to five players, not as an array so that
 // the default comparison works.
@@ -45,8 +51,8 @@ func (mockGame mockGameState) Name() string {
 }
 
 // Ruleset gets mocked.
-func (mockGame mockGameState) Ruleset() game.Ruleset {
-	return &game.StandardWithoutRainbowRuleset{}
+func (mockGame mockGameState) Ruleset() game_state.Ruleset {
+	return &game_state.StandardWithoutRainbowRuleset{}
 }
 
 // Players gets mocked.
@@ -90,7 +96,7 @@ func (mockGame mockGameState) DeckSize() int {
 }
 
 // LastPlayedForColor gets mocked.
-func (mockGame mockGameState) LastPlayedForColor(colorSuit string) game.ReadonlyCard {
+func (mockGame mockGameState) LastPlayedForColor(colorSuit string) game_state.ReadonlyCard {
 	return nil
 }
 
@@ -102,22 +108,22 @@ func (mockGame mockGameState) NumberOfDiscardedCards(colorSuit string, sequenceI
 // VisibleCardInHand gets mocked.
 func (mockGame mockGameState) VisibleCardInHand(
 	holdingPlayerName string,
-	indexInHand int) (game.ReadonlyCard, error) {
+	indexInHand int) (game_state.ReadonlyCard, error) {
 	return nil, nil
 }
 
 // InferredCardInHand gets mocked.
 func (mockGame mockGameState) InferredCardInHand(
 	holdingPlayerName string,
-	indexInHand int) (game.InferredCard, error) {
-	return game.InferredCard{}, nil
+	indexInHand int) (game_state.InferredCard, error) {
+	return game_state.InferredCard{}, nil
 }
 
 type mockGameCollection struct {
 	FunctionsAndArgumentsReceived []functionNameAndArgument
 	ErrorToReturn                 error
-	ReturnForViewAllWithPlayer    []*game.PlayerView
-	ReturnForViewState            *game.PlayerView
+	ReturnForViewAllWithPlayer    []*game_state.PlayerView
+	ReturnForViewState            *game_state.PlayerView
 }
 
 func (mockCollection *mockGameCollection) recordFunctionAndArgument(
@@ -148,7 +154,7 @@ func (mockCollection *mockGameCollection) getFirstAndEnsureOnly(
 // ViewState gets mocked.
 func (mockCollection *mockGameCollection) ViewState(
 	gameName string,
-	playerName string) (*game.PlayerView, error) {
+	playerName string) (*game_state.PlayerView, error) {
 	mockCollection.recordFunctionAndArgument(
 		"ViewState",
 		stringPair{first: gameName, second: playerName})
@@ -157,7 +163,7 @@ func (mockCollection *mockGameCollection) ViewState(
 
 // ViewAllWithPlayer gets mocked.
 func (mockCollection *mockGameCollection) ViewAllWithPlayer(
-	playerName string) ([]*game.PlayerView, error) {
+	playerName string) ([]*game_state.PlayerView, error) {
 	mockCollection.recordFunctionAndArgument(
 		"ViewAllWithPlayer",
 		playerName)
@@ -178,7 +184,7 @@ func (mockCollection *mockGameCollection) RecordChatMessage(
 // AddNew gets mocked.
 func (mockCollection *mockGameCollection) AddNew(
 	gameName string,
-	gameRuleset game.Ruleset,
+	gameRuleset game_state.Ruleset,
 	playerNames []string) error {
 	functionArgument := mockGameDefinition{
 		GameName:           gameName,
@@ -212,30 +218,25 @@ func (mockCollection *mockGameCollection) AddNew(
 	return mockCollection.ErrorToReturn
 }
 
-// newGameCollectionAndServer prepares a mock game collection and uses it to
+// newGameCollectionAndHandler prepares a mock game collection and uses it to
 // prepare a server.State with the default endpoint segment translator for
 // the tests, in a consistent way for the tests of the player endpoints,
 // returning the mock collection and the server state.
-func newGameCollectionAndServer() (*mockGameCollection, *server.State) {
-	return newGameCollectionAndServerForTranslator(segmentTranslatorForTest())
+func newGameCollectionAndHandler() (*mockGameCollection, *game_endpoint.Handler) {
+	return newGameCollectionAndHandlerForTranslator(segmentTranslatorForTest())
 }
 
-// newGameCollectionAndServerForTranslator prepares a mock game collection and
+// newGameCollectionAndHandlerForTranslator prepares a mock game collection and
 // uses it to prepare a server.State with the given endpoint segment translator
 // in a consistent way for the tests of the game endpoints, returning the mock
 // collection and the server state.
-func newGameCollectionAndServerForTranslator(
-	segmentTranslator parsing.SegmentTranslator) (*mockGameCollection, *server.State) {
+func newGameCollectionAndHandlerForTranslator(
+	segmentTranslator parsing.SegmentTranslator) (*mockGameCollection, *game_endpoint.Handler) {
 	mockCollection := &mockGameCollection{}
 
-	serverState :=
-		server.New(
-			"test",
-			segmentTranslator,
-			nil,
-			mockCollection)
+	handlerForGame := game_endpoint.New(mockCollection, segmentTranslator)
 
-	return mockCollection, serverState
+	return mockCollection, handlerForGame
 }
 
 func TestGetGameNoFurtherSegmentBadRequest(unitTest *testing.T) {
