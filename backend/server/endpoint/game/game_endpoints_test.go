@@ -16,7 +16,6 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	game_state "github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/player"
-	"github.com/benoleary/ilutulestikud/backend/server"
 	game_endpoint "github.com/benoleary/ilutulestikud/backend/server/endpoint/game"
 	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
@@ -191,24 +190,24 @@ func (mockCollection *mockGameCollection) AddNew(
 		RulesetDescription: gameRuleset.FrontendDescription(),
 	}
 
-	numberOfPLayers := len(playerNames)
+	numberOfPlayers := len(playerNames)
 
-	if numberOfPLayers > 0 {
+	if numberOfPlayers > 0 {
 		functionArgument.FirstPlayerName = playerNames[0]
 	}
 
-	if numberOfPLayers > 1 {
+	if numberOfPlayers > 1 {
 		functionArgument.SecondPlayerName = playerNames[1]
 	}
-	if numberOfPLayers > 2 {
+	if numberOfPlayers > 2 {
 		functionArgument.ThirdPlayerName = playerNames[2]
 	}
 
-	if numberOfPLayers > 3 {
+	if numberOfPlayers > 3 {
 		functionArgument.FourthPlayerName = playerNames[3]
 	}
 
-	if numberOfPLayers > 4 {
+	if numberOfPlayers > 4 {
 		functionArgument.FifthPlayerName = playerNames[4]
 	}
 
@@ -239,18 +238,37 @@ func newGameCollectionAndHandlerForTranslator(
 	return mockCollection, handlerForGame
 }
 
-func TestGetGameNoFurtherSegmentBadRequest(unitTest *testing.T) {
-	testIdentifier := "GET with no segments after game"
-	mockCollection, testServer := newGameCollectionAndServer()
+func TestGetGameNilFutherSegmentSliceBadRequest(unitTest *testing.T) {
+	testIdentifier := "GET with nil segment slice after game"
+	mockCollection, testHandler := newGameCollectionAndHandler()
 
-	getResponse := mockGet(testServer, "/backend/game")
+	_, responseCode := testHandler.HandleGet(nil)
 
-	assertResponseIsCorrect(
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
+
+	assertNoFunctionWasCalled(
 		unitTest,
-		testIdentifier,
-		getResponse,
-		nil,
-		http.StatusBadRequest)
+		mockCollection.FunctionsAndArgumentsReceived,
+		testIdentifier)
+}
+
+func TestGetGameEmptyFutherSegmentSliceBadRequest(unitTest *testing.T) {
+	testIdentifier := "GET with empty segment slice after game"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+
+	_, responseCode := testHandler.HandleGet([]string{})
+
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
 
 	assertNoFunctionWasCalled(
 		unitTest,
@@ -260,17 +278,16 @@ func TestGetGameNoFurtherSegmentBadRequest(unitTest *testing.T) {
 
 func TestGetGameInvalidSegmentNotFound(unitTest *testing.T) {
 	testIdentifier := "GET game/invalid-segment"
-	mockCollection, testServer := newGameCollectionAndServer()
+	mockCollection, testHandler := newGameCollectionAndHandler()
 
-	getResponse :=
-		mockGet(testServer, "/backend/game/invalid-segment")
+	_, responseCode := testHandler.HandleGet([]string{"invalid-segment"})
 
-	assertResponseIsCorrect(
-		unitTest,
-		testIdentifier,
-		getResponse,
-		nil,
-		http.StatusNotFound)
+	if responseCode != http.StatusNotFound {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusNotFound,
+			responseCode)
+	}
 
 	assertNoFunctionWasCalled(
 		unitTest,
@@ -278,24 +295,49 @@ func TestGetGameInvalidSegmentNotFound(unitTest *testing.T) {
 		testIdentifier)
 }
 
-func TestPostGameNoFurtherSegmentBadRequest(unitTest *testing.T) {
-	testIdentifier := "POST with no segments after game"
-	mockCollection, testServer := newGameCollectionAndServer()
+func TestPostGameNilFutherSegmentSliceBadRequest(unitTest *testing.T) {
+	testIdentifier := "POST with nil segment slice after game"
+	mockCollection, testHandler := newGameCollectionAndHandler()
 
-	bodyObject := endpoint.PlayerState{
-		Name:  "Player Name",
-		Color: "Chat color",
+	_, responseCode :=
+		testHandler.HandlePost(
+			DecoderAroundInterface(
+				unitTest,
+				testIdentifier,
+				endpoint.GameDefinition{GameName: "test"}),
+			nil)
+
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
 	}
 
-	postResponse, encodingError :=
-		mockPost(testServer, "/backend/game", bodyObject)
-
-	assertResponseIsCorrect(
+	assertNoFunctionWasCalled(
 		unitTest,
-		testIdentifier,
-		postResponse,
-		encodingError,
-		http.StatusBadRequest)
+		mockCollection.FunctionsAndArgumentsReceived,
+		testIdentifier)
+}
+
+func TestPostGameEmptyFutherSegmentSliceBadRequest(unitTest *testing.T) {
+	testIdentifier := "POST with empty segment slice after game"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+
+	_, responseCode :=
+		testHandler.HandlePost(
+			DecoderAroundInterface(
+				unitTest,
+				testIdentifier,
+				endpoint.GameDefinition{GameName: "test"}),
+			[]string{})
+
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
 
 	assertNoFunctionWasCalled(
 		unitTest,
@@ -305,22 +347,22 @@ func TestPostGameNoFurtherSegmentBadRequest(unitTest *testing.T) {
 
 func TestPostGameInvalidSegmentNotFound(unitTest *testing.T) {
 	testIdentifier := "POST game/invalid-segment"
-	mockCollection, testServer := newGameCollectionAndServer()
+	mockCollection, testHandler := newGameCollectionAndHandler()
 
-	bodyObject := endpoint.PlayerState{
-		Name:  "Player Name",
-		Color: "Chat color",
+	_, responseCode :=
+		testHandler.HandlePost(
+			DecoderAroundInterface(
+				unitTest,
+				testIdentifier,
+				endpoint.GameDefinition{GameName: "test"}),
+			[]string{"invalid-segment"})
+
+	if responseCode != http.StatusNotFound {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusNotFound,
+			responseCode)
 	}
-
-	postResponse, encodingError :=
-		mockPost(testServer, "/backend/game/invalid-segment", bodyObject)
-
-	assertResponseIsCorrect(
-		unitTest,
-		testIdentifier,
-		postResponse,
-		encodingError,
-		http.StatusNotFound)
 
 	assertNoFunctionWasCalled(
 		unitTest,
@@ -330,33 +372,30 @@ func TestPostGameInvalidSegmentNotFound(unitTest *testing.T) {
 
 func TestAvailableRulesetsCorrectlyDelivered(unitTest *testing.T) {
 	testIdentifier := "GET available-rulesets"
-	mockCollection, testServer := newPlayerCollectionAndServer()
+	mockCollection, testHandler := newGameCollectionAndHandler()
 
-	expectedRulesetIdentifiers := game.ValidRulesetIdentifiers()
+	expectedRulesetIdentifiers := game_state.ValidRulesetIdentifiers()
 
-	getResponse :=
-		mockGet(testServer, "/backend/game/available-rulesets")
+	returnedInterface, responseCode := testHandler.HandleGet([]string{"available-rulesets"})
 
-	assertResponseIsCorrect(
-		unitTest,
-		testIdentifier,
-		getResponse,
-		nil,
-		http.StatusOK)
+	if responseCode != http.StatusOK {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusOK,
+			responseCode)
+	}
 
 	assertNoFunctionWasCalled(
 		unitTest,
 		mockCollection.FunctionsAndArgumentsReceived,
 		testIdentifier)
 
-	bodyDecoder := json.NewDecoder(getResponse.Body)
+	responseRulesetList, isInterfaceCorrect := returnedInterface.(endpoint.RulesetList)
 
-	var responseRulesetList endpoint.RulesetList
-	parsingError := bodyDecoder.Decode(&responseRulesetList)
-	if parsingError != nil {
+	if !isInterfaceCorrect {
 		unitTest.Fatalf(
-			testIdentifier+"/error parsing JSON from HTTP response body: %v",
-			parsingError)
+			testIdentifier+"/received %v instead of expected endpoint.RulesetList",
+			returnedInterface)
 	}
 
 	if responseRulesetList.Rulesets == nil {
@@ -376,7 +415,8 @@ func TestAvailableRulesetsCorrectlyDelivered(unitTest *testing.T) {
 	// The list of expected rulesets contains no duplicates, so it suffices to compare lengths
 	// and that every expected ruleset is found.
 	for _, expectedRulesetIdentifier := range expectedRulesetIdentifiers {
-		expectedRuleset, identificationError := game.RulesetFromIdentifier(expectedRulesetIdentifier)
+		expectedRuleset, identificationError :=
+			game_state.RulesetFromIdentifier(expectedRulesetIdentifier)
 		if identificationError != nil {
 			unitTest.Fatalf(
 				testIdentifier+
@@ -409,16 +449,16 @@ func TestAvailableRulesetsCorrectlyDelivered(unitTest *testing.T) {
 
 func TestGetAllGamesWithPlayerNoFurtherSegmentBadRequest(unitTest *testing.T) {
 	testIdentifier := "GET with no segments after all-games-with-player"
-	mockCollection, testServer := newGameCollectionAndServer()
+	mockCollection, testHandler := newGameCollectionAndHandler()
 
-	getResponse := mockGet(testServer, "/backend/game/all-games-with-player")
+	_, responseCode := testHandler.HandleGet([]string{"all-games-with-player"})
 
-	assertResponseIsCorrect(
-		unitTest,
-		testIdentifier,
-		getResponse,
-		nil,
-		http.StatusBadRequest)
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
 
 	assertNoFunctionWasCalled(
 		unitTest,
@@ -428,17 +468,17 @@ func TestGetAllGamesWithPlayerNoFurtherSegmentBadRequest(unitTest *testing.T) {
 
 func TestGetAllGamesWithPlayerInvalidPlayerIdentifierBadRequest(unitTest *testing.T) {
 	testIdentifier := "GET all-games-with-player with invalid identifier"
-	mockCollection, testServer := newGameCollectionAndServer()
+	mockCollection, testHandler := newGameCollectionAndHandler()
 
 	// The character '+' is not a valid base-32 character.
-	getResponse := mockGet(testServer, "/backend/game/all-games-with-player/++++")
+	_, responseCode := testHandler.HandleGet([]string{"all-games-with-player", "++++"})
 
-	assertResponseIsCorrect(
-		unitTest,
-		testIdentifier,
-		getResponse,
-		nil,
-		http.StatusBadRequest)
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
 
 	assertNoFunctionWasCalled(
 		unitTest,
@@ -448,21 +488,20 @@ func TestGetAllGamesWithPlayerInvalidPlayerIdentifierBadRequest(unitTest *testin
 
 func TestGetAllGamesWithPlayerRejectedIfCollectionRejectsIt(unitTest *testing.T) {
 	testIdentifier := "GET all-games-with-player rejected by collection"
-	mockCollection, testServer := newGameCollectionAndServer()
-
+	mockCollection, testHandler := newGameCollectionAndHandler()
 	mockCollection.ErrorToReturn = errors.New("error")
 
-	mockPlayerName := "Mock Mock"
+	mockPlayerName := "Mock MacMock"
 	mockPlayerIdentifier := segmentTranslatorForTest().ToSegment(mockPlayerName)
 
-	getResponse := mockGet(testServer, "/backend/game/all-games-with-player/"+mockPlayerIdentifier)
+	_, responseCode := testHandler.HandleGet([]string{"all-games-with-player", mockPlayerIdentifier})
 
-	assertResponseIsCorrect(
-		unitTest,
-		testIdentifier,
-		getResponse,
-		nil,
-		http.StatusBadRequest)
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
 
 	functionRecord :=
 		mockCollection.getFirstAndEnsureOnly(
@@ -480,31 +519,29 @@ func TestGetAllGamesWithPlayerRejectedIfCollectionRejectsIt(unitTest *testing.T)
 }
 
 func TestGetAllGamesWithPlayerWhenEmptyList(unitTest *testing.T) {
-	testIdentifier := "GET all-games-with-player with invalid identifier"
-	mockCollection, testServer := newGameCollectionAndServer()
+	testIdentifier := "GET all-games-with-player when empty list"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockCollection.ReturnForViewAllWithPlayer = make([]*game_state.PlayerView, 0)
 
-	mockCollection.ReturnForViewAllWithPlayer = make([]*game.PlayerView, 0)
-
-	mockPlayerName := "Mock Mock"
+	mockPlayerName := "Mock MacMock"
 	mockPlayerIdentifier := segmentTranslatorForTest().ToSegment(mockPlayerName)
 
-	getResponse := mockGet(testServer, "/backend/game/all-games-with-player/"+mockPlayerIdentifier)
+	returnedInterface, responseCode :=
+		testHandler.HandleGet([]string{"all-games-with-player", mockPlayerIdentifier})
 
-	assertResponseIsCorrect(
-		unitTest,
-		testIdentifier,
-		getResponse,
-		nil,
-		http.StatusOK)
-
-	bodyDecoder := json.NewDecoder(getResponse.Body)
-
-	var responseTurnSummaryList endpoint.TurnSummaryList
-	parsingError := bodyDecoder.Decode(&responseTurnSummaryList)
-	if parsingError != nil {
+	if responseCode != http.StatusOK {
 		unitTest.Fatalf(
-			testIdentifier+"/error parsing JSON from HTTP response body: %v",
-			parsingError)
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusOK,
+			responseCode)
+	}
+
+	responseTurnSummaryList, isInterfaceCorrect := returnedInterface.(endpoint.TurnSummaryList)
+
+	if !isInterfaceCorrect {
+		unitTest.Fatalf(
+			testIdentifier+"/received %v instead of expected endpoint.TurnSummaryList",
+			returnedInterface)
 	}
 
 	if len(responseTurnSummaryList.TurnSummaries) != 0 {
@@ -529,8 +566,8 @@ func TestGetAllGamesWithPlayerWhenEmptyList(unitTest *testing.T) {
 }
 
 func TestGetAllGamesWithPlayerWhenThreeGames(unitTest *testing.T) {
-	testIdentifier := "GET all-games-with-player with invalid identifier"
-	mockCollection, testServer := newGameCollectionAndServer()
+	testIdentifier := "GET all-games-with-player when three games"
+	mockCollection, testHandler := newGameCollectionAndHandler()
 
 	firstTestGame := &mockGameState{
 		mockName:    "first test game",
@@ -539,7 +576,7 @@ func TestGetAllGamesWithPlayerWhenThreeGames(unitTest *testing.T) {
 	}
 
 	firstTestView, errorForFirstView :=
-		game.ViewForPlayer(firstTestGame, testPlayerStates[0].Name())
+		game_state.ViewForPlayer(firstTestGame, testPlayerStates[0].Name())
 
 	if errorForFirstView != nil {
 		unitTest.Fatalf(
@@ -554,7 +591,7 @@ func TestGetAllGamesWithPlayerWhenThreeGames(unitTest *testing.T) {
 	}
 
 	secondTestView, errorForSecondView :=
-		game.ViewForPlayer(secondTestGame, testPlayerStates[1].Name())
+		game_state.ViewForPlayer(secondTestGame, testPlayerStates[1].Name())
 
 	if errorForSecondView != nil {
 		unitTest.Fatalf(
@@ -569,7 +606,7 @@ func TestGetAllGamesWithPlayerWhenThreeGames(unitTest *testing.T) {
 	}
 
 	thirdTestView, errorForThirdView :=
-		game.ViewForPlayer(thirdTestGame, testPlayerStates[2].Name())
+		game_state.ViewForPlayer(thirdTestGame, testPlayerStates[2].Name())
 
 	if errorForThirdView != nil {
 		unitTest.Fatalf(
@@ -577,7 +614,7 @@ func TestGetAllGamesWithPlayerWhenThreeGames(unitTest *testing.T) {
 			errorForThirdView)
 	}
 
-	expectedViews := []*game.PlayerView{
+	expectedViews := []*game_state.PlayerView{
 		firstTestView,
 		secondTestView,
 		thirdTestView,
@@ -588,14 +625,15 @@ func TestGetAllGamesWithPlayerWhenThreeGames(unitTest *testing.T) {
 	mockPlayerName := "Mock Player"
 	mockPlayerIdentifier := segmentTranslatorForTest().ToSegment(mockPlayerName)
 
-	getResponse := mockGet(testServer, "/backend/game/all-games-with-player/"+mockPlayerIdentifier)
+	returnedInterface, responseCode :=
+		testHandler.HandleGet([]string{"all-games-with-player", mockPlayerIdentifier})
 
-	assertResponseIsCorrect(
-		unitTest,
-		testIdentifier,
-		getResponse,
-		nil,
-		http.StatusOK)
+	if responseCode != http.StatusOK {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusOK,
+			responseCode)
+	}
 
 	functionRecord :=
 		mockCollection.getFirstAndEnsureOnly(
@@ -611,14 +649,12 @@ func TestGetAllGamesWithPlayerWhenThreeGames(unitTest *testing.T) {
 		},
 		testIdentifier)
 
-	bodyDecoder := json.NewDecoder(getResponse.Body)
+	responseTurnSummaryList, isInterfaceCorrect := returnedInterface.(endpoint.TurnSummaryList)
 
-	var responseTurnSummaryList endpoint.TurnSummaryList
-	parsingError := bodyDecoder.Decode(&responseTurnSummaryList)
-	if parsingError != nil {
+	if !isInterfaceCorrect {
 		unitTest.Fatalf(
-			testIdentifier+"/error parsing JSON from HTTP response body: %v",
-			parsingError)
+			testIdentifier+"/received %v instead of expected endpoint.TurnSummaryList",
+			returnedInterface)
 	}
 
 	if len(responseTurnSummaryList.TurnSummaries) != len(expectedViews) {
@@ -656,16 +692,17 @@ func TestGetAllGamesWithPlayerWhenThreeGames(unitTest *testing.T) {
 
 func TestGetGameForPlayerNoFurtherSegmentBadRequest(unitTest *testing.T) {
 	testIdentifier := "GET with no segments after game-as-seen-by-player"
-	mockCollection, testServer := newGameCollectionAndServer()
+	mockCollection, testHandler := newGameCollectionAndHandler()
 
-	getResponse := mockGet(testServer, "/backend/game/game-as-seen-by-player")
+	returnedInterface, responseCode :=
+		testHandler.HandleGet([]string{"game-as-seen-by-player"})
 
-	assertResponseIsCorrect(
-		unitTest,
-		testIdentifier,
-		getResponse,
-		nil,
-		http.StatusBadRequest)
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
 
 	assertNoFunctionWasCalled(
 		unitTest,
@@ -675,19 +712,20 @@ func TestGetGameForPlayerNoFurtherSegmentBadRequest(unitTest *testing.T) {
 
 func TestGetGameForPlayerOnlyGameSegmentBadRequest(unitTest *testing.T) {
 	testIdentifier := "GET with only one segment after game-as-seen-by-player"
-	mockCollection, testServer := newGameCollectionAndServer()
+	mockCollection, testHandler := newGameCollectionAndHandler()
 
 	mockGameName := "Mock game"
 	mockGameIdentifier := segmentTranslatorForTest().ToSegment(mockGameName)
 
-	getResponse := mockGet(testServer, "/backend/game/game-as-seen-by-player/"+mockGameIdentifier)
+	returnedInterface, responseCode :=
+		testHandler.HandleGet([]string{"game-as-seen-by-player", mockGameIdentifier})
 
-	assertResponseIsCorrect(
-		unitTest,
-		testIdentifier,
-		getResponse,
-		nil,
-		http.StatusBadRequest)
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
 
 	assertNoFunctionWasCalled(
 		unitTest,

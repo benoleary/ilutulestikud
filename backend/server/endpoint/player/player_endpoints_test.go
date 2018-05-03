@@ -132,18 +132,18 @@ func (mockCollection *mockPlayerCollection) AvailableChatColors() []string {
 	return mockCollection.ReturnForAvailableChatColors
 }
 
-// newPlayerCollectionAndServer prepares a mock player collection and uses it to prepare a
-// server.State with the default endpoint segment translator for the tests,
-// in a consistent way for the tests of the player endpoints, returning the
-// mock collection and the server state.
+// newPlayerCollectionAndHandler prepares a mock player collection and uses it to
+// prepare a player_endpoint.Handler with the default endpoint segment translator
+// for the tests, in a consistent way for the tests of the player endpoints,
+// returning the mock collection and the endpoint handler.
 func newPlayerCollectionAndHandler() (*mockPlayerCollection, *player_endpoint.Handler) {
 	return newPlayerCollectionAndHandlerForTranslator(segmentTranslatorForTest())
 }
 
-// newPlayerCollectionAndServerForTranslator prepares a mock player collection and uses it to
-// prepare a server.State with the given endpoint segment translator in a
-// consistent way for the tests of the player endpoints, returning the
-// mock collection and the server state.
+// newPlayerCollectionAndHandlerForTranslator prepares a mock player collection and
+// uses it to prepare a player_endpoint.Handler with the given endpoint segment
+// translator in a consistent way for the tests of the player endpoints, returning
+// the mock collection and the endpoint handler.
 func newPlayerCollectionAndHandlerForTranslator(
 	segmentTranslator parsing.SegmentTranslator) (
 	*mockPlayerCollection, *player_endpoint.Handler) {
