@@ -4,4 +4,4 @@ frontend/dist
 frontend/node_modules
 .vscode
 frontend/package-lock.json
-*/*/coverage.out
+**/coverage.out
