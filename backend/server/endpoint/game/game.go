@@ -1,5 +1,7 @@
-package server
+package game
 
+// This package is exported as game and yet also imports a different package as game.
+// This is not a problem as imported package names are local to the file.
 import (
 	"encoding/json"
 	"fmt"
@@ -11,16 +13,28 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
 
-// gameEndpointHandler is a struct meant to encapsulate all the state co-ordinating
+// Handler is a struct meant to encapsulate all the state co-ordinating
 // interaction with all the games through the endpoints.
-type gameEndpointHandler struct {
-	stateCollection   gameCollection
+// It implements the
+// github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler interface.
+type Handler struct {
+	stateCollection   StateCollection
 	segmentTranslator parsing.SegmentTranslator
+}
+
+// New returns a pointer to a new Handler.
+func New(
+	collectionOfStates StateCollection,
+	translatorForSegments parsing.SegmentTranslator) *Handler {
+	return &Handler{
+		stateCollection:   collectionOfStates,
+		segmentTranslator: translatorForSegments,
+	}
 }
 
 // HandleGet parses an HTTP GET request and responds with the appropriate function.
 // This implements part of github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
-func (gameHandler *gameEndpointHandler) HandleGet(
+func (handler *Handler) HandleGet(
 	relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 1 {
 		return "Not enough segments in URI to determine what to do", http.StatusBadRequest
@@ -28,11 +42,11 @@ func (gameHandler *gameEndpointHandler) HandleGet(
 
 	switch relevantSegments[0] {
 	case "available-rulesets":
-		return gameHandler.writeAvailableRulesets()
+		return handler.writeAvailableRulesets()
 	case "all-games-with-player":
-		return gameHandler.writeTurnSummariesForPlayer(relevantSegments[1:])
+		return handler.writeTurnSummariesForPlayer(relevantSegments[1:])
 	case "game-as-seen-by-player":
-		return gameHandler.writeGameForPlayer(relevantSegments[1:])
+		return handler.writeGameForPlayer(relevantSegments[1:])
 	default:
 		return "URI segment " + relevantSegments[0] + " not valid", http.StatusNotFound
 	}
@@ -40,7 +54,7 @@ func (gameHandler *gameEndpointHandler) HandleGet(
 
 // HandlePost parses an HTTP POST request and responds with the appropriate function.
 // This implements part of github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
-func (gameHandler *gameEndpointHandler) HandlePost(
+func (handler *Handler) HandlePost(
 	httpBodyDecoder *json.Decoder,
 	relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 1 {
@@ -49,9 +63,9 @@ func (gameHandler *gameEndpointHandler) HandlePost(
 
 	switch relevantSegments[0] {
 	case "create-new-game":
-		return gameHandler.handleNewGame(httpBodyDecoder, relevantSegments)
+		return handler.handleNewGame(httpBodyDecoder, relevantSegments)
 	case "record-chat-message":
-		return gameHandler.handleRecordChatMessage(httpBodyDecoder, relevantSegments)
+		return handler.handleRecordChatMessage(httpBodyDecoder, relevantSegments)
 	default:
 		return "URI segment " + relevantSegments[0] + " not valid", http.StatusNotFound
 	}
@@ -59,7 +73,7 @@ func (gameHandler *gameEndpointHandler) HandlePost(
 
 // writeAvailableRulesets writes a JSON object into the HTTP response which has
 // the list of available rulesets as its "Rulesets" attribute.
-func (gameHandler *gameEndpointHandler) writeAvailableRulesets() (interface{}, int) {
+func (handler *Handler) writeAvailableRulesets() (interface{}, int) {
 	availableRulesetIdentifiers := game.ValidRulesetIdentifiers()
 
 	selectableRulesets := make([]endpoint.SelectableRuleset, 0)
@@ -88,7 +102,7 @@ func (gameHandler *gameEndpointHandler) writeAvailableRulesets() (interface{}, i
 
 // writeTurnSummariesForPlayer writes a JSON object into the HTTP response which has
 // the list of turn summary objects as its "TurnSummaries" attribute.
-func (gameHandler *gameEndpointHandler) writeTurnSummariesForPlayer(
+func (handler *Handler) writeTurnSummariesForPlayer(
 	relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 1 {
 		return "Not enough segments in URI to determine player", http.StatusBadRequest
@@ -96,18 +110,18 @@ func (gameHandler *gameEndpointHandler) writeTurnSummariesForPlayer(
 
 	playerIdentifier := relevantSegments[0]
 
-	playerName, identificationError :=
-		gameHandler.segmentTranslator.FromSegment(playerIdentifier)
+	playerName, errorFromIdentification :=
+		handler.segmentTranslator.FromSegment(playerIdentifier)
 
-	if identificationError != nil {
-		return identificationError, http.StatusBadRequest
+	if errorFromIdentification != nil {
+		return errorFromIdentification, http.StatusBadRequest
 	}
 
-	allGamesWithPlayer, viewError :=
-		gameHandler.stateCollection.ViewAllWithPlayer(playerName)
+	allGamesWithPlayer, errorFromView :=
+		handler.stateCollection.ViewAllWithPlayer(playerName)
 
-	if viewError != nil {
-		return viewError, http.StatusBadRequest
+	if errorFromView != nil {
+		return errorFromView, http.StatusBadRequest
 	}
 
 	numberOfGamesWithPlayer := len(allGamesWithPlayer)
@@ -118,7 +132,7 @@ func (gameHandler *gameEndpointHandler) writeTurnSummariesForPlayer(
 		gameView := allGamesWithPlayer[gameIndex]
 		_, isPlayerTurn := gameView.CurrentTurnOrder()
 		turnSummaries[gameIndex] = endpoint.TurnSummary{
-			GameIdentifier: gameHandler.segmentTranslator.ToSegment(gameView.GameName()),
+			GameIdentifier: handler.segmentTranslator.ToSegment(gameView.GameName()),
 			GameName:       gameView.GameName(),
 			IsPlayerTurn:   isPlayerTurn,
 		}
@@ -132,14 +146,14 @@ func (gameHandler *gameEndpointHandler) writeTurnSummariesForPlayer(
 }
 
 // handleNewGame adds a new game to the map of game state objects.
-func (gameHandler *gameEndpointHandler) handleNewGame(
+func (handler *Handler) handleNewGame(
 	httpBodyDecoder *json.Decoder,
 	relevantSegments []string) (interface{}, int) {
 	var gameDefinition endpoint.GameDefinition
 
-	parsingError := httpBodyDecoder.Decode(&gameDefinition)
-	if parsingError != nil {
-		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
+	errorFromParse := httpBodyDecoder.Decode(&gameDefinition)
+	if errorFromParse != nil {
+		return "Error parsing JSON: " + errorFromParse.Error(), http.StatusBadRequest
 	}
 
 	gameRuleset, unknownRulesetError :=
@@ -148,17 +162,17 @@ func (gameHandler *gameEndpointHandler) handleNewGame(
 		return unknownRulesetError, http.StatusBadRequest
 	}
 
-	addError :=
-		gameHandler.stateCollection.AddNew(
+	errorFromAdd :=
+		handler.stateCollection.AddNew(
 			gameDefinition.GameName,
 			gameRuleset,
 			gameDefinition.PlayerNames)
 
-	if addError != nil {
-		return addError, http.StatusBadRequest
+	if errorFromAdd != nil {
+		return errorFromAdd, http.StatusBadRequest
 	}
 
-	gameIdentifier := gameHandler.segmentTranslator.ToSegment(gameDefinition.GameName)
+	gameIdentifier := handler.segmentTranslator.ToSegment(gameDefinition.GameName)
 
 	if strings.Contains(gameIdentifier, "/") {
 		errorMessage := fmt.Sprintf(
@@ -172,33 +186,33 @@ func (gameHandler *gameEndpointHandler) handleNewGame(
 
 // writeGameForPlayer writes a JSON representation of the current state of the game
 // with the given name for the player with the given name.
-func (gameHandler *gameEndpointHandler) writeGameForPlayer(
+func (handler *Handler) writeGameForPlayer(
 	relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 2 {
 		return "Not enough segments in URI to determine game name and player name", http.StatusBadRequest
 	}
 
 	gameIdentifier := relevantSegments[0]
-	gameName, gameIdentificationError :=
-		gameHandler.segmentTranslator.FromSegment(gameIdentifier)
+	gameName, gameerrorFromIdentification :=
+		handler.segmentTranslator.FromSegment(gameIdentifier)
 
-	if gameIdentificationError != nil {
-		return gameIdentificationError, http.StatusBadRequest
+	if gameerrorFromIdentification != nil {
+		return gameerrorFromIdentification, http.StatusBadRequest
 	}
 
 	playerIdentifier := relevantSegments[1]
-	playerName, playerIdentificationError :=
-		gameHandler.segmentTranslator.FromSegment(playerIdentifier)
+	playerName, playererrorFromIdentification :=
+		handler.segmentTranslator.FromSegment(playerIdentifier)
 
-	if playerIdentificationError != nil {
-		return playerIdentificationError, http.StatusBadRequest
+	if playererrorFromIdentification != nil {
+		return playererrorFromIdentification, http.StatusBadRequest
 	}
 
-	gameView, viewError :=
-		gameHandler.stateCollection.ViewState(gameName, playerName)
+	gameView, errorFromView :=
+		handler.stateCollection.ViewState(gameName, playerName)
 
-	if viewError != nil {
-		return viewError, http.StatusBadRequest
+	if errorFromView != nil {
+		return errorFromView, http.StatusBadRequest
 	}
 
 	chatMessages := gameView.SortedChatLog()
@@ -228,24 +242,24 @@ func (gameHandler *gameEndpointHandler) writeGameForPlayer(
 }
 
 // handleRecordChatMessage passes on the given chat message to the relevant game.
-func (gameHandler *gameEndpointHandler) handleRecordChatMessage(
+func (handler *Handler) handleRecordChatMessage(
 	httpBodyDecoder *json.Decoder,
 	relevantSegments []string) (interface{}, int) {
 	var playerChatMessage endpoint.PlayerChatMessage
 
-	parsingError := httpBodyDecoder.Decode(&playerChatMessage)
-	if parsingError != nil {
-		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
+	errorFromParse := httpBodyDecoder.Decode(&playerChatMessage)
+	if errorFromParse != nil {
+		return "Error parsing JSON: " + errorFromParse.Error(), http.StatusBadRequest
 	}
 
-	actionError :=
-		gameHandler.stateCollection.RecordChatMessage(
+	errorFromRecord :=
+		handler.stateCollection.RecordChatMessage(
 			playerChatMessage.GameName,
 			playerChatMessage.PlayerName,
 			playerChatMessage.ChatMessage)
 
-	if actionError != nil {
-		return actionError, http.StatusBadRequest
+	if errorFromRecord != nil {
+		return errorFromRecord, http.StatusBadRequest
 	}
 
 	return "OK", http.StatusOK

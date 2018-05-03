@@ -1,4 +1,4 @@
-package server_test
+package player_test
 
 import (
 	"encoding/json"
@@ -6,14 +6,11 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/benoleary/ilutulestikud/backend/defaults"
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/player"
 	"github.com/benoleary/ilutulestikud/backend/server"
 	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
-
-var colorsAvailableInTest []string = defaults.AvailableColors()
 
 var testPlayerList endpoint.PlayerList = endpoint.PlayerList{
 	Players: []endpoint.PlayerState{

@@ -1,5 +1,7 @@
-package server
+package player
 
+// This package is exported as player and yet also imports a different package as player.
+// This is not a problem as imported package names are local to the file.
 import (
 	"encoding/json"
 	"fmt"
@@ -10,17 +12,27 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
 
-// playerEndpointHandler is a struct meant to encapsulate all the state making the
-// player states available to the endpoints.
+// Handler is a struct meant to encapsulate all the state making the player states
+// available to the endpoints.
 // It implements github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
-type playerEndpointHandler struct {
-	stateCollection   playerCollection
+type Handler struct {
+	stateCollection   StateCollection
 	segmentTranslator parsing.SegmentTranslator
+}
+
+// New returns a pointer to a new Handler.
+func New(
+	collectionOfStates StateCollection,
+	translatorForSegments parsing.SegmentTranslator) *Handler {
+	return &Handler{
+		stateCollection:   collectionOfStates,
+		segmentTranslator: translatorForSegments,
+	}
 }
 
 // HandleGet parses an HTTP GET request and responds with the appropriate function.
 // This implements part of github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
-func (playerHandler *playerEndpointHandler) HandleGet(
+func (handler *Handler) HandleGet(
 	relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 1 {
 		return "Not enough segments in URI to determine what to do", http.StatusBadRequest
@@ -28,9 +40,9 @@ func (playerHandler *playerEndpointHandler) HandleGet(
 
 	switch relevantSegments[0] {
 	case "registered-players":
-		return playerHandler.writeRegisteredPlayers()
+		return handler.writeRegisteredPlayers()
 	case "available-colors":
-		return playerHandler.writeAvailableColors()
+		return handler.writeAvailableColors()
 	default:
 		return "URI segment " + relevantSegments[0] + " not valid", http.StatusNotFound
 	}
@@ -38,7 +50,7 @@ func (playerHandler *playerEndpointHandler) HandleGet(
 
 // HandlePost parses an HTTP POST request and responds with the appropriate function.
 // This implements part of github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
-func (playerHandler *playerEndpointHandler) HandlePost(
+func (handler *Handler) HandlePost(
 	httpBodyDecoder *json.Decoder,
 	relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 1 {
@@ -47,11 +59,11 @@ func (playerHandler *playerEndpointHandler) HandlePost(
 
 	switch relevantSegments[0] {
 	case "new-player":
-		return playerHandler.handleNewPlayer(httpBodyDecoder)
+		return handler.handleNewPlayer(httpBodyDecoder)
 	case "update-player":
-		return playerHandler.handleUpdatePlayer(httpBodyDecoder)
+		return handler.handleUpdatePlayer(httpBodyDecoder)
 	case "reset-players":
-		return playerHandler.handleResetPlayers()
+		return handler.handleResetPlayers()
 	default:
 		return "URI segment " + relevantSegments[0] + " not valid", http.StatusNotFound
 	}
@@ -60,13 +72,13 @@ func (playerHandler *playerEndpointHandler) HandlePost(
 // writeRegisteredPlayers writes a JSON object into the HTTP response which has
 // the list of player objects as its "Players" attribute. The order of the players
 // may not consistent with repeated calls as ForEndpoint does not guarantee it.
-func (playerHandler *playerEndpointHandler) writeRegisteredPlayers() (interface{}, int) {
-	playerStates := playerHandler.stateCollection.All()
+func (handler *Handler) writeRegisteredPlayers() (interface{}, int) {
+	playerStates := handler.stateCollection.All()
 	playerList := make([]endpoint.PlayerState, 0, len(playerStates))
 	for _, playerState := range playerStates {
 		playerName := playerState.Name()
 		playerList = append(playerList, endpoint.PlayerState{
-			Identifier: playerHandler.segmentTranslator.ToSegment(playerName),
+			Identifier: handler.segmentTranslator.ToSegment(playerName),
 			Name:       playerName,
 			Color:      playerState.Color(),
 		})
@@ -81,9 +93,9 @@ func (playerHandler *playerEndpointHandler) writeRegisteredPlayers() (interface{
 
 // writeAvailableColors writes a JSON object into the HTTP response which has
 // the list of strings as its "Colors" attribute.
-func (playerHandler *playerEndpointHandler) writeAvailableColors() (interface{}, int) {
+func (handler *Handler) writeAvailableColors() (interface{}, int) {
 	endpointObject := endpoint.ChatColorList{
-		Colors: playerHandler.stateCollection.AvailableChatColors(),
+		Colors: handler.stateCollection.AvailableChatColors(),
 	}
 
 	return endpointObject, http.StatusOK
@@ -92,21 +104,21 @@ func (playerHandler *playerEndpointHandler) writeAvailableColors() (interface{},
 // handleNewPlayer adds the player defined by the JSON of the request's body to the list
 // of registered players, and returns the updated list as writeRegisteredPlayerNameListJson
 // would.
-func (playerHandler *playerEndpointHandler) handleNewPlayer(
+func (handler *Handler) handleNewPlayer(
 	httpBodyDecoder *json.Decoder) (interface{}, int) {
 	var endpointPlayer endpoint.PlayerState
-	parsingError := httpBodyDecoder.Decode(&endpointPlayer)
-	if parsingError != nil {
-		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
+	errorFromParse := httpBodyDecoder.Decode(&endpointPlayer)
+	if errorFromParse != nil {
+		return "Error parsing JSON: " + errorFromParse.Error(), http.StatusBadRequest
 	}
 
-	addError := playerHandler.stateCollection.Add(endpointPlayer.Name, endpointPlayer.Color)
+	errorFromAdd := handler.stateCollection.Add(endpointPlayer.Name, endpointPlayer.Color)
 
-	if addError != nil {
-		return addError, http.StatusBadRequest
+	if errorFromAdd != nil {
+		return errorFromAdd, http.StatusBadRequest
 	}
 
-	playerIdentifier := playerHandler.segmentTranslator.ToSegment(endpointPlayer.Name)
+	playerIdentifier := handler.segmentTranslator.ToSegment(endpointPlayer.Name)
 
 	if strings.Contains(playerIdentifier, "/") {
 		errorMessage := fmt.Sprintf(
@@ -115,34 +127,34 @@ func (playerHandler *playerEndpointHandler) handleNewPlayer(
 		return errorMessage, http.StatusBadRequest
 	}
 
-	return playerHandler.writeRegisteredPlayers()
+	return handler.writeRegisteredPlayers()
 }
 
 // handleUpdatePlayer updates the player defined by the JSON of the request's body, taking
 // the "Name" attribute as the key, and returns the updated list as writeRegisteredPlayers
 // would. Attributes which are present are updated, those which are missing remain unchanged.
-func (playerHandler *playerEndpointHandler) handleUpdatePlayer(
+func (handler *Handler) handleUpdatePlayer(
 	httpBodyDecoder *json.Decoder) (interface{}, int) {
 	var playerUpdate endpoint.PlayerState
-	parsingError := httpBodyDecoder.Decode(&playerUpdate)
-	if parsingError != nil {
-		return "Error parsing JSON: " + parsingError.Error(), http.StatusBadRequest
+	errorFromParse := httpBodyDecoder.Decode(&playerUpdate)
+	if errorFromParse != nil {
+		return "Error parsing JSON: " + errorFromParse.Error(), http.StatusBadRequest
 	}
 
 	updateError :=
-		playerHandler.stateCollection.UpdateColor(playerUpdate.Name, playerUpdate.Color)
+		handler.stateCollection.UpdateColor(playerUpdate.Name, playerUpdate.Color)
 
 	if updateError != nil {
 		return updateError, http.StatusBadRequest
 	}
 
-	return playerHandler.writeRegisteredPlayers()
+	return handler.writeRegisteredPlayers()
 }
 
 // handleResetPlayers resets the player list to the initial list, and returns the updated list
 // as writeRegisteredPlayers would.
-func (playerHandler *playerEndpointHandler) handleResetPlayers() (interface{}, int) {
-	playerHandler.stateCollection.Reset()
+func (handler *Handler) handleResetPlayers() (interface{}, int) {
+	handler.stateCollection.Reset()
 
-	return playerHandler.writeRegisteredPlayers()
+	return handler.writeRegisteredPlayers()
 }

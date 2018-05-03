@@ -1,8 +1,11 @@
 package server_test
 
 import (
+	"github.com/benoleary/ilutulestikud/backend/defaults"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
+
+var colorsAvailableInTest []string = defaults.AvailableColors()
 
 type mockPlayerState struct {
 	name  string

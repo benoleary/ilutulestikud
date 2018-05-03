@@ -5,14 +5,16 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/benoleary/ilutulestikud/backend/server/endpoint/game"
 	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
+	"github.com/benoleary/ilutulestikud/backend/server/endpoint/player"
 )
 
 // State contains all the state to allow the backend to function.
 type State struct {
 	accessControlAllowedOrigin string
-	playerHandler              *playerEndpointHandler
-	gameHandler                *gameEndpointHandler
+	playerHandler              *player.Handler
+	gameHandler                *game.Handler
 }
 
 // New creates a new State object and returns a pointer to it, assuming that the
@@ -20,18 +22,14 @@ type State struct {
 func New(
 	accessControlAllowedOrigin string,
 	segmentTranslator parsing.SegmentTranslator,
-	playerStateCollection playerCollection,
-	gameStateCollection gameCollection) *State {
+	playerStateCollection player.StateCollection,
+	gameStateCollection game.StateCollection) *State {
+	handlerForPlayer := player.New(playerStateCollection, segmentTranslator)
+	handlerForGame := game.New(gameStateCollection, segmentTranslator)
 	return &State{
 		accessControlAllowedOrigin: accessControlAllowedOrigin,
-		playerHandler: &playerEndpointHandler{
-			stateCollection:   playerStateCollection,
-			segmentTranslator: segmentTranslator,
-		},
-		gameHandler: &gameEndpointHandler{
-			stateCollection:   gameStateCollection,
-			segmentTranslator: segmentTranslator,
-		},
+		playerHandler:              handlerForPlayer,
+		gameHandler:                handlerForGame,
 	}
 }
 
