@@ -1,4 +1,4 @@
-package game_test
+package server_test
 
 // This file tests the github.com/benoleary/ilutulestikud/backend/server/endpoint/game package,
 // but does not import it directly, as it is most convenient to use a server.State which contains
