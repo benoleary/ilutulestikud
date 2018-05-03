@@ -8,17 +8,6 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/server"
 )
 
-func prepareState() *server.State {
-	// It is OK to set the player and game handlers to nil as this file just tests
-	// endpoints which are not covered by requests which would get validly redirected
-	// to either of the endpoint handlers.
-	return server.New(
-		"irrelevant",
-		nil,
-		nil,
-		nil)
-}
-
 func TestMockPostReturnsErrorForMalformedBody(unitTest *testing.T) {
 	// The json encoder is quite robust, but one way to trigger an error is to try
 	// to encode a function pointer.
@@ -147,7 +136,10 @@ func TestHandleBackend(unitTest *testing.T) {
 				httpRequest.Body = nil
 			}
 
-			serverState := prepareState()
+			// It is OK to set the player and game handlers to nil as this file just tests
+			// endpoints which are not covered by requests which would get validly redirected
+			// to either of the endpoint handlers.
+			serverState := server.New("irrelevant to tests", nil, nil, nil)
 
 			// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 			responseRecorder := httptest.NewRecorder()
