@@ -8,6 +8,8 @@ import (
 // SegmentTranslator defines the interface for structs which should be able to encode
 // a name as an identifier to be a segment in a URI, in a way so that it does not
 // generate problematic characters for URIs (especially '/').
+// It is exported from this package as it is used by two other packages which have to
+// be consistent with each other.
 type SegmentTranslator interface {
 	// ToSegment should return the name encoded as an identifier for interaction
 	// between frontend and backend.
