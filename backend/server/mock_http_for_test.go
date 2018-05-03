@@ -12,11 +12,6 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
 
-// segmentTranslatorForTest returns the standard base-32 translator.
-func segmentTranslatorForTest() parsing.SegmentTranslator {
-	return &parsing.Base32Translator{}
-}
-
 // mockGet creates a mock HTTP GET request and sends it to the given
 // server.State and returns an object containing the recorded response.
 func mockGet(

@@ -1,4 +1,4 @@
-package server_test
+package player_test
 
 import (
 	"encoding/json"
@@ -8,9 +8,13 @@ import (
 
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/player"
-	"github.com/benoleary/ilutulestikud/backend/server"
 	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
+
+// segmentTranslatorForTest returns the standard base-32 translator.
+func segmentTranslatorForTest() parsing.SegmentTranslator {
+	return &parsing.Base32Translator{}
+}
 
 var testPlayerList endpoint.PlayerList = endpoint.PlayerList{
 	Players: []endpoint.PlayerState{
