@@ -8,13 +8,14 @@ import (
 
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/game"
+	"github.com/benoleary/ilutulestikud/backend/server/endpoint_parsing"
 )
 
 // gameEndpointHandler is a struct meant to encapsulate all the state co-ordinating
 // interaction with all the games through the endpoints.
 type gameEndpointHandler struct {
 	stateCollection   gameCollection
-	segmentTranslator EndpointSegmentTranslator
+	segmentTranslator endpoint_parsing.EndpointSegmentTranslator
 }
 
 // HandleGet parses an HTTP GET request and responds with the appropriate function.

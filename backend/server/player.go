@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
+	"github.com/benoleary/ilutulestikud/backend/server/endpoint_parsing"
 )
 
 // playerEndpointHandler is a struct meant to encapsulate all the state making the
@@ -14,7 +15,7 @@ import (
 // It implements github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
 type playerEndpointHandler struct {
 	stateCollection   playerCollection
-	segmentTranslator EndpointSegmentTranslator
+	segmentTranslator endpoint_parsing.EndpointSegmentTranslator
 }
 
 // HandleGet parses an HTTP GET request and responds with the appropriate function.

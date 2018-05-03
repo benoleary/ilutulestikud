@@ -9,11 +9,12 @@ import (
 	"testing"
 
 	"github.com/benoleary/ilutulestikud/backend/server"
+	"github.com/benoleary/ilutulestikud/backend/server/endpoint_parsing"
 )
 
 // segmentTranslatorForTest returns the standard base-32 translator.
-func segmentTranslatorForTest() server.EndpointSegmentTranslator {
-	return &server.Base32Translator{}
+func segmentTranslatorForTest() endpoint_parsing.EndpointSegmentTranslator {
+	return &endpoint_parsing.Base32Translator{}
 }
 
 // mockGet creates a mock HTTP GET request and sends it to the given

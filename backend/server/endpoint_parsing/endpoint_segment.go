@@ -1,4 +1,4 @@
-package server
+package endpoint_parsing
 
 import (
 	"encoding/base32"

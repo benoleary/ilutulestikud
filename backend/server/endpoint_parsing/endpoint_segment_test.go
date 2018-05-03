@@ -1,27 +1,27 @@
-package server_test
+package endpoint_parsing_test
 
 import (
 	"testing"
 
-	"github.com/benoleary/ilutulestikud/backend/server"
+	"github.com/benoleary/ilutulestikud/backend/server/endpoint_parsing"
 )
 
 func TestDecodedEncodingIsInvariant(unitTest *testing.T) {
 	testCases := []struct {
 		testName            string
-		translatorReference server.EndpointSegmentTranslator
+		translatorReference endpoint_parsing.EndpointSegmentTranslator
 	}{
 		{
 			testName:            "Base32",
-			translatorReference: &server.Base32Translator{},
+			translatorReference: &endpoint_parsing.Base32Translator{},
 		},
 		{
 			testName:            "Base64",
-			translatorReference: &server.Base64Translator{},
+			translatorReference: &endpoint_parsing.Base64Translator{},
 		},
 		{
 			testName:            "No-operation",
-			translatorReference: &server.NoOperationTranslator{},
+			translatorReference: &endpoint_parsing.NoOperationTranslator{},
 		},
 	}
 
@@ -54,15 +54,15 @@ func TestDecodingStringWithInvalidCharacterProducesError(unitTest *testing.T) {
 	// does not have any disallowed characters.
 	testCases := []struct {
 		testName            string
-		translatorReference server.EndpointSegmentTranslator
+		translatorReference endpoint_parsing.EndpointSegmentTranslator
 	}{
 		{
 			testName:            "Base32",
-			translatorReference: &server.Base32Translator{},
+			translatorReference: &endpoint_parsing.Base32Translator{},
 		},
 		{
 			testName:            "Base64",
-			translatorReference: &server.Base64Translator{},
+			translatorReference: &endpoint_parsing.Base64Translator{},
 		},
 	}
 
