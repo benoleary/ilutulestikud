@@ -20,9 +20,8 @@ func mapStringsToTrue(stringsToMap []string) map[string]bool {
 	return stringMap
 }
 
-type mockPersister struct {
-}
-
+// We could prepare a mock persister just for this test, but the persister.InMemoryPersister
+// does everything which we could want without interacting with an external system.
 func prepareCollection(
 	unitTest *testing.T,
 	initialPlayerNames []string,

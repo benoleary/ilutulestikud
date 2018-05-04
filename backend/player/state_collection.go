@@ -74,8 +74,8 @@ func (stateCollection *StateCollection) AvailableChatColors() []string {
 	return deepCopy
 }
 
-// Add ensures that the player definition has a chat color before wrapping around
-// the add function of the internal collection.
+// Add ensures that the player definition has a chat color before calling
+// the Add function of the internal collection.
 func (stateCollection *StateCollection) Add(
 	playerName string,
 	chatColor string) error {
