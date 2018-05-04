@@ -55,14 +55,14 @@ func NewCollection(
 	return newCollection, nil
 }
 
-// All just wraps around the all function of the internal collection.
+// All just wraps around the All function of the internal collection.
 func (stateCollection *StateCollection) All() []ReadonlyState {
-	return stateCollection.statePersister.all()
+	return stateCollection.statePersister.All()
 }
 
-// Get just wraps around the get function of the internal collection.
+// Get just wraps around the Get function of the internal collection.
 func (stateCollection *StateCollection) Get(playerName string) (ReadonlyState, error) {
-	return stateCollection.statePersister.get(playerName)
+	return stateCollection.statePersister.Get(playerName)
 }
 
 // AvailableChatColors returns a deep copy of state collection's chat color slice.
@@ -84,7 +84,7 @@ func (stateCollection *StateCollection) Add(
 	}
 
 	if chatColor == "" {
-		playerCount := len(stateCollection.statePersister.all())
+		playerCount := len(stateCollection.statePersister.All())
 		colorIndex := playerCount % stateCollection.numberOfColors
 		chatColor = stateCollection.chatColorSlice[colorIndex]
 	} else if !stateCollection.chatColorMap[chatColor] {
@@ -94,10 +94,10 @@ func (stateCollection *StateCollection) Add(
 			stateCollection.chatColorSlice)
 	}
 
-	return stateCollection.statePersister.add(playerName, chatColor)
+	return stateCollection.statePersister.Add(playerName, chatColor)
 }
 
-// UpdateColor checks the validity of the color then wraps around the updateColor
+// UpdateColor checks the validity of the color then calls the UpdateColor
 // function of the internal collection.
 func (stateCollection *StateCollection) UpdateColor(
 	playerName string,
@@ -109,12 +109,12 @@ func (stateCollection *StateCollection) UpdateColor(
 			stateCollection.chatColorSlice)
 	}
 
-	return stateCollection.statePersister.updateColor(playerName, chatColor)
+	return stateCollection.statePersister.UpdateColor(playerName, chatColor)
 }
 
-// Reset calls the reset of the internal collection then adds the initial players again.
+// Reset calls the Reset of the internal collection then adds the initial players again.
 func (stateCollection *StateCollection) Reset() {
-	stateCollection.statePersister.reset()
+	stateCollection.statePersister.Reset()
 	stateCollection.addInitialPlayers()
 }
 

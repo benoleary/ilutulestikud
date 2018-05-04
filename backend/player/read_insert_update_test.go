@@ -5,6 +5,7 @@ import (
 
 	"github.com/benoleary/ilutulestikud/backend/defaults"
 	"github.com/benoleary/ilutulestikud/backend/player"
+	"github.com/benoleary/ilutulestikud/backend/player/persister"
 )
 
 var colorsAvailableInTest []string = defaults.AvailableColors()
@@ -52,7 +53,7 @@ func prepareCollectionsOrReturnError(
 	availableColors []string) ([]collectionAndDescription, error) {
 	statePersisters := []persisterAndDescription{
 		persisterAndDescription{
-			PlayerPersister:      player.NewInMemoryPersister(),
+			PlayerPersister:      persister.NewInMemoryPersister(),
 			PersisterDescription: "in-memory persister",
 		},
 	}

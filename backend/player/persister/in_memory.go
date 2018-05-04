@@ -1,8 +1,10 @@
-package player
+package persister
 
 import (
 	"fmt"
 	"sync"
+
+	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
 // InMemoryPersister stores inMemoryState objects as instances
@@ -23,10 +25,10 @@ func NewInMemoryPersister() *InMemoryPersister {
 	}
 }
 
-// add creates a new inMemoryState object with the given name and given color,
+// Add creates a new inMemoryState object with the given name and given color,
 // and adds a reference to it into the collection. It returns an error if the
 // player already exists.
-func (inMemoryPersister *InMemoryPersister) add(playerName string, chatColor string) error {
+func (inMemoryPersister *InMemoryPersister) Add(playerName string, chatColor string) error {
 	_, playerExists := inMemoryPersister.playerStates[playerName]
 
 	if playerExists {
@@ -46,9 +48,9 @@ func (inMemoryPersister *InMemoryPersister) add(playerName string, chatColor str
 	return nil
 }
 
-// updateColor updates the given player to have the given chat color. It uses
+// UpdateColor updates the given player to have the given chat color. It uses
 // a mutex to ensure thread safety.
-func (inMemoryPersister *InMemoryPersister) updateColor(
+func (inMemoryPersister *InMemoryPersister) UpdateColor(
 	playerName string,
 	chatColor string) error {
 	playerToUpdate, playerExists := inMemoryPersister.playerStates[playerName]
@@ -68,10 +70,10 @@ func (inMemoryPersister *InMemoryPersister) updateColor(
 	return nil
 }
 
-// get returns the ReadOnly corresponding to the given player identifier if it exists
+// Get returns the ReadOnly corresponding to the given player identifier if it exists
 // already along with an error which is nil if there was no problem. If the player does
 // not exist, a non-nil error is returned along with a nil ReadOnly.
-func (inMemoryPersister *InMemoryPersister) get(playerName string) (ReadonlyState, error) {
+func (inMemoryPersister *InMemoryPersister) Get(playerName string) (player.ReadonlyState, error) {
 	playerState, playerExists := inMemoryPersister.playerStates[playerName]
 	if !playerExists {
 		return nil, fmt.Errorf(
@@ -82,11 +84,11 @@ func (inMemoryPersister *InMemoryPersister) get(playerName string) (ReadonlyStat
 	return playerState, nil
 }
 
-// all returns a slice of all the players in the collection as
+// All returns a slice of all the players in the collection as
 // ReadonlyState instances, ordered in the random way the iteration
 // over the entries of a Golang map normally is.
-func (inMemoryPersister *InMemoryPersister) all() []ReadonlyState {
-	playerList := make([]ReadonlyState, 0, len(inMemoryPersister.playerStates))
+func (inMemoryPersister *InMemoryPersister) All() []player.ReadonlyState {
+	playerList := make([]player.ReadonlyState, 0, len(inMemoryPersister.playerStates))
 	for _, playerState := range inMemoryPersister.playerStates {
 		playerList = append(playerList, playerState)
 	}
@@ -94,8 +96,8 @@ func (inMemoryPersister *InMemoryPersister) all() []ReadonlyState {
 	return playerList
 }
 
-// reset removes all players.
-func (inMemoryPersister *InMemoryPersister) reset() {
+// Reset removes all players.
+func (inMemoryPersister *InMemoryPersister) Reset() {
 	for playerName := range inMemoryPersister.playerStates {
 		delete(inMemoryPersister.playerStates, playerName)
 	}
