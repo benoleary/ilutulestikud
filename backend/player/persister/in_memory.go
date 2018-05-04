@@ -27,12 +27,8 @@ func NewInMemoryPersister() *InMemoryPersister {
 
 // Add creates a new inMemoryState object with the given name and given color,
 // and adds a reference to it into the collection. It returns an error if the
-// player already exists, or if the player name is an empty string.
+// player already exists.
 func (inMemoryPersister *InMemoryPersister) Add(playerName string, chatColor string) error {
-	if playerName == "" {
-		return fmt.Errorf("Player name is empty")
-	}
-
 	_, playerExists := inMemoryPersister.playerStates[playerName]
 
 	if playerExists {

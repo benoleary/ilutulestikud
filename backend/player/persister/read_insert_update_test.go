@@ -54,47 +54,6 @@ func TestReturnErrorWhenPlayerNotFoundInternally(unitTest *testing.T) {
 	}
 }
 
-func TestRejectNewPlayerWithNoName(unitTest *testing.T) {
-	statePersisters := preparePersisters()
-	playerName := ""
-	chatColor := colorsAvailableInTest[0]
-
-	for _, statePersister := range statePersisters {
-		testIdentifier :=
-			"Reject Add(player with no name)/" + statePersister.PersisterDescription
-
-		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			errorFromAdd := statePersister.PlayerPersister.Add(playerName, chatColor)
-
-			// We check that the persister still produces valid states.
-			assertPlayerNamesAreCorrectAndGetIsConsistentWithAll(
-				testIdentifier,
-				unitTest,
-				defaultTestPlayerNames,
-				statePersister.PlayerPersister)
-
-			// If there was no error, then something went wrong.
-			if errorFromAdd == nil {
-				unitTest.Fatalf(
-					"Add(%v, %v) did not produce an error",
-					playerName,
-					chatColor)
-			}
-
-			// We check that the player was not added.
-			playerState, errorFromGet := statePersister.PlayerPersister.Get(playerName)
-
-			// If there was no error, then something went wrong.
-			if errorFromGet == nil {
-				unitTest.Fatalf(
-					"Get(%v) did not produce an error, instead retrieved %v",
-					playerName,
-					playerState)
-			}
-		})
-	}
-}
-
 func TestRejectAddPlayerWithExistingName(unitTest *testing.T) {
 	statePersisters := preparePersisters()
 

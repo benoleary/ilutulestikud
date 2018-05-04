@@ -20,15 +20,96 @@ func mapStringsToTrue(stringsToMap []string) map[string]bool {
 	return stringMap
 }
 
-// We could prepare a mock persister just for this test, but the persister.InMemoryPersister
-// does everything which we could want without interacting with an external system.
+type mockPlayerState struct {
+	mockName  string
+	mockColor string
+}
+
+func (mockState *mockPlayerState) Name() string {
+	return mockState.mockName
+}
+
+func (mockState *mockPlayerState) Color() string {
+	return mockState.mockColor
+}
+
+type mockPersister struct {
+	TestReference           *testing.T
+	ReturnForAll            []player.ReadonlyState
+	ReturnForGet            player.ReadonlyState
+	ReturnForNontestError   error
+	TestErrorForAll         error
+	TestErrorForGet         error
+	TestErrorForAdd         error
+	TestErrorForUpdateColor error
+	TestErrorForReset       error
+	ArgumentsForAdd         map[string][]string
+}
+
+func NewMockFullTestError(testReference *testing.T, testError error) *mockPersister {
+	return &mockPersister{
+		TestReference:           testReference,
+		ReturnForAll:            nil,
+		ReturnForGet:            nil,
+		ReturnForNontestError:   nil,
+		TestErrorForAll:         testError,
+		TestErrorForGet:         testError,
+		TestErrorForAdd:         testError,
+		TestErrorForUpdateColor: testError,
+		TestErrorForReset:       testError,
+		ArgumentsForAdd:         make(map[string][]string, 0),
+	}
+}
+
+func (mockImplementation *mockPersister) All() []player.ReadonlyState {
+	if mockImplementation.TestErrorForAll != nil {
+		mockImplementation.TestReference.Errorf("%v", mockImplementation.TestErrorForAll)
+	}
+
+	return mockImplementation.ReturnForAll
+}
+
+func (mockImplementation *mockPersister) Get(playerName string) (player.ReadonlyState, error) {
+	if mockImplementation.TestErrorForGet != nil {
+		mockImplementation.TestReference.Errorf("%v", mockImplementation.TestErrorForGet)
+	}
+
+	return mockImplementation.ReturnForGet, mockImplementation.ReturnForNontestError
+}
+
+func (mockImplementation *mockPersister) Add(playerName string, chatColor string) error {
+	if mockImplementation.TestErrorForAdd != nil {
+		mockImplementation.TestReference.Errorf("%v", mockImplementation.TestErrorForAdd)
+	}
+
+	existingColors := mockImplementation.ArgumentsForAdd[playerName]
+	mockImplementation.ArgumentsForAdd[playerName] = append(existingColors, chatColor)
+
+	return mockImplementation.ReturnForNontestError
+}
+
+func (mockImplementation *mockPersister) UpdateColor(playerName string, chatColor string) error {
+	if mockImplementation.TestErrorForUpdateColor != nil {
+		mockImplementation.TestReference.Errorf("%v", mockImplementation.TestErrorForUpdateColor)
+	}
+
+	return mockImplementation.ReturnForNontestError
+}
+
+func (mockImplementation *mockPersister) Reset() {
+	if mockImplementation.TestErrorForReset != nil {
+		mockImplementation.TestReference.Errorf("%v", mockImplementation.TestErrorForReset)
+	}
+}
+
 func prepareCollection(
 	unitTest *testing.T,
 	initialPlayerNames []string,
-	availableColors []string) *player.StateCollection {
+	availableColors []string,
+	mockImplementation *mockPersister) (*player.StateCollection, map[string]bool) {
 	stateCollection, errorFromCreation :=
 		player.NewCollection(
-			persister.NewInMemoryPersister(),
+			mockImplementation,
 			defaultTestPlayerNames,
 			colorsAvailableInTest)
 
@@ -38,10 +119,15 @@ func prepareCollection(
 			errorFromCreation)
 	}
 
-	return stateCollection
+	colorSet := make(map[string]bool, 0)
+	for _, availableColor := range availableColors {
+		colorSet[availableColor] = true
+	}
+
+	return stateCollection, colorSet
 }
 
-func TestAllCorrectlyReturnsInitialPlayers(unitTest *testing.T) {
+func TestConstructorAddsCorrectly(unitTest *testing.T) {
 	testCases := []struct {
 		testName           string
 		initialPlayerNames []string
@@ -61,16 +147,51 @@ func TestAllCorrectlyReturnsInitialPlayers(unitTest *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		stateCollection :=
-			prepareCollection(unitTest, defaultTestPlayerNames, colorsAvailableInTest)
+		mockImplementation := &mockPersister{}
 
 		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
-			assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
-				testCase.testName,
-				unitTest,
-				testCase.initialPlayerNames,
-				colorsAvailableInTest,
-				stateCollection)
+			stateCollection, validColors :=
+				prepareCollection(
+					unitTest,
+					testCase.initialPlayerNames,
+					colorsAvailableInTest,
+					mockImplementation)
+
+			numberOfAddedPlayers := len(mockImplementation.ArgumentsForAdd)
+
+			if numberOfAddedPlayers != len(testCase.initialPlayerNames) {
+				unitTest.Errorf(
+					"Number of initial players (expected %v) did not match number of players added (added %v)",
+					testCase.initialPlayerNames,
+					mockImplementation.ArgumentsForAdd)
+			}
+
+			for _, initialPlayerName := range testCase.initialPlayerNames {
+				addArguments, hasAddedArguments :=
+					mockImplementation.ArgumentsForAdd[initialPlayerName]
+
+				if !hasAddedArguments {
+					unitTest.Errorf(
+						"No Add arguments for player name %v",
+						initialPlayerName)
+				}
+
+				if len(addArguments) != 1 {
+					unitTest.Errorf(
+						"Wrong number of Add arguments for player name %v - expected 1, arguments slice %v",
+						initialPlayerName,
+						addArguments)
+				}
+
+				colorOfAdd := addArguments[0]
+				if !validColors[colorOfAdd] {
+					unitTest.Errorf(
+						"Add for player %v had invalid color %v (valid colors are %v)",
+						initialPlayerName,
+						colorOfAdd,
+						validColors)
+				}
+			}
 		})
 	}
 }
