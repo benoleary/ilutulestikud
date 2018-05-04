@@ -95,47 +95,6 @@ func TestRejectNewPlayerWithNoName(unitTest *testing.T) {
 	}
 }
 
-func TestAddNewPlayerWithInvalidColor(unitTest *testing.T) {
-	statePersisters := preparePersisters()
-	playerName := "A. New Player"
-	invalidColor := "Not a valid color"
-
-	for _, statePersister := range statePersisters {
-		testIdentifier :=
-			"Reject Add(player with invalid color)/" + statePersister.PersisterDescription
-
-		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			errorFromAdd := statePersister.PlayerPersister.Add(playerName, invalidColor)
-
-			// We check that the persister still produces valid states.
-			assertPlayerNamesAreCorrectAndGetIsConsistentWithAll(
-				testIdentifier,
-				unitTest,
-				defaultTestPlayerNames,
-				statePersister.PlayerPersister)
-
-			// If there was no error, then something went wrong.
-			if errorFromAdd == nil {
-				unitTest.Fatalf(
-					"Add(%v, %v) did not produce an error",
-					playerName,
-					invalidColor)
-			}
-
-			// We check that the persister was not added.
-			playerState, errorFromGet := statePersister.PlayerPersister.Get(playerName)
-
-			// If there was no error, then something went wrong.
-			if errorFromGet == nil {
-				unitTest.Fatalf(
-					"Get(%v) did not produce an error, instead retrieved %v",
-					playerName,
-					playerState)
-			}
-		})
-	}
-}
-
 func TestRejectAddPlayerWithExistingName(unitTest *testing.T) {
 	statePersisters := preparePersisters()
 
@@ -145,13 +104,16 @@ func TestRejectAddPlayerWithExistingName(unitTest *testing.T) {
 				"Reject Add(player with existing name)/" + statePersister.PersisterDescription
 
 			unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-				initialState := getStateAndAssertNoError(
-					testIdentifier+"/Get(initial player)",
-					unitTest,
-					playerName,
-					statePersister.PlayerPersister)
+				errorFromInitialAdd :=
+					statePersister.PlayerPersister.Add(playerName, colorsAvailableInTest[0])
 
-				errorFromAddWithNoColor := statePersister.PlayerPersister.Add(playerName, "")
+				if errorFromInitialAdd != nil {
+					unitTest.Fatalf(
+						"Add(%v, %v) produced an error: %v",
+						playerName,
+						colorsAvailableInTest[0],
+						errorFromInitialAdd)
+				}
 
 				// We check that the persister still produces valid states.
 				assertPlayerNamesAreCorrectAndGetIsConsistentWithAll(
@@ -160,36 +122,15 @@ func TestRejectAddPlayerWithExistingName(unitTest *testing.T) {
 					defaultTestPlayerNames,
 					statePersister.PlayerPersister)
 
-				// If there was no error, then something went wrong.
-				if errorFromAddWithNoColor == nil {
-					unitTest.Fatalf(
-						"Add(%v, [empty string for color]) did not produce an error",
-						playerName)
-				}
-
-				// We check that the player is unchanged.
-				existingStateAfterAddWithNoColor :=
+				initialState :=
 					getStateAndAssertNoError(
 						testIdentifier+"/Get(initial player)",
 						unitTest,
 						playerName,
 						statePersister.PlayerPersister)
 
-				if (existingStateAfterAddWithNoColor.Name() != existingStateAfterAddWithNoColor.Name()) ||
-					(existingStateAfterAddWithNoColor.Color() != existingStateAfterAddWithNoColor.Color()) {
-					unitTest.Fatalf(
-						"Add(existing player %v, empty color string) changed the player state from %v to %v",
-						playerName,
-						initialState,
-						existingStateAfterAddWithNoColor)
-				}
-
-				newColor := colorsAvailableInTest[0]
-				if newColor == initialState.Color() {
-					newColor = colorsAvailableInTest[1]
-				}
-
-				errorFromAddWithNewColor := statePersister.PlayerPersister.Add(playerName, newColor)
+				errorFromSecondAdd :=
+					statePersister.PlayerPersister.Add(playerName, colorsAvailableInTest[1])
 
 				// We check that the persister still produces valid states.
 				assertPlayerNamesAreCorrectAndGetIsConsistentWithAll(
@@ -199,11 +140,11 @@ func TestRejectAddPlayerWithExistingName(unitTest *testing.T) {
 					statePersister.PlayerPersister)
 
 				// If there was no error, then something went wrong.
-				if errorFromAddWithNewColor == nil {
+				if errorFromSecondAdd == nil {
 					unitTest.Fatalf(
 						"Add(%v, %v) did not produce an error",
 						playerName,
-						newColor)
+						colorsAvailableInTest[1])
 				}
 
 				// We check that the player is unchanged.
@@ -219,7 +160,7 @@ func TestRejectAddPlayerWithExistingName(unitTest *testing.T) {
 					unitTest.Fatalf(
 						"Add(existing player %v, new color %v) changed the player state from %v to %v",
 						playerName,
-						newColor,
+						colorsAvailableInTest[1],
 						initialState,
 						existingStateAfterAddWithNewColor)
 				}
