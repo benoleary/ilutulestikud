@@ -3,7 +3,7 @@ package game
 import (
 	"fmt"
 
-	"github.com/benoleary/ilutulestikud/backend/chat"
+	"github.com/benoleary/ilutulestikud/backend/game/chat"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 

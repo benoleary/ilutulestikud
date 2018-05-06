@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/benoleary/ilutulestikud/backend/chat"
+	"github.com/benoleary/ilutulestikud/backend/game/chat"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 

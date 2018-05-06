@@ -8,14 +8,16 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/defaults"
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/player"
+	player_persister "github.com/benoleary/ilutulestikud/backend/player/persister"
 	"github.com/benoleary/ilutulestikud/backend/server"
+	endpoint_parsing "github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
 
 func main() {
 	fmt.Printf("Local server started.\n")
 
 	// This main function just injects hard-coded dependencies.
-	playerPersister := player.NewInMemoryPersister()
+	playerPersister := player_persister.NewInMemoryPersister()
 	playerCollection, errorCreatingPlayerCollection :=
 		player.NewCollection(
 			playerPersister,
@@ -38,7 +40,7 @@ func main() {
 	serverState :=
 		server.New(
 			"http://localhost:4233",
-			&server.Base32Translator{},
+			&endpoint_parsing.Base32Translator{},
 			playerCollection,
 			gameCollection)
 	http.HandleFunc("/backend/", serverState.HandleBackend)
