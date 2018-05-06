@@ -131,7 +131,7 @@ func prepareCollection(
 	stateCollection, errorFromCreation :=
 		player.NewCollection(
 			mockImplementation,
-			defaultTestPlayerNames,
+			initialPlayerNames,
 			colorsAvailableInTest)
 
 	if errorFromCreation != nil {
@@ -206,49 +206,6 @@ func TestConstructorAndResetBothAddCorrectly(unitTest *testing.T) {
 				validColors,
 				mockImplementation.ArgumentsForAdd)
 		})
-	}
-}
-
-func assertPersisterAddCalledCorrectly(
-	testIdentifier string,
-	unitTest *testing.T,
-	initialPlayerNames []string,
-	validColors map[string]bool,
-	argumentsForPersisterAdd map[string][]string) {
-	numberOfAddedPlayers := len(argumentsForPersisterAdd)
-
-	if numberOfAddedPlayers != len(initialPlayerNames) {
-		unitTest.Errorf(
-			"Number of initial players (expected %v) did not match number of players added (added %v)",
-			initialPlayerNames,
-			argumentsForPersisterAdd)
-	}
-
-	for _, initialPlayerName := range initialPlayerNames {
-		addArguments, hasAddedArguments :=
-			argumentsForPersisterAdd[initialPlayerName]
-
-		if !hasAddedArguments {
-			unitTest.Errorf(
-				"No Add(...) arguments for player name %v",
-				initialPlayerName)
-		}
-
-		if len(addArguments) != 1 {
-			unitTest.Errorf(
-				"Wrong number of Add(...) arguments for player name %v - expected 1, arguments slice %v",
-				initialPlayerName,
-				addArguments)
-		}
-
-		colorOfAdd := addArguments[0]
-		if !validColors[colorOfAdd] {
-			unitTest.Errorf(
-				"Add(...) for player %v had invalid color %v (valid colors are %v)",
-				initialPlayerName,
-				colorOfAdd,
-				validColors)
-		}
 	}
 }
 
@@ -352,8 +309,9 @@ func TestReturnFromGetIsCorrect(unitTest *testing.T) {
 	for _, testCase := range testCases {
 		mockImplementation :=
 			NewMockPersister(unitTest, fmt.Errorf("Only Get(...) should be called"))
-		mockImplementation.TestErrorForGet = testCase.expectedError
+		mockImplementation.TestErrorForGet = nil
 		mockImplementation.ReturnForGet = testCase.expectedReturn
+		mockImplementation.ReturnForNontestError = testCase.expectedError
 
 		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
 			stateCollection, _ :=
@@ -506,8 +464,10 @@ func TestReturnErrorFromPersisterAdd(unitTest *testing.T) {
 
 	for _, testCase := range testCases {
 		mockImplementation :=
-			NewMockPersister(unitTest, fmt.Errorf("Only Add(...) should be called"))
-		mockImplementation.TestErrorForAdd = testCase.expectedError
+			NewMockPersister(unitTest, fmt.Errorf("Only Add(...) and All() should be called"))
+		mockImplementation.TestErrorForAdd = nil
+		mockImplementation.TestErrorForAll = nil
+		mockImplementation.ReturnForNontestError = testCase.expectedError
 
 		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
 			stateCollection, _ :=
@@ -536,8 +496,9 @@ func TestReturnErrorFromPersisterAdd(unitTest *testing.T) {
 
 func TestAddPlayerWithNoColorGetsValidColor(unitTest *testing.T) {
 	mockImplementation :=
-		NewMockPersister(unitTest, fmt.Errorf("Only Add(...) should be called"))
+		NewMockPersister(unitTest, fmt.Errorf("Only Add(...) and All() should be called"))
 	mockImplementation.TestErrorForAdd = nil
+	mockImplementation.TestErrorForAll = nil
 
 	stateCollection, validColors :=
 		prepareCollection(
@@ -573,7 +534,7 @@ func TestAddPlayerWithNoColorGetsValidColor(unitTest *testing.T) {
 	}
 
 	assignedColor := assignedColorList[0]
-	if validColors[assignedColor] {
+	if !validColors[assignedColor] {
 		unitTest.Fatalf(
 			"Assigned color %v is not in the valid color map %v",
 			assignedColor,
@@ -630,7 +591,8 @@ func TestReturnErrorFromPersisterUpdateColor(unitTest *testing.T) {
 	for _, testCase := range testCases {
 		mockImplementation :=
 			NewMockPersister(unitTest, fmt.Errorf("Only UpdateColor(...) should be called"))
-		mockImplementation.TestErrorForUpdateColor = testCase.expectedError
+		mockImplementation.TestErrorForUpdateColor = nil
+		mockImplementation.ReturnForNontestError = testCase.expectedError
 
 		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
 			stateCollection, _ :=
@@ -654,6 +616,49 @@ func TestReturnErrorFromPersisterUpdateColor(unitTest *testing.T) {
 					testCase.expectedError)
 			}
 		})
+	}
+}
+
+func assertPersisterAddCalledCorrectly(
+	testIdentifier string,
+	unitTest *testing.T,
+	initialPlayerNames []string,
+	validColors map[string]bool,
+	argumentsForPersisterAdd map[string][]string) {
+	numberOfAddedPlayers := len(argumentsForPersisterAdd)
+
+	if numberOfAddedPlayers != len(initialPlayerNames) {
+		unitTest.Errorf(
+			"Number of initial players (expected %v) did not match number of players added (added %v)",
+			initialPlayerNames,
+			argumentsForPersisterAdd)
+	}
+
+	for _, initialPlayerName := range initialPlayerNames {
+		addArguments, hasAddedArguments :=
+			argumentsForPersisterAdd[initialPlayerName]
+
+		if !hasAddedArguments {
+			unitTest.Errorf(
+				"No Add(...) arguments for player name %v",
+				initialPlayerName)
+		}
+
+		if len(addArguments) != 1 {
+			unitTest.Errorf(
+				"Wrong number of Add(...) arguments for player name %v - expected 1, arguments slice %v",
+				initialPlayerName,
+				addArguments)
+		}
+
+		colorOfAdd := addArguments[0]
+		if !validColors[colorOfAdd] {
+			unitTest.Errorf(
+				"Add(...) for player %v had invalid color %v (valid colors are %v)",
+				initialPlayerName,
+				colorOfAdd,
+				validColors)
+		}
 	}
 }
 

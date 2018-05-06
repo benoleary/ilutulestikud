@@ -238,26 +238,40 @@ func TestRejectUpdateInvalidPlayer(unitTest *testing.T) {
 	}
 }
 
-func TestUpdateAllPlayersToFirstColor(unitTest *testing.T) {
+func TestUpdateAllPlayersToNewColor(unitTest *testing.T) {
 	statePersisters := preparePersisters()
 
-	firstColor := colorsAvailableInTest[0]
+	initialColor := colorsAvailableInTest[0]
+	newColor := colorsAvailableInTest[1]
 
 	for _, statePersister := range statePersisters {
-		for _, playerName := range defaultTestPlayerNames {
-			testIdentifier :=
-				"Update player to first color/" + statePersister.PersisterDescription
+		testIdentifier :=
+			"Update player to new color/" + statePersister.PersisterDescription
 
-			unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-				errorFromAddWithNoColor :=
-					statePersister.PlayerPersister.UpdateColor(playerName, firstColor)
+		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			// First we have to add all the required players
+			for _, playerName := range defaultTestPlayerNames {
+				errorFromAdd := statePersister.PlayerPersister.Add(playerName, initialColor)
 
-				if errorFromAddWithNoColor != nil {
+				if errorFromAdd != nil {
+					unitTest.Fatalf(
+						"Add(%v, %v) produced an error %v",
+						playerName,
+						initialColor,
+						errorFromAdd)
+				}
+			}
+
+			for _, playerName := range defaultTestPlayerNames {
+				errorFromUpdateColor :=
+					statePersister.PlayerPersister.UpdateColor(playerName, newColor)
+
+				if errorFromUpdateColor != nil {
 					unitTest.Fatalf(
 						"UpdateColor(%v, %v) produced an error: %v",
 						playerName,
-						firstColor,
-						errorFromAddWithNoColor)
+						newColor,
+						errorFromUpdateColor)
 				}
 
 				// We check that the persister still produces valid states.
@@ -276,16 +290,16 @@ func TestUpdateAllPlayersToFirstColor(unitTest *testing.T) {
 						statePersister.PlayerPersister)
 
 				if (updatedState.Name() != playerName) ||
-					(updatedState.Color() != firstColor) {
+					(updatedState.Color() != newColor) {
 					unitTest.Fatalf(
 						"UpdateColor(%v, %v) then Get(%v) produced state %v",
 						playerName,
-						firstColor,
+						newColor,
 						playerName,
 						updatedState)
 				}
-			})
-		}
+			}
+		})
 	}
 }
 
@@ -330,6 +344,20 @@ func TestReset(unitTest *testing.T) {
 				testCase.testName + "/" + statePersister.PersisterDescription
 
 			unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+
+				// First we have to add all the required players
+				for _, playerName := range defaultTestPlayerNames {
+					errorFromAdd := statePersister.PlayerPersister.Add(playerName, chatColorForAdd)
+
+					if errorFromAdd != nil {
+						unitTest.Fatalf(
+							"Add(%v, %v) produced an error %v",
+							playerName,
+							chatColorForAdd,
+							errorFromAdd)
+					}
+				}
+
 				if testCase.shouldAddBeforeReset {
 					errorFromAdd :=
 						statePersister.PlayerPersister.Add(playerNameToAdd, chatColorForAdd)
