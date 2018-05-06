@@ -400,11 +400,18 @@ func assertPlayerNamesAreCorrectAndGetIsConsistentWithAll(
 
 	setOfNamesFromAll := make(map[string]bool, 0)
 	for _, stateFromAll := range statesFromAll {
+		if stateFromAll == nil {
+			unitTest.Fatalf(
+				testIdentifier+"/nil state in return from All(): %v",
+				statesFromAll)
+		}
+
 		stateName := stateFromAll.Name()
 		if setOfNamesFromAll[stateName] {
 			unitTest.Fatalf(
-				testIdentifier+"/player name %v duplicated in return from All()",
-				stateName)
+				testIdentifier+"/player name %v duplicated in return from All() %v",
+				stateName,
+				statesFromAll)
 		}
 
 		setOfNamesFromAll[stateName] = true
@@ -412,6 +419,7 @@ func assertPlayerNamesAreCorrectAndGetIsConsistentWithAll(
 
 	// Now we check that Get(...) is consistent with each player from All().
 	for _, stateFromAll := range statesFromAll {
+		// At this point we can be sure that there are no nils in statesFromAll.
 		nameFromAll := stateFromAll.Name()
 		stateFromGet, errorFromGet := playerPersister.Get(nameFromAll)
 		if errorFromGet != nil {
@@ -419,6 +427,12 @@ func assertPlayerNamesAreCorrectAndGetIsConsistentWithAll(
 				testIdentifier+"/Get(%v) produced error %v",
 				nameFromAll,
 				errorFromGet)
+		}
+
+		if stateFromGet == nil {
+			unitTest.Fatalf(
+				testIdentifier+"/nil state from Get(%v)",
+				nameFromAll)
 		}
 
 		if (stateFromGet.Name() != nameFromAll) ||
@@ -442,6 +456,12 @@ func getStateAndAssertNoError(
 			testIdentifier+"/Get(%v) produced an error %v",
 			playerName,
 			errorGettingState)
+	}
+
+	if playerState == nil {
+		unitTest.Fatalf(
+			testIdentifier+"/nil state from Get(%v)",
+			playerName)
 	}
 
 	if playerState.Name() != playerName {

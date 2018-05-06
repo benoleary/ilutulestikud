@@ -282,6 +282,12 @@ func TestPlayerListDelivered(unitTest *testing.T) {
 	returnedInterface, responseCode :=
 		testHandler.HandleGet([]string{"registered-players"})
 
+	if returnedInterface == nil {
+		unitTest.Fatalf(
+			testIdentifier+"/returned nil along with code %v",
+			responseCode)
+	}
+
 	if responseCode != http.StatusOK {
 		unitTest.Fatalf(
 			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
@@ -367,6 +373,12 @@ func TestAvailableColorsCorrectlyDelivered(unitTest *testing.T) {
 
 	returnedInterface, responseCode :=
 		testHandler.HandleGet([]string{"available-colors"})
+
+	if returnedInterface == nil {
+		unitTest.Fatalf(
+			testIdentifier+"/returned nil along with code %v",
+			responseCode)
+	}
 
 	if responseCode != http.StatusOK {
 		unitTest.Fatalf(

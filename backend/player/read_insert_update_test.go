@@ -1,6 +1,7 @@
 package player_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/benoleary/ilutulestikud/backend/defaults"
@@ -196,17 +197,147 @@ func TestConstructorAddsCorrectly(unitTest *testing.T) {
 	}
 }
 
-func TestReturnErrorWhenPlayerNotFoundInternally(unitTest *testing.T) {
-	stateCollection := prepareCollection(unitTest, defaultTestPlayerNames, colorsAvailableInTest)
+func TestReturnFromAllIsCorrect(unitTest *testing.T) {
+	testCases := []struct {
+		testName              string
+		expectedReturnFromAll []player.ReadonlyState
+	}{
+		{
+			testName:              "Nil player list",
+			expectedReturnFromAll: nil,
+		},
+		{
+			testName:              "Empty list",
+			expectedReturnFromAll: []player.ReadonlyState{},
+		},
+		{
+			testName: "Three players",
+			expectedReturnFromAll: []player.ReadonlyState{
+				&mockPlayerState{
+					mockName:  "Mock Player One",
+					mockColor: colorsAvailableInTest[0],
+				},
+				&mockPlayerState{
+					mockName:  "Mock Player Two",
+					mockColor: colorsAvailableInTest[1],
+				},
+				&mockPlayerState{
+					mockName:  "Mock Player Three",
+					mockColor: colorsAvailableInTest[0], // Same as Mock Player One
+				},
+			},
+		},
+	}
 
-	invalidName := "Not A. Participant"
-	playerState, errorFromGet := stateCollection.Get(invalidName)
+	for _, testCase := range testCases {
+		mockImplementation :=
+			NewMockFullTestError(unitTest, fmt.Errorf("Only All should be called"))
+		mockImplementation.TestErrorForAll = nil
+		mockImplementation.ReturnForAll = testCase.expectedReturnFromAll
 
-	if errorFromGet == nil {
-		unitTest.Fatalf(
-			"Get(unknown player name %v) did not return an error, did return player state %v",
-			invalidName,
-			playerState)
+		expectedNumberOfPlayers := len(testCase.expectedReturnFromAll)
+
+		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
+			stateCollection, validColors :=
+				prepareCollection(
+					unitTest,
+					nil,
+					colorsAvailableInTest,
+					mockImplementation)
+
+			actualReturnFromAll := stateCollection.All()
+
+			if len(actualReturnFromAll) != expectedNumberOfPlayers {
+				unitTest.Errorf(
+					"Number of players from All unexpected: expected %v; actual %v",
+					testCase.expectedReturnFromAll,
+					actualReturnFromAll)
+			}
+
+			for playerIndex := 0; playerIndex < expectedNumberOfPlayers; playerIndex++ {
+				expectedPlayer := testCase.expectedReturnFromAll[playerIndex]
+				actualPlayer := actualReturnFromAll[playerIndex]
+
+				// We did not set up any expected nil.
+				if (actualPlayer == nil) ||
+					(actualPlayer.Name() != expectedPlayer.Name()) ||
+					(actualPlayer.Color() != expectedPlayer.Color()) {
+					unitTest.Errorf(
+						"Actual return from All did not match expected in index %v: expected %v; actual %v",
+						playerIndex,
+						testCase.expectedReturnFromAll,
+						actualReturnFromAll)
+				}
+			}
+		})
+	}
+}
+
+func TestReturnFromGetIsCorrect(unitTest *testing.T) {
+	testCases := []struct {
+		testName              string
+		expectedReturnFromGet player.ReadonlyState
+		expectedErrorFromGet  error
+	}{
+		{
+			testName:              "Nil player, string error",
+			expectedReturnFromGet: nil,
+			expectedErrorFromGet:  nil,
+		},
+		{
+			testName: "Valid player, nil error",
+			expectedReturnFromGet: &mockPlayerState{
+				mockName:  "Mock Player",
+				mockColor: colorsAvailableInTest[0],
+			},
+			expectedErrorFromGet: nil,
+		},
+	}
+
+	for _, testCase := range testCases {
+		mockImplementation :=
+			NewMockFullTestError(unitTest, fmt.Errorf("Only Get should be called"))
+		mockImplementation.TestErrorForGet = testCase.expectedErrorFromGet
+		mockImplementation.ReturnForGet = testCase.expectedReturnFromGet
+
+		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
+			stateCollection, validColors :=
+				prepareCollection(
+					unitTest,
+					nil,
+					colorsAvailableInTest,
+					mockImplementation)
+
+			actualReturnFromGet, actualErrorFromGet :=
+				stateCollection.Get("Does not matter for the mock")
+
+			if actualErrorFromGet != testCase.expectedErrorFromGet {
+				unitTest.Errorf(
+					"Unexpected error from Get: expected %v; actual %v",
+					testCase.expectedErrorFromGet,
+					actualErrorFromGet)
+			}
+
+			if testCase.expectedReturnFromGet == nil {
+				if actualReturnFromGet != nil {
+					unitTest.Errorf(
+						"Unexpected player.State from Get: expected nil; actual %v",
+						actualReturnFromGet)
+				}
+			} else {
+				if actualReturnFromGet == nil {
+					unitTest.Errorf(
+						"Unexpected player.State from Get: expected %v; actual nil",
+						testCase.expectedReturnFromGet)
+				} else if (actualReturnFromGet.Name() != testCase.expectedReturnFromGet.Name()) ||
+					(actualReturnFromGet.Color() != testCase.expectedReturnFromGet.Color()) {
+					unitTest.Errorf(
+						"Unexpected player.State from Get: expected %v; actual %v",
+						testCase.expectedReturnFromGet,
+						actualReturnFromGet)
+				}
+			}
+		})
 	}
 }
 
