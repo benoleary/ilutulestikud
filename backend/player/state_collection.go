@@ -42,13 +42,14 @@ func NewCollection(
 		}
 	}
 
-	newCollection := &StateCollection{
-		statePersister:     statePersister,
-		initialPlayerNames: initialPlayerNames,
-		chatColorSlice:     uniqueColors,
-		chatColorMap:       colorMap,
-		numberOfColors:     len(uniqueColors),
-	}
+	newCollection :=
+		&StateCollection{
+			statePersister:     statePersister,
+			initialPlayerNames: initialPlayerNames,
+			chatColorSlice:     uniqueColors,
+			chatColorMap:       colorMap,
+			numberOfColors:     len(uniqueColors),
+		}
 
 	newCollection.addInitialPlayers()
 

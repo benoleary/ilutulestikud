@@ -6,7 +6,6 @@ import (
 
 	"github.com/benoleary/ilutulestikud/backend/defaults"
 	"github.com/benoleary/ilutulestikud/backend/player"
-	"github.com/benoleary/ilutulestikud/backend/player/persister"
 )
 
 var colorsAvailableInTest []string = defaults.AvailableColors()
@@ -128,7 +127,7 @@ func prepareCollection(
 	return stateCollection, colorSet
 }
 
-func TestConstructorAddsCorrectly(unitTest *testing.T) {
+func TestConstructorAndResetBothAddCorrectly(unitTest *testing.T) {
 	testCases := []struct {
 		testName           string
 		initialPlayerNames []string
@@ -148,7 +147,9 @@ func TestConstructorAddsCorrectly(unitTest *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		mockImplementation := &mockPersister{}
+		mockImplementation :=
+			NewMockFullTestError(unitTest, fmt.Errorf("Only Add(...) should be called"))
+		mockImplementation.TestErrorForAdd = nil
 
 		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
 			stateCollection, validColors :=
@@ -158,61 +159,87 @@ func TestConstructorAddsCorrectly(unitTest *testing.T) {
 					colorsAvailableInTest,
 					mockImplementation)
 
-			numberOfAddedPlayers := len(mockImplementation.ArgumentsForAdd)
+			assertPersisterAddCalledCorrectly(
+				testCase.testName,
+				unitTest,
+				testCase.initialPlayerNames,
+				validColors,
+				mockImplementation.ArgumentsForAdd)
 
-			if numberOfAddedPlayers != len(testCase.initialPlayerNames) {
-				unitTest.Errorf(
-					"Number of initial players (expected %v) did not match number of players added (added %v)",
-					testCase.initialPlayerNames,
-					mockImplementation.ArgumentsForAdd)
-			}
+			// We clear the record of calls to the persister's function.
+			mockImplementation.ArgumentsForAdd = make(map[string][]string, 0)
 
-			for _, initialPlayerName := range testCase.initialPlayerNames {
-				addArguments, hasAddedArguments :=
-					mockImplementation.ArgumentsForAdd[initialPlayerName]
+			stateCollection.Reset()
 
-				if !hasAddedArguments {
-					unitTest.Errorf(
-						"No Add arguments for player name %v",
-						initialPlayerName)
-				}
-
-				if len(addArguments) != 1 {
-					unitTest.Errorf(
-						"Wrong number of Add arguments for player name %v - expected 1, arguments slice %v",
-						initialPlayerName,
-						addArguments)
-				}
-
-				colorOfAdd := addArguments[0]
-				if !validColors[colorOfAdd] {
-					unitTest.Errorf(
-						"Add for player %v had invalid color %v (valid colors are %v)",
-						initialPlayerName,
-						colorOfAdd,
-						validColors)
-				}
-			}
+			assertPersisterAddCalledCorrectly(
+				testCase.testName,
+				unitTest,
+				testCase.initialPlayerNames,
+				validColors,
+				mockImplementation.ArgumentsForAdd)
 		})
+	}
+}
+
+func assertPersisterAddCalledCorrectly(
+	testIdentifier string,
+	unitTest *testing.T,
+	initialPlayerNames []string,
+	validColors map[string]bool,
+	argumentsForPersisterAdd map[string][]string) {
+	numberOfAddedPlayers := len(argumentsForPersisterAdd)
+
+	if numberOfAddedPlayers != len(initialPlayerNames) {
+		unitTest.Errorf(
+			"Number of initial players (expected %v) did not match number of players added (added %v)",
+			initialPlayerNames,
+			argumentsForPersisterAdd)
+	}
+
+	for _, initialPlayerName := range initialPlayerNames {
+		addArguments, hasAddedArguments :=
+			argumentsForPersisterAdd[initialPlayerName]
+
+		if !hasAddedArguments {
+			unitTest.Errorf(
+				"No Add(...) arguments for player name %v",
+				initialPlayerName)
+		}
+
+		if len(addArguments) != 1 {
+			unitTest.Errorf(
+				"Wrong number of Add(...) arguments for player name %v - expected 1, arguments slice %v",
+				initialPlayerName,
+				addArguments)
+		}
+
+		colorOfAdd := addArguments[0]
+		if !validColors[colorOfAdd] {
+			unitTest.Errorf(
+				"Add(...) for player %v had invalid color %v (valid colors are %v)",
+				initialPlayerName,
+				colorOfAdd,
+				validColors)
+		}
 	}
 }
 
 func TestReturnFromAllIsCorrect(unitTest *testing.T) {
 	testCases := []struct {
-		testName              string
-		expectedReturnFromAll []player.ReadonlyState
+		testName       string
+		expectedReturn []player.ReadonlyState
 	}{
 		{
-			testName:              "Nil player list",
-			expectedReturnFromAll: nil,
+			testName:       "Nil player list",
+			expectedReturn: nil,
 		},
 		{
-			testName:              "Empty list",
-			expectedReturnFromAll: []player.ReadonlyState{},
+			testName:       "Empty list",
+			expectedReturn: []player.ReadonlyState{},
 		},
 		{
 			testName: "Three players",
-			expectedReturnFromAll: []player.ReadonlyState{
+			expectedReturn: []player.ReadonlyState{
 				&mockPlayerState{
 					mockName:  "Mock Player One",
 					mockColor: colorsAvailableInTest[0],
@@ -231,14 +258,14 @@ func TestReturnFromAllIsCorrect(unitTest *testing.T) {
 
 	for _, testCase := range testCases {
 		mockImplementation :=
-			NewMockFullTestError(unitTest, fmt.Errorf("Only All should be called"))
+			NewMockFullTestError(unitTest, fmt.Errorf("Only All() should be called"))
 		mockImplementation.TestErrorForAll = nil
-		mockImplementation.ReturnForAll = testCase.expectedReturnFromAll
+		mockImplementation.ReturnForAll = testCase.expectedReturn
 
-		expectedNumberOfPlayers := len(testCase.expectedReturnFromAll)
+		expectedNumberOfPlayers := len(testCase.expectedReturn)
 
 		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
-			stateCollection, validColors :=
+			stateCollection, _ :=
 				prepareCollection(
 					unitTest,
 					nil,
@@ -249,13 +276,13 @@ func TestReturnFromAllIsCorrect(unitTest *testing.T) {
 
 			if len(actualReturnFromAll) != expectedNumberOfPlayers {
 				unitTest.Errorf(
-					"Number of players from All unexpected: expected %v; actual %v",
-					testCase.expectedReturnFromAll,
+					"Number of players from All() unexpected: expected %v; actual %v",
+					testCase.expectedReturn,
 					actualReturnFromAll)
 			}
 
 			for playerIndex := 0; playerIndex < expectedNumberOfPlayers; playerIndex++ {
-				expectedPlayer := testCase.expectedReturnFromAll[playerIndex]
+				expectedPlayer := testCase.expectedReturn[playerIndex]
 				actualPlayer := actualReturnFromAll[playerIndex]
 
 				// We did not set up any expected nil.
@@ -263,9 +290,9 @@ func TestReturnFromAllIsCorrect(unitTest *testing.T) {
 					(actualPlayer.Name() != expectedPlayer.Name()) ||
 					(actualPlayer.Color() != expectedPlayer.Color()) {
 					unitTest.Errorf(
-						"Actual return from All did not match expected in index %v: expected %v; actual %v",
+						"Actual return from All() did not match expected in index %v: expected %v; actual %v",
 						playerIndex,
-						testCase.expectedReturnFromAll,
+						testCase.expectedReturn,
 						actualReturnFromAll)
 				}
 			}
@@ -275,642 +302,353 @@ func TestReturnFromAllIsCorrect(unitTest *testing.T) {
 
 func TestReturnFromGetIsCorrect(unitTest *testing.T) {
 	testCases := []struct {
-		testName              string
-		expectedReturnFromGet player.ReadonlyState
-		expectedErrorFromGet  error
+		testName       string
+		expectedReturn player.ReadonlyState
+		expectedError  error
 	}{
 		{
-			testName:              "Nil player, string error",
-			expectedReturnFromGet: nil,
-			expectedErrorFromGet:  nil,
+			testName:       "Nil player, string error",
+			expectedReturn: nil,
+			expectedError:  fmt.Errorf("Expected error from Get(...)"),
 		},
 		{
 			testName: "Valid player, nil error",
-			expectedReturnFromGet: &mockPlayerState{
+			expectedReturn: &mockPlayerState{
 				mockName:  "Mock Player",
 				mockColor: colorsAvailableInTest[0],
 			},
-			expectedErrorFromGet: nil,
+			expectedError: nil,
 		},
 	}
 
 	for _, testCase := range testCases {
 		mockImplementation :=
-			NewMockFullTestError(unitTest, fmt.Errorf("Only Get should be called"))
-		mockImplementation.TestErrorForGet = testCase.expectedErrorFromGet
-		mockImplementation.ReturnForGet = testCase.expectedReturnFromGet
+			NewMockFullTestError(unitTest, fmt.Errorf("Only Get(...) should be called"))
+		mockImplementation.TestErrorForGet = testCase.expectedError
+		mockImplementation.ReturnForGet = testCase.expectedReturn
 
 		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
-			stateCollection, validColors :=
+			stateCollection, _ :=
 				prepareCollection(
 					unitTest,
 					nil,
 					colorsAvailableInTest,
 					mockImplementation)
 
-			actualReturnFromGet, actualErrorFromGet :=
-				stateCollection.Get("Does not matter for the mock")
+			irrelevantPlayerName := "Does not matter for the mock"
 
-			if actualErrorFromGet != testCase.expectedErrorFromGet {
+			actualReturn, actualError :=
+				stateCollection.Get(irrelevantPlayerName)
+
+			if actualError != testCase.expectedError {
 				unitTest.Errorf(
-					"Unexpected error from Get: expected %v; actual %v",
-					testCase.expectedErrorFromGet,
-					actualErrorFromGet)
+					"Unexpected error from Get(%v): expected %v; actual %v",
+					irrelevantPlayerName,
+					testCase.expectedError,
+					actualError)
 			}
 
-			if testCase.expectedReturnFromGet == nil {
-				if actualReturnFromGet != nil {
+			if testCase.expectedReturn == nil {
+				if actualReturn != nil {
 					unitTest.Errorf(
-						"Unexpected player.State from Get: expected nil; actual %v",
-						actualReturnFromGet)
+						"Unexpected player.State from Get(%v): expected nil; actual %v",
+						irrelevantPlayerName,
+						actualReturn)
 				}
 			} else {
-				if actualReturnFromGet == nil {
+				if actualReturn == nil {
 					unitTest.Errorf(
-						"Unexpected player.State from Get: expected %v; actual nil",
-						testCase.expectedReturnFromGet)
-				} else if (actualReturnFromGet.Name() != testCase.expectedReturnFromGet.Name()) ||
-					(actualReturnFromGet.Color() != testCase.expectedReturnFromGet.Color()) {
+						"Unexpected player.State from Get(%v): expected %v; actual nil",
+						irrelevantPlayerName,
+						testCase.expectedReturn)
+				} else if (actualReturn.Name() != testCase.expectedReturn.Name()) ||
+					(actualReturn.Color() != testCase.expectedReturn.Color()) {
 					unitTest.Errorf(
-						"Unexpected player.State from Get: expected %v; actual %v",
-						testCase.expectedReturnFromGet,
-						actualReturnFromGet)
+						"Unexpected player.State from Get(%v): expected %v; actual %v",
+						irrelevantPlayerName,
+						testCase.expectedReturn,
+						actualReturn)
 				}
 			}
 		})
 	}
 }
 
-func TestErrorIfEmptyAvailableColors(unitTest *testing.T) {
-	stateCollection, errorFromCreation :=
-		player.NewCollection(
-			persister.NewInMemoryPersister(),
-			defaultTestPlayerNames,
-			[]string{})
+func TestAvailableColorsIsCorrectAndFreshCopy(unitTest *testing.T) {
+	mockImplementation :=
+		NewMockFullTestError(unitTest, fmt.Errorf("No functions should be called"))
 
-	if errorFromCreation == nil {
-		unitTest.Fatalf(
-			"No error when preparing collection with empty list of colors, returned %v",
-			stateCollection)
-	}
-}
-
-func TestNonemptyAvailableColors(unitTest *testing.T) {
-	stateCollection := prepareCollection(unitTest, defaultTestPlayerNames, colorsAvailableInTest)
-
-	availableColors := stateCollection.AvailableChatColors()
-
-	numberOfExpectedColors := len(colorsAvailableInTest)
-
-	if len(availableColors) != numberOfExpectedColors {
-		unitTest.Fatalf(
-			"AvailableChatColors() set up with %v returned list %v which has wrong size",
+	stateCollection, validColors :=
+		prepareCollection(
+			unitTest,
+			nil,
 			colorsAvailableInTest,
-			availableColors)
+			mockImplementation)
+
+	firstColors := stateCollection.AvailableChatColors()
+
+	assertColorsAreCorrect(
+		"First slice from AvailableChatColors()",
+		unitTest,
+		firstColors,
+		validColors)
+
+	firstColors[0] = "not even a valid color"
+	if validColors[firstColors[0]] {
+		unitTest.Fatalf(
+			"Somehow %v is in the valid color map %v",
+			firstColors[0],
+			validColors)
 	}
 
-	expectedColorMap := mapStringsToTrue(colorsAvailableInTest)
+	secondColors := stateCollection.AvailableChatColors()
 
-	for colorIndex := 0; colorIndex < numberOfExpectedColors; colorIndex++ {
-		if !expectedColorMap[availableColors[colorIndex]] {
-			unitTest.Fatalf(
-				"AvailableChatColors() set up with %v returned list %v which had unexpected color %v",
-				colorsAvailableInTest,
-				availableColors,
-				availableColors[colorIndex])
-		}
+	assertColorsAreCorrect(
+		"Second slice from AvailableChatColors()",
+		unitTest,
+		secondColors,
+		validColors)
+}
+
+func TestRejectAddWithEmptyPlayerName(unitTest *testing.T) {
+	mockImplementation :=
+		NewMockFullTestError(unitTest, fmt.Errorf("No functions should be called"))
+
+	stateCollection, _ :=
+		prepareCollection(
+			unitTest,
+			nil,
+			colorsAvailableInTest,
+			mockImplementation)
+
+	actualError := stateCollection.Add("", colorsAvailableInTest[0])
+
+	if actualError == nil {
+		unitTest.Fatalf(
+			"No error from Add(empty player name, chat color %v)",
+			colorsAvailableInTest[0])
 	}
 }
 
-func TestRejectNewPlayerWithNoName(unitTest *testing.T) {
-	stateCollection := prepareCollection(unitTest, defaultTestPlayerNames, colorsAvailableInTest)
+func TestRejectAddWithInvalidColor(unitTest *testing.T) {
+	mockImplementation :=
+		NewMockFullTestError(unitTest, fmt.Errorf("No functions should be called"))
 
-	playerName := ""
-	chatColor := colorsAvailableInTest[0]
+	stateCollection, validColors :=
+		prepareCollection(
+			unitTest,
+			nil,
+			colorsAvailableInTest,
+			mockImplementation)
 
-	testIdentifier := "Reject Add(player with no name)"
+	playerName := "Mock Player"
 
-	errorFromAdd := stateCollection.Add(playerName, chatColor)
-
-	// We check that the collection still produces valid states.
-	assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
-		testIdentifier,
-		unitTest,
-		defaultTestPlayerNames,
-		colorsAvailableInTest,
-		stateCollection)
-
-	// If there was no error, then something went wrong.
-	if errorFromAdd == nil {
+	invalidColor := "not a valid color"
+	if validColors[invalidColor] {
 		unitTest.Fatalf(
-			"Add(%v, %v) did not produce an error",
-			playerName,
-			chatColor)
+			"Somehow %v is in the valid color map %v",
+			invalidColor,
+			validColors)
 	}
 
-	// We check that the player was not added.
-	playerState, errorFromGet :=
-		stateCollection.Get(playerName)
+	actualError := stateCollection.Add(playerName, invalidColor)
 
-	// If there was no error, then something went wrong.
-	if errorFromGet == nil {
+	if actualError == nil {
 		unitTest.Fatalf(
-			"Get(%v) did not produce an error, instead retrieved %v",
-			playerName,
-			playerState)
-	}
-}
-
-func TestAddNewPlayerWithInvalidColor(unitTest *testing.T) {
-	stateCollection := prepareCollection(unitTest, defaultTestPlayerNames, colorsAvailableInTest)
-
-	playerName := "A. New Player"
-	invalidColor := "Not a valid color"
-
-	testIdentifier := "Reject Add(player with invalid color)"
-
-	errorFromAdd := stateCollection.Add(playerName, invalidColor)
-
-	// We check that the collection still produces valid states.
-	assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
-		testIdentifier,
-		unitTest,
-		defaultTestPlayerNames,
-		colorsAvailableInTest,
-		stateCollection)
-
-	// If there was no error, then something went wrong.
-	if errorFromAdd == nil {
-		unitTest.Fatalf(
-			"Add(%v, %v) did not produce an error",
+			"No error from Add(player name %v, chat color %v)",
 			playerName,
 			invalidColor)
 	}
-
-	// We check that the player was not added.
-	playerState, errorFromGet := stateCollection.Get(playerName)
-
-	// If there was no error, then something went wrong.
-	if errorFromGet == nil {
-		unitTest.Fatalf(
-			"Get(%v) did not produce an error, instead retrieved %v",
-			playerName,
-			playerState)
-	}
 }
 
-func TestRejectAddPlayerWithExistingName(unitTest *testing.T) {
-	stateCollection := prepareCollection(unitTest, defaultTestPlayerNames, colorsAvailableInTest)
-
-	for _, playerName := range defaultTestPlayerNames {
-		testIdentifier := "Reject Add(player with existing name)"
-
-		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			initialState := getStateAndAssertNoError(
-				testIdentifier+"/Get(initial player)",
-				unitTest,
-				playerName,
-				stateCollection)
-
-			errorFromAddWithNoColor := stateCollection.Add(playerName, "")
-
-			// We check that the collection still produces valid states.
-			assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
-				testIdentifier,
-				unitTest,
-				defaultTestPlayerNames,
-				colorsAvailableInTest,
-				stateCollection)
-
-			// If there was no error, then something went wrong.
-			if errorFromAddWithNoColor == nil {
-				unitTest.Fatalf(
-					"Add(%v, [empty string for color]) did not produce an error",
-					playerName)
-			}
-
-			// We check that the player is unchanged.
-			existingStateAfterAddWithNoColor := getStateAndAssertNoError(
-				testIdentifier+"/Get(initial player)",
-				unitTest,
-				playerName,
-				stateCollection)
-
-			if (existingStateAfterAddWithNoColor.Name() != existingStateAfterAddWithNoColor.Name()) ||
-				(existingStateAfterAddWithNoColor.Color() != existingStateAfterAddWithNoColor.Color()) {
-				unitTest.Fatalf(
-					"Add(existing player %v, empty color string) changed the player state from %v to %v",
-					playerName,
-					initialState,
-					existingStateAfterAddWithNoColor)
-			}
-
-			newColor := colorsAvailableInTest[0]
-			if newColor == initialState.Color() {
-				newColor = colorsAvailableInTest[1]
-			}
-
-			errorFromAddWithNewColor := stateCollection.Add(playerName, newColor)
-
-			// We check that the collection still produces valid states.
-			assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
-				testIdentifier,
-				unitTest,
-				defaultTestPlayerNames,
-				colorsAvailableInTest,
-				stateCollection)
-
-			// If there was no error, then something went wrong.
-			if errorFromAddWithNewColor == nil {
-				unitTest.Fatalf(
-					"Add(%v, %v) did not produce an error",
-					playerName,
-					newColor)
-			}
-
-			// We check that the player is unchanged.
-			existingStateAfterAddWithNewColor := getStateAndAssertNoError(
-				testIdentifier+"/Get(initial player)",
-				unitTest,
-				playerName,
-				stateCollection)
-
-			if (existingStateAfterAddWithNewColor.Name() != initialState.Name()) ||
-				(existingStateAfterAddWithNewColor.Color() != initialState.Color()) {
-				unitTest.Fatalf(
-					"Add(existing player %v, new color %v) changed the player state from %v to %v",
-					playerName,
-					newColor,
-					initialState,
-					existingStateAfterAddWithNewColor)
-			}
-		})
-	}
-}
-
-func TestAddPlayerWithValidColorAndTestGet(unitTest *testing.T) {
-	stateCollection := prepareCollection(unitTest, defaultTestPlayerNames, colorsAvailableInTest)
-
-	chatColor := colorsAvailableInTest[1]
-
+func TestReturnErrorFromPersisterAdd(unitTest *testing.T) {
 	testCases := []struct {
-		testName   string
-		playerName string
+		testName      string
+		expectedError error
 	}{
 		{
-			testName:   "Simple ASCII",
-			playerName: "New Player",
+			testName:      "String error",
+			expectedError: fmt.Errorf("Expected error from Add(...)"),
 		},
 		{
-			testName:   "Non-ASCII and punctuation",
-			playerName: "?ß@äô#\"'\"\\\\\\",
-		},
-		{
-			testName:   "Slashes",
-			playerName: "/Slashes/are/reserved/for/parsing/URI/segments/",
+			testName:      "Nil error",
+			expectedError: nil,
 		},
 	}
 
 	for _, testCase := range testCases {
-		testIdentifier := "Add(" + testCase.playerName + ", with valid color) and Get(same player)"
+		mockImplementation :=
+			NewMockFullTestError(unitTest, fmt.Errorf("Only Add(...) should be called"))
+		mockImplementation.TestErrorForAdd = testCase.expectedError
 
-		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			errorFromAdd :=
-				stateCollection.Add(testCase.playerName, chatColor)
-
-			if errorFromAdd != nil {
-				unitTest.Fatalf(
-					"Add(%v, %v) produced an error %v",
-					testCase.playerName,
-					chatColor,
-					errorFromAdd)
-			}
-
-			// We check that the collection still produces valid states.
-			assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
-				testIdentifier,
-				unitTest,
-				defaultTestPlayerNames,
-				colorsAvailableInTest,
-				stateCollection)
-
-			// We check that the player can be retrieved.
-			newState := getStateAndAssertNoError(
-				testIdentifier+"/Retrieve with Get(...)",
-				unitTest,
-				testCase.playerName,
-				stateCollection)
-
-			if newState.Color() != chatColor {
-				unitTest.Fatalf(
-					"Add(%v, %v) then Get(%v) produced a state %v which does not have the correct color",
-					testCase.playerName,
-					chatColor,
-					testCase.playerName,
-					newState)
-			}
-		})
-	}
-}
-
-func TestAddPlayerWithNoColorAndTestGetHasValidColor(unitTest *testing.T) {
-	stateCollection := prepareCollection(unitTest, defaultTestPlayerNames, colorsAvailableInTest)
-
-	testCases := []struct {
-		testName   string
-		playerName string
-	}{
-		{
-			testName:   "Simple ASCII",
-			playerName: "New Player",
-		},
-		{
-			testName:   "Non-ASCII and punctuation",
-			playerName: "?ß@äô#\"'\"\\\\\\",
-		},
-		{
-			testName:   "Slashes",
-			playerName: "/Slashes/are/reserved/for/parsing/URI/segments/",
-		},
-	}
-
-	for _, testCase := range testCases {
-		testIdentifier := "Add(" + testCase.playerName + ", with no color) and Get(same player)"
-
-		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			errorFromAdd := stateCollection.Add(testCase.playerName, "")
-
-			if errorFromAdd != nil {
-				unitTest.Fatalf(
-					"Add(%v, [empty string for color]) produced an error %v",
-					testCase.playerName,
-					errorFromAdd)
-			}
-
-			// We check that the collection still produces valid states.
-			assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
-				testIdentifier,
-				unitTest,
-				defaultTestPlayerNames,
-				colorsAvailableInTest,
-				stateCollection)
-
-			// We check that the player can be retrieved.
-			newState := getStateAndAssertNoError(
-				testIdentifier+"/Get(newly-added player)",
-				unitTest,
-				testCase.playerName,
-				stateCollection)
-
-			newStateHasValidColor := mapStringsToTrue(colorsAvailableInTest)[newState.Color()]
-			if !newStateHasValidColor {
-				unitTest.Fatalf(
-					"Add(%v, [empty string for color]) then Get(%v) produced a state %v which does not have a color in the list %v",
-					testCase.playerName,
-					newState,
-					testCase.playerName,
-					colorsAvailableInTest)
-			}
-		})
-	}
-}
-
-func TestRejectUpdateInvalidPlayer(unitTest *testing.T) {
-	stateCollection := prepareCollection(unitTest, defaultTestPlayerNames, colorsAvailableInTest)
-
-	playerName := "Not A. Participant"
-	chatColor := colorsAvailableInTest[0]
-
-	testIdentifier := "UpdateColor(valid player, invalid color)"
-
-	errorFromUpdate := stateCollection.UpdateColor(playerName, chatColor)
-
-	if errorFromUpdate == nil {
-		unitTest.Fatalf(
-			"UpdateColor(%v, %v) did not produce an error",
-			playerName,
-			chatColor)
-	}
-
-	// We check that the collection still produces valid states.
-	assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
-		testIdentifier,
-		unitTest,
-		defaultTestPlayerNames,
-		colorsAvailableInTest,
-		stateCollection)
-
-	// We check that the player was not added.
-	playerState, errorFromGet :=
-		stateCollection.Get(playerName)
-
-	// If there was no error, then something went wrong.
-	if errorFromGet == nil {
-		unitTest.Fatalf(
-			"Get(%v) did not produce an error, instead retrieved %v",
-			playerName,
-			playerState)
-	}
-}
-
-func TestRejectUpdatePlayerWithInvalidColor(unitTest *testing.T) {
-	stateCollection := prepareCollection(unitTest, defaultTestPlayerNames, colorsAvailableInTest)
-
-	testCases := []struct {
-		testName   string
-		playerName string
-		chatColor  string
-	}{
-		{
-			testName:   "Valid player but missing color",
-			playerName: defaultTestPlayerNames[0],
-			chatColor:  "",
-		},
-		{
-			testName:   "Valid player but invalid color",
-			playerName: defaultTestPlayerNames[1],
-			chatColor:  "not a color",
-		},
-	}
-
-	for _, testCase := range testCases {
 		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
-			// We save the state to later check that the color was not changed.
-			initialState := getStateAndAssertNoError(
-				testCase.testName+"/Get(valid player) before update",
-				unitTest,
-				testCase.playerName,
-				stateCollection)
+			stateCollection, _ :=
+				prepareCollection(
+					unitTest,
+					nil,
+					colorsAvailableInTest,
+					mockImplementation)
 
-			errorFromUpdate :=
-				stateCollection.UpdateColor(testCase.playerName, testCase.chatColor)
+			playerName := "Mock Player"
+			chatColor := colorsAvailableInTest[0]
 
-			if errorFromUpdate == nil {
-				unitTest.Fatalf(
-					"UpdateColor(%v, %v) did not produce an error",
-					testCase.playerName,
-					testCase.chatColor)
-			}
+			actualError := stateCollection.Add(playerName, chatColor)
 
-			// We check that the collection still produces valid states.
-			assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
-				testCase.testName,
-				unitTest,
-				defaultTestPlayerNames,
-				colorsAvailableInTest,
-				stateCollection)
-
-			// We check that the player can be retrieved.
-			stateAfterUpdate := getStateAndAssertNoError(
-				testCase.testName+"/Get(same player) after update",
-				unitTest,
-				testCase.playerName,
-				stateCollection)
-
-			if stateAfterUpdate.Color() != initialState.Color() {
-				unitTest.Fatalf(
-					"UpdateColor(%v, %v) changed the state from %v to %v",
-					testCase.playerName,
-					testCase.chatColor,
-					initialState,
-					stateAfterUpdate)
+			if actualError != testCase.expectedError {
+				unitTest.Errorf(
+					"Add(player name %v, chat color %v) returned error %v - expected %v",
+					playerName,
+					chatColor,
+					actualError,
+					testCase.expectedError)
 			}
 		})
 	}
 }
 
-func TestUpdateAllPlayersToFirstColor(unitTest *testing.T) {
-	stateCollection := prepareCollection(unitTest, defaultTestPlayerNames, colorsAvailableInTest)
+func TestAddPlayerWithNoColorGetsValidColor(unitTest *testing.T) {
+	mockImplementation :=
+		NewMockFullTestError(unitTest, fmt.Errorf("Only Add(...) should be called"))
+	mockImplementation.TestErrorForAdd = nil
 
-	firstColor := colorsAvailableInTest[0]
+	stateCollection, validColors :=
+		prepareCollection(
+			unitTest,
+			nil,
+			colorsAvailableInTest,
+			mockImplementation)
 
-	for _, playerName := range defaultTestPlayerNames {
-		testIdentifier := "Update player to first color"
+	playerName := "Mock Player"
 
-		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			errorFromAddWithNoColor := stateCollection.UpdateColor(playerName, firstColor)
+	errorFromAdd := stateCollection.Add(playerName, "")
 
-			if errorFromAddWithNoColor != nil {
-				unitTest.Fatalf(
-					"UpdateColor(%v, %v) produced an error: %v",
-					playerName,
-					firstColor,
-					errorFromAddWithNoColor)
-			}
+	if errorFromAdd != nil {
+		unitTest.Fatalf(
+			"Add(player name %v, empty chat color) produced unexpected error %v",
+			playerName,
+			errorFromAdd)
+	}
 
-			// We check that the collection still produces valid states.
-			assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
-				testIdentifier,
-				unitTest,
-				defaultTestPlayerNames,
-				colorsAvailableInTest,
-				stateCollection)
+	assignedColorList, hasAssignedColor := mockImplementation.ArgumentsForAdd[playerName]
 
-			// We check that the player has the correct color.
-			updatedState := getStateAndAssertNoError(
-				testIdentifier+"/Get(updated player)",
-				unitTest,
-				playerName,
-				stateCollection)
+	if !hasAssignedColor {
+		unitTest.Fatalf(
+			"Add(player name %v, empty chat color) did not assign a color",
+			playerName)
+	}
 
-			if (updatedState.Name() != playerName) ||
-				(updatedState.Color() != firstColor) {
-				unitTest.Fatalf(
-					"UpdateColor(%v, %v) then Get(%v) produced state %v",
-					playerName,
-					firstColor,
-					playerName,
-					updatedState)
-			}
-		})
+	if len(assignedColorList) != 1 {
+		unitTest.Fatalf(
+			"Add(player name %v, empty chat color) did not call the persister's add once, but with %v",
+			playerName,
+			assignedColorList)
+	}
+
+	assignedColor := assignedColorList[0]
+	if validColors[assignedColor] {
+		unitTest.Fatalf(
+			"Assigned color %v is not in the valid color map %v",
+			assignedColor,
+			validColors)
 	}
 }
 
-func TestReset(unitTest *testing.T) {
-	playerNameToAdd := "Added player"
-	chatColorForAdd := colorsAvailableInTest[0]
-	playerNameToUpdate := defaultTestPlayerNames[0]
-	chatColorForUpdate := colorsAvailableInTest[1]
+func TestRejectUpdateWithInvalidColor(unitTest *testing.T) {
+	mockImplementation :=
+		NewMockFullTestError(unitTest, fmt.Errorf("No functions should be called"))
 
+	stateCollection, validColors :=
+		prepareCollection(
+			unitTest,
+			nil,
+			colorsAvailableInTest,
+			mockImplementation)
+
+	playerName := "Mock Player"
+
+	invalidColor := "not a valid color"
+	if validColors[invalidColor] {
+		unitTest.Fatalf(
+			"Somehow %v is in the valid color map %v",
+			invalidColor,
+			validColors)
+	}
+
+	errorFromUpdateColor := stateCollection.UpdateColor(playerName, invalidColor)
+
+	if errorFromUpdateColor == nil {
+		unitTest.Fatalf(
+			"No error from UpdateColor(player name %v, chat color %v)",
+			playerName,
+			invalidColor)
+	}
+}
+
+func TestReturnErrorFromPersisterUpdateColor(unitTest *testing.T) {
 	testCases := []struct {
-		testName                string
-		shouldAddBeforeReset    bool
-		shouldUpdateBeforeReset bool
+		testName      string
+		expectedError error
 	}{
 		{
-			testName:                "No add, no update",
-			shouldAddBeforeReset:    false,
-			shouldUpdateBeforeReset: false,
+			testName:      "String error",
+			expectedError: fmt.Errorf("Expected error from UpdateColor(...)"),
 		},
 		{
-			testName:                "Just add, no update",
-			shouldAddBeforeReset:    true,
-			shouldUpdateBeforeReset: false,
-		},
-		{
-			testName:                "No add, just update",
-			shouldAddBeforeReset:    false,
-			shouldUpdateBeforeReset: true,
-		},
-		{
-			testName:                "Both add and update",
-			shouldAddBeforeReset:    true,
-			shouldUpdateBeforeReset: true,
+			testName:      "Nil error",
+			expectedError: nil,
 		},
 	}
 
 	for _, testCase := range testCases {
-		stateCollection := prepareCollection(unitTest, defaultTestPlayerNames, colorsAvailableInTest)
-		testIdentifier :=
-			testCase.testName
+		mockImplementation :=
+			NewMockFullTestError(unitTest, fmt.Errorf("Only UpdateColor(...) should be called"))
+		mockImplementation.TestErrorForUpdateColor = testCase.expectedError
 
-		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			if testCase.shouldAddBeforeReset {
-				errorFromAdd := stateCollection.Add(playerNameToAdd, chatColorForAdd)
+		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
+			stateCollection, _ :=
+				prepareCollection(
+					unitTest,
+					nil,
+					colorsAvailableInTest,
+					mockImplementation)
 
-				if errorFromAdd != nil {
-					unitTest.Fatalf(
-						"Add(%v, %v) produced an error: %v",
-						playerNameToAdd,
-						chatColorForAdd,
-						errorFromAdd)
-				}
-			}
+			playerName := "Mock Player"
+			chatColor := colorsAvailableInTest[0]
 
-			if testCase.shouldUpdateBeforeReset {
-				errorFromUpdate := stateCollection.UpdateColor(playerNameToUpdate, chatColorForUpdate)
-				if errorFromUpdate != nil {
-					unitTest.Fatalf(
-						"UpdateColor(%v, %v) produced an error: %v",
-						playerNameToUpdate,
-						chatColorForUpdate,
-						errorFromUpdate)
-				}
-			}
+			actualError := stateCollection.UpdateColor(playerName, chatColor)
 
-			// Now we can reset.
-			stateCollection.Reset()
-
-			// We check that the collection still produces valid states.
-			assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
-				testIdentifier,
-				unitTest,
-				defaultTestPlayerNames,
-				colorsAvailableInTest,
-				stateCollection)
-
-			// We check that if a player had been added, it is no longer retrievable.
-			addedState, errorFromGet :=
-				stateCollection.Get(playerNameToAdd)
-
-			// If there was no error, then something went wrong.
-			if errorFromGet == nil {
-				unitTest.Fatalf(
-					"Get(%v) did not produce an error, instead retrieved %v",
-					playerNameToAdd,
-					addedState)
+			if actualError != testCase.expectedError {
+				unitTest.Errorf(
+					"UpdateColor(player name %v, chat color %v) returned error %v - expected %v",
+					playerName,
+					chatColor,
+					actualError,
+					testCase.expectedError)
 			}
 		})
+	}
+}
+
+func assertColorsAreCorrect(
+	testIdentifier string,
+	unitTest *testing.T,
+	actualColors []string,
+	validColors map[string]bool) {
+	if len(actualColors) != len(validColors) {
+		unitTest.Fatalf(
+			testIdentifier+"/actual colors %v had wrong length, expected %v",
+			actualColors,
+			colorsAvailableInTest)
+	}
+
+	for _, actualColor := range actualColors {
+		if !validColors[actualColor] {
+			unitTest.Fatalf(
+				testIdentifier+"/actual colors %v had unexpected color %v, expected %v",
+				actualColors,
+				actualColor,
+				colorsAvailableInTest)
+		}
 	}
 }
 
