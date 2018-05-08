@@ -13,9 +13,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/benoleary/ilutulestikud/backend/chat"
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	game_state "github.com/benoleary/ilutulestikud/backend/game"
+	"github.com/benoleary/ilutulestikud/backend/game/card"
+	"github.com/benoleary/ilutulestikud/backend/game/chat"
 	"github.com/benoleary/ilutulestikud/backend/player"
 	game_endpoint "github.com/benoleary/ilutulestikud/backend/server/endpoint/game"
 	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
@@ -96,8 +97,8 @@ func (mockGame mockGameState) DeckSize() int {
 }
 
 // LastPlayedForColor gets mocked.
-func (mockGame mockGameState) LastPlayedForColor(colorSuit string) game_state.ReadonlyCard {
-	return nil
+func (mockGame mockGameState) LastPlayedForColor(colorSuit string) (card.Readonly, bool) {
+	return card.ErrorReadonly(), false
 }
 
 // NumberOfDiscardedCards gets mocked.
@@ -108,15 +109,15 @@ func (mockGame mockGameState) NumberOfDiscardedCards(colorSuit string, sequenceI
 // VisibleCardInHand gets mocked.
 func (mockGame mockGameState) VisibleCardInHand(
 	holdingPlayerName string,
-	indexInHand int) (game_state.ReadonlyCard, error) {
-	return nil, nil
+	indexInHand int) (card.Readonly, error) {
+	return card.ErrorReadonly(), nil
 }
 
 // InferredCardInHand gets mocked.
 func (mockGame mockGameState) InferredCardInHand(
 	holdingPlayerName string,
-	indexInHand int) (game_state.InferredCard, error) {
-	return game_state.InferredCard{}, nil
+	indexInHand int) (card.Inferred, error) {
+	return card.Inferred{}, nil
 }
 
 type mockGameCollection struct {
