@@ -3,6 +3,7 @@ package game
 import (
 	"time"
 
+	"github.com/benoleary/ilutulestikud/backend/game/card"
 	"github.com/benoleary/ilutulestikud/backend/game/chat"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
@@ -48,19 +49,20 @@ type ReadonlyState interface {
 	DeckSize() int
 
 	// LastPlayedForColor should return the last card which has been played correctly for
-	// the given color suit. If no card has been played, it should return nil.
-	LastPlayedForColor(colorSuit string) ReadonlyCard
+	// the given color suit along with whether any card has been played in that suit so far,
+	// analogously to how a Go map works.
+	LastPlayedForColor(colorSuit string) (card.Readonly, bool)
 
 	// NumberOfDiscardedCards should return the number of cards with the given suit and index
 	// which were discarded or played incorrectly.
 	NumberOfDiscardedCards(colorSuit string, sequenceIndex int) int
 
 	// VisibleCardInHand should return the card held by the given player in the given position.
-	VisibleCardInHand(holdingPlayerName string, indexInHand int) (ReadonlyCard, error)
+	VisibleCardInHand(holdingPlayerName string, indexInHand int) (card.Readonly, error)
 
 	// InferredCardInHand should return the inferred information about the card held by the
 	// given player in the given position.
-	InferredCardInHand(holdingPlayerName string, indexInHand int) (InferredCard, error)
+	InferredCardInHand(holdingPlayerName string, indexInHand int) (card.Inferred, error)
 }
 
 // readAndWriteState defines the interface for structs which should encapsulate the state of
@@ -75,7 +77,7 @@ type readAndWriteState interface {
 
 	// drawCard should return the top-most card of the deck, or nil and an error if there are
 	// no cards left.
-	drawCard() (ReadonlyCard, error)
+	drawCard() (card.Readonly, error)
 
 	// replaceCardInHand should replace the card at the given index in the hand of the given
 	// player with the given replacement card, and return the card which has just been
@@ -83,14 +85,14 @@ type readAndWriteState interface {
 	replaceCardInHand(
 		holdingPlayerName string,
 		indexInHand int,
-		replacementCard ReadonlyCard) (ReadonlyCard, error)
+		replacementCard card.Readonly) (card.Readonly, error)
 
 	// addCardToPlayedSequence should add the given card to the appropriate sequence of played
 	// cards.
-	addCardToPlayedSequence(playedCard ReadonlyCard) error
+	addCardToPlayedSequence(playedCard card.Readonly) error
 
 	// addCardToDiscardPile should add the given card to the pile of discarded cards.
-	addCardToDiscardPile(discardedCard ReadonlyCard) error
+	addCardToDiscardPile(discardedCard card.Readonly) error
 }
 
 // StatePersister defines the interface for structs which should be able to create objects
@@ -108,7 +110,7 @@ type StatePersister interface {
 		gameName string,
 		gameRuleset Ruleset,
 		playerStates []player.ReadonlyState,
-		initialShuffle []ReadonlyCard) error
+		initialShuffle []card.Readonly) error
 
 	// readAllWithPlayer should return a slice of all the games in the collection which
 	// have the given player as a participant, where each game is given as a ReadonlyState

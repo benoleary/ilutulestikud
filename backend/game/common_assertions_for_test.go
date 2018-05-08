@@ -3,14 +3,14 @@ package game_test
 import (
 	"testing"
 
-	"github.com/benoleary/ilutulestikud/backend/game"
+	"github.com/benoleary/ilutulestikud/backend/game/card"
 )
 
 func assertCardsMatch(
 	testIdentifier string,
 	unitTest *testing.T,
-	actualCards []game.ReadonlyCard,
-	expectedCards []game.ReadonlyCard) {
+	actualCards []card.Readonly,
+	expectedCards []card.Readonly) {
 	numberOfExpectedCards := len(expectedCards)
 
 	if len(actualCards) != numberOfExpectedCards {

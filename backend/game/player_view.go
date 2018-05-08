@@ -3,6 +3,7 @@ package game
 import (
 	"fmt"
 
+	"github.com/benoleary/ilutulestikud/backend/game/card"
 	"github.com/benoleary/ilutulestikud/backend/game/chat"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
@@ -145,32 +146,35 @@ func (playerView *PlayerView) DeckSize() int {
 	return playerView.gameState.DeckSize()
 }
 
-// TopmostPlayedCards lists the top-most cards in play for each suit, leaving nil
-// to represent a color which has no cards in play yet.
-func (playerView *PlayerView) TopmostPlayedCards() []ReadonlyCard {
-	topmostCards := make([]ReadonlyCard, playerView.numberOfSuits)
+// TopmostPlayedCards lists the top-most cards in play for each suit, leaving out
+// any color suits which have no cards in play yet.
+func (playerView *PlayerView) TopmostPlayedCards() []card.Readonly {
+	topmostCards := make([]card.Readonly, 0)
 
 	for suitIndex := 0; suitIndex < playerView.numberOfSuits; suitIndex++ {
 		suitColor := playerView.colorSuits[suitIndex]
-		topmostCards[suitIndex] =
+
+		topmostCardOfSuit, hasSuitAnyPlayedCards :=
 			playerView.gameState.LastPlayedForColor(suitColor)
+
+			// If a card has been played for the suit, we add it to the list.
+		if hasSuitAnyPlayedCards {
+			topmostCards = append(topmostCards, topmostCardOfSuit)
+		}
 	}
 
 	return topmostCards
 }
 
 // DiscardedCards lists the discarded cards, ordered by suit first then by index.
-func (playerView *PlayerView) DiscardedCards() []ReadonlyCard {
-	discardedCards := make([]ReadonlyCard, 0)
+func (playerView *PlayerView) DiscardedCards() []card.Readonly {
+	discardedCards := make([]card.Readonly, 0)
 
 	for _, colorSuit := range playerView.colorSuits {
 		for _, sequenceIndex := range playerView.sequenceIndices {
 			numberOfDiscardedCopies :=
 				playerView.gameState.NumberOfDiscardedCards(colorSuit, sequenceIndex)
-			discardedCard := &simpleCard{
-				colorSuit:     colorSuit,
-				sequenceIndex: sequenceIndex,
-			}
+			discardedCard := card.NewReadonly(colorSuit, sequenceIndex)
 
 			for copiesCount := 0; copiesCount < numberOfDiscardedCopies; copiesCount++ {
 				discardedCards = append(discardedCards, discardedCard)
@@ -183,12 +187,12 @@ func (playerView *PlayerView) DiscardedCards() []ReadonlyCard {
 
 // VisibleHand returns the cards held by the given player, or nil and an error if
 // the player cannot see the cards.
-func (playerView *PlayerView) VisibleHand(playerName string) ([]ReadonlyCard, error) {
+func (playerView *PlayerView) VisibleHand(playerName string) ([]card.Readonly, error) {
 	if playerName == playerView.playerName {
 		return nil, fmt.Errorf("Player is not allowed to view own hand")
 	}
 
-	playerHand := make([]ReadonlyCard, playerView.handSize)
+	playerHand := make([]card.Readonly, playerView.handSize)
 
 	for indexInHand := 0; indexInHand < playerView.handSize; indexInHand++ {
 		visibleCard, errorFromView :=
@@ -206,8 +210,8 @@ func (playerView *PlayerView) VisibleHand(playerName string) ([]ReadonlyCard, er
 
 // KnowledgeOfOwnHand returns the knowledge about the player's own cards which
 // was inferred directly from the hints officially given so far.
-func (playerView *PlayerView) KnowledgeOfOwnHand() ([]InferredCard, error) {
-	playerHand := make([]InferredCard, playerView.handSize)
+func (playerView *PlayerView) KnowledgeOfOwnHand() ([]card.Inferred, error) {
+	playerHand := make([]card.Inferred, playerView.handSize)
 
 	for indexInHand := 0; indexInHand < playerView.handSize; indexInHand++ {
 		inferredCard, errorFromInferral :=

@@ -1,31 +1,53 @@
-package game
+package card
 
 import (
 	"math/rand"
 )
 
-// ReadonlyCard should encapsulate the read-only state of a single card.
-type ReadonlyCard interface {
-	// ColorSuit should be the suit of the card, which should be contained
-	// in the set of color suits of the game's ruleset.
-	ColorSuit() string
-
-	// SequenceIndex should be the sequence index of the card, which should
-	// be contained in the set of sequence indices of the game's ruleset.
-	SequenceIndex() int
+// Readonly encapsulates the read-only state of a single card.
+type Readonly struct {
+	colorSuit     string
+	sequenceIndex int
 }
 
-// InferredCard encapsulates the information known to a player about a card
+// NewReadonly returns a new Readonly card.
+func NewReadonly(
+	colorSuit string,
+	sequenceIndex int) Readonly {
+	return Readonly{
+		colorSuit:     colorSuit,
+		sequenceIndex: sequenceIndex,
+	}
+}
+
+// ErrorReadonly returns a card signalling that there was an error.
+func ErrorReadonly() Readonly {
+	return NewReadonly("error", -1)
+}
+
+// ColorSuit returns the suit of the card, which should be contained
+// in the set of color suits of the game's ruleset.
+func (readonlyCard *Readonly) ColorSuit() string {
+	return readonlyCard.colorSuit
+}
+
+// SequenceIndex returns the sequence index of the card, which should
+// be contained in the set of sequence indices of the game's ruleset.
+func (readonlyCard *Readonly) SequenceIndex() int {
+	return readonlyCard.sequenceIndex
+}
+
+// Inferred encapsulates the information known to a player about a card
 // held by that player.
-type InferredCard struct {
-	underlyingCard  ReadonlyCard
+type Inferred struct {
+	underlyingCard  Readonly
 	possibleColors  []string
 	possibleIndices []int
 }
 
 // ShuffleInPlace shuffles the given cards in place (using the Fisher-Yates
 // algorithm).
-func ShuffleInPlace(cardsToShuffle []ReadonlyCard, randomSeed int64) {
+func ShuffleInPlace(cardsToShuffle []Readonly, randomSeed int64) {
 	randomNumberGenerator := rand.New(rand.NewSource(randomSeed))
 
 	// Good ol' Fisher-Yates!
@@ -39,17 +61,4 @@ func ShuffleInPlace(cardsToShuffle []ReadonlyCard, randomSeed int64) {
 		cardsToShuffle[numberOfUnshuffledCards], cardsToShuffle[indexToMove] =
 			cardsToShuffle[indexToMove], cardsToShuffle[numberOfUnshuffledCards]
 	}
-}
-
-type simpleCard struct {
-	colorSuit     string
-	sequenceIndex int
-}
-
-func (singleCard *simpleCard) ColorSuit() string {
-	return singleCard.colorSuit
-}
-
-func (singleCard *simpleCard) SequenceIndex() int {
-	return singleCard.sequenceIndex
 }

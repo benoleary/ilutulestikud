@@ -2,6 +2,8 @@ package game
 
 import (
 	"fmt"
+
+	"github.com/benoleary/ilutulestikud/backend/game/card"
 )
 
 // This file contains the definition of an interface for rulesets,
@@ -14,7 +16,7 @@ type Ruleset interface {
 
 	// CopyOfFullCardset should return a new array populated with every card which should
 	// be present for a game under the ruleset, including duplicates.
-	CopyOfFullCardset() []ReadonlyCard
+	CopyOfFullCardset() []card.Readonly
 
 	// NumberOfCardsInPlayerHand should return the number of cards held
 	// in a player's hand, dependent on the number of players in the game.
@@ -94,19 +96,16 @@ func (standardRuleset StandardWithoutRainbowRuleset) FrontendDescription() strin
 
 // CopyOfFullCardset returns an array populated with every card which should be present
 // for a game under the ruleset, including duplicates.
-func (standardRuleset StandardWithoutRainbowRuleset) CopyOfFullCardset() []ReadonlyCard {
+func (standardRuleset StandardWithoutRainbowRuleset) CopyOfFullCardset() []card.Readonly {
 	colorSuits := standardRuleset.ColorSuits()
 	numberOfColors := len(colorSuits)
 	sequenceIndices := standardRuleset.SequenceIndices()
 	numberOfIndices := len(sequenceIndices)
-	fullCardset := make([]ReadonlyCard, 0, numberOfColors*numberOfIndices)
+	fullCardset := make([]card.Readonly, 0, numberOfColors*numberOfIndices)
 
 	for _, colorSuit := range colorSuits {
 		for _, sequenceIndex := range sequenceIndices {
-			fullCardset = append(fullCardset, &simpleCard{
-				colorSuit:     colorSuit,
-				sequenceIndex: sequenceIndex,
-			})
+			fullCardset = append(fullCardset, card.NewReadonly(colorSuit, sequenceIndex))
 		}
 	}
 
@@ -194,15 +193,12 @@ func (separateRainbow RainbowAsSeparateSuitRuleset) FrontendDescription() string
 
 // CopyOfFullCardset returns an array populated with every card which should be present
 // for a game under the ruleset, including duplicates.
-func (separateRainbow RainbowAsSeparateSuitRuleset) CopyOfFullCardset() []ReadonlyCard {
+func (separateRainbow RainbowAsSeparateSuitRuleset) CopyOfFullCardset() []card.Readonly {
 	fullCardset := separateRainbow.StandardWithoutRainbowRuleset.CopyOfFullCardset()
 	sequenceIndices := separateRainbow.SequenceIndices()
 
 	for _, sequenceIndex := range sequenceIndices {
-		fullCardset = append(fullCardset, &simpleCard{
-			colorSuit:     RainbowSuit,
-			sequenceIndex: sequenceIndex,
-		})
+		fullCardset = append(fullCardset, card.NewReadonly(RainbowSuit, sequenceIndex))
 	}
 
 	return fullCardset

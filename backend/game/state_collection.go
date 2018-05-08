@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/benoleary/ilutulestikud/backend/game/card"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
@@ -89,7 +90,7 @@ func (gameCollection *StateCollection) AddNew(
 	playerNames []string) error {
 	initialDeck := gameRuleset.CopyOfFullCardset()
 
-	ShuffleInPlace(initialDeck, gameCollection.statePersister.randomSeed())
+	card.ShuffleInPlace(initialDeck, gameCollection.statePersister.randomSeed())
 
 	return gameCollection.AddNewWithGivenDeck(
 		gameName,
@@ -105,7 +106,7 @@ func (gameCollection *StateCollection) AddNewWithGivenDeck(
 	gameName string,
 	gameRuleset Ruleset,
 	playerNames []string,
-	shuffledDeck []ReadonlyCard) error {
+	shuffledDeck []card.Readonly) error {
 	if gameName == "" {
 		return fmt.Errorf("Game must have a name")
 	}
