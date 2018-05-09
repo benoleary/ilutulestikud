@@ -4,53 +4,8 @@ import (
 	"testing"
 
 	"github.com/benoleary/ilutulestikud/backend/game"
-	"github.com/benoleary/ilutulestikud/backend/game/persister"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
-
-var defaultTestRuleset game.Ruleset = &game.StandardWithoutRainbowRuleset{}
-
-type mockPlayerState struct {
-	mockName  string
-	mockColor string
-}
-
-func (mockState *mockPlayerState) Name() string {
-	return mockState.mockName
-}
-
-func (mockState *mockPlayerState) Color() string {
-	return mockState.mockColor
-}
-
-var defaultTestPlayers []player.ReadonlyState = []player.ReadonlyState{
-	&mockPlayerState{
-		mockName:  "Player One",
-		mockColor: "color one",
-	},
-	&mockPlayerState{
-		mockName:  "Player Two",
-		mockColor: "color two",
-	},
-	&mockPlayerState{
-		mockName:  "Player Three",
-		mockColor: "color three",
-	},
-}
-
-type persisterAndDescription struct {
-	GamePersister        game.StatePersister
-	PersisterDescription string
-}
-
-func preparePersisters() []persisterAndDescription {
-	return []persisterAndDescription{
-		persisterAndDescription{
-			GamePersister:        persister.NewInMemoryPersister(),
-			PersisterDescription: "in-memory persister",
-		},
-	}
-}
 
 func TestRandomSeedCausesNoPanic(unitTest *testing.T) {
 	statePersisters := preparePersisters()
@@ -132,12 +87,7 @@ func TestRejectAddGameWithExistingName(unitTest *testing.T) {
 				"Reject Add(game with existing name)/" + statePersister.PersisterDescription
 
 			unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-				expectedPlayers := make(map[string]bool, 0)
-				for _, expectedPlayer := range reducedPlayerList {
-					expectedPlayers[expectedPlayer.Name()] = true
-				}
-
-				expectedGamesMappedToPlayers[gameName] = expectedPlayers
+				expectedGamesMappedToPlayers[gameName] = playerNameSet(reducedPlayerList)
 
 				errorFromInitialAdd :=
 					statePersister.GamePersister.AddGame(
@@ -304,22 +254,11 @@ func assertGameNameAndParticipantsAreCorrect(
 			readonlyGame)
 	}
 
-	actualPlayers := readonlyGame.Players()
-	if len(actualPlayers) != len(expectedPlayerNames) {
-		unitTest.Fatalf(
-			testIdentifier+"/expected players %v, actual state %v",
-			expectedPlayerNames,
-			readonlyGame)
-	}
-
-	for _, actualPlayer := range actualPlayers {
-		if !expectedPlayerNames[actualPlayer.Name()] {
-			unitTest.Fatalf(
-				testIdentifier+"/expected players %v, actual state %v",
-				expectedPlayerNames,
-				readonlyGame)
-		}
-	}
+	assertPlayersMatchNames(
+		testIdentifier,
+		unitTest,
+		expectedPlayerNames,
+		readonlyGame.Players())
 }
 
 func getStateAndAssertNoError(

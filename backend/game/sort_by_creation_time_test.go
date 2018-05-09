@@ -16,7 +16,7 @@ type mockGameState struct {
 }
 
 // Read gets mocked.
-func (gameState *mockGameState) read() game.ReadonlyState {
+func (gameState *mockGameState) Read() game.ReadonlyState {
 	return gameState
 }
 

@@ -45,6 +45,18 @@ type Inferred struct {
 	possibleIndices []int
 }
 
+// PossibleColors returns the color suits which this card could have and
+// have not yet been eliminated by hints .
+func (inferredCard *Inferred) PossibleColors() []string {
+	return inferredCard.possibleColors
+}
+
+// PossibleIndices returns the sequence indices which this card could have
+// and have not yet been eliminated by hints .
+func (inferredCard *Inferred) PossibleIndices() []int {
+	return inferredCard.possibleIndices
+}
+
 // ShuffleInPlace shuffles the given cards in place (using the Fisher-Yates
 // algorithm).
 func ShuffleInPlace(cardsToShuffle []Readonly, randomSeed int64) {

@@ -8,6 +8,41 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
+// Ruleset should encapsulate the set of rules for a game as functions.
+type Ruleset interface {
+	// FrontendDescription should describe the ruleset succintly enough for the frontend.
+	FrontendDescription() string
+
+	// CopyOfFullCardset should return a new array populated with every card which should
+	// be present for a game under the ruleset, including duplicates.
+	CopyOfFullCardset() []card.Readonly
+
+	// NumberOfCardsInPlayerHand should return the number of cards held
+	// in a player's hand, dependent on the number of players in the game.
+	NumberOfCardsInPlayerHand(numberOfPlayers int) int
+
+	// ColorSuits should return the set of colors used as suits.
+	ColorSuits() []string
+
+	// SequenceIndices returns all the indices for the cards, per card so
+	// including repetitions of indices, as they should be played per suit.
+	SequenceIndices() []int
+
+	// MinimumNumberOfPlayers should return the minimum number of players needed for a game.
+	MinimumNumberOfPlayers() int
+
+	// MaximumNumberOfPlayers should return the maximum number of players allowed for a game.
+	MaximumNumberOfPlayers() int
+
+	// MaximumNumberOfHints should return the maximum number of hints which can be available
+	// at any instant.
+	MaximumNumberOfHints() int
+
+	// MaximumNumberOfMistakesAllowed should return the maximum number of mistakes which can
+	// be made without the game ending (i.e. the game ends on the next mistake after that).
+	MaximumNumberOfMistakesAllowed() int
+}
+
 // ReadonlyState defines the interface for structs which should provide read-only
 // information which can completely describe the state of a game.
 type ReadonlyState interface {
@@ -124,5 +159,5 @@ type StatePersister interface {
 		gameName string,
 		gameRuleset Ruleset,
 		playerStates []player.ReadonlyState,
-		initialShuffle []card.Readonly) error
+		initialDeck []card.Readonly) error
 }

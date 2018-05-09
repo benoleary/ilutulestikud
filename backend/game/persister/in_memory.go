@@ -76,7 +76,7 @@ func (inMemoryPersister *InMemoryPersister) AddGame(
 	gameName string,
 	gameRuleset game.Ruleset,
 	playerStates []player.ReadonlyState,
-	initialShuffle []card.Readonly) error {
+	initialDeck []card.Readonly) error {
 	if gameName == "" {
 		return fmt.Errorf("Game must have a name")
 	}
@@ -92,7 +92,7 @@ func (inMemoryPersister *InMemoryPersister) AddGame(
 			gameName,
 			gameRuleset,
 			playerStates,
-			initialShuffle)
+			initialDeck)
 
 	inMemoryPersister.mutualExclusion.Lock()
 
