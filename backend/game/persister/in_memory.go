@@ -1,4 +1,4 @@
-package game
+package persister
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/game/card"
 	"github.com/benoleary/ilutulestikud/backend/game/chat"
 	"github.com/benoleary/ilutulestikud/backend/player"
@@ -16,8 +17,8 @@ import (
 type InMemoryPersister struct {
 	mutualExclusion       sync.Mutex
 	randomNumberGenerator *rand.Rand
-	gameStates            map[string]readAndWriteState
-	gamesWithPlayers      map[string][]ReadonlyState
+	gameStates            map[string]game.ReadAndWriteState
+	gamesWithPlayers      map[string][]game.ReadonlyState
 }
 
 // NewInMemoryPersister creates a game state persister around a map of games.
@@ -25,25 +26,25 @@ func NewInMemoryPersister() *InMemoryPersister {
 	return &InMemoryPersister{
 		mutualExclusion:       sync.Mutex{},
 		randomNumberGenerator: rand.New(rand.NewSource(time.Now().Unix())),
-		gameStates:            make(map[string]readAndWriteState, 1),
-		gamesWithPlayers:      make(map[string][]ReadonlyState, 0),
+		gameStates:            make(map[string]game.ReadAndWriteState, 1),
+		gamesWithPlayers:      make(map[string][]game.ReadonlyState, 0),
 	}
 }
 
-// randomSeed provides an int64 which can be used as a seed for the
+// RandomSeed provides an int64 which can be used as a seed for the
 // rand.NewSource(...) function.
-func (inMemoryPersister *InMemoryPersister) randomSeed() int64 {
+func (inMemoryPersister *InMemoryPersister) RandomSeed() int64 {
 	return inMemoryPersister.randomNumberGenerator.Int63()
 }
 
-// addGame adds an element to the collection which is a new object implementing
+// AddGame adds an element to the collection which is a new object implementing
 // the readAndWriteState interface from the given arguments, and returns the
 // identifier of the newly-created game, along with an error which of course is
 // nil if there was no problem. It returns an error if a game with the given name
 // already exists.
-func (inMemoryPersister *InMemoryPersister) addGame(
+func (inMemoryPersister *InMemoryPersister) AddGame(
 	gameName string,
-	gameRuleset Ruleset,
+	gameRuleset game.Ruleset,
 	playerStates []player.ReadonlyState,
 	initialShuffle []card.Readonly) error {
 	if gameName == "" {
@@ -71,35 +72,36 @@ func (inMemoryPersister *InMemoryPersister) addGame(
 		playerName := playerState.Name()
 		existingGamesWithPlayer := inMemoryPersister.gamesWithPlayers[playerName]
 		inMemoryPersister.gamesWithPlayers[playerName] =
-			append(existingGamesWithPlayer, newGame.read())
+			append(existingGamesWithPlayer, newGame.Read())
 	}
 
 	inMemoryPersister.mutualExclusion.Unlock()
 	return nil
 }
 
-// readAllWithPlayer returns a slice of all the ReadonlyState instances in the collection
+// ReadAllWithPlayer returns a slice of all the game.ReadonlyState instances in the collection
 // which have the given player as a participant. The order is not consistent with repeated
 // calls, as it is defined by the entry set of a standard Golang map.
-func (inMemoryPersister *InMemoryPersister) readAllWithPlayer(
-	playerIdentifier string) []ReadonlyState {
+func (inMemoryPersister *InMemoryPersister) ReadAllWithPlayer(
+	playerIdentifier string) []game.ReadonlyState {
 	return inMemoryPersister.gamesWithPlayers[playerIdentifier]
 }
 
-// ReadGame returns the ReadonlyState corresponding to the given game identifier if
-// it exists already (or else nil) along with whether the game exists, analogously
+// ReadAndWriteGame returns the game.ReadAndWriteState corresponding to the given game
+// identifier if it exists already (or else nil) along with whether the game exists, analogously
 // to a standard Golang map.
-func (inMemoryPersister *InMemoryPersister) readAndWriteGame(
-	gameIdentifier string) (readAndWriteState, bool) {
+func (inMemoryPersister *InMemoryPersister) ReadAndWriteGame(
+	gameIdentifier string) (game.ReadAndWriteState, bool) {
 	gameState, gameExists := inMemoryPersister.gameStates[gameIdentifier]
 	return gameState, gameExists
 }
 
-// inMemoryState is a struct meant to encapsulate all the state required for a single game to function.
+// inMemoryState is a struct meant to encapsulate all the state required for a single game to
+// function.
 type inMemoryState struct {
 	mutualExclusion        sync.Mutex
 	gameName               string
-	gameRuleset            Ruleset
+	gameRuleset            game.Ruleset
 	creationTime           time.Time
 	participatingPlayers   []player.ReadonlyState
 	chatLog                *chat.Log
@@ -118,9 +120,9 @@ type inMemoryState struct {
 // initially.
 func newInMemoryState(
 	gameName string,
-	gameRuleset Ruleset,
+	gameRuleset game.Ruleset,
 	playerStates []player.ReadonlyState,
-	shuffledDeck []card.Readonly) readAndWriteState {
+	shuffledDeck []card.Readonly) game.ReadAndWriteState {
 	return &inMemoryState{
 		mutualExclusion:        sync.Mutex{},
 		gameName:               gameName,
@@ -144,7 +146,7 @@ func (gameState *inMemoryState) Name() string {
 }
 
 // Ruleset returns the ruleset for the game.
-func (gameState *inMemoryState) Ruleset() Ruleset {
+func (gameState *inMemoryState) Ruleset() game.Ruleset {
 	return gameState.gameRuleset
 }
 
@@ -236,14 +238,14 @@ func (gameState *inMemoryState) InferredCardInHand(
 	return card.Inferred{}, fmt.Errorf("not implemented yet")
 }
 
-// read returns the gameState itself as a read-only object for the purposes of reading
+// Read returns the gameState itself as a read-only object for the purposes of reading
 // properties.
-func (gameState *inMemoryState) read() ReadonlyState {
+func (gameState *inMemoryState) Read() game.ReadonlyState {
 	return gameState
 }
 
-// recordChatMessage records a chat message from the given player.
-func (gameState *inMemoryState) recordChatMessage(
+// RecordChatMessage records a chat message from the given player.
+func (gameState *inMemoryState) RecordChatMessage(
 	actingPlayer player.ReadonlyState,
 	chatMessage string) error {
 	gameState.chatLog.AppendNewMessage(
@@ -253,9 +255,9 @@ func (gameState *inMemoryState) recordChatMessage(
 	return nil
 }
 
-// drawCard returns the top-most card of the deck, or a card representing an error
+// DrawCard returns the top-most card of the deck, or a card representing an error
 // along with an actual Go error if there are no cards left.
-func (gameState *inMemoryState) drawCard() (card.Readonly, error) {
+func (gameState *inMemoryState) DrawCard() (card.Readonly, error) {
 	if len(gameState.undrawnDeck) <= 0 {
 		return card.ErrorReadonly(), fmt.Errorf("No cards left to draw")
 	}
@@ -271,10 +273,10 @@ func (gameState *inMemoryState) drawCard() (card.Readonly, error) {
 	return drawnCard, nil
 }
 
-// replaceCardInHand replaces the card at the given index in the hand of the given
+// ReplaceCardInHand replaces the card at the given index in the hand of the given
 // player with the given replacement card, and returns the card which has just been
 // replaced.
-func (gameState *inMemoryState) replaceCardInHand(
+func (gameState *inMemoryState) ReplaceCardInHand(
 	holdingPlayerName string,
 	indexInHand int,
 	replacementCard card.Readonly) (card.Readonly, error) {
@@ -298,19 +300,19 @@ func (gameState *inMemoryState) replaceCardInHand(
 	return cardBeingReplaced, nil
 }
 
-// addCardToPlayedSequence adds the given card to the appropriate sequence of played
+// AddCardToPlayedSequence adds the given card to the appropriate sequence of played
 // cards (by just over-writing what was the top-most card of the sequence).
-func (gameState *inMemoryState) addCardToPlayedSequence(playedCard card.Readonly) error {
+func (gameState *inMemoryState) AddCardToPlayedSequence(playedCard card.Readonly) error {
 	gameState.lastPlayedCardForColor[playedCard.ColorSuit()] = playedCard
 	return nil
 }
 
-// addCardToDiscardPile adds the given card to the pile of discarded cards (by just
+// AddCardToDiscardPile adds the given card to the pile of discarded cards (by just
 // incrementing the number of copies of that card marked as discarded). This assumes
 // that the given card was emitted by an instance of inMemoryState and so is a
 // simpleCard instance, as each key of the map so far has been. If it is not, no error
 // is returned, and the number of copies of that implementation gets incremented.
-func (gameState *inMemoryState) addCardToDiscardPile(discardedCard card.Readonly) error {
+func (gameState *inMemoryState) AddCardToDiscardPile(discardedCard card.Readonly) error {
 	discardedCopiesUntilNow, _ := gameState.discardedCards[discardedCard]
 	gameState.discardedCards[discardedCard] = discardedCopiesUntilNow + 1
 	return nil

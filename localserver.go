@@ -7,6 +7,7 @@ import (
 
 	"github.com/benoleary/ilutulestikud/backend/defaults"
 	"github.com/benoleary/ilutulestikud/backend/game"
+	game_persister "github.com/benoleary/ilutulestikud/backend/game/persister"
 	"github.com/benoleary/ilutulestikud/backend/player"
 	player_persister "github.com/benoleary/ilutulestikud/backend/player/persister"
 	"github.com/benoleary/ilutulestikud/backend/server"
@@ -30,7 +31,7 @@ func main() {
 			errorCreatingPlayerCollection)
 	}
 
-	gamePersister := game.NewInMemoryPersister()
+	gamePersister := game_persister.NewInMemoryPersister()
 	gameCollection :=
 		game.NewCollection(
 			gamePersister,

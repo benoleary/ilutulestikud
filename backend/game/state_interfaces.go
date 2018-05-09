@@ -65,63 +65,63 @@ type ReadonlyState interface {
 	InferredCardInHand(holdingPlayerName string, indexInHand int) (card.Inferred, error)
 }
 
-// readAndWriteState defines the interface for structs which should encapsulate the state of
+// ReadAndWriteState defines the interface for structs which should encapsulate the state of
 // a single game.
-type readAndWriteState interface {
-	// read should return the state as a read-only object for the purposes of reading
+type ReadAndWriteState interface {
+	// Read should return the state as a read-only object for the purposes of reading
 	// properties.
-	read() ReadonlyState
+	Read() ReadonlyState
 
-	// recordChatMessage should record a chat message from the given player.
-	recordChatMessage(actingPlayer player.ReadonlyState, chatMessage string) error
+	// RecordChatMessage should record a chat message from the given player.
+	RecordChatMessage(actingPlayer player.ReadonlyState, chatMessage string) error
 
-	// drawCard should return the top-most card of the deck, or nil and an error if there are
+	// DrawCard should return the top-most card of the deck, or nil and an error if there are
 	// no cards left.
-	drawCard() (card.Readonly, error)
+	DrawCard() (card.Readonly, error)
 
-	// replaceCardInHand should replace the card at the given index in the hand of the given
+	// ReplaceCardInHand should replace the card at the given index in the hand of the given
 	// player with the given replacement card, and return the card which has just been
 	// replaced.
-	replaceCardInHand(
+	ReplaceCardInHand(
 		holdingPlayerName string,
 		indexInHand int,
 		replacementCard card.Readonly) (card.Readonly, error)
 
-	// addCardToPlayedSequence should add the given card to the appropriate sequence of played
+	// AddCardToPlayedSequence should add the given card to the appropriate sequence of played
 	// cards.
-	addCardToPlayedSequence(playedCard card.Readonly) error
+	AddCardToPlayedSequence(playedCard card.Readonly) error
 
-	// addCardToDiscardPile should add the given card to the pile of discarded cards.
-	addCardToDiscardPile(discardedCard card.Readonly) error
+	// AddCardToDiscardPile should add the given card to the pile of discarded cards.
+	AddCardToDiscardPile(discardedCard card.Readonly) error
 }
 
 // StatePersister defines the interface for structs which should be able to create objects
 // implementing the readAndWriteState interface encapsulating the state information for
 // individual games, and for tracking the games by their name.
 type StatePersister interface {
-	// randomSeed should provide an int64 which can be used as a seed for the
+	// RandomSeed should provide an int64 which can be used as a seed for the
 	// rand.NewSource(...) function.
-	randomSeed() int64
+	RandomSeed() int64
 
-	// addGame should add an element to the collection which is a new object implementing
+	// AddGame should add an element to the collection which is a new object implementing
 	// the readAndWriteState interface from the given argument. It should return an error
 	// if a game with the given name already exists.
-	addGame(
+	AddGame(
 		gameName string,
 		gameRuleset Ruleset,
 		playerStates []player.ReadonlyState,
 		initialShuffle []card.Readonly) error
 
-	// readAllWithPlayer should return a slice of all the games in the collection which
+	// ReadAllWithPlayer should return a slice of all the games in the collection which
 	// have the given player as a participant, where each game is given as a ReadonlyState
 	// instance.
 	// The order is not mandated, and may even change with repeated calls to the same
 	// unchanged persister (analogously to the entry set of a standard Golang map, for
 	// example), though of course an implementation may order the slice consistently.
-	readAllWithPlayer(playerName string) []ReadonlyState
+	ReadAllWithPlayer(playerName string) []ReadonlyState
 
-	// readAndWriteGame should return the readAndWriteState corresponding to the given game
+	// ReadAndWriteGame should return the readAndWriteState corresponding to the given game
 	// name if it exists already (or else nil) along with whether the game exists,
 	// analogously to a standard Golang map.
-	readAndWriteGame(gameName string) (readAndWriteState, bool)
+	ReadAndWriteGame(gameName string) (ReadAndWriteState, bool)
 }

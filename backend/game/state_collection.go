@@ -36,7 +36,7 @@ func NewCollection(
 func (gameCollection *StateCollection) ViewState(
 	gameName string,
 	playerName string) (*PlayerView, error) {
-	gameState, gameExists := gameCollection.statePersister.readAndWriteGame(gameName)
+	gameState, gameExists := gameCollection.statePersister.ReadAndWriteGame(gameName)
 
 	if !gameExists {
 		gameDoesNotExistError :=
@@ -47,7 +47,7 @@ func (gameCollection *StateCollection) ViewState(
 		return nil, gameDoesNotExistError
 	}
 
-	return ViewForPlayer(gameState.read(), playerName)
+	return ViewForPlayer(gameState.Read(), playerName)
 }
 
 // ViewAllWithPlayer wraps every read-only state given by the persister for the given player
@@ -55,7 +55,7 @@ func (gameCollection *StateCollection) ViewState(
 // The views are ordered by creation timestamp, oldest first.
 func (gameCollection *StateCollection) ViewAllWithPlayer(
 	playerName string) ([]*PlayerView, error) {
-	gameStates := gameCollection.statePersister.readAllWithPlayer(playerName)
+	gameStates := gameCollection.statePersister.ReadAllWithPlayer(playerName)
 	numberOfGames := len(gameStates)
 
 	sort.Sort(ByCreationTime(gameStates))
@@ -90,7 +90,7 @@ func (gameCollection *StateCollection) AddNew(
 	playerNames []string) error {
 	initialDeck := gameRuleset.CopyOfFullCardset()
 
-	card.ShuffleInPlace(initialDeck, gameCollection.statePersister.randomSeed())
+	card.ShuffleInPlace(initialDeck, gameCollection.statePersister.RandomSeed())
 
 	return gameCollection.AddNewWithGivenDeck(
 		gameName,
@@ -121,7 +121,7 @@ func (gameCollection *StateCollection) AddNewWithGivenDeck(
 		return playerError
 	}
 
-	return gameCollection.statePersister.addGame(
+	return gameCollection.statePersister.AddGame(
 		gameName,
 		gameRuleset,
 		playerStates,
@@ -142,7 +142,7 @@ func (gameCollection *StateCollection) RecordChatMessage(
 	}
 
 	gameState, isFound :=
-		gameCollection.statePersister.readAndWriteGame(gameName)
+		gameCollection.statePersister.ReadAndWriteGame(gameName)
 
 	if !isFound {
 		return fmt.Errorf(
@@ -151,14 +151,14 @@ func (gameCollection *StateCollection) RecordChatMessage(
 			playerName)
 	}
 
-	_, participantError := ViewForPlayer(gameState.read(), playerName)
+	_, participantError := ViewForPlayer(gameState.Read(), playerName)
 
 	if participantError != nil {
 		return participantError
 	}
 
 	// No error is returned when recording a chat message.
-	gameState.recordChatMessage(chattingPlayer, chatMessage)
+	gameState.RecordChatMessage(chattingPlayer, chatMessage)
 	return nil
 }
 

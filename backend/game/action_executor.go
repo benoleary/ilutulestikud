@@ -9,7 +9,7 @@ import (
 // game's ruleset.
 type ActionExecutor struct {
 	gameRuleset Ruleset
-	gameState   readAndWriteState
+	gameState   ReadAndWriteState
 	playerName  string
 }
 
@@ -18,14 +18,14 @@ type ActionExecutor struct {
 // the executor. If the player is not a participant, it returns nil
 // along with an error.
 func ExecutorForPlayer(
-	stateOfGame readAndWriteState,
+	stateOfGame ReadAndWriteState,
 	nameOfPlayer string) (*ActionExecutor, error) {
-	gameParticipants := stateOfGame.read().Players()
+	gameParticipants := stateOfGame.Read().Players()
 	for _, gameParticipant := range gameParticipants {
 		if gameParticipant.Name() == nameOfPlayer {
 			actionExecutor :=
 				&ActionExecutor{
-					gameRuleset: stateOfGame.read().Ruleset(),
+					gameRuleset: stateOfGame.Read().Ruleset(),
 					gameState:   stateOfGame,
 					playerName:  nameOfPlayer,
 				}
@@ -40,7 +40,7 @@ func ExecutorForPlayer(
 		fmt.Errorf(
 			"No player with name %v is a participant in game %v",
 			nameOfPlayer,
-			stateOfGame.read().Name())
+			stateOfGame.Read().Name())
 
 	return nil, notFoundError
 }
