@@ -34,7 +34,7 @@ func preparePersisters() []persisterAndDescription {
 	}
 }
 
-func TestReturnErrorWhenPlayerNotFoundInternally(unitTest *testing.T) {
+func TestReturnErrorWhenPlayerNotFound(unitTest *testing.T) {
 	statePersisters := preparePersisters()
 
 	for _, statePersister := range statePersisters {

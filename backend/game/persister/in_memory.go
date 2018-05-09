@@ -37,6 +37,36 @@ func (inMemoryPersister *InMemoryPersister) RandomSeed() int64 {
 	return inMemoryPersister.randomNumberGenerator.Int63()
 }
 
+// ReadAndWriteGame returns the game.ReadAndWriteState corresponding to the given
+// game name, or nil with an error if it does not exist.
+func (inMemoryPersister *InMemoryPersister) ReadAndWriteGame(
+	gameName string) (game.ReadAndWriteState, error) {
+	gameState, gameExists := inMemoryPersister.gameStates[gameName]
+
+	if !gameExists {
+		return nil, fmt.Errorf("Game %v does not exist", gameName)
+	}
+
+	return gameState, nil
+}
+
+// ReadAllWithPlayer returns a slice of all the game.ReadonlyState instances in the
+// collection which have the given player as a participant.
+func (inMemoryPersister *InMemoryPersister) ReadAllWithPlayer(
+	playerName string) []game.ReadonlyState {
+	// We do not care if there was no entry for the player, as the default in this
+	// case is nil, and we are going to explicitly check for nil to ensure that we
+	// return an empty list instead anyway (in case the player was mapped to nil
+	// somehow).
+	gameStates, _ := inMemoryPersister.gamesWithPlayers[playerName]
+
+	if gameStates == nil {
+		return []game.ReadonlyState{}
+	}
+
+	return gameStates
+}
+
 // AddGame adds an element to the collection which is a new object implementing
 // the readAndWriteState interface from the given arguments, and returns the
 // identifier of the newly-created game, along with an error which of course is
@@ -79,25 +109,8 @@ func (inMemoryPersister *InMemoryPersister) AddGame(
 	return nil
 }
 
-// ReadAllWithPlayer returns a slice of all the game.ReadonlyState instances in the collection
-// which have the given player as a participant. The order is not consistent with repeated
-// calls, as it is defined by the entry set of a standard Golang map.
-func (inMemoryPersister *InMemoryPersister) ReadAllWithPlayer(
-	playerIdentifier string) []game.ReadonlyState {
-	return inMemoryPersister.gamesWithPlayers[playerIdentifier]
-}
-
-// ReadAndWriteGame returns the game.ReadAndWriteState corresponding to the given game
-// identifier if it exists already (or else nil) along with whether the game exists, analogously
-// to a standard Golang map.
-func (inMemoryPersister *InMemoryPersister) ReadAndWriteGame(
-	gameIdentifier string) (game.ReadAndWriteState, bool) {
-	gameState, gameExists := inMemoryPersister.gameStates[gameIdentifier]
-	return gameState, gameExists
-}
-
-// inMemoryState is a struct meant to encapsulate all the state required for a single game to
-// function.
+// inMemoryState is a struct meant to encapsulate all the state required for a
+// single game to function.
 type inMemoryState struct {
 	mutualExclusion        sync.Mutex
 	gameName               string
@@ -115,9 +128,8 @@ type inMemoryState struct {
 	playerHands            map[string][]card.Readonly
 }
 
-// newInMemoryState creates a new game given the required information,
-// using the given seed for the random number generator used to shuffle the deck
-// initially.
+// newInMemoryState creates a new game given the required information, using the
+// given shuffled deck.
 func newInMemoryState(
 	gameName string,
 	gameRuleset game.Ruleset,
@@ -197,8 +209,10 @@ func (gameState *inMemoryState) DeckSize() int {
 // LastPlayedForColor returns the last card which has been played correctly for the
 // given color suit along with whether any card has been played in that suit so far,
 // analogously to how a Go map works.
-func (gameState *inMemoryState) LastPlayedForColor(colorSuit string) (card.Readonly, bool) {
-	lastPlayedCard, hasCardBeenPlayedForColor := gameState.lastPlayedCardForColor[colorSuit]
+func (gameState *inMemoryState) LastPlayedForColor(
+	colorSuit string) (card.Readonly, bool) {
+	lastPlayedCard, hasCardBeenPlayedForColor :=
+		gameState.lastPlayedCardForColor[colorSuit]
 
 	return lastPlayedCard, hasCardBeenPlayedForColor
 }
@@ -256,7 +270,7 @@ func (gameState *inMemoryState) RecordChatMessage(
 }
 
 // DrawCard returns the top-most card of the deck, or a card representing an error
-// along with an actual Go error if there are no cards left.
+// along with an actual Golang error if there are no cards left.
 func (gameState *inMemoryState) DrawCard() (card.Readonly, error) {
 	if len(gameState.undrawnDeck) <= 0 {
 		return card.ErrorReadonly(), fmt.Errorf("No cards left to draw")

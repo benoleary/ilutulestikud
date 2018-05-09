@@ -36,13 +36,14 @@ func NewCollection(
 func (gameCollection *StateCollection) ViewState(
 	gameName string,
 	playerName string) (*PlayerView, error) {
-	gameState, gameExists := gameCollection.statePersister.ReadAndWriteGame(gameName)
+	gameState, errorFromGet := gameCollection.statePersister.ReadAndWriteGame(gameName)
 
-	if !gameExists {
+	if errorFromGet != nil {
 		gameDoesNotExistError :=
 			fmt.Errorf(
-				"Game %v does not exist, cannot be viewed by player %v",
+				"Could not find game %v (%v), cannot be viewed by player %v",
 				gameName,
+				errorFromGet,
 				playerName)
 		return nil, gameDoesNotExistError
 	}
@@ -141,13 +142,14 @@ func (gameCollection *StateCollection) RecordChatMessage(
 		return playerIdentificationError
 	}
 
-	gameState, isFound :=
+	gameState, errorFromGet :=
 		gameCollection.statePersister.ReadAndWriteGame(gameName)
 
-	if !isFound {
+	if errorFromGet != nil {
 		return fmt.Errorf(
-			"Game %v does not exist, cannot record chat message from player %v",
+			"Could not find game %v (%v), cannot record chat message from player %v",
 			gameName,
+			errorFromGet,
 			playerName)
 	}
 
