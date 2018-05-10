@@ -20,9 +20,9 @@ type ActionExecutor struct {
 func ExecutorForPlayer(
 	stateOfGame ReadAndWriteState,
 	nameOfPlayer string) (*ActionExecutor, error) {
-	gameParticipants := stateOfGame.Read().Players()
+	gameParticipants := stateOfGame.Read().PlayerNames()
 	for _, gameParticipant := range gameParticipants {
-		if gameParticipant.Name() == nameOfPlayer {
+		if gameParticipant == nameOfPlayer {
 			actionExecutor :=
 				&ActionExecutor{
 					gameRuleset: stateOfGame.Read().Ruleset(),

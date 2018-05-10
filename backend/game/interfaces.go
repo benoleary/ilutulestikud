@@ -52,9 +52,9 @@ type ReadonlyState interface {
 	// Ruleset should return the ruleset for the game.
 	Ruleset() Ruleset
 
-	// Players should return the list of players participating in the game, in the
-	// order in which they have their first turns.
-	Players() []player.ReadonlyState
+	// PlayerNames should return the list of players participating in the game, in
+	// the order in which they have their first turns.
+	PlayerNames() []string
 
 	// CreationTime should return the time object describing the time at which the
 	// state was created.
@@ -158,6 +158,6 @@ type StatePersister interface {
 	AddGame(
 		gameName string,
 		gameRuleset Ruleset,
-		playerStates []player.ReadonlyState,
+		playersWithInitialHands map[string][]card.Inferred,
 		initialDeck []card.Readonly) error
 }

@@ -119,7 +119,7 @@ type inMemoryState struct {
 	gameName               string
 	gameRuleset            game.Ruleset
 	creationTime           time.Time
-	participatingPlayers   []player.ReadonlyState
+	participantNames       []string
 	chatLog                *chat.Log
 	turnNumber             int
 	currentScore           int
@@ -136,14 +136,14 @@ type inMemoryState struct {
 func newInMemoryState(
 	gameName string,
 	gameRuleset game.Ruleset,
-	playerStates []player.ReadonlyState,
+	participantNames []string,
 	shuffledDeck []card.Readonly) game.ReadAndWriteState {
 	return &inMemoryState{
 		mutualExclusion:        sync.Mutex{},
 		gameName:               gameName,
 		gameRuleset:            gameRuleset,
 		creationTime:           time.Now(),
-		participatingPlayers:   playerStates,
+		participantNames:       participantNames,
 		chatLog:                chat.NewLog(),
 		turnNumber:             1,
 		numberOfReadyHints:     gameRuleset.MaximumNumberOfHints(),

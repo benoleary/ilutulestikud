@@ -5,7 +5,6 @@ import (
 
 	"github.com/benoleary/ilutulestikud/backend/game/card"
 	"github.com/benoleary/ilutulestikud/backend/game/chat"
-	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
 // PlayerView encapsulates the functions on a game's read-only state
@@ -13,7 +12,7 @@ import (
 // that state.
 type PlayerView struct {
 	gameState            ReadonlyState
-	gameParticipants     []player.ReadonlyState
+	gameParticipants     []string
 	numberOfParticipants int
 	playerName           string
 	gameRuleset          Ruleset
@@ -30,9 +29,9 @@ type PlayerView struct {
 func ViewForPlayer(
 	stateOfGame ReadonlyState,
 	nameOfPlayer string) (*PlayerView, error) {
-	participantsInGame := stateOfGame.Players()
+	participantsInGame := stateOfGame.PlayerNames()
 	for _, gameParticipant := range participantsInGame {
-		if gameParticipant.Name() == nameOfPlayer {
+		if gameParticipant == nameOfPlayer {
 			numberOfPlayers := len(participantsInGame)
 			rulesetOfGame := stateOfGame.Ruleset()
 			gameColorSuits := rulesetOfGame.ColorSuits()
@@ -95,9 +94,9 @@ func (playerView *PlayerView) CurrentTurnOrder() ([]string, bool) {
 		// gameParticipants[2], then [3], then [4], then [0], then [1].
 		playerIndex := (playerIndex + gameTurn - 1) % playerView.numberOfParticipants
 		playerInTurnOrder := playerView.gameParticipants[playerIndex]
-		playerNamesInTurnOrder[playerIndex] = playerInTurnOrder.Name()
+		playerNamesInTurnOrder[playerIndex] = playerInTurnOrder
 
-		if playerView.playerName == playerInTurnOrder.Name() {
+		if playerView.playerName == playerInTurnOrder {
 			isPlayerTurn = true
 		}
 	}

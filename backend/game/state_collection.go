@@ -108,16 +108,16 @@ func (gameCollection *StateCollection) AddNewWithGivenDeck(
 	gameName string,
 	gameRuleset Ruleset,
 	playerNames []string,
-	shuffledDeck []card.Readonly) error {
+	initialDeck []card.Readonly) error {
 	if gameName == "" {
 		return fmt.Errorf("Game must have a name")
 	}
 
-	playerStates, playerError :=
-		createPlayerStates(
+	playerStates, errorFromHands :=
+		createPlayerHands(
 			playerNames,
 			gameRuleset,
-			gameCollection.playerProvider)
+			initialDeck)
 
 	if playerError != nil {
 		return playerError
@@ -127,7 +127,7 @@ func (gameCollection *StateCollection) AddNewWithGivenDeck(
 		gameName,
 		gameRuleset,
 		playerStates,
-		shuffledDeck)
+		initialDeck)
 }
 
 // RecordChatMessage finds the given game and records the given chat message from the
@@ -165,10 +165,10 @@ func (gameCollection *StateCollection) RecordChatMessage(
 	return nil
 }
 
-func createPlayerStates(
+func createPlayerHands(
 	playerNames []string,
 	gameRuleset Ruleset,
-	playerProvider readonlyPlayerProvider) ([]player.ReadonlyState, error) {
+	initialDeck []card.Readonly) (map[string][]card.Inferred, error) {
 	// A nil slice still has a length of 0, so this is OK.
 	numberOfPlayers := len(playerNames)
 
@@ -188,18 +188,15 @@ func createPlayerStates(
 		return nil, tooManyError
 	}
 
-	playerNameMap := make(map[string]bool, 0)
+	handSize := gameRuleset.NumberOfCardsInPlayerHand(numberOfPlayers)
 
-	playerStates := make([]player.ReadonlyState, numberOfPlayers)
+	playerHands := make(map[string][]card.Inferred, 0)
+
 	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
 		playerName := playerNames[playerIndex]
-		playerState, identificationError := playerProvider.Get(playerName)
 
-		if identificationError != nil {
-			return nil, identificationError
-		}
-
-		if playerNameMap[playerName] {
+		_, hasHandAlready := playerHands[playerName]
+		if hasHandAlready {
 			degenerateNameError :=
 				fmt.Errorf(
 					"Player with name %v appears more than once in the list of players",
@@ -207,9 +204,11 @@ func createPlayerStates(
 			return nil, degenerateNameError
 		}
 
-		playerNameMap[playerName] = true
+		playerHands[playerName] = make([]card.Inferred, handSize)
 
-		playerStates[playerIndex] = playerState
+		for cardsInHand := 0; cardsInHand < handSize; cardsInHand++ {
+			x, y := 
+		}
 	}
 
 	return playerStates, nil
