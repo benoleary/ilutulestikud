@@ -7,6 +7,9 @@ import (
 )
 
 // This file contains some implementations of the interface for rulesets.
+// It also contains a system mapping ints to implementations, which is here
+// as it is both used by the endpoint-handling code in its communication
+// with the frontend, and is relevant to serializing the game state.
 
 const (
 	// NoRulesetChosen denotes 0 as no ruleset chosen, as a missing JSON identifier

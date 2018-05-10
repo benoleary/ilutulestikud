@@ -9,7 +9,11 @@ import (
 )
 
 var colorsAvailableInTest []string = defaults.AvailableColors()
-var defaultTestPlayerNames []string = []string{"Player One", "Player Two", "Player Three"}
+var defaultTestPlayerNames []string = []string{
+	"Player One",
+	"Player Two",
+	"Player Three",
+}
 
 func mapStringsToTrue(stringsToMap []string) map[string]bool {
 	stringMap := make(map[string]bool, 0)
@@ -28,7 +32,7 @@ type persisterAndDescription struct {
 func preparePersisters() []persisterAndDescription {
 	return []persisterAndDescription{
 		persisterAndDescription{
-			PlayerPersister:      persister.NewInMemoryPersister(),
+			PlayerPersister:      persister.NewInMemory(),
 			PersisterDescription: "in-memory persister",
 		},
 	}

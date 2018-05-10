@@ -18,7 +18,7 @@ func main() {
 	fmt.Printf("Local server started.\n")
 
 	// This main function just injects hard-coded dependencies.
-	playerPersister := player_persister.NewInMemoryPersister()
+	playerPersister := player_persister.NewInMemory()
 	playerCollection, errorCreatingPlayerCollection :=
 		player.NewCollection(
 			playerPersister,
@@ -31,7 +31,7 @@ func main() {
 			errorCreatingPlayerCollection)
 	}
 
-	gamePersister := game_persister.NewInMemoryPersister()
+	gamePersister := game_persister.NewInMemory()
 	gameCollection :=
 		game.NewCollection(
 			gamePersister,

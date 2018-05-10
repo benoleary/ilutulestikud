@@ -12,18 +12,21 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
-// InMemoryPersister stores inMemoryState objects as State objects. The games are
-// mapped to by their name, as are the players.
-type InMemoryPersister struct {
+// inMemoryPersister stores game states by creating inMemoryStates and
+// saving them as game.ReadAndWriteStates, mapped to by their names.
+// It also maintains a map of player names to slices of game states,
+// where each game state in the slice mapped to by a player includes
+// that player as a participant.
+type inMemoryPersister struct {
 	mutualExclusion       sync.Mutex
 	randomNumberGenerator *rand.Rand
 	gameStates            map[string]game.ReadAndWriteState
 	gamesWithPlayers      map[string][]game.ReadonlyState
 }
 
-// NewInMemoryPersister creates a game state persister around a map of games.
-func NewInMemoryPersister() *InMemoryPersister {
-	return &InMemoryPersister{
+// NewInMemory creates a game state persister around a map of games.
+func NewInMemory() game.StatePersister {
+	return &inMemoryPersister{
 		mutualExclusion:       sync.Mutex{},
 		randomNumberGenerator: rand.New(rand.NewSource(time.Now().Unix())),
 		gameStates:            make(map[string]game.ReadAndWriteState, 1),
@@ -33,15 +36,15 @@ func NewInMemoryPersister() *InMemoryPersister {
 
 // RandomSeed provides an int64 which can be used as a seed for the
 // rand.NewSource(...) function.
-func (inMemoryPersister *InMemoryPersister) RandomSeed() int64 {
-	return inMemoryPersister.randomNumberGenerator.Int63()
+func (gamePersister *inMemoryPersister) RandomSeed() int64 {
+	return gamePersister.randomNumberGenerator.Int63()
 }
 
 // ReadAndWriteGame returns the game.ReadAndWriteState corresponding to the given
 // game name, or nil with an error if it does not exist.
-func (inMemoryPersister *InMemoryPersister) ReadAndWriteGame(
+func (gamePersister *inMemoryPersister) ReadAndWriteGame(
 	gameName string) (game.ReadAndWriteState, error) {
-	gameState, gameExists := inMemoryPersister.gameStates[gameName]
+	gameState, gameExists := gamePersister.gameStates[gameName]
 
 	if !gameExists {
 		return nil, fmt.Errorf("Game %v does not exist", gameName)
@@ -52,13 +55,13 @@ func (inMemoryPersister *InMemoryPersister) ReadAndWriteGame(
 
 // ReadAllWithPlayer returns a slice of all the game.ReadonlyState instances in the
 // collection which have the given player as a participant.
-func (inMemoryPersister *InMemoryPersister) ReadAllWithPlayer(
+func (gamePersister *inMemoryPersister) ReadAllWithPlayer(
 	playerName string) []game.ReadonlyState {
 	// We do not care if there was no entry for the player, as the default in this
 	// case is nil, and we are going to explicitly check for nil to ensure that we
 	// return an empty list instead anyway (in case the player was mapped to nil
 	// somehow).
-	gameStates, _ := inMemoryPersister.gamesWithPlayers[playerName]
+	gameStates, _ := gamePersister.gamesWithPlayers[playerName]
 
 	if gameStates == nil {
 		return []game.ReadonlyState{}
@@ -72,7 +75,7 @@ func (inMemoryPersister *InMemoryPersister) ReadAllWithPlayer(
 // identifier of the newly-created game, along with an error which of course is
 // nil if there was no problem. It returns an error if a game with the given name
 // already exists.
-func (inMemoryPersister *InMemoryPersister) AddGame(
+func (gamePersister *inMemoryPersister) AddGame(
 	gameName string,
 	gameRuleset game.Ruleset,
 	playerStates []player.ReadonlyState,
@@ -81,7 +84,7 @@ func (inMemoryPersister *InMemoryPersister) AddGame(
 		return fmt.Errorf("Game must have a name")
 	}
 
-	_, gameExists := inMemoryPersister.gameStates[gameName]
+	_, gameExists := gamePersister.gameStates[gameName]
 
 	if gameExists {
 		return fmt.Errorf("Game %v already exists", gameName)
@@ -94,18 +97,18 @@ func (inMemoryPersister *InMemoryPersister) AddGame(
 			playerStates,
 			initialDeck)
 
-	inMemoryPersister.mutualExclusion.Lock()
+	gamePersister.mutualExclusion.Lock()
 
-	inMemoryPersister.gameStates[gameName] = newGame
+	gamePersister.gameStates[gameName] = newGame
 
 	for _, playerState := range playerStates {
 		playerName := playerState.Name()
-		existingGamesWithPlayer := inMemoryPersister.gamesWithPlayers[playerName]
-		inMemoryPersister.gamesWithPlayers[playerName] =
+		existingGamesWithPlayer := gamePersister.gamesWithPlayers[playerName]
+		gamePersister.gamesWithPlayers[playerName] =
 			append(existingGamesWithPlayer, newGame.Read())
 	}
 
-	inMemoryPersister.mutualExclusion.Unlock()
+	gamePersister.mutualExclusion.Unlock()
 	return nil
 }
 

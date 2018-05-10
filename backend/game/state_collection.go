@@ -36,7 +36,8 @@ func NewCollection(
 func (gameCollection *StateCollection) ViewState(
 	gameName string,
 	playerName string) (*PlayerView, error) {
-	gameState, errorFromGet := gameCollection.statePersister.ReadAndWriteGame(gameName)
+	gameState, errorFromGet :=
+		gameCollection.statePersister.ReadAndWriteGame(gameName)
 
 	if errorFromGet != nil {
 		gameDoesNotExistError :=

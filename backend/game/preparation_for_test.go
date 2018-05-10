@@ -6,6 +6,7 @@ import (
 
 	"github.com/benoleary/ilutulestikud/backend/defaults"
 	"github.com/benoleary/ilutulestikud/backend/game"
+	"github.com/benoleary/ilutulestikud/backend/game/persister"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
@@ -93,7 +94,7 @@ func prepareCollections(unitTest *testing.T) []collectionAndDescription {
 
 	statePersisters := []persisterAndDescription{
 		persisterAndDescription{
-			GamePersister:        game.NewInMemoryPersister(),
+			GamePersister:        persister.NewInMemory(),
 			PersisterDescription: "in-memory persister",
 		},
 	}

@@ -58,7 +58,7 @@ type persisterAndDescription struct {
 func preparePersisters() []persisterAndDescription {
 	return []persisterAndDescription{
 		persisterAndDescription{
-			GamePersister:        persister.NewInMemoryPersister(),
+			GamePersister:        persister.NewInMemory(),
 			PersisterDescription: "in-memory persister",
 		},
 	}
