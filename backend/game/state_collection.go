@@ -113,14 +113,14 @@ func (gameCollection *StateCollection) AddNewWithGivenDeck(
 		return fmt.Errorf("Game must have a name")
 	}
 
-	playerStates, errorFromHands :=
-		createPlayerHands(
+	playerStates, initialDeck, errorFromHands :=
+		gameCollection.createPlayerHands(
 			playerNames,
 			gameRuleset,
 			initialDeck)
 
-	if playerError != nil {
-		return playerError
+	if errorFromHands != nil {
+		return errorFromHands
 	}
 
 	return gameCollection.statePersister.AddGame(
@@ -165,10 +165,13 @@ func (gameCollection *StateCollection) RecordChatMessage(
 	return nil
 }
 
-func createPlayerHands(
+// createPlayerHands deals out each player's hand (a full hand per player rather
+// than one card each time to each player) and then returns a map of player names
+// to hands along with the remaining deck.
+func (gameCollection *StateCollection) createPlayerHands(
 	playerNames []string,
 	gameRuleset Ruleset,
-	initialDeck []card.Readonly) (map[string][]card.Inferred, error) {
+	initialDeck []card.Readonly) (map[string][]card.Inferred, []card.Readonly, error) {
 	// A nil slice still has a length of 0, so this is OK.
 	numberOfPlayers := len(playerNames)
 
@@ -177,7 +180,7 @@ func createPlayerHands(
 			fmt.Errorf(
 				"Game must have at least %v players",
 				gameRuleset.MinimumNumberOfPlayers())
-		return nil, tooFewError
+		return nil, nil, tooFewError
 	}
 
 	if numberOfPlayers > gameRuleset.MaximumNumberOfPlayers() {
@@ -185,7 +188,7 @@ func createPlayerHands(
 			fmt.Errorf(
 				"Game must have no more than %v players",
 				gameRuleset.MaximumNumberOfPlayers())
-		return nil, tooManyError
+		return nil, nil, tooManyError
 	}
 
 	handSize := gameRuleset.NumberOfCardsInPlayerHand(numberOfPlayers)
@@ -201,17 +204,30 @@ func createPlayerHands(
 				fmt.Errorf(
 					"Player with name %v appears more than once in the list of players",
 					playerName)
-			return nil, degenerateNameError
+			return nil, nil, degenerateNameError
 		}
 
-		playerHands[playerName] = make([]card.Inferred, handSize)
+		playerHand := make([]card.Inferred, handSize)
 
 		for cardsInHand := 0; cardsInHand < handSize; cardsInHand++ {
-			x, y := 
+			playerHand[cardsInHand] =
+				card.NewInferred(
+					initialDeck[cardsInHand],
+					gameRuleset.ColorSuits(),
+					gameRuleset.SequenceIndices())
+
+			// We should not ever re-visit these cards, but we set them to
+			// represent an error just in case.
+			initialDeck[cardsInHand] = card.ErrorReadonly()
 		}
+
+		// Now we ensure that the cards just dealt out are no longer part of the deck.
+		initialDeck = initialDeck[handSize:]
+
+		playerHands[playerName] = playerHand
 	}
 
-	return playerStates, nil
+	return playerHands, initialDeck, nil
 }
 
 // ByCreationTime implements sort interface for []ReadonlyState based on the return

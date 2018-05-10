@@ -71,14 +71,15 @@ func (gamePersister *inMemoryPersister) ReadAllWithPlayer(
 }
 
 // AddGame adds an element to the collection which is a new object implementing
-// the readAndWriteState interface from the given arguments, and returns the
+// the ReadAndWriteState interface from the given arguments, and returns the
 // identifier of the newly-created game, along with an error which of course is
 // nil if there was no problem. It returns an error if a game with the given name
 // already exists.
 func (gamePersister *inMemoryPersister) AddGame(
 	gameName string,
 	gameRuleset game.Ruleset,
-	playerStates []player.ReadonlyState,
+	playersInTurnOrder []string,
+	initialHands map[string][]card.Inferred,
 	initialDeck []card.Readonly) error {
 	if gameName == "" {
 		return fmt.Errorf("Game must have a name")
@@ -94,7 +95,7 @@ func (gamePersister *inMemoryPersister) AddGame(
 		newInMemoryState(
 			gameName,
 			gameRuleset,
-			playerStates,
+			playersWithInitialHands,
 			initialDeck)
 
 	gamePersister.mutualExclusion.Lock()
@@ -136,7 +137,7 @@ type inMemoryState struct {
 func newInMemoryState(
 	gameName string,
 	gameRuleset game.Ruleset,
-	participantNames []string,
+	playersWithInitialHands map[string][]card.Inferred,
 	shuffledDeck []card.Readonly) game.ReadAndWriteState {
 	return &inMemoryState{
 		mutualExclusion:        sync.Mutex{},
@@ -165,9 +166,9 @@ func (gameState *inMemoryState) Ruleset() game.Ruleset {
 	return gameState.gameRuleset
 }
 
-// Players returns a slice of the private participatingPlayers array.
-func (gameState *inMemoryState) Players() []player.ReadonlyState {
-	return gameState.participatingPlayers
+// Players returns a slice of the private participantNames array.
+func (gameState *inMemoryState) PlayerNames() []string {
+	return gameState.participantNames
 }
 
 // CreationTime returns the value of the private time object describing the time at
