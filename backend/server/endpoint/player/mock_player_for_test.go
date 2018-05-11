@@ -5,7 +5,7 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
-var colorsAvailableInTest []string = defaults.AvailableColors()
+var colorsAvailableInTest []string = defaults.AvailableColors
 
 type mockPlayerState struct {
 	name  string

@@ -22,8 +22,8 @@ func main() {
 	playerCollection, errorCreatingPlayerCollection :=
 		player.NewCollection(
 			playerPersister,
-			defaults.InitialPlayerNames(),
-			defaults.AvailableColors())
+			defaults.InitialPlayerNames,
+			defaults.AvailableColors)
 
 	if errorCreatingPlayerCollection != nil {
 		log.Fatalf(

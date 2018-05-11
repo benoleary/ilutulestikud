@@ -45,7 +45,7 @@ type Inferred struct {
 	possibleIndices []int
 }
 
-// NewInferred returns a new inferred card around a given readon-only card.
+// NewInferred returns a new inferred card around a given read-only card.
 // The possible suits and indices must be provided externally.
 func NewInferred(
 	underlyingCard Readonly,
@@ -58,6 +58,11 @@ func NewInferred(
 	}
 }
 
+// UnderlyingCard returns the card as seen by the other players.
+func (inferredCard *Inferred) UnderlyingCard() Readonly {
+	return inferredCard.underlyingCard
+}
+
 // PossibleColors returns the color suits which this card could have and
 // have not yet been eliminated by hints .
 func (inferredCard *Inferred) PossibleColors() []string {
@@ -65,7 +70,7 @@ func (inferredCard *Inferred) PossibleColors() []string {
 }
 
 // PossibleIndices returns the sequence indices which this card could have
-// and have not yet been eliminated by hints .
+// and have not yet been eliminated by hints.
 func (inferredCard *Inferred) PossibleIndices() []int {
 	return inferredCard.possibleIndices
 }

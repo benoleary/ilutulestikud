@@ -78,8 +78,7 @@ func (gamePersister *inMemoryPersister) ReadAllWithPlayer(
 func (gamePersister *inMemoryPersister) AddGame(
 	gameName string,
 	gameRuleset game.Ruleset,
-	playersInTurnOrder []string,
-	initialHands map[string][]card.Inferred,
+	playersInTurnOrderWithInitialHands []game.PlayerNameWithHand,
 	initialDeck []card.Readonly) error {
 	if gameName == "" {
 		return fmt.Errorf("Game must have a name")
@@ -95,15 +94,15 @@ func (gamePersister *inMemoryPersister) AddGame(
 		newInMemoryState(
 			gameName,
 			gameRuleset,
-			playersWithInitialHands,
+			playersInTurnOrderWithInitialHands,
 			initialDeck)
 
 	gamePersister.mutualExclusion.Lock()
 
 	gamePersister.gameStates[gameName] = newGame
 
-	for _, playerState := range playerStates {
-		playerName := playerState.Name()
+	for _, nameWithHand := range playersInTurnOrderWithInitialHands {
+		playerName := nameWithHand.PlayerName
 		existingGamesWithPlayer := gamePersister.gamesWithPlayers[playerName]
 		gamePersister.gamesWithPlayers[playerName] =
 			append(existingGamesWithPlayer, newGame.Read())
@@ -116,20 +115,20 @@ func (gamePersister *inMemoryPersister) AddGame(
 // inMemoryState is a struct meant to encapsulate all the state required for a
 // single game to function.
 type inMemoryState struct {
-	mutualExclusion        sync.Mutex
-	gameName               string
-	gameRuleset            game.Ruleset
-	creationTime           time.Time
-	participantNames       []string
-	chatLog                *chat.Log
-	turnNumber             int
-	currentScore           int
-	numberOfReadyHints     int
-	numberOfMistakesMade   int
-	undrawnDeck            []card.Readonly
-	lastPlayedCardForColor map[string]card.Readonly
-	discardedCards         map[card.Readonly]int
-	playerHands            map[string][]card.Readonly
+	mutualExclusion             sync.Mutex
+	gameName                    string
+	gameRuleset                 game.Ruleset
+	creationTime                time.Time
+	participantNamesInTurnOrder []string
+	chatLog                     *chat.Log
+	turnNumber                  int
+	currentScore                int
+	numberOfReadyHints          int
+	numberOfMistakesMade        int
+	undrawnDeck                 []card.Readonly
+	lastPlayedCardForColor      map[string]card.Readonly
+	discardedCards              map[card.Readonly]int
+	playerHands                 map[string][]card.Inferred
 }
 
 // newInMemoryState creates a new game given the required information, using the
@@ -137,22 +136,34 @@ type inMemoryState struct {
 func newInMemoryState(
 	gameName string,
 	gameRuleset game.Ruleset,
-	playersWithInitialHands map[string][]card.Inferred,
+	playersInTurnOrderWithInitialHands []game.PlayerNameWithHand,
 	shuffledDeck []card.Readonly) game.ReadAndWriteState {
+	numberOfParticipants := len(playersInTurnOrderWithInitialHands)
+	participantNamesInTurnOrder := make([]string, numberOfParticipants)
+	playerHands := make(map[string][]card.Inferred, numberOfParticipants)
+	for playerIndex := 0; playerIndex < numberOfParticipants; playerIndex++ {
+		playerName := playersInTurnOrderWithInitialHands[playerIndex].PlayerName
+		participantNamesInTurnOrder[playerIndex] = playerName
+		playerHands[playerName] =
+			playersInTurnOrderWithInitialHands[playerIndex].InitialHand
+	}
+
+	// We could already set up the capacity for the maps by getting slices from
+	// the ruleset and counting, but that is a lot of effort for very little gain.
 	return &inMemoryState{
-		mutualExclusion:        sync.Mutex{},
-		gameName:               gameName,
-		gameRuleset:            gameRuleset,
-		creationTime:           time.Now(),
-		participantNames:       participantNames,
-		chatLog:                chat.NewLog(),
-		turnNumber:             1,
-		numberOfReadyHints:     gameRuleset.MaximumNumberOfHints(),
-		numberOfMistakesMade:   0,
-		undrawnDeck:            shuffledDeck,
-		lastPlayedCardForColor: make(map[string]card.Readonly, 0),
-		discardedCards:         make(map[card.Readonly]int, 0),
-		playerHands:            make(map[string][]card.Readonly, 0),
+		mutualExclusion:             sync.Mutex{},
+		gameName:                    gameName,
+		gameRuleset:                 gameRuleset,
+		creationTime:                time.Now(),
+		participantNamesInTurnOrder: participantNamesInTurnOrder,
+		chatLog:                     chat.NewLog(),
+		turnNumber:                  1,
+		numberOfReadyHints:          gameRuleset.MaximumNumberOfHints(),
+		numberOfMistakesMade:        0,
+		undrawnDeck:                 shuffledDeck,
+		lastPlayedCardForColor:      make(map[string]card.Readonly, 0),
+		discardedCards:              make(map[card.Readonly]int, 0),
+		playerHands:                 playerHands,
 	}
 }
 
@@ -168,7 +179,7 @@ func (gameState *inMemoryState) Ruleset() game.Ruleset {
 
 // Players returns a slice of the private participantNames array.
 func (gameState *inMemoryState) PlayerNames() []string {
-	return gameState.participantNames
+	return gameState.participantNamesInTurnOrder
 }
 
 // CreationTime returns the value of the private time object describing the time at
@@ -245,7 +256,7 @@ func (gameState *inMemoryState) VisibleCardInHand(
 		return card.ErrorReadonly(), fmt.Errorf("Player has no hand")
 	}
 
-	return playerHand[indexInHand], nil
+	return playerHand[indexInHand].UnderlyingCard(), nil
 }
 
 // InferredCardInHand returns the inferred information about the card held by the given
@@ -297,7 +308,7 @@ func (gameState *inMemoryState) DrawCard() (card.Readonly, error) {
 func (gameState *inMemoryState) ReplaceCardInHand(
 	holdingPlayerName string,
 	indexInHand int,
-	replacementCard card.Readonly) (card.Readonly, error) {
+	replacementCard card.Inferred) (card.Readonly, error) {
 	if indexInHand < 0 {
 		return card.ErrorReadonly(), fmt.Errorf("Index %v is out of allowed range", indexInHand)
 	}
@@ -315,7 +326,7 @@ func (gameState *inMemoryState) ReplaceCardInHand(
 	cardBeingReplaced := playerHand[indexInHand]
 	playerHand[indexInHand] = replacementCard
 
-	return cardBeingReplaced, nil
+	return cardBeingReplaced.UnderlyingCard(), nil
 }
 
 // AddCardToPlayedSequence adds the given card to the appropriate sequence of played

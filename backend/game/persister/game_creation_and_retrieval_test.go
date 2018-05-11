@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/benoleary/ilutulestikud/backend/game"
-	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
 func TestRandomSeedCausesNoPanic(unitTest *testing.T) {
@@ -73,10 +72,32 @@ func TestReturnEmptyListWhenPlayerHasNoGames(unitTest *testing.T) {
 func TestRejectAddGameWithExistingName(unitTest *testing.T) {
 	statePersisters := preparePersisters()
 
-	reducedPlayerList :=
-		[]player.ReadonlyState{
-			defaultTestPlayers[0],
-			defaultTestPlayers[1],
+	twoPlayersWithNilHands :=
+		[]game.PlayerNameWithHand{
+			game.PlayerNameWithHand{
+				PlayerName:  defaultTestPlayers[0],
+				InitialHand: nil,
+			},
+			game.PlayerNameWithHand{
+				PlayerName:  defaultTestPlayers[2],
+				InitialHand: nil,
+			},
+		}
+
+	threePlayersWithNilHands :=
+		[]game.PlayerNameWithHand{
+			game.PlayerNameWithHand{
+				PlayerName:  defaultTestPlayers[0],
+				InitialHand: nil,
+			},
+			game.PlayerNameWithHand{
+				PlayerName:  defaultTestPlayers[1],
+				InitialHand: nil,
+			},
+			game.PlayerNameWithHand{
+				PlayerName:  defaultTestPlayers[2],
+				InitialHand: nil,
+			},
 		}
 
 	expectedGamesMappedToPlayers := make(map[string]map[string]bool, 0)
@@ -87,13 +108,14 @@ func TestRejectAddGameWithExistingName(unitTest *testing.T) {
 				"Reject Add(game with existing name)/" + statePersister.PersisterDescription
 
 			unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-				expectedGamesMappedToPlayers[gameName] = playerNameSet(reducedPlayerList)
+				expectedGamesMappedToPlayers[gameName] =
+					playerNameSet(twoPlayersWithNilHands)
 
 				errorFromInitialAdd :=
 					statePersister.GamePersister.AddGame(
 						gameName,
 						defaultTestRuleset,
-						reducedPlayerList,
+						twoPlayersWithNilHands,
 						nil)
 
 				if errorFromInitialAdd != nil {
@@ -101,7 +123,7 @@ func TestRejectAddGameWithExistingName(unitTest *testing.T) {
 						"AddGame(%v, %v, %v, nil) produced an error: %v",
 						gameName,
 						defaultTestRuleset,
-						reducedPlayerList,
+						twoPlayersWithNilHands,
 						errorFromInitialAdd)
 				}
 
@@ -123,7 +145,7 @@ func TestRejectAddGameWithExistingName(unitTest *testing.T) {
 					statePersister.GamePersister.AddGame(
 						gameName,
 						defaultTestRuleset,
-						defaultTestPlayers,
+						threePlayersWithNilHands,
 						nil)
 
 				assertGameNameAndParticipantsAreCorrect(
@@ -258,7 +280,7 @@ func assertGameNameAndParticipantsAreCorrect(
 		testIdentifier,
 		unitTest,
 		expectedPlayerNames,
-		readonlyGame.Players())
+		readonlyGame.PlayerNames())
 }
 
 func getStateAndAssertNoError(

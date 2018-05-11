@@ -79,7 +79,7 @@ type collectionAndDescription struct {
 }
 
 func prepareCollections(unitTest *testing.T) []collectionAndDescription {
-	chatColor := defaults.AvailableColors()[0]
+	chatColor := defaults.AvailableColors[0]
 	mockPlayerMap := make(map[string]*mockPlayerState, 0)
 	for _, mockPlayerName := range playerNamesAvailableInTest {
 		mockPlayerMap[mockPlayerName] = &mockPlayerState{

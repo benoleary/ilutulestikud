@@ -6,7 +6,6 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/game/card"
 	"github.com/benoleary/ilutulestikud/backend/game/persister"
-	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
 const testGameName = "test game"
@@ -26,28 +25,19 @@ func (mockState *mockPlayerState) Color() string {
 	return mockState.mockColor
 }
 
-var defaultTestPlayers []player.ReadonlyState = []player.ReadonlyState{
-	&mockPlayerState{
-		mockName:  "Player One",
-		mockColor: "color one",
-	},
-	&mockPlayerState{
-		mockName:  "Player Two",
-		mockColor: "color two",
-	},
-	&mockPlayerState{
-		mockName:  "Player Three",
-		mockColor: "color three",
-	},
+var defaultTestPlayers []string = []string{
+	"Player One",
+	"Player Two",
+	"Player Three",
 }
 
-func playerNameSet(playerStates []player.ReadonlyState) map[string]bool {
-	playerNames := make(map[string]bool, 0)
-	for _, playerState := range playerStates {
-		playerNames[playerState.Name()] = true
+func playerNameSet(namesWithHands []game.PlayerNameWithHand) map[string]bool {
+	playerNameMap := make(map[string]bool, 0)
+	for _, nameWithHand := range namesWithHands {
+		playerNameMap[nameWithHand.PlayerName] = true
 	}
 
-	return playerNames
+	return playerNameMap
 }
 
 type persisterAndDescription struct {
@@ -72,7 +62,7 @@ type gameAndDescription struct {
 func prepareGameStates(
 	unitTest *testing.T,
 	gameRuleset game.Ruleset,
-	playerStates []player.ReadonlyState,
+	playersInTurnOrderWithInitialHands []game.PlayerNameWithHand,
 	initialDeck []card.Readonly) []gameAndDescription {
 	statePersisters := preparePersisters()
 
@@ -86,7 +76,7 @@ func prepareGameStates(
 			statePersister.GamePersister.AddGame(
 				testGameName,
 				gameRuleset,
-				playerStates,
+				playersInTurnOrderWithInitialHands,
 				initialDeck)
 
 		if errorFromAdd != nil {

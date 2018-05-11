@@ -113,7 +113,7 @@ func (gameCollection *StateCollection) AddNewWithGivenDeck(
 		return fmt.Errorf("Game must have a name")
 	}
 
-	playerStates, initialDeck, errorFromHands :=
+	namesWithHands, initialDeck, errorFromHands :=
 		gameCollection.createPlayerHands(
 			playerNames,
 			gameRuleset,
@@ -126,7 +126,7 @@ func (gameCollection *StateCollection) AddNewWithGivenDeck(
 	return gameCollection.statePersister.AddGame(
 		gameName,
 		gameRuleset,
-		playerStates,
+		namesWithHands,
 		initialDeck)
 }
 
@@ -171,7 +171,7 @@ func (gameCollection *StateCollection) RecordChatMessage(
 func (gameCollection *StateCollection) createPlayerHands(
 	playerNames []string,
 	gameRuleset Ruleset,
-	initialDeck []card.Readonly) (map[string][]card.Inferred, []card.Readonly, error) {
+	initialDeck []card.Readonly) ([]PlayerNameWithHand, []card.Readonly, error) {
 	// A nil slice still has a length of 0, so this is OK.
 	numberOfPlayers := len(playerNames)
 
@@ -193,19 +193,21 @@ func (gameCollection *StateCollection) createPlayerHands(
 
 	handSize := gameRuleset.NumberOfCardsInPlayerHand(numberOfPlayers)
 
-	playerHands := make(map[string][]card.Inferred, 0)
+	namesWithHands := make([]PlayerNameWithHand, numberOfPlayers)
+	uniquePlayerNames := make(map[string]bool, numberOfPlayers)
 
 	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
 		playerName := playerNames[playerIndex]
 
-		_, hasHandAlready := playerHands[playerName]
-		if hasHandAlready {
+		if uniquePlayerNames[playerName] {
 			degenerateNameError :=
 				fmt.Errorf(
 					"Player with name %v appears more than once in the list of players",
 					playerName)
 			return nil, nil, degenerateNameError
 		}
+
+		uniquePlayerNames[playerName] = true
 
 		playerHand := make([]card.Inferred, handSize)
 
@@ -224,10 +226,14 @@ func (gameCollection *StateCollection) createPlayerHands(
 		// Now we ensure that the cards just dealt out are no longer part of the deck.
 		initialDeck = initialDeck[handSize:]
 
-		playerHands[playerName] = playerHand
+		namesWithHands[playerIndex] =
+			PlayerNameWithHand{
+				PlayerName:  playerName,
+				InitialHand: playerHand,
+			}
 	}
 
-	return playerHands, initialDeck, nil
+	return namesWithHands, initialDeck, nil
 }
 
 // ByCreationTime implements sort interface for []ReadonlyState based on the return

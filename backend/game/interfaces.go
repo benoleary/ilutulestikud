@@ -122,7 +122,7 @@ type ReadAndWriteState interface {
 	ReplaceCardInHand(
 		holdingPlayerName string,
 		indexInHand int,
-		replacementCard card.Readonly) (card.Readonly, error)
+		replacementCard card.Inferred) (card.Readonly, error)
 
 	// AddCardToPlayedSequence should add the given card to the appropriate sequence of
 	// played cards.
@@ -130,6 +130,15 @@ type ReadAndWriteState interface {
 
 	// AddCardToDiscardPile should add the given card to the pile of discarded cards.
 	AddCardToDiscardPile(discardedCard card.Readonly) error
+}
+
+// PlayerNameWithHand is a struct to keep the initial hand of a player with the name,
+// so that the player names can be passed in turn order with the hands kept with the
+// holding player. (Using a map of player names to slices of cards would not preserve
+// the order of the player names, but a slice of these structs does.)
+type PlayerNameWithHand struct {
+	PlayerName  string
+	InitialHand []card.Inferred
 }
 
 // StatePersister defines the interface for structs which should be able to create
@@ -153,11 +162,11 @@ type StatePersister interface {
 	ReadAllWithPlayer(playerName string) []ReadonlyState
 
 	// AddGame should add an element to the collection which is a new object implementing
-	// the readAndWriteState interface from the given argument. It should return an error
+	// the ReadAndWriteState interface from the given argument. It should return an error
 	// if a game with the given name already exists.
 	AddGame(
 		gameName string,
 		gameRuleset Ruleset,
-		playersWithInitialHands map[string][]card.Inferred,
+		playersInTurnOrderWithInitialHands []PlayerNameWithHand,
 		initialDeck []card.Readonly) error
 }

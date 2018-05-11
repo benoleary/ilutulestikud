@@ -13,14 +13,22 @@ import (
 	"testing"
 	"time"
 
+	"github.com/benoleary/ilutulestikud/backend/defaults"
 	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	game_state "github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/game/card"
 	"github.com/benoleary/ilutulestikud/backend/game/chat"
-	"github.com/benoleary/ilutulestikud/backend/player"
 	game_endpoint "github.com/benoleary/ilutulestikud/backend/server/endpoint/game"
 	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
+
+var colorsAvailableInTest = defaults.AvailableColors
+
+var testPlayers = []string{
+	"Player One",
+	"Player Two",
+	"Player Three",
+}
 
 // segmentTranslatorForTest returns the standard base-32 translator.
 func segmentTranslatorForTest() parsing.SegmentTranslator {
@@ -41,7 +49,7 @@ type mockGameDefinition struct {
 
 type mockGameState struct {
 	mockName    string
-	mockPlayers []player.ReadonlyState
+	mockPlayers []string
 	mockTurn    int
 	mockChatLog *chat.Log
 }
@@ -57,7 +65,7 @@ func (mockGame mockGameState) Ruleset() game_state.Ruleset {
 }
 
 // Players gets mocked.
-func (mockGame mockGameState) Players() []player.ReadonlyState {
+func (mockGame mockGameState) PlayerNames() []string {
 	return mockGame.mockPlayers
 }
 
@@ -573,12 +581,12 @@ func TestGetAllGamesWithPlayerWhenThreeGames(unitTest *testing.T) {
 
 	firstTestGame := &mockGameState{
 		mockName:    "first test game",
-		mockPlayers: testPlayerStates,
+		mockPlayers: testPlayers,
 		mockTurn:    1,
 	}
 
 	firstTestView, errorForFirstView :=
-		game_state.ViewForPlayer(firstTestGame, testPlayerStates[0].Name())
+		game_state.ViewForPlayer(firstTestGame, testPlayers[0])
 
 	if errorForFirstView != nil {
 		unitTest.Fatalf(
@@ -588,12 +596,12 @@ func TestGetAllGamesWithPlayerWhenThreeGames(unitTest *testing.T) {
 
 	secondTestGame := &mockGameState{
 		mockName:    "second test game",
-		mockPlayers: testPlayerStates,
+		mockPlayers: testPlayers,
 		mockTurn:    2,
 	}
 
 	secondTestView, errorForSecondView :=
-		game_state.ViewForPlayer(secondTestGame, testPlayerStates[1].Name())
+		game_state.ViewForPlayer(secondTestGame, testPlayers[1])
 
 	if errorForSecondView != nil {
 		unitTest.Fatalf(
@@ -603,12 +611,12 @@ func TestGetAllGamesWithPlayerWhenThreeGames(unitTest *testing.T) {
 
 	thirdTestGame := &mockGameState{
 		mockName:    "third test game",
-		mockPlayers: testPlayerStates,
+		mockPlayers: testPlayers,
 		mockTurn:    3,
 	}
 
 	thirdTestView, errorForThirdView :=
-		game_state.ViewForPlayer(thirdTestGame, testPlayerStates[2].Name())
+		game_state.ViewForPlayer(thirdTestGame, testPlayers[2])
 
 	if errorForThirdView != nil {
 		unitTest.Fatalf(
@@ -827,16 +835,16 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 	testIdentifier := "GET game-as-seen-by-player"
 	mockCollection, testHandler := newGameCollectionAndHandler()
 
-	chattingPlayer := testPlayerStates[0]
-	playerName := chattingPlayer.Name()
+	playerName := testPlayers[0]
+	chatColor := "some valid color"
 
 	expectedChatLog := chat.NewLog()
-	expectedChatLog.AppendNewMessage(playerName, chattingPlayer.Color(), "first message")
-	expectedChatLog.AppendNewMessage(playerName, chattingPlayer.Color(), "second message")
+	expectedChatLog.AppendNewMessage(playerName, chatColor, "first message")
+	expectedChatLog.AppendNewMessage(playerName, chatColor, "second message")
 
 	testGame := &mockGameState{
 		mockName:    "test game",
-		mockPlayers: testPlayerStates,
+		mockPlayers: testPlayers,
 		mockTurn:    1,
 		mockChatLog: expectedChatLog,
 	}

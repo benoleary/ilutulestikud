@@ -4,20 +4,79 @@ import (
 	"testing"
 	"time"
 
+	"github.com/benoleary/ilutulestikud/backend/game/card"
+
+	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/game/chat"
 )
 
 func TestInitialMetadataAreCorrect(unitTest *testing.T) {
 	testStartTime := time.Now()
 	emptyMessage := chat.Message{}
-	numberOfParticipants := len(defaultTestPlayers)
+
+	threePlayersWithHands :=
+		[]game.PlayerNameWithHand{
+			game.PlayerNameWithHand{
+				PlayerName: defaultTestPlayers[0],
+				InitialHand: []card.Inferred{
+					card.NewInferred(
+						card.NewReadonly("a", 1),
+						[]string{"a", "b", "c"},
+						[]int{1, 2, 3}),
+					card.NewInferred(
+						card.NewReadonly("a", 1),
+						[]string{"a", "b", "c"},
+						[]int{1, 2, 3}),
+					card.NewInferred(
+						card.NewReadonly("a", 2),
+						[]string{"a", "b", "c"},
+						[]int{1, 2, 3}),
+				},
+			},
+			game.PlayerNameWithHand{
+				PlayerName: defaultTestPlayers[1],
+				InitialHand: []card.Inferred{
+					card.NewInferred(
+						card.NewReadonly("a", 1),
+						[]string{"a", "b", "c"},
+						[]int{1, 2, 3, 4}),
+					card.NewInferred(
+						card.NewReadonly("b", 1),
+						[]string{"a", "b", "c", "d"},
+						[]int{1, 2, 3}),
+					card.NewInferred(
+						card.NewReadonly("b", 2),
+						[]string{"a", "b", "c"},
+						[]int{1, 2, 3}),
+				},
+			},
+			game.PlayerNameWithHand{
+				PlayerName: defaultTestPlayers[2],
+				InitialHand: []card.Inferred{
+					card.NewInferred(
+						card.NewReadonly("c", 3),
+						[]string{"a", "b", "c"},
+						[]int{1, 2, 3, 4}),
+					card.NewInferred(
+						card.NewReadonly("b", 3),
+						[]string{"a", "b", "c"},
+						[]int{1, 2, 3}),
+					card.NewInferred(
+						card.NewReadonly("a", 3),
+						[]string{"a", "b", "c"},
+						[]int{1, 2, 3}),
+				},
+			},
+		}
+
+	numberOfParticipants := len(threePlayersWithHands)
 	initialDeck := defaultTestRuleset.CopyOfFullCardset()
 
 	gamesAndDescriptions :=
 		prepareGameStates(
 			unitTest,
 			defaultTestRuleset,
-			defaultTestPlayers,
+			threePlayersWithHands,
 			initialDeck)
 
 	for _, gameAndDescription := range gamesAndDescriptions {
@@ -48,8 +107,8 @@ func TestInitialMetadataAreCorrect(unitTest *testing.T) {
 			assertPlayersMatchNames(
 				testIdentifier,
 				unitTest,
-				playerNameSet(defaultTestPlayers),
-				readonlyState.Players())
+				playerNameSet(threePlayersWithHands),
+				readonlyState.PlayerNames())
 
 			comparisonTime := time.Now()
 
@@ -144,11 +203,16 @@ func TestInitialMetadataAreCorrect(unitTest *testing.T) {
 			numberOfCardsInHand :=
 				defaultTestRuleset.NumberOfCardsInPlayerHand(numberOfParticipants)
 
-			for _, playerState := range defaultTestPlayers {
-				playerName := playerState.Name()
+			for playerIndex, playerWithHand := range threePlayersWithHands {
+				expectedNameWithHand := threePlayersWithHands[playerIndex]
+				playerName := playerWithHand.PlayerName
 
 				for indexInHand := 0; indexInHand < numberOfCardsInHand; indexInHand++ {
-					visibleCard, errorFromVisible :=
+					expectedInferred :=
+						expectedNameWithHand.InitialHand[indexInHand]
+					expectedVisible := expectedInferred.UnderlyingCard()
+
+					actualVisible, errorFromVisible :=
 						readonlyState.VisibleCardInHand(playerName, indexInHand)
 
 					if errorFromVisible != nil {
@@ -156,16 +220,20 @@ func TestInitialMetadataAreCorrect(unitTest *testing.T) {
 							"VisibleCardInHand(%v, %v) %v produced error %v",
 							playerName,
 							indexInHand,
-							visibleCard,
+							actualVisible,
 							errorFromVisible)
 					}
 
-					if visibleCard == visibleCard {
+					if actualVisible != expectedVisible {
 						unitTest.Errorf(
-							"Need to work out how to check hands")
+							"VisibleCardInHand(%v, %v) %v was not expected %v",
+							playerName,
+							indexInHand,
+							actualVisible,
+							expectedVisible)
 					}
 
-					inferredCard, errorFromInferred :=
+					actualInferred, errorFromInferred :=
 						readonlyState.InferredCardInHand(playerName, indexInHand)
 
 					if errorFromInferred != nil {
@@ -173,14 +241,30 @@ func TestInitialMetadataAreCorrect(unitTest *testing.T) {
 							"InferredCardInHand(%v, %v) %v produced error %v",
 							playerName,
 							indexInHand,
-							visibleCard,
+							actualInferred,
 							errorFromInferred)
 					}
 
-					if len(inferredCard.PossibleColors()) != -1 {
+					if actualInferred.UnderlyingCard() != expectedVisible {
 						unitTest.Errorf(
-							"Need to work out how to check hands")
+							"InferredCardInHand(%v, %v) %v was not expected %v",
+							playerName,
+							indexInHand,
+							actualInferred,
+							expectedInferred)
 					}
+
+					assertStringSlicesMatch(
+						testIdentifier+"/inferred possible colors",
+						unitTest,
+						expectedInferred.PossibleColors(),
+						actualInferred.PossibleColors())
+
+					assertIntSlicesMatch(
+						testIdentifier+"/inferred possible indices",
+						unitTest,
+						expectedInferred.PossibleIndices(),
+						actualInferred.PossibleIndices())
 				}
 			}
 		})
