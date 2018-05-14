@@ -264,7 +264,13 @@ func (gameState *inMemoryState) VisibleCardInHand(
 func (gameState *inMemoryState) InferredCardInHand(
 	holdingPlayerName string,
 	indexInHand int) (card.Inferred, error) {
-	return card.Inferred{}, fmt.Errorf("not implemented yet")
+	playerHand, hasHand := gameState.playerHands[holdingPlayerName]
+
+	if !hasHand {
+		return card.ErrorInferred(), fmt.Errorf("Player has no hand")
+	}
+
+	return playerHand[indexInHand], nil
 }
 
 // Read returns the gameState itself as a read-only object for the purposes of reading

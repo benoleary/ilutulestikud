@@ -58,6 +58,11 @@ func NewInferred(
 	}
 }
 
+// ErrorInferred returns a card signalling that there was an error.
+func ErrorInferred() Inferred {
+	return NewInferred(ErrorReadonly(), nil, nil)
+}
+
 // UnderlyingCard returns the card as seen by the other players.
 func (inferredCard *Inferred) UnderlyingCard() Readonly {
 	return inferredCard.underlyingCard

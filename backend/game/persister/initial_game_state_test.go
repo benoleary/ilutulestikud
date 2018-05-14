@@ -205,6 +205,14 @@ func TestInitialMetadataAreCorrect(unitTest *testing.T) {
 
 			for playerIndex, playerWithHand := range threePlayersWithHands {
 				expectedNameWithHand := threePlayersWithHands[playerIndex]
+
+				if len(expectedNameWithHand.InitialHand) != numberOfCardsInHand {
+					unitTest.Fatalf(
+						"expected hand %v not set up correctly, requires %v cards per hand",
+						expectedNameWithHand,
+						numberOfCardsInHand)
+				}
+
 				playerName := playerWithHand.PlayerName
 
 				for indexInHand := 0; indexInHand < numberOfCardsInHand; indexInHand++ {
