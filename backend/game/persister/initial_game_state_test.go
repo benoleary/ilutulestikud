@@ -31,6 +31,14 @@ func TestInitialMetadataAreCorrect(unitTest *testing.T) {
 						card.NewReadonly("a", 2),
 						[]string{"a", "b", "c"},
 						[]int{1, 2, 3}),
+					card.NewInferred(
+						card.NewReadonly("a", 1),
+						[]string{"a", "b", "c"},
+						[]int{1, 2, 3}),
+					card.NewInferred(
+						card.NewReadonly("a", 2),
+						[]string{"a", "b", "c"},
+						[]int{1, 2, 3}),
 				},
 			},
 			game.PlayerNameWithHand{
@@ -46,6 +54,14 @@ func TestInitialMetadataAreCorrect(unitTest *testing.T) {
 						[]int{1, 2, 3}),
 					card.NewInferred(
 						card.NewReadonly("b", 2),
+						[]string{"a", "b", "c"},
+						[]int{1, 2, 3}),
+					card.NewInferred(
+						card.NewReadonly("c", 2),
+						[]string{"a", "b", "c"},
+						[]int{1, 2, 3}),
+					card.NewInferred(
+						card.NewReadonly("c", 3),
 						[]string{"a", "b", "c"},
 						[]int{1, 2, 3}),
 				},
@@ -64,6 +80,14 @@ func TestInitialMetadataAreCorrect(unitTest *testing.T) {
 					card.NewInferred(
 						card.NewReadonly("a", 3),
 						[]string{"a", "b", "c"},
+						[]int{1, 2, 3}),
+					card.NewInferred(
+						card.NewReadonly("d", 3),
+						[]string{"a", "b", "c", "d"},
+						[]int{1, 2, 3}),
+					card.NewInferred(
+						card.NewReadonly("d", 1),
+						[]string{"a", "b", "c", "d"},
 						[]int{1, 2, 3}),
 				},
 			},
