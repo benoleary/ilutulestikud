@@ -71,7 +71,7 @@ func (gameCollection *StateCollection) ViewAllWithPlayer(
 		if participantError != nil {
 			overallError :=
 				fmt.Errorf(
-					"When trying to wrap views around read-only game states, encountered errror %v",
+					"When trying to wrap views around read-only game states, encountered error %v",
 					participantError)
 			return nil, overallError
 		}
