@@ -130,39 +130,32 @@ func (gameCollection *StateCollection) AddNewWithGivenDeck(
 		initialDeck)
 }
 
-// RecordChatMessage finds the given game and records the given chat message from the
-// given player, or returns an error.
-func (gameCollection *StateCollection) RecordChatMessage(
+// ExecuteAction finds the given game and wraps it in an executor for the given
+// player, or returns an error.
+func (gameCollection *StateCollection) ExecuteAction(
 	gameName string,
-	playerName string,
-	chatMessage string) error {
-	chattingPlayer, playerIdentificationError :=
+	playerName string) (*ActionExecutor, error) {
+	actingPlayer, playerIdentificationError :=
 		gameCollection.playerProvider.Get(playerName)
 
 	if playerIdentificationError != nil {
-		return playerIdentificationError
+		return nil, playerIdentificationError
 	}
 
 	gameState, errorFromGet :=
 		gameCollection.statePersister.ReadAndWriteGame(gameName)
 
 	if errorFromGet != nil {
-		return fmt.Errorf(
-			"Could not find game %v (%v), cannot record chat message from player %v",
-			gameName,
-			errorFromGet,
-			playerName)
+		overallError :=
+			fmt.Errorf(
+				"Could not find game %v (%v), cannot execute action for player %v",
+				gameName,
+				errorFromGet,
+				playerName)
+		return nil, overallError
 	}
 
-	_, participantError := ViewForPlayer(gameState.Read(), playerName)
-
-	if participantError != nil {
-		return participantError
-	}
-
-	// No error is returned when recording a chat message.
-	gameState.RecordChatMessage(chattingPlayer, chatMessage)
-	return nil
+	return ExecutorForPlayer(gameState, actingPlayer)
 }
 
 // createPlayerHands deals out each player's hand (a full hand per player rather

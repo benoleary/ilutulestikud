@@ -10,6 +10,8 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
+set up mock persister as in player package
+
 var playerNamesAvailableInTest []string = []string{"A", "B", "C", "D", "E", "F", "G"}
 var testRuleset game.Ruleset = &game.StandardWithoutRainbowRuleset{}
 

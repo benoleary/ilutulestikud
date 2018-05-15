@@ -2,15 +2,17 @@ package game
 
 import (
 	"fmt"
+
+	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
 // ActionExecutor encapsulates the write functions on a game's state
 // which update the state based on player actions, according to the
 // game's ruleset.
 type ActionExecutor struct {
-	gameRuleset Ruleset
-	gameState   ReadAndWriteState
-	playerName  string
+	gameRuleset  Ruleset
+	gameState    ReadAndWriteState
+	actingPlayer player.ReadonlyState
 }
 
 // ExecutorForPlayer creates a ActionExecutor around the given game
@@ -19,15 +21,15 @@ type ActionExecutor struct {
 // along with an error.
 func ExecutorForPlayer(
 	stateOfGame ReadAndWriteState,
-	nameOfPlayer string) (*ActionExecutor, error) {
+	actingPlayer player.ReadonlyState) (*ActionExecutor, error) {
 	gameParticipants := stateOfGame.Read().PlayerNames()
 	for _, gameParticipant := range gameParticipants {
-		if gameParticipant == nameOfPlayer {
+		if gameParticipant == actingPlayer.Name() {
 			actionExecutor :=
 				&ActionExecutor{
-					gameRuleset: stateOfGame.Read().Ruleset(),
-					gameState:   stateOfGame,
-					playerName:  nameOfPlayer,
+					gameRuleset:  stateOfGame.Read().Ruleset(),
+					gameState:    stateOfGame,
+					actingPlayer: actingPlayer,
 				}
 
 			return actionExecutor, nil
@@ -39,8 +41,14 @@ func ExecutorForPlayer(
 	notFoundError :=
 		fmt.Errorf(
 			"No player with name %v is a participant in game %v",
-			nameOfPlayer,
+			actingPlayer.Name(),
 			stateOfGame.Read().Name())
 
 	return nil, notFoundError
+}
+
+// RecordChatMessage records the given chat message from the acting player,
+// or returns an error.
+func (actionExecutor *ActionExecutor) RecordChatMessage(chatMessage string) {
+	actionExecutor.gameState.RecordChatMessage(actionExecutor.actingPlayer, chatMessage)
 }

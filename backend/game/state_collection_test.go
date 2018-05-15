@@ -8,6 +8,10 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
+test no games produces view error
+test no games produces empty list for player
+
+
 func TestInitialState(unitTest *testing.T) {
 	gameName := "test game"
 

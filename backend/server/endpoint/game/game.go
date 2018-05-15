@@ -252,15 +252,16 @@ func (handler *Handler) handleRecordChatMessage(
 		return "Error parsing JSON: " + errorFromParse.Error(), http.StatusBadRequest
 	}
 
-	errorFromRecord :=
-		handler.stateCollection.RecordChatMessage(
+	actionExecutor, errorFromExecutor :=
+		handler.stateCollection.ExecuteAction(
 			playerChatMessage.GameName,
-			playerChatMessage.PlayerName,
-			playerChatMessage.ChatMessage)
+			playerChatMessage.PlayerName)
 
-	if errorFromRecord != nil {
-		return errorFromRecord, http.StatusBadRequest
+	if errorFromExecutor != nil {
+		return errorFromExecutor, http.StatusBadRequest
 	}
+
+	actionExecutor.RecordChatMessage(playerChatMessage.ChatMessage)
 
 	return "OK", http.StatusOK
 }
