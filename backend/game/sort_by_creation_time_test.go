@@ -142,18 +142,22 @@ func TestOrderByCreationTime(unitTest *testing.T) {
 		NewMockReadonly(unitTest, "Near past", time.Now().Add(-1*time.Second)),
 	})
 
-	sort.Sort(mockGames)
-
-	if (mockGames[0].Name() != mockGames[1].Name()) ||
-		(mockGames[1].Name() != mockGames[3].Name()) ||
-		(mockGames[2].Name() != mockGames[2].Name()) ||
-		(mockGames[3].Name() != mockGames[0].Name()) {
-		unitTest.Fatalf(
-			"Game states were not sorted: expected names [%v, %v, %v, %v], instead had %v",
+	expectedNames :=
+		[]string{
 			mockGames[1].Name(),
 			mockGames[3].Name(),
 			mockGames[2].Name(),
 			mockGames[0].Name(),
-			mockGames)
+		}
+
+	sort.Sort(mockGames)
+
+	for gameIndex := 0; gameIndex < len(expectedNames); gameIndex++ {
+		if mockGames[gameIndex].Name() != expectedNames[gameIndex] {
+			unitTest.Fatalf(
+				"Game states were not sorted: expected names %v, instead had %v",
+				expectedNames,
+				mockGames)
+		}
 	}
 }

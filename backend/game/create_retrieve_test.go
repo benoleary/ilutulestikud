@@ -232,7 +232,7 @@ func TestRegisterAndRetrieveNewGames(unitTest *testing.T) {
 					"ViewState(game name "+gameToAdd.gameName+", player name "+viewingPlayer+")")
 
 				// We check that an unknown player causes an error when trying to view games.
-				unknownPlayerName := "A. Player"
+				unknownPlayerName := "Not A. Player"
 				gamesForUnknownPlayer, errorFromUnknownViewAll :=
 					collectionType.GameCollection.ViewAllWithPlayer(unknownPlayerName)
 
