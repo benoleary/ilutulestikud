@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	player_state "github.com/benoleary/ilutulestikud/backend/player"
 	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 	player_endpoint "github.com/benoleary/ilutulestikud/backend/server/endpoint/player"
@@ -21,7 +20,7 @@ func segmentTranslatorForTest() parsing.SegmentTranslator {
 func decoderAroundDefaultPlayer(
 	unitTest *testing.T,
 	testIdentifier string) *json.Decoder {
-	defaultBodyObject := endpoint.PlayerState{
+	defaultBodyObject := parsing.PlayerState{
 		Name:  "Player Name",
 		Color: "Chat color",
 	}
@@ -29,19 +28,19 @@ func decoderAroundDefaultPlayer(
 	return DecoderAroundInterface(unitTest, testIdentifier, defaultBodyObject)
 }
 
-var testPlayerList endpoint.PlayerList = endpoint.PlayerList{
-	Players: []endpoint.PlayerState{
-		endpoint.PlayerState{
+var testPlayerList parsing.PlayerList = parsing.PlayerList{
+	Players: []parsing.PlayerState{
+		parsing.PlayerState{
 			Identifier: segmentTranslatorForTest().ToSegment(testPlayerStates[0].Name()),
 			Name:       testPlayerStates[0].Name(),
 			Color:      testPlayerStates[0].Color(),
 		},
-		endpoint.PlayerState{
+		parsing.PlayerState{
 			Identifier: segmentTranslatorForTest().ToSegment(testPlayerStates[1].Name()),
 			Name:       testPlayerStates[1].Name(),
 			Color:      testPlayerStates[1].Color(),
 		},
-		endpoint.PlayerState{
+		parsing.PlayerState{
 			Identifier: segmentTranslatorForTest().ToSegment(testPlayerStates[2].Name()),
 			Name:       testPlayerStates[2].Name(),
 			Color:      testPlayerStates[2].Color(),
@@ -309,11 +308,11 @@ func TestPlayerListDelivered(unitTest *testing.T) {
 		},
 		testIdentifier)
 
-	responsePlayerList, isInterfaceCorrect := returnedInterface.(endpoint.PlayerList)
+	responsePlayerList, isInterfaceCorrect := returnedInterface.(parsing.PlayerList)
 
 	if !isInterfaceCorrect {
 		unitTest.Fatalf(
-			testIdentifier+"/received %v instead of expected endpoint.PlayerList",
+			testIdentifier+"/received %v instead of expected parsing.PlayerList",
 			returnedInterface)
 	}
 
@@ -401,11 +400,11 @@ func TestAvailableColorsCorrectlyDelivered(unitTest *testing.T) {
 		},
 		testIdentifier)
 
-	responseColorList, isInterfaceCorrect := returnedInterface.(endpoint.ChatColorList)
+	responseColorList, isInterfaceCorrect := returnedInterface.(parsing.ChatColorList)
 
 	if !isInterfaceCorrect {
 		unitTest.Fatalf(
-			testIdentifier+"/received %v instead of expected endpoint.ChatColorList",
+			testIdentifier+"/received %v instead of expected parsing.ChatColorList",
 			returnedInterface)
 	}
 
@@ -482,7 +481,7 @@ func TestRejectNewPlayerIfCollectionRejectsIt(unitTest *testing.T) {
 	mockCollection.ErrorToReturn = errors.New("error")
 	mockCollection.ReturnForAll = testPlayerStates
 
-	bodyObject := endpoint.PlayerState{
+	bodyObject := parsing.PlayerState{
 		Name:  "A. Player Name",
 		Color: "The color",
 	}
@@ -530,7 +529,7 @@ func TestRejectNewPlayerIfIdentifierHasSegmentDelimiter(unitTest *testing.T) {
 	// It should unescape to \/\\\? as a literal.
 	breaksBase64 := "\\/\\\\\\?"
 
-	bodyObject := endpoint.PlayerState{
+	bodyObject := parsing.PlayerState{
 		Name:  breaksBase64,
 		Color: "The color",
 	}
@@ -568,7 +567,7 @@ func TestAcceptValidNewPlayer(unitTest *testing.T) {
 	mockCollection.ErrorToReturn = nil
 	mockCollection.ReturnForAll = testPlayerStates
 
-	bodyObject := endpoint.PlayerState{
+	bodyObject := parsing.PlayerState{
 		Name:  "A. Player Name",
 		Color: "The color",
 	}
@@ -638,7 +637,7 @@ func TestRejectUpdatePlayerIfCollectionRejectsIt(unitTest *testing.T) {
 	mockCollection.ErrorToReturn = errors.New("error")
 	mockCollection.ReturnForAll = testPlayerStates
 
-	bodyObject := endpoint.PlayerState{
+	bodyObject := parsing.PlayerState{
 		Name:  "A. Player Name",
 		Color: "The color",
 	}
@@ -676,7 +675,7 @@ func TestAcceptValidUpdatePlayer(unitTest *testing.T) {
 	mockCollection.ErrorToReturn = nil
 	mockCollection.ReturnForAll = testPlayerStates
 
-	bodyObject := endpoint.PlayerState{
+	bodyObject := parsing.PlayerState{
 		Name:  "A. Player Name",
 		Color: "The color",
 	}

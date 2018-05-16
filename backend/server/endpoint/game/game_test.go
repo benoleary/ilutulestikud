@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"github.com/benoleary/ilutulestikud/backend/defaults"
-	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	game_state "github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/game/card"
 	"github.com/benoleary/ilutulestikud/backend/game/chat"
@@ -359,7 +358,7 @@ func TestPostGameNilFutherSegmentSliceBadRequest(unitTest *testing.T) {
 			DecoderAroundInterface(
 				unitTest,
 				testIdentifier,
-				endpoint.GameDefinition{GameName: "test"}),
+				parsing.GameDefinition{GameName: "test"}),
 			nil)
 
 	if responseCode != http.StatusBadRequest {
@@ -384,7 +383,7 @@ func TestPostGameEmptyFutherSegmentSliceBadRequest(unitTest *testing.T) {
 			DecoderAroundInterface(
 				unitTest,
 				testIdentifier,
-				endpoint.GameDefinition{GameName: "test"}),
+				parsing.GameDefinition{GameName: "test"}),
 			[]string{})
 
 	if responseCode != http.StatusBadRequest {
@@ -409,7 +408,7 @@ func TestPostGameInvalidSegmentNotFound(unitTest *testing.T) {
 			DecoderAroundInterface(
 				unitTest,
 				testIdentifier,
-				endpoint.GameDefinition{GameName: "test"}),
+				parsing.GameDefinition{GameName: "test"}),
 			[]string{"invalid-segment"})
 
 	if responseCode != http.StatusNotFound {
@@ -445,11 +444,11 @@ func TestAvailableRulesetsCorrectlyDelivered(unitTest *testing.T) {
 		mockCollection.FunctionsAndArgumentsReceived,
 		testIdentifier)
 
-	responseRulesetList, isInterfaceCorrect := returnedInterface.(endpoint.RulesetList)
+	responseRulesetList, isInterfaceCorrect := returnedInterface.(parsing.RulesetList)
 
 	if !isInterfaceCorrect {
 		unitTest.Fatalf(
-			testIdentifier+"/received %v instead of expected endpoint.RulesetList",
+			testIdentifier+"/received %v instead of expected parsing.RulesetList",
 			returnedInterface)
 	}
 
@@ -591,11 +590,11 @@ func TestGetAllGamesWithPlayerWhenEmptyList(unitTest *testing.T) {
 			responseCode)
 	}
 
-	responseTurnSummaryList, isInterfaceCorrect := returnedInterface.(endpoint.TurnSummaryList)
+	responseTurnSummaryList, isInterfaceCorrect := returnedInterface.(parsing.TurnSummaryList)
 
 	if !isInterfaceCorrect {
 		unitTest.Fatalf(
-			testIdentifier+"/received %v instead of expected endpoint.TurnSummaryList",
+			testIdentifier+"/received %v instead of expected parsing.TurnSummaryList",
 			returnedInterface)
 	}
 
@@ -704,11 +703,11 @@ func TestGetAllGamesWithPlayerWhenThreeGames(unitTest *testing.T) {
 		},
 		testIdentifier)
 
-	responseTurnSummaryList, isInterfaceCorrect := returnedInterface.(endpoint.TurnSummaryList)
+	responseTurnSummaryList, isInterfaceCorrect := returnedInterface.(parsing.TurnSummaryList)
 
 	if !isInterfaceCorrect {
 		unitTest.Fatalf(
-			testIdentifier+"/received %v instead of expected endpoint.TurnSummaryList",
+			testIdentifier+"/received %v instead of expected parsing.TurnSummaryList",
 			returnedInterface)
 	}
 
@@ -932,11 +931,11 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 		},
 		testIdentifier)
 
-	responseGameView, isInterfaceCorrect := returnedInterface.(endpoint.GameView)
+	responseGameView, isInterfaceCorrect := returnedInterface.(parsing.GameView)
 
 	if !isInterfaceCorrect {
 		unitTest.Fatalf(
-			testIdentifier+"/received %v instead of expected endpoint.GameView",
+			testIdentifier+"/received %v instead of expected parsing.GameView",
 			returnedInterface)
 	}
 
@@ -1013,7 +1012,7 @@ func TestRejectChatIfCollectionRejectsIt(unitTest *testing.T) {
 	mockCollection, testHandler := newGameCollectionAndHandler()
 	mockCollection.ErrorToReturn = errors.New("error")
 
-	bodyObject := endpoint.PlayerChatMessage{
+	bodyObject := parsing.PlayerChatMessage{
 		GameName:    "Test game",
 		PlayerName:  "A. Player Name",
 		ChatMessage: "Blah blah blah",
@@ -1051,7 +1050,7 @@ func TestAcceptValidChat(unitTest *testing.T) {
 	mockCollection, testHandler := newGameCollectionAndHandler()
 	mockCollection.ReturnForExecuteAction = &mockActionExecutor{}
 
-	bodyObject := endpoint.PlayerChatMessage{
+	bodyObject := parsing.PlayerChatMessage{
 		GameName:    "Test game",
 		PlayerName:  "A. Player Name",
 		ChatMessage: "Blah blah blah",
@@ -1118,7 +1117,7 @@ func TestRejectNewGameWithInvalidRulesetIdentifier(unitTest *testing.T) {
 	mockCollection, testHandler := newGameCollectionAndHandler()
 
 	// All the valid ruleset identifiers should be > 0.
-	bodyObject := endpoint.GameDefinition{
+	bodyObject := parsing.GameDefinition{
 		GameName:          "test game",
 		RulesetIdentifier: -1,
 		PlayerNames:       []string{"Player One", "Player Two"},
@@ -1147,7 +1146,7 @@ func TestRejectNewGameIfCollectionRejectsIt(unitTest *testing.T) {
 	mockCollection, testHandler := newGameCollectionAndHandler()
 	mockCollection.ErrorToReturn = errors.New("error")
 
-	bodyObject := endpoint.GameDefinition{
+	bodyObject := parsing.GameDefinition{
 		GameName:          "test game",
 		RulesetIdentifier: game_state.ValidRulesetIdentifiers()[0],
 		PlayerNames:       []string{"Player One", "Player Two"},
@@ -1202,7 +1201,7 @@ func TestRejectNewGameIfIdentifierIncludesSegmentDelimiter(unitTest *testing.T) 
 	mockCollection, testHandler :=
 		newGameCollectionAndHandlerForTranslator(&parsing.NoOperationTranslator{})
 
-	bodyObject := endpoint.GameDefinition{
+	bodyObject := parsing.GameDefinition{
 		GameName:          "name/which/cannot/work/as/identifier",
 		RulesetIdentifier: game_state.ValidRulesetIdentifiers()[0],
 		PlayerNames:       []string{"Player One", "Player Two"},
@@ -1256,7 +1255,7 @@ func TestAcceptValidNewGame(unitTest *testing.T) {
 	testIdentifier := "POST record-chat-message"
 	mockCollection, testHandler := newGameCollectionAndHandler()
 
-	bodyObject := endpoint.GameDefinition{
+	bodyObject := parsing.GameDefinition{
 		GameName:          "test game",
 		RulesetIdentifier: game_state.ValidRulesetIdentifiers()[0],
 		PlayerNames:       []string{"Player One", "Player Two"},

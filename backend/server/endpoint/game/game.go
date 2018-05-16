@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
@@ -76,14 +75,14 @@ func (handler *Handler) HandlePost(
 func (handler *Handler) writeAvailableRulesets() (interface{}, int) {
 	availableRulesetIdentifiers := game.ValidRulesetIdentifiers()
 
-	selectableRulesets := make([]endpoint.SelectableRuleset, 0)
+	selectableRulesets := make([]parsing.SelectableRuleset, 0)
 
 	for _, rulesetIdentifier := range availableRulesetIdentifiers {
 		// There definitely will not be an error from RulesetFromIdentifier if we
 		// iterate only over the valid identifiers.
 		availableRuleset, _ := game.RulesetFromIdentifier(rulesetIdentifier)
 		selectableRuleset :=
-			endpoint.SelectableRuleset{
+			parsing.SelectableRuleset{
 				Identifier:             rulesetIdentifier,
 				Description:            availableRuleset.FrontendDescription(),
 				MinimumNumberOfPlayers: availableRuleset.MinimumNumberOfPlayers(),
@@ -93,7 +92,7 @@ func (handler *Handler) writeAvailableRulesets() (interface{}, int) {
 		selectableRulesets = append(selectableRulesets, selectableRuleset)
 	}
 
-	endpointObject := endpoint.RulesetList{
+	endpointObject := parsing.RulesetList{
 		Rulesets: selectableRulesets,
 	}
 
@@ -126,19 +125,19 @@ func (handler *Handler) writeTurnSummariesForPlayer(
 
 	numberOfGamesWithPlayer := len(allGamesWithPlayer)
 
-	turnSummaries := make([]endpoint.TurnSummary, numberOfGamesWithPlayer)
+	turnSummaries := make([]parsing.TurnSummary, numberOfGamesWithPlayer)
 
 	for gameIndex := 0; gameIndex < numberOfGamesWithPlayer; gameIndex++ {
 		gameView := allGamesWithPlayer[gameIndex]
 		_, isPlayerTurn := gameView.CurrentTurnOrder()
-		turnSummaries[gameIndex] = endpoint.TurnSummary{
+		turnSummaries[gameIndex] = parsing.TurnSummary{
 			GameIdentifier: handler.segmentTranslator.ToSegment(gameView.GameName()),
 			GameName:       gameView.GameName(),
 			IsPlayerTurn:   isPlayerTurn,
 		}
 	}
 
-	endpointObject := endpoint.TurnSummaryList{
+	endpointObject := parsing.TurnSummaryList{
 		TurnSummaries: turnSummaries,
 	}
 
@@ -149,7 +148,7 @@ func (handler *Handler) writeTurnSummariesForPlayer(
 func (handler *Handler) handleNewGame(
 	httpBodyDecoder *json.Decoder,
 	relevantSegments []string) (interface{}, int) {
-	var gameDefinition endpoint.GameDefinition
+	var gameDefinition parsing.GameDefinition
 
 	errorFromParse := httpBodyDecoder.Decode(&gameDefinition)
 	if errorFromParse != nil {
@@ -217,10 +216,10 @@ func (handler *Handler) writeGameForPlayer(
 
 	chatMessages := gameView.SortedChatLog()
 	numberOfMessages := len(chatMessages)
-	chatLogForFrontend := make([]endpoint.ChatLogMessage, numberOfMessages)
+	chatLogForFrontend := make([]parsing.ChatLogMessage, numberOfMessages)
 	for messageIndex := 0; messageIndex < numberOfMessages; messageIndex++ {
 		chatMessage := chatMessages[messageIndex]
-		chatLogForFrontend[messageIndex] = endpoint.ChatLogMessage{
+		chatLogForFrontend[messageIndex] = parsing.ChatLogMessage{
 			TimestampInSeconds: chatMessage.CreationTime.Unix(),
 			PlayerName:         chatMessage.PlayerName,
 			ChatColor:          chatMessage.ChatColor,
@@ -229,7 +228,7 @@ func (handler *Handler) writeGameForPlayer(
 	}
 
 	endpointObject :=
-		endpoint.GameView{
+		parsing.GameView{
 			ChatLog:                      chatLogForFrontend,
 			ScoreSoFar:                   gameView.Score(),
 			NumberOfReadyHints:           gameView.NumberOfReadyHints(),
@@ -245,7 +244,7 @@ func (handler *Handler) writeGameForPlayer(
 func (handler *Handler) handleRecordChatMessage(
 	httpBodyDecoder *json.Decoder,
 	relevantSegments []string) (interface{}, int) {
-	var playerChatMessage endpoint.PlayerChatMessage
+	var playerChatMessage parsing.PlayerChatMessage
 
 	errorFromParse := httpBodyDecoder.Decode(&playerChatMessage)
 	if errorFromParse != nil {

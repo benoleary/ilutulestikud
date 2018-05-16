@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/benoleary/ilutulestikud/backend/endpoint"
 	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
 
@@ -74,17 +73,17 @@ func (handler *Handler) HandlePost(
 // may not consistent with repeated calls as ForEndpoint does not guarantee it.
 func (handler *Handler) writeRegisteredPlayers() (interface{}, int) {
 	playerStates := handler.stateCollection.All()
-	playerList := make([]endpoint.PlayerState, 0, len(playerStates))
+	playerList := make([]parsing.PlayerState, 0, len(playerStates))
 	for _, playerState := range playerStates {
 		playerName := playerState.Name()
-		playerList = append(playerList, endpoint.PlayerState{
+		playerList = append(playerList, parsing.PlayerState{
 			Identifier: handler.segmentTranslator.ToSegment(playerName),
 			Name:       playerName,
 			Color:      playerState.Color(),
 		})
 	}
 
-	endpointObject := endpoint.PlayerList{
+	endpointObject := parsing.PlayerList{
 		Players: playerList,
 	}
 
@@ -94,7 +93,7 @@ func (handler *Handler) writeRegisteredPlayers() (interface{}, int) {
 // writeAvailableColors writes a JSON object into the HTTP response which has
 // the list of strings as its "Colors" attribute.
 func (handler *Handler) writeAvailableColors() (interface{}, int) {
-	endpointObject := endpoint.ChatColorList{
+	endpointObject := parsing.ChatColorList{
 		Colors: handler.stateCollection.AvailableChatColors(),
 	}
 
@@ -106,7 +105,7 @@ func (handler *Handler) writeAvailableColors() (interface{}, int) {
 // would.
 func (handler *Handler) handleNewPlayer(
 	httpBodyDecoder *json.Decoder) (interface{}, int) {
-	var endpointPlayer endpoint.PlayerState
+	var endpointPlayer parsing.PlayerState
 	errorFromParse := httpBodyDecoder.Decode(&endpointPlayer)
 	if errorFromParse != nil {
 		return "Error parsing JSON: " + errorFromParse.Error(), http.StatusBadRequest
@@ -135,7 +134,7 @@ func (handler *Handler) handleNewPlayer(
 // would. Attributes which are present are updated, those which are missing remain unchanged.
 func (handler *Handler) handleUpdatePlayer(
 	httpBodyDecoder *json.Decoder) (interface{}, int) {
-	var playerUpdate endpoint.PlayerState
+	var playerUpdate parsing.PlayerState
 	errorFromParse := httpBodyDecoder.Decode(&playerUpdate)
 	if errorFromParse != nil {
 		return "Error parsing JSON: " + errorFromParse.Error(), http.StatusBadRequest

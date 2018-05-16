@@ -1,4 +1,4 @@
-package endpoint
+package parsing
 
 // Types emitted and accepted by server.playerEndpointHandler:
 
