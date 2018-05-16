@@ -23,7 +23,7 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
 
-var colorsAvailableInTest []string = defaults.AvailableColors
+var colorsAvailableInTest []string = defaults.AvailableColors()
 
 var testPlayers = []string{
 	"Player One",

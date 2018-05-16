@@ -8,7 +8,7 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/player/persister"
 )
 
-var colorsAvailableInTest []string = defaults.AvailableColors
+var colorsAvailableInTest []string = defaults.AvailableColors()
 var defaultTestPlayerNames []string = []string{
 	"Player One",
 	"Player Two",

@@ -1,24 +1,28 @@
 package defaults
 
-// InitialPlayerNames contains the default initial player names.
-var InitialPlayerNames = []string{
-	"Mimi",
-	"Aet",
-	"Martin",
-	"Markus",
-	"Liisbet",
-	"Madli",
-	"Ben",
+// InitialPlayerNames returns the default initial player names.
+func InitialPlayerNames() []string {
+	return []string{
+		"Mimi",
+		"Aet",
+		"Martin",
+		"Markus",
+		"Liisbet",
+		"Madli",
+		"Ben",
+	}
 }
 
-// AvailableColors contains the default chat colors.
-var AvailableColors = []string{
-	"pink",
-	"red",
-	"orange",
-	"yellow",
-	"green",
-	"blue",
-	"purple",
-	"white",
+// AvailableColors returns the default chat colors.
+func AvailableColors() []string {
+	return []string{
+		"pink",
+		"red",
+		"orange",
+		"yellow",
+		"green",
+		"blue",
+		"purple",
+		"white",
+	}
 }
