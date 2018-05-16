@@ -229,7 +229,7 @@ func (mockCollection *mockGameCollection) ExecuteAction(
 	gameName string,
 	playerName string) (game_state.ExecutorForPlayer, error) {
 	mockCollection.recordFunctionAndArgument(
-		"RecordChatMessage",
+		"ExecuteAction",
 		stringPair{first: gameName, second: playerName})
 	return mockCollection.ReturnForExecuteAction, mockCollection.ErrorToReturn
 }
@@ -1039,8 +1039,8 @@ func TestRejectChatIfCollectionRejectsIt(unitTest *testing.T) {
 		unitTest,
 		functionRecord,
 		functionNameAndArgument{
-			FunctionName:     "RecordChatMessage",
-			FunctionArgument: stringTriple{first: bodyObject.GameName, second: bodyObject.PlayerName, third: bodyObject.ChatMessage},
+			FunctionName:     "ExecuteAction",
+			FunctionArgument: stringPair{first: bodyObject.GameName, second: bodyObject.PlayerName},
 		},
 		testIdentifier)
 }
@@ -1077,8 +1077,8 @@ func TestAcceptValidChat(unitTest *testing.T) {
 		unitTest,
 		functionRecord,
 		functionNameAndArgument{
-			FunctionName:     "RecordChatMessage",
-			FunctionArgument: stringTriple{first: bodyObject.GameName, second: bodyObject.PlayerName, third: bodyObject.ChatMessage},
+			FunctionName:     "ExecuteAction",
+			FunctionArgument: stringPair{first: bodyObject.GameName, second: bodyObject.PlayerName},
 		},
 		testIdentifier)
 }

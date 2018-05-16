@@ -13,19 +13,31 @@ import (
 // State contains all the state to allow the backend to function.
 type State struct {
 	accessControlAllowedOrigin string
-	playerHandler              *player.Handler
-	gameHandler                *game.Handler
+	playerHandler              httpGetAndPostHandler
+	gameHandler                httpGetAndPostHandler
 }
 
-// New creates a new State object and returns a pointer to it, assuming that the
-// given handlers are consistent.
+// New creates a new State object with handlers built around the given
+// state collections.
 func New(
 	accessControlAllowedOrigin string,
 	segmentTranslator parsing.SegmentTranslator,
 	playerStateCollection player.StateCollection,
 	gameStateCollection game.StateCollection) *State {
-	handlerForPlayer := player.New(playerStateCollection, segmentTranslator)
-	handlerForGame := game.New(gameStateCollection, segmentTranslator)
+	return NewWithGivenHandlers(
+		accessControlAllowedOrigin,
+		segmentTranslator,
+		player.New(playerStateCollection, segmentTranslator),
+		game.New(gameStateCollection, segmentTranslator))
+}
+
+// NewWithGivenHandlers creates a new State object and returns a pointer to it,
+// assuming that the given handlers are consistent.
+func NewWithGivenHandlers(
+	accessControlAllowedOrigin string,
+	segmentTranslator parsing.SegmentTranslator,
+	handlerForPlayer httpGetAndPostHandler,
+	handlerForGame httpGetAndPostHandler) *State {
 	return &State{
 		accessControlAllowedOrigin: accessControlAllowedOrigin,
 		playerHandler:              handlerForPlayer,

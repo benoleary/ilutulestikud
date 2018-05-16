@@ -1,12 +1,62 @@
 package server_test
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/benoleary/ilutulestikud/backend/server"
 )
+
+type mockEndpointHandler struct {
+	TestReference    *testing.T
+	TestErrorForGet  error
+	TestErrorForPost error
+	ReturnInterface  interface{}
+	ReturnCode       int
+}
+
+func ErrorEndpointHandler(unitTest *testing.T) *mockEndpointHandler {
+	return &mockEndpointHandler{
+		TestReference:    unitTest,
+		TestErrorForGet:  fmt.Errorf("GET not intended"),
+		TestErrorForPost: fmt.Errorf("POST not intended"),
+		ReturnInterface:  nil,
+		ReturnCode:       -1,
+	}
+}
+
+// HandleGet parses an HTTP GET request and responds with the appropriate function.
+// This implements part of github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
+func (mockHandler *mockEndpointHandler) HandleGet(
+	relevantSegments []string) (interface{}, int) {
+	if mockHandler.TestErrorForGet != nil {
+		mockHandler.TestReference.Fatalf(
+			"HandleGet(%v) called: %v",
+			relevantSegments,
+			mockHandler.TestErrorForGet)
+	}
+
+	return mockHandler.ReturnInterface, mockHandler.ReturnCode
+}
+
+// HandlePost parses an HTTP POST request and responds with the appropriate function.
+// This implements part of github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
+func (mockHandler *mockEndpointHandler) HandlePost(
+	httpBodyDecoder *json.Decoder,
+	relevantSegments []string) (interface{}, int) {
+	if mockHandler.TestErrorForPost != nil {
+		mockHandler.TestReference.Fatalf(
+			"HandlePost(%v, %v) called: %v",
+			httpBodyDecoder,
+			relevantSegments,
+			mockHandler.TestErrorForPost)
+	}
+
+	return mockHandler.ReturnInterface, mockHandler.ReturnCode
+}
 
 func TestMockPostReturnsErrorForMalformedBody(unitTest *testing.T) {
 	// The json encoder is quite robust, but one way to trigger an error is to try
@@ -22,117 +72,80 @@ func TestMockPostReturnsErrorForMalformedBody(unitTest *testing.T) {
 	}
 }
 
-// This tests that the HandleBackend function selects the correct handler and the correct function of the handler.
-func TestHandleBackend(unitTest *testing.T) {
-	type argumentStruct struct {
+func TestRejectInvalidRequestsBeforeCallingHandler(unitTest *testing.T) {
+	testCases := []struct {
+		testName                       string
 		requestMethod                  string
 		requestAddress                 string
 		bodyIsNilRatherThanEmptyObject bool
-	}
-
-	type expectedStruct struct {
-		returnedCode int
-	}
-
-	testCases := []struct {
-		testName      string
-		testArguments argumentStruct
-		expectedCode  expectedStruct
+		expectedCode                   int
 	}{
 		{
-			testName: "GET root",
-			testArguments: argumentStruct{
-				requestMethod:                  http.MethodGet,
-				requestAddress:                 "/",
-				bodyIsNilRatherThanEmptyObject: false,
-			},
-			expectedCode: expectedStruct{
-				returnedCode: http.StatusNotFound,
-			},
+			testName:                       "GET root",
+			requestMethod:                  http.MethodGet,
+			requestAddress:                 "/",
+			bodyIsNilRatherThanEmptyObject: false,
+			expectedCode:                   http.StatusNotFound,
 		},
 		{
-			testName: "GetBackend",
-			testArguments: argumentStruct{
-				requestMethod:                  http.MethodGet,
-				requestAddress:                 "/backend",
-				bodyIsNilRatherThanEmptyObject: false,
-			},
-			expectedCode: expectedStruct{
-				returnedCode: http.StatusNotFound,
-			},
+			testName:                       "GET backend",
+			requestMethod:                  http.MethodGet,
+			requestAddress:                 "/backend",
+			bodyIsNilRatherThanEmptyObject: false,
+			expectedCode:                   http.StatusNotFound,
 		},
 		{
-			testName: "OptionsPlayer",
-			testArguments: argumentStruct{
-				requestMethod:                  http.MethodOptions,
-				requestAddress:                 "/backend/player/test/options/player",
-				bodyIsNilRatherThanEmptyObject: false,
-			},
-			expectedCode: expectedStruct{
-				returnedCode: http.StatusOK,
-			},
+			testName:                       "OPTIONS player",
+			requestMethod:                  http.MethodOptions,
+			requestAddress:                 "/backend/player/test/options/player",
+			bodyIsNilRatherThanEmptyObject: false,
+			expectedCode:                   http.StatusOK,
 		},
 		{
-			testName: "PutPlayer",
-			testArguments: argumentStruct{
-				requestMethod:                  http.MethodPut,
-				requestAddress:                 "/backend/player/test/put/player",
-				bodyIsNilRatherThanEmptyObject: false,
-			},
-			expectedCode: expectedStruct{
-				returnedCode: http.StatusBadRequest,
-			},
+			testName:                       "PUT player",
+			requestMethod:                  http.MethodPut,
+			requestAddress:                 "/backend/player/test/put/player",
+			bodyIsNilRatherThanEmptyObject: false,
+			expectedCode:                   http.StatusBadRequest,
 		},
 		{
-			testName: "DeleteGame",
-			testArguments: argumentStruct{
-				requestMethod:                  http.MethodDelete,
-				requestAddress:                 "/backend/game/test/delete/game",
-				bodyIsNilRatherThanEmptyObject: false,
-			},
-			expectedCode: expectedStruct{
-				returnedCode: http.StatusBadRequest,
-			},
+			testName:                       "DELETE game",
+			requestMethod:                  http.MethodDelete,
+			requestAddress:                 "/backend/game/test/delete/game",
+			bodyIsNilRatherThanEmptyObject: false,
+			expectedCode:                   http.StatusBadRequest,
 		},
 		{
-			testName: "Post nil body to player",
-			testArguments: argumentStruct{
-				requestMethod:                  http.MethodPost,
-				requestAddress:                 "/backend/player/test/post/nil",
-				bodyIsNilRatherThanEmptyObject: true,
-			},
-			expectedCode: expectedStruct{
-				returnedCode: http.StatusBadRequest,
-			},
+			testName:                       "POST nil body to player",
+			requestMethod:                  http.MethodPost,
+			requestAddress:                 "/backend/player/test/post/nil",
+			bodyIsNilRatherThanEmptyObject: true,
+			expectedCode:                   http.StatusBadRequest,
 		},
 		{
-			testName: "GetInvalidSegment",
-			testArguments: argumentStruct{
-				requestMethod:                  http.MethodGet,
-				requestAddress:                 "/backend/invalid/test/get/invalid",
-				bodyIsNilRatherThanEmptyObject: false,
-			},
-			expectedCode: expectedStruct{
-				returnedCode: http.StatusNotFound,
-			},
+			testName:                       "GET invalid segment",
+			requestMethod:                  http.MethodGet,
+			requestAddress:                 "/backend/invalid/test/get/invalid",
+			bodyIsNilRatherThanEmptyObject: false,
+			expectedCode:                   http.StatusNotFound,
 		},
 		{
-			testName: "PostInvalidSegment",
-			testArguments: argumentStruct{
-				requestMethod:                  http.MethodPost,
-				requestAddress:                 "/backend/invalid/test/post/invalid",
-				bodyIsNilRatherThanEmptyObject: false,
-			},
-			expectedCode: expectedStruct{
-				returnedCode: http.StatusNotFound,
-			},
+			testName:                       "POST invalid segment",
+			requestMethod:                  http.MethodPost,
+			requestAddress:                 "/backend/invalid/test/post/invalid",
+			bodyIsNilRatherThanEmptyObject: false,
+			expectedCode:                   http.StatusNotFound,
 		},
 	}
 
 	for _, testCase := range testCases {
 		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
-			httpRequest := httptest.NewRequest(testCase.testArguments.requestMethod, testCase.testArguments.requestAddress, nil)
-			if testCase.testArguments.bodyIsNilRatherThanEmptyObject {
+			httpRequest :=
+				httptest.NewRequest(
+					testCase.requestMethod,
+					testCase.requestAddress,
+					nil)
+			if testCase.bodyIsNilRatherThanEmptyObject {
 				httpRequest.Body = nil
 			}
 
@@ -145,12 +158,90 @@ func TestHandleBackend(unitTest *testing.T) {
 			responseRecorder := httptest.NewRecorder()
 			serverState.HandleBackend(responseRecorder, httpRequest)
 
-			if responseRecorder.Code != testCase.expectedCode.returnedCode {
+			if responseRecorder.Code != testCase.expectedCode {
 				unitTest.Errorf(
 					"%v: returned wrong status %v instead of expected %v",
 					testCase.testName,
 					responseRecorder.Code,
-					testCase.expectedCode.returnedCode)
+					testCase.expectedCode)
+			}
+		})
+	}
+}
+
+func TestSelectCorrectHandlerForValidRequest(unitTest *testing.T) {
+	wrongHandler := ErrorEndpointHandler(unitTest)
+	getHandler := ErrorEndpointHandler(unitTest)
+	getHandler.TestErrorForGet = nil
+	getHandler.ReturnInterface = "success"
+	getHandler.ReturnCode = http.StatusOK
+	postHandler := ErrorEndpointHandler(unitTest)
+	postHandler.TestErrorForPost = nil
+	postHandler.ReturnInterface = "success"
+	postHandler.ReturnCode = http.StatusOK
+
+	testCases := []struct {
+		testName       string
+		requestMethod  string
+		requestAddress string
+		playerHandler  *mockEndpointHandler
+		gameHandler    *mockEndpointHandler
+	}{
+		{
+			testName:       "GET player",
+			requestMethod:  http.MethodGet,
+			requestAddress: "/backend/player",
+			playerHandler:  getHandler,
+			gameHandler:    wrongHandler,
+		},
+		{
+			testName:       "GET game",
+			requestMethod:  http.MethodGet,
+			requestAddress: "/backend/game",
+			playerHandler:  wrongHandler,
+			gameHandler:    getHandler,
+		},
+		{
+			testName:       "POST player",
+			requestMethod:  http.MethodPost,
+			requestAddress: "/backend/player",
+			playerHandler:  postHandler,
+			gameHandler:    wrongHandler,
+		},
+		{
+			testName:       "POST game",
+			requestMethod:  http.MethodPost,
+			requestAddress: "/backend/game",
+			playerHandler:  wrongHandler,
+			gameHandler:    postHandler,
+		},
+	}
+
+	for _, testCase := range testCases {
+		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
+			httpRequest :=
+				httptest.NewRequest(
+					testCase.requestMethod,
+					testCase.requestAddress,
+					nil)
+
+			serverState :=
+				server.NewWithGivenHandlers(
+					"irrelevant to tests",
+					nil,
+					testCase.playerHandler,
+					testCase.gameHandler)
+
+			// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
+			responseRecorder := httptest.NewRecorder()
+			serverState.HandleBackend(responseRecorder, httpRequest)
+
+			if responseRecorder.Code != http.StatusOK {
+				unitTest.Errorf(
+					"%v: returned wrong status %v instead of expected %v",
+					testCase.testName,
+					responseRecorder.Code,
+					http.StatusOK)
 			}
 		})
 	}
