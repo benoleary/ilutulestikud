@@ -8,7 +8,9 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
-type readonlyPlayerProvider interface {
+// ReadonlyPlayerProvider defines an interface for structs to provide
+// player.ReadonlyStates for given player names.
+type ReadonlyPlayerProvider interface {
 	Get(playerName string) (player.ReadonlyState, error)
 }
 
@@ -16,14 +18,14 @@ type readonlyPlayerProvider interface {
 // the functions of the interface.
 type StateCollection struct {
 	statePersister StatePersister
-	playerProvider readonlyPlayerProvider
+	playerProvider ReadonlyPlayerProvider
 }
 
 // NewCollection creates a new StateCollection around the given StatePersister and list
 // of rulesets.
 func NewCollection(
 	statePersister StatePersister,
-	playerProvider readonlyPlayerProvider) *StateCollection {
+	playerProvider ReadonlyPlayerProvider) *StateCollection {
 	return &StateCollection{
 		statePersister: statePersister,
 		playerProvider: playerProvider,

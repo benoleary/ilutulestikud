@@ -225,6 +225,7 @@ func TestRegisterAndRetrieveNewGames(unitTest *testing.T) {
 
 				assertStateSummaryFunctionsAreCorrect(
 					unitTest,
+					viewingPlayer,
 					gameToAdd.gameName,
 					gameToAdd.playerNames,
 					playerView,
@@ -283,6 +284,7 @@ func TestRegisterAndRetrieveNewGames(unitTest *testing.T) {
 
 func assertStateSummaryFunctionsAreCorrect(
 	unitTest *testing.T,
+	viewingPlayer string,
 	expectedGameName string,
 	expectedPlayers []string,
 	actualGameView *game.PlayerView,
@@ -295,6 +297,7 @@ func assertStateSummaryFunctionsAreCorrect(
 	}
 
 	actualPlayers, viewingPlayerGoesNext := actualGameView.CurrentTurnOrder()
+
 	playerSlicesMatch := (len(actualPlayers) == len(expectedPlayers))
 
 	if playerSlicesMatch {
@@ -309,9 +312,18 @@ func assertStateSummaryFunctionsAreCorrect(
 
 	if !playerSlicesMatch {
 		unitTest.Fatalf(
-			testIdentifier+": game %v was found but had players %v instead of expected %v.",
+			testIdentifier+"/game %v was found but had players %v instead of expected %v.",
 			expectedGameName,
 			actualPlayers,
 			expectedPlayers)
+	}
+
+	if viewingPlayerGoesNext != (actualPlayers[0] == viewingPlayer) {
+		unitTest.Fatalf(
+			testIdentifier+"/game %v for viewing player %v had wrong flag for next turn %v instead of expected %v.",
+			expectedGameName,
+			viewingPlayer,
+			viewingPlayerGoesNext,
+			actualPlayers[0] == viewingPlayer)
 	}
 }
