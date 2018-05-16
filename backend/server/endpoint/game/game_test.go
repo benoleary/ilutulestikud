@@ -18,11 +18,12 @@ import (
 	game_state "github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/game/card"
 	"github.com/benoleary/ilutulestikud/backend/game/chat"
+	"github.com/benoleary/ilutulestikud/backend/player"
 	game_endpoint "github.com/benoleary/ilutulestikud/backend/server/endpoint/game"
 	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
 
-var colorsAvailableInTest = defaults.AvailableColors
+var colorsAvailableInTest []string = defaults.AvailableColors
 
 var testPlayers = []string{
 	"Player One",
@@ -55,84 +56,129 @@ type mockGameState struct {
 }
 
 // Name gets mocked.
-func (mockGame mockGameState) Name() string {
+func (mockGame *mockGameState) Name() string {
 	return mockGame.mockName
 }
 
 // Ruleset gets mocked.
-func (mockGame mockGameState) Ruleset() game_state.Ruleset {
+func (mockGame *mockGameState) Ruleset() game_state.Ruleset {
 	return game_state.StandardWithoutRainbowRuleset{}
 }
 
 // Players gets mocked.
-func (mockGame mockGameState) PlayerNames() []string {
+func (mockGame *mockGameState) PlayerNames() []string {
 	return mockGame.mockPlayers
 }
 
 // Turn gets mocked.
-func (mockGame mockGameState) Turn() int {
+func (mockGame *mockGameState) Turn() int {
 	return mockGame.mockTurn
 }
 
 // CreationTime gets mocked.
-func (mockGame mockGameState) CreationTime() time.Time {
+func (mockGame *mockGameState) CreationTime() time.Time {
 	return time.Now()
 }
 
 // ChatLog gets mocked.
-func (mockGame mockGameState) ChatLog() *chat.Log {
+func (mockGame *mockGameState) ChatLog() *chat.Log {
 	return mockGame.mockChatLog
 }
 
 // Score gets mocked.
-func (mockGame mockGameState) Score() int {
+func (mockGame *mockGameState) Score() int {
 	return 1
 }
 
 // NumberOfReadyHints gets mocked.
-func (mockGame mockGameState) NumberOfReadyHints() int {
+func (mockGame *mockGameState) NumberOfReadyHints() int {
 	return 2
 }
 
 // NumberOfMistakesMade gets mocked.
-func (mockGame mockGameState) NumberOfMistakesMade() int {
+func (mockGame *mockGameState) NumberOfMistakesMade() int {
 	return 3
 }
 
 // DeckSize gets mocked.
-func (mockGame mockGameState) DeckSize() int {
+func (mockGame *mockGameState) DeckSize() int {
 	return 4
 }
 
 // LastPlayedForColor gets mocked.
-func (mockGame mockGameState) LastPlayedForColor(colorSuit string) (card.Readonly, bool) {
+func (mockGame *mockGameState) LastPlayedForColor(colorSuit string) (card.Readonly, bool) {
 	return card.ErrorReadonly(), false
 }
 
 // NumberOfDiscardedCards gets mocked.
-func (mockGame mockGameState) NumberOfDiscardedCards(colorSuit string, sequenceIndex int) int {
+func (mockGame *mockGameState) NumberOfDiscardedCards(colorSuit string, sequenceIndex int) int {
 	return 5
 }
 
 // VisibleCardInHand gets mocked.
-func (mockGame mockGameState) VisibleCardInHand(
+func (mockGame *mockGameState) VisibleCardInHand(
 	holdingPlayerName string,
 	indexInHand int) (card.Readonly, error) {
 	return card.ErrorReadonly(), nil
 }
 
 // InferredCardInHand gets mocked.
-func (mockGame mockGameState) InferredCardInHand(
+func (mockGame *mockGameState) InferredCardInHand(
 	holdingPlayerName string,
 	indexInHand int) (card.Inferred, error) {
-	return card.Inferred{}, nil
+	return card.ErrorInferred(), nil
+}
+
+// Read actually does what it is supposed to.
+func (mockGame *mockGameState) Read() game_state.ReadonlyState {
+	return mockGame
+}
+
+// RecordChatMessage gets mocked.
+func (mockGame *mockGameState) RecordChatMessage(
+	actingPlayer player.ReadonlyState, chatMessage string) error {
+	return nil
+}
+
+// DrawCard gets mocked.
+func (mockGame *mockGameState) DrawCard() (card.Readonly, error) {
+	return card.ErrorReadonly(), nil
+}
+
+// ReplaceCardInHand gets mocked.
+func (mockGame *mockGameState) ReplaceCardInHand(
+	holdingPlayerName string,
+	indexInHand int,
+	replacementCard card.Inferred) (card.Readonly, error) {
+	return card.ErrorReadonly(), nil
+}
+
+// AddCardToPlayedSequence gets mocked.
+func (mockGame *mockGameState) AddCardToPlayedSequence(
+	playedCard card.Readonly) error {
+	return nil
+}
+
+// AddCardToDiscardPile gets mocked.
+func (mockGame *mockGameState) AddCardToDiscardPile(
+	discardedCard card.Readonly) error {
+	return nil
+}
+
+type mockActionExecutor struct {
+	ErrorToReturn error
+}
+
+// RecordChatMessage gets mocked.
+func (mockExecutor *mockActionExecutor) RecordChatMessage(chatMessage string) {
 }
 
 type mockGameCollection struct {
 	FunctionsAndArgumentsReceived []functionNameAndArgument
 	ErrorToReturn                 error
-	ReturnForViewAllWithPlayer    []*game_state.PlayerView
-	ReturnForViewState            *game_state.PlayerView
+	ReturnForViewAllWithPlayer    []game_state.ViewForPlayer
+	ReturnForViewState            game_state.ViewForPlayer
+	ReturnForExecuteAction        game_state.ExecutorForPlayer
 }
 
 func (mockCollection *mockGameCollection) recordFunctionAndArgument(
@@ -163,7 +209,7 @@ func (mockCollection *mockGameCollection) getFirstAndEnsureOnly(
 // ViewState gets mocked.
 func (mockCollection *mockGameCollection) ViewState(
 	gameName string,
-	playerName string) (*game_state.PlayerView, error) {
+	playerName string) (game_state.ViewForPlayer, error) {
 	mockCollection.recordFunctionAndArgument(
 		"ViewState",
 		stringPair{first: gameName, second: playerName})
@@ -172,22 +218,21 @@ func (mockCollection *mockGameCollection) ViewState(
 
 // ViewAllWithPlayer gets mocked.
 func (mockCollection *mockGameCollection) ViewAllWithPlayer(
-	playerName string) ([]*game_state.PlayerView, error) {
+	playerName string) ([]game_state.ViewForPlayer, error) {
 	mockCollection.recordFunctionAndArgument(
 		"ViewAllWithPlayer",
 		playerName)
 	return mockCollection.ReturnForViewAllWithPlayer, mockCollection.ErrorToReturn
 }
 
-// RecordChatMessage gets mocked.
-func (mockCollection *mockGameCollection) RecordChatMessage(
+// ExecuteAction gets mocked.
+func (mockCollection *mockGameCollection) ExecuteAction(
 	gameName string,
-	playerName string,
-	chatMessage string) error {
+	playerName string) (game_state.ExecutorForPlayer, error) {
 	mockCollection.recordFunctionAndArgument(
 		"RecordChatMessage",
-		stringTriple{first: gameName, second: playerName, third: chatMessage})
-	return mockCollection.ErrorToReturn
+		stringPair{first: gameName, second: playerName})
+	return mockCollection.ReturnForExecuteAction, mockCollection.ErrorToReturn
 }
 
 // AddNew gets mocked.
@@ -531,7 +576,7 @@ func TestGetAllGamesWithPlayerRejectedIfCollectionRejectsIt(unitTest *testing.T)
 func TestGetAllGamesWithPlayerWhenEmptyList(unitTest *testing.T) {
 	testIdentifier := "GET all-games-with-player when empty list"
 	mockCollection, testHandler := newGameCollectionAndHandler()
-	mockCollection.ReturnForViewAllWithPlayer = make([]*game_state.PlayerView, 0)
+	mockCollection.ReturnForViewAllWithPlayer = make([]game_state.ViewForPlayer, 0)
 
 	mockPlayerName := "Mock MacMock"
 	mockPlayerIdentifier := segmentTranslatorForTest().ToSegment(mockPlayerName)
@@ -586,7 +631,7 @@ func TestGetAllGamesWithPlayerWhenThreeGames(unitTest *testing.T) {
 	}
 
 	firstTestView, errorForFirstView :=
-		game_state.ViewForPlayer(firstTestGame, testPlayers[0])
+		game_state.ViewOnStateForPlayer(firstTestGame, testPlayers[0])
 
 	if errorForFirstView != nil {
 		unitTest.Fatalf(
@@ -601,7 +646,7 @@ func TestGetAllGamesWithPlayerWhenThreeGames(unitTest *testing.T) {
 	}
 
 	secondTestView, errorForSecondView :=
-		game_state.ViewForPlayer(secondTestGame, testPlayers[1])
+		game_state.ViewOnStateForPlayer(secondTestGame, testPlayers[1])
 
 	if errorForSecondView != nil {
 		unitTest.Fatalf(
@@ -616,7 +661,7 @@ func TestGetAllGamesWithPlayerWhenThreeGames(unitTest *testing.T) {
 	}
 
 	thirdTestView, errorForThirdView :=
-		game_state.ViewForPlayer(thirdTestGame, testPlayers[2])
+		game_state.ViewOnStateForPlayer(thirdTestGame, testPlayers[2])
 
 	if errorForThirdView != nil {
 		unitTest.Fatalf(
@@ -624,7 +669,7 @@ func TestGetAllGamesWithPlayerWhenThreeGames(unitTest *testing.T) {
 			errorForThirdView)
 	}
 
-	expectedViews := []*game_state.PlayerView{
+	expectedViews := []game_state.ViewForPlayer{
 		firstTestView,
 		secondTestView,
 		thirdTestView,
@@ -850,7 +895,7 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 	}
 
 	testView, viewError :=
-		game_state.ViewForPlayer(testGame, playerName)
+		game_state.ViewOnStateForPlayer(testGame, playerName)
 	if viewError != nil {
 		unitTest.Fatalf(
 			testIdentifier+"/error when creating view on test game: %v",
@@ -1004,6 +1049,7 @@ func TestRejectChatIfCollectionRejectsIt(unitTest *testing.T) {
 func TestAcceptValidChat(unitTest *testing.T) {
 	testIdentifier := "POST record-chat-message"
 	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockCollection.ReturnForExecuteAction = &mockActionExecutor{}
 
 	bodyObject := endpoint.PlayerChatMessage{
 		GameName:    "Test game",

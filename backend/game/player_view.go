@@ -22,13 +22,13 @@ type PlayerView struct {
 	handSize             int
 }
 
-// ViewForPlayer creates a PlayerView around the given game state if
-// the given player is a participant, returning a pointer to the view.
-// If the player is not a participant, it returns nil along with an
-// error.
-func ViewForPlayer(
+// ViewOnStateForPlayer creates a PlayerView around the given game
+// state if the given player is a participant, returning a pointer to
+// the view. If the player is not a participant, it returns nil
+// along with an error.
+func ViewOnStateForPlayer(
 	stateOfGame ReadonlyState,
-	nameOfPlayer string) (*PlayerView, error) {
+	nameOfPlayer string) (ViewForPlayer, error) {
 	participantsInGame := stateOfGame.PlayerNames()
 	for _, gameParticipant := range participantsInGame {
 		if gameParticipant == nameOfPlayer {

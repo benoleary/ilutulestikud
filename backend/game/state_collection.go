@@ -37,7 +37,7 @@ func NewCollection(
 // player is not a participant, it returns an error.
 func (gameCollection *StateCollection) ViewState(
 	gameName string,
-	playerName string) (*PlayerView, error) {
+	playerName string) (ViewForPlayer, error) {
 	gameState, errorFromGet :=
 		gameCollection.statePersister.ReadAndWriteGame(gameName)
 
@@ -51,24 +51,24 @@ func (gameCollection *StateCollection) ViewState(
 		return nil, gameDoesNotExistError
 	}
 
-	return ViewForPlayer(gameState.Read(), playerName)
+	return ViewOnStateForPlayer(gameState.Read(), playerName)
 }
 
 // ViewAllWithPlayer wraps every read-only state given by the persister for the given player
 // in a view. It returns an error if there is an error in creating any of the player views.
 // The views are ordered by creation timestamp, oldest first.
 func (gameCollection *StateCollection) ViewAllWithPlayer(
-	playerName string) ([]*PlayerView, error) {
+	playerName string) ([]ViewForPlayer, error) {
 	gameStates := gameCollection.statePersister.ReadAllWithPlayer(playerName)
 	numberOfGames := len(gameStates)
 
 	sort.Sort(ByCreationTime(gameStates))
 
-	playerViews := make([]*PlayerView, numberOfGames)
+	playerViews := make([]ViewForPlayer, numberOfGames)
 
 	for gameIndex := 0; gameIndex < numberOfGames; gameIndex++ {
 		playerView, participantError :=
-			ViewForPlayer(gameStates[gameIndex], playerName)
+			ViewOnStateForPlayer(gameStates[gameIndex], playerName)
 
 		if participantError != nil {
 			overallError :=
@@ -136,7 +136,7 @@ func (gameCollection *StateCollection) AddNewWithGivenDeck(
 // player, or returns an error.
 func (gameCollection *StateCollection) ExecuteAction(
 	gameName string,
-	playerName string) (*ActionExecutor, error) {
+	playerName string) (ExecutorForPlayer, error) {
 	actingPlayer, playerIdentificationError :=
 		gameCollection.playerProvider.Get(playerName)
 
@@ -157,7 +157,7 @@ func (gameCollection *StateCollection) ExecuteAction(
 		return nil, overallError
 	}
 
-	return ExecutorForPlayer(gameState, actingPlayer)
+	return ExecutorOfActionsForPlayer(gameState, actingPlayer)
 }
 
 // createPlayerHands deals out each player's hand (a full hand per player rather

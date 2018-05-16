@@ -43,6 +43,71 @@ type Ruleset interface {
 	MaximumNumberOfMistakesAllowed() int
 }
 
+// ViewForPlayer should encapsulate functions to view the state of the game as seen by a
+// particular player.
+type ViewForPlayer interface {
+	// GameName should just wrap around the read-only game state's Name function.
+	GameName() string
+
+	// RulesetDescription should return the description given by the ruleset of the game.
+	RulesetDescription() string
+
+	// SortedChatLog should sort the read-only game state's ChatLog and return the sorted log.
+	SortedChatLog() []chat.Message
+
+	// CurrentTurnOrder should return the names of the participants of the game in the
+	// order which their next turns are in, along with true if the view is for
+	// the first player in that list or false otherwise.
+	CurrentTurnOrder() ([]string, bool)
+
+	// Turn should just wrap around the read-only game state's Turn function.
+	Turn() int
+
+	// Score should just wrap around the read-only game state's Score function.
+	Score() int
+
+	// NumberOfReadyHints should just wrap around the read-only game state's
+	// NumberOfReadyHints function.
+	NumberOfReadyHints() int
+
+	// NumberOfSpentHints should just subtract the read-only game state's
+	// NumberOfReadyHints function's return value from the game's ruleset's maximum.
+	NumberOfSpentHints() int
+
+	// NumberOfMistakesStillAllowed should just subtract the read-only game state's
+	// NumberOfMistakesMade function's return value from the game's ruleset's maximum.
+	NumberOfMistakesStillAllowed() int
+
+	// NumberOfMistakesMade should just wrap around the read-only game state's
+	// NumberOfMistakesMade function.
+	NumberOfMistakesMade() int
+
+	// DeckSize should just wrap around the read-only game state's DeckSize function.
+	DeckSize() int
+
+	// TopmostPlayedCards should list the top-most cards in play for each suit, leaving out
+	// any color suits which have no cards in play yet.
+	TopmostPlayedCards() []card.Readonly
+
+	// DiscardedCards should list the discarded cards, ordered by suit first then by index.
+	DiscardedCards() []card.Readonly
+
+	// VisibleHand should return the cards held by the given player, or nil and an error if
+	// the player cannot see the cards.
+	VisibleHand(playerName string) ([]card.Readonly, error)
+
+	// KnowledgeOfOwnHand should return the knowledge about the player's own cards which
+	// was inferred directly from the hints officially given so far.
+	KnowledgeOfOwnHand() ([]card.Inferred, error)
+}
+
+// ExecutorForPlayer should encapsulate functions to execute actions by a particular player
+// on the state of the game.
+type ExecutorForPlayer interface {
+	// RecordChatMessage should records the given chat message from the acting player.
+	RecordChatMessage(chatMessage string)
+}
+
 // ReadonlyState defines the interface for structs which should provide read-only
 // information which can completely describe the state of a game.
 type ReadonlyState interface {

@@ -287,7 +287,7 @@ func assertStateSummaryFunctionsAreCorrect(
 	viewingPlayer string,
 	expectedGameName string,
 	expectedPlayers []string,
-	actualGameView *game.PlayerView,
+	actualGameView game.ViewForPlayer,
 	testIdentifier string) {
 	if actualGameView.GameName() != expectedGameName {
 		unitTest.Fatalf(

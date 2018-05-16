@@ -15,13 +15,13 @@ type ActionExecutor struct {
 	actingPlayer player.ReadonlyState
 }
 
-// ExecutorForPlayer creates a ActionExecutor around the given game
-// state if the given player is a participant, returning a pointer to
-// the executor. If the player is not a participant, it returns nil
-// along with an error.
-func ExecutorForPlayer(
+// ExecutorOfActionsForPlayer creates a ActionExecutor around the
+// given game state if the given player is a participant, returning a
+// pointer to the executor. If the player is not a participant, it
+// returns nil along with an error.
+func ExecutorOfActionsForPlayer(
 	stateOfGame ReadAndWriteState,
-	actingPlayer player.ReadonlyState) (*ActionExecutor, error) {
+	actingPlayer player.ReadonlyState) (ExecutorForPlayer, error) {
 	gameParticipants := stateOfGame.Read().PlayerNames()
 	for _, gameParticipant := range gameParticipants {
 		if gameParticipant == actingPlayer.Name() {

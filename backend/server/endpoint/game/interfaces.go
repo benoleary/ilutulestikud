@@ -11,7 +11,7 @@ type StateCollection interface {
 	// ViewState should return a view around the read-only game state corresponding
 	// to the given name as seen by the given player. If the game does not exist or
 	// the player is not a participant, it should return an error.
-	ViewState(gameName string, playerName string) (*game.PlayerView, error)
+	ViewState(gameName string, playerName string) (game.ViewForPlayer, error)
 
 	// ViewAllWithPlayer should return a slice of read-only views on all the games in
 	// the collection which have the given player as a participant. It should return an
@@ -19,12 +19,12 @@ type StateCollection interface {
 	// The order is not mandated, and may even change with repeated calls to the same
 	// unchanged collection (analogously to the entry set of a standard Golang map, for
 	// example), though of course an implementation may order the slice consistently.
-	ViewAllWithPlayer(playerName string) ([]*game.PlayerView, error)
+	ViewAllWithPlayer(playerName string) ([]game.ViewForPlayer, error)
 
 	// ExecuteAction should return an executor around the read-and-write game state
 	// corresponding to the given name, for actions by the given player for the given,
 	// or should return an error.
-	ExecuteAction(gameName string, playerName string) (*game.ActionExecutor, error)
+	ExecuteAction(gameName string, playerName string) (game.ExecutorForPlayer, error)
 
 	// AddNew should add a new game to the collection based on the given arguments.
 	AddNew(
