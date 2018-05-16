@@ -194,6 +194,12 @@ func (gameCollection *StateCollection) createPlayerHands(
 	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
 		playerName := playerNames[playerIndex]
 
+		_, errorFromPlayerProvider := gameCollection.playerProvider.Get(playerName)
+
+		if errorFromPlayerProvider != nil {
+			return nil, nil, errorFromPlayerProvider
+		}
+
 		if uniquePlayerNames[playerName] {
 			degenerateNameError :=
 				fmt.Errorf(
