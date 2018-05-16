@@ -7,6 +7,8 @@ import (
 )
 
 func TestRejectInvalidNewGame(unitTest *testing.T) {
+	unitTest.Fatalf("These tests need to be removed once anything useful is taken from them")
+
 	validGameName := "Test game"
 
 	validPlayerNameList :=
@@ -95,6 +97,7 @@ func TestRejectInvalidNewGame(unitTest *testing.T) {
 }
 
 func TestRejectNewGameWithExistingName(unitTest *testing.T) {
+	unitTest.Fatalf("These tests need to be removed once anything useful is taken from them")
 	collectionTypes := prepareCollections(unitTest)
 
 	gameName := "Test game"
@@ -143,6 +146,7 @@ func TestRejectNewGameWithExistingName(unitTest *testing.T) {
 }
 
 func TestRegisterAndRetrieveNewGames(unitTest *testing.T) {
+	unitTest.Fatalf("These tests need to be removed once anything useful is taken from them")
 	collectionTypes := prepareCollections(unitTest)
 
 	gamesToAddInSequence := []struct {
