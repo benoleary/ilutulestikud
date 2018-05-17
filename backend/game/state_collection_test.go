@@ -8,11 +8,60 @@ import (
 )
 
 func TestViewErrorWhenPersisterGivesError(unitTest *testing.T) {
-	unitTest.Fatalf("Not implemented yet")
+	gameName := "Test game"
+	playerName := playerNamesAvailableInTest[0]
+	gameCollection, mockPersister, _ :=
+		prepareCollection(unitTest, playerNamesAvailableInTest)
+
+	mockPersister.TestErrorForReadAndWriteGame = nil
+	mockPersister.ReturnForNontestError = fmt.Errorf("Expected error for test")
+
+	viewForPlayer, errorFromViewState :=
+		gameCollection.ViewState(
+			gameName,
+			playerName)
+
+	if errorFromViewState == nil {
+		unitTest.Fatalf(
+			"ViewState(%v, %v) did not produce expected error, instead produced %v",
+			gameName,
+			playerName,
+			viewForPlayer)
+	}
 }
 
 func TestViewErrorWhenPlayerNotParticipant(unitTest *testing.T) {
-	unitTest.Fatalf("Not implemented yet")
+	gameName := "Test game"
+	playerName := "Test Player"
+	gameCollection, mockPersister, _ :=
+		prepareCollection(unitTest, playerNamesAvailableInTest)
+
+	mockPersister.TestErrorForReadAndWriteGame = nil
+
+	mockReadAndWriteState :=
+		NewMockGameState(unitTest, fmt.Errorf("No function should be called"))
+	mockReadAndWriteState.TestErrorForName = nil
+	mockReadAndWriteState.MockName = "test game"
+	mockReadAndWriteState.TestErrorForPlayerNames = nil
+	mockReadAndWriteState.ReturnForPlayerNames = []string{
+		"A. Different Player",
+		"A. Nother Different Player",
+	}
+
+	mockPersister.ReturnForReadAndWriteGame = mockReadAndWriteState
+
+	viewForPlayer, errorFromViewState :=
+		gameCollection.ViewState(
+			gameName,
+			playerName)
+
+	if errorFromViewState == nil {
+		unitTest.Fatalf(
+			"ViewState(%v, %v) did not produce expected error, instead produced %v",
+			gameName,
+			playerName,
+			viewForPlayer)
+	}
 }
 
 func TestViewCorrectWhenPersisterGivesValidGame(unitTest *testing.T) {
