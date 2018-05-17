@@ -8,6 +8,12 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
+// ReadonlyPlayerProvider defines an interface for structs to provide
+// player.ReadonlyStates for given player names.
+type ReadonlyPlayerProvider interface {
+	Get(playerName string) (player.ReadonlyState, error)
+}
+
 // Ruleset should encapsulate the set of rules for a game as functions.
 type Ruleset interface {
 	// FrontendDescription should describe the ruleset succintly enough for the frontend.

@@ -5,14 +5,7 @@ import (
 	"sort"
 
 	"github.com/benoleary/ilutulestikud/backend/game/card"
-	"github.com/benoleary/ilutulestikud/backend/player"
 )
-
-// ReadonlyPlayerProvider defines an interface for structs to provide
-// player.ReadonlyStates for given player names.
-type ReadonlyPlayerProvider interface {
-	Get(playerName string) (player.ReadonlyState, error)
-}
 
 // StateCollection wraps around a game.StatePersister to encapsulate logic acting on
 // the functions of the interface.
@@ -171,22 +164,31 @@ func (gameCollection *StateCollection) createPlayerHands(
 	numberOfPlayers := len(playerNames)
 
 	if numberOfPlayers < gameRuleset.MinimumNumberOfPlayers() {
-		tooFewError :=
+		tooFewPlayersError :=
 			fmt.Errorf(
 				"Game must have at least %v players",
 				gameRuleset.MinimumNumberOfPlayers())
-		return nil, nil, tooFewError
+		return nil, nil, tooFewPlayersError
 	}
 
 	if numberOfPlayers > gameRuleset.MaximumNumberOfPlayers() {
-		tooManyError :=
+		tooManyPlayersError :=
 			fmt.Errorf(
 				"Game must have no more than %v players",
 				gameRuleset.MaximumNumberOfPlayers())
-		return nil, nil, tooManyError
+		return nil, nil, tooManyPlayersError
 	}
 
 	handSize := gameRuleset.NumberOfCardsInPlayerHand(numberOfPlayers)
+	minimumNumberOfCardsRequired := handSize * numberOfPlayers
+
+	if len(initialDeck) < minimumNumberOfCardsRequired {
+		tooFewCardsError :=
+			fmt.Errorf(
+				"Game must have at least %v cards",
+				minimumNumberOfCardsRequired)
+		return nil, nil, tooFewCardsError
+	}
 
 	namesWithHands := make([]PlayerNameWithHand, numberOfPlayers)
 	uniquePlayerNames := make(map[string]bool, numberOfPlayers)

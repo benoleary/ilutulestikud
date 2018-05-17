@@ -14,6 +14,8 @@ import (
 var playerNamesAvailableInTest []string = []string{"A", "B", "C", "D", "E", "F", "G"}
 var testRuleset game.Ruleset = &game.StandardWithoutRainbowRuleset{}
 
+var mockChatColor string = defaults.AvailableColors()[0]
+
 type mockPlayerState struct {
 	MockName  string
 	MockColor string
@@ -30,12 +32,27 @@ func (mockPlayer *mockPlayerState) Color() string {
 }
 
 type mockPlayerProvider struct {
-	mockPlayers map[string]*mockPlayerState
+	MockPlayers map[string]*mockPlayerState
+}
+
+func NewMockPlayerProvider(initialPlayers []string) *mockPlayerProvider {
+	mockProvider := &mockPlayerProvider{
+		MockPlayers: make(map[string]*mockPlayerState, 0),
+	}
+
+	for _, initialPlayer := range initialPlayers {
+		mockProvider.MockPlayers[initialPlayer] = &mockPlayerState{
+			MockName:  initialPlayer,
+			MockColor: mockChatColor,
+		}
+	}
+
+	return mockProvider
 }
 
 func (mockProvider *mockPlayerProvider) Get(
 	playerName string) (player.ReadonlyState, error) {
-	mockPlayer, isInMap := mockProvider.mockPlayers[playerName]
+	mockPlayer, isInMap := mockProvider.MockPlayers[playerName]
 
 	if !isInMap {
 		return nil, fmt.Errorf("not in map")
@@ -52,7 +69,7 @@ type mockGameState struct {
 	mockDeck          []card.Readonly
 }
 
-type mockPersister struct {
+type mockGamePersister struct {
 	TestReference                 *testing.T
 	ReturnForRandomSeed           int64
 	ReturnForReadAndWriteGame     game.ReadAndWriteState
@@ -65,8 +82,10 @@ type mockPersister struct {
 	ArgumentsForAddGame           []mockGameState
 }
 
-func NewMockPersister(testReference *testing.T, testError error) *mockPersister {
-	return &mockPersister{
+func NewMockGamePersister(
+	testReference *testing.T,
+	testError error) *mockGamePersister {
+	return &mockGamePersister{
 		TestReference:                 testReference,
 		ReturnForRandomSeed:           -1,
 		ReturnForReadAndWriteGame:     nil,
@@ -80,7 +99,7 @@ func NewMockPersister(testReference *testing.T, testError error) *mockPersister 
 	}
 }
 
-func (mockImplementation *mockPersister) RandomSeed() int64 {
+func (mockImplementation *mockGamePersister) RandomSeed() int64 {
 	if mockImplementation.TestErrorForRandomSeed != nil {
 		mockImplementation.TestReference.Errorf(
 			"RandomSeed(): %v",
@@ -90,7 +109,7 @@ func (mockImplementation *mockPersister) RandomSeed() int64 {
 	return mockImplementation.ReturnForRandomSeed
 }
 
-func (mockImplementation *mockPersister) ReadAndWriteGame(
+func (mockImplementation *mockGamePersister) ReadAndWriteGame(
 	gameName string) (game.ReadAndWriteState, error) {
 	if mockImplementation.TestErrorForReadAndWriteGame != nil {
 		mockImplementation.TestReference.Errorf(
@@ -102,7 +121,7 @@ func (mockImplementation *mockPersister) ReadAndWriteGame(
 	return mockImplementation.ReturnForReadAndWriteGame, mockImplementation.ReturnForNontestError
 }
 
-func (mockImplementation *mockPersister) ReadAllWithPlayer(playerName string) []game.ReadonlyState {
+func (mockImplementation *mockGamePersister) ReadAllWithPlayer(playerName string) []game.ReadonlyState {
 	if mockImplementation.TestErrorForReadAllWithPlayer != nil {
 		mockImplementation.TestReference.Errorf(
 			"ReadAllWithPlayer(%v): %v",
@@ -113,7 +132,7 @@ func (mockImplementation *mockPersister) ReadAllWithPlayer(playerName string) []
 	return mockImplementation.ReturnForReadAllWithPlayer
 }
 
-func (mockImplementation *mockPersister) AddGame(
+func (mockImplementation *mockGamePersister) AddGame(
 	gameName string,
 	gameRuleset game.Ruleset,
 	playersInTurnOrderWithInitialHands []game.PlayerNameWithHand,
@@ -142,9 +161,12 @@ func (mockImplementation *mockPersister) AddGame(
 
 func prepareCollection(
 	unitTest *testing.T,
-	mockImplementation *mockPersister,
-	mockProvider *mockPlayerProvider) *game.StateCollection {
-	return game.NewCollection(mockImplementation, mockProvider)
+	initialPlayers []string) (*game.StateCollection, *mockGamePersister, *mockPlayerProvider) {
+	mockGamePersister :=
+		NewMockGamePersister(unitTest, fmt.Errorf("initial error for every function"))
+	mockPlayerProvider := NewMockPlayerProvider(initialPlayers)
+	mockCollection := game.NewCollection(mockGamePersister, mockPlayerProvider)
+	return mockCollection, mockGamePersister, mockPlayerProvider
 }
 
 func getAvailableRulesetIdentifiers(unitTest *testing.T) []int {
@@ -183,18 +205,7 @@ type collectionAndDescription struct {
 }
 
 func prepareCollections(unitTest *testing.T) []collectionAndDescription {
-	chatColor := defaults.AvailableColors()[0]
-	mockPlayerMap := make(map[string]*mockPlayerState, 0)
-	for _, mockPlayerName := range playerNamesAvailableInTest {
-		mockPlayerMap[mockPlayerName] = &mockPlayerState{
-			MockName:  mockPlayerName,
-			MockColor: chatColor,
-		}
-	}
-
-	mockProvider := &mockPlayerProvider{
-		mockPlayers: mockPlayerMap,
-	}
+	mockProvider := NewMockPlayerProvider(playerNamesAvailableInTest)
 
 	statePersisters := []persisterAndDescription{
 		persisterAndDescription{

@@ -1,7 +1,10 @@
 package game_test
 
 import (
+	"fmt"
 	"testing"
+
+	"github.com/benoleary/ilutulestikud/backend/game/card"
 )
 
 func TestViewErrorWhenPersisterGivesError(unitTest *testing.T) {
@@ -24,8 +27,11 @@ func TestViewsCorrectFromAllForPlayer(unitTest *testing.T) {
 	unitTest.Fatalf("Not implemented yet")
 }
 
-func TestRejectAddNewForEmptyGameName(unitTest *testing.T) {
+func TestRejectAddNewWhenInvalid(unitTest *testing.T) {
 	validGameName := "Test game"
+	errorWhenPlayerProviderShouldNotAllowGet :=
+		fmt.Errorf("mock player provider should not allow Get(...)")
+	fullDeck := testRuleset.CopyOfFullCardset()
 
 	validPlayerNameList :=
 		[]string{
@@ -35,24 +41,32 @@ func TestRejectAddNewForEmptyGameName(unitTest *testing.T) {
 		}
 
 	testCases := []struct {
-		testName    string
-		gameName    string
-		playerNames []string
+		testName                   string
+		gameName                   string
+		playerNames                []string
+		initialDeck                []card.Readonly
+		errorFromPlayerProviderGet error
 	}{
 		{
-			testName:    "Empty game name",
-			gameName:    "",
-			playerNames: validPlayerNameList,
+			testName:                   "Empty game name",
+			gameName:                   "",
+			playerNames:                validPlayerNameList,
+			initialDeck:                fullDeck,
+			errorFromPlayerProviderGet: errorWhenPlayerProviderShouldNotAllowGet,
 		},
 		{
-			testName:    "Nil players",
-			gameName:    validGameName,
-			playerNames: nil,
+			testName:                   "Nil players",
+			gameName:                   validGameName,
+			playerNames:                nil,
+			initialDeck:                fullDeck,
+			errorFromPlayerProviderGet: errorWhenPlayerProviderShouldNotAllowGet,
 		},
 		{
-			testName:    "No players",
-			gameName:    validGameName,
-			playerNames: []string{},
+			testName:                   "No players",
+			gameName:                   validGameName,
+			playerNames:                []string{},
+			initialDeck:                fullDeck,
+			errorFromPlayerProviderGet: errorWhenPlayerProviderShouldNotAllowGet,
 		},
 		{
 			testName: "Too few players",
@@ -60,11 +74,15 @@ func TestRejectAddNewForEmptyGameName(unitTest *testing.T) {
 			playerNames: []string{
 				playerNamesAvailableInTest[0],
 			},
+			initialDeck:                fullDeck,
+			errorFromPlayerProviderGet: errorWhenPlayerProviderShouldNotAllowGet,
 		},
 		{
-			testName:    "Too many players",
-			gameName:    validGameName,
-			playerNames: playerNamesAvailableInTest,
+			testName:                   "Too many players",
+			gameName:                   validGameName,
+			playerNames:                playerNamesAvailableInTest,
+			initialDeck:                fullDeck,
+			errorFromPlayerProviderGet: errorWhenPlayerProviderShouldNotAllowGet,
 		},
 		{
 			testName: "Repeated player",
@@ -75,24 +93,59 @@ func TestRejectAddNewForEmptyGameName(unitTest *testing.T) {
 				playerNamesAvailableInTest[1],
 				playerNamesAvailableInTest[3],
 			},
+			initialDeck:                fullDeck,
+			errorFromPlayerProviderGet: nil,
 		},
 		{
-			testName: "Unregistered player",
+			testName: "Unknown player",
 			gameName: validGameName,
 			playerNames: []string{
 				playerNamesAvailableInTest[2],
 				playerNamesAvailableInTest[1],
-				"Not A. Registered Player",
+				"Unknown Player",
 				playerNamesAvailableInTest[3],
 			},
+			initialDeck:                fullDeck,
+			errorFromPlayerProviderGet: errorWhenPlayerProviderShouldNotAllowGet,
+		},
+		{
+			testName: "Too few cards",
+			gameName: validGameName,
+			playerNames: []string{
+				playerNamesAvailableInTest[2],
+				playerNamesAvailableInTest[1],
+				playerNamesAvailableInTest[3],
+			},
+			initialDeck: []card.Readonly{
+				fullDeck[0],
+				fullDeck[1],
+			},
+			errorFromPlayerProviderGet: nil,
 		},
 	}
 
-	unitTest.Fatalf("Not implemented yet")
-}
+	for _, testCase := range testCases {
+		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
+			gameCollection, _, _ :=
+				prepareCollection(unitTest, playerNamesAvailableInTest)
 
-func TestRejectAddNewWhenErrorCreatingHands(unitTest *testing.T) {
-	unitTest.Fatalf("Not implemented yet")
+			errorFromAddNew :=
+				gameCollection.AddNewWithGivenDeck(
+					testCase.gameName,
+					testRuleset,
+					testCase.playerNames,
+					testCase.initialDeck)
+
+			if errorFromAddNew == nil {
+				unitTest.Fatalf(
+					"AddNewWithGivenDeck(%v, %v, %v, %v) did not produce expected error",
+					testCase.gameName,
+					testRuleset,
+					testCase.playerNames,
+					testCase.initialDeck)
+			}
+		})
+	}
 }
 
 func TestAddNewWithDefaultShuffle(unitTest *testing.T) {
