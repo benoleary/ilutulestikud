@@ -3,7 +3,9 @@ package game_test
 import (
 	"fmt"
 	"testing"
+	"time"
 
+	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/game/card"
 )
 
@@ -70,8 +72,6 @@ func TestViewCorrectWhenPersisterGivesValidGame(unitTest *testing.T) {
 	gameCollection, mockPersister, _ :=
 		prepareCollection(unitTest, playerNamesAvailableInTest)
 
-	mockPersister.TestErrorForReadAndWriteGame = nil
-
 	mockReadAndWriteState :=
 		NewMockGameState(unitTest, fmt.Errorf("No function should be called"))
 	mockReadAndWriteState.TestErrorForName = nil
@@ -81,6 +81,7 @@ func TestViewCorrectWhenPersisterGivesValidGame(unitTest *testing.T) {
 	mockReadAndWriteState.TestErrorForPlayerNames = nil
 	mockReadAndWriteState.ReturnForPlayerNames = playerNamesAvailableInTest
 
+	mockPersister.TestErrorForReadAndWriteGame = nil
 	mockPersister.ReturnForReadAndWriteGame = mockReadAndWriteState
 
 	viewForPlayer, errorFromViewState :=
@@ -108,7 +109,49 @@ func TestViewCorrectWhenPersisterGivesValidGame(unitTest *testing.T) {
 }
 
 func TestErrorWhenViewErrorOnStateFromAll(unitTest *testing.T) {
-	unitTest.Fatalf("Not implemented yet")
+	gameName := "Test game"
+	playerName := "Test Player"
+	gameCollection, mockPersister, _ :=
+		prepareCollection(unitTest, playerNamesAvailableInTest)
+
+	mockGameWithPlayer :=
+		NewMockGameState(unitTest, fmt.Errorf("mock game with player"))
+	mockGameWithPlayer.TestErrorForName = nil
+	mockGameWithPlayer.MockName = gameName
+	mockGameWithPlayer.TestErrorForCreationTime = nil
+	mockGameWithPlayer.ReturnForCreationTime = time.Now().Add(-2 * time.Second)
+	mockGameWithPlayer.TestErrorForRuleset = nil
+	mockGameWithPlayer.ReturnForRuleset = testRuleset
+	mockGameWithPlayer.TestErrorForPlayerNames = nil
+	mockGameWithPlayer.ReturnForPlayerNames = playerNamesAvailableInTest
+
+	mockGameWithoutPlayer :=
+		NewMockGameState(unitTest, fmt.Errorf("mock game without player"))
+	mockGameWithoutPlayer.TestErrorForName = nil
+	mockGameWithoutPlayer.MockName = "test game"
+	mockGameWithoutPlayer.TestErrorForCreationTime = nil
+	mockGameWithoutPlayer.ReturnForCreationTime = time.Now().Add(-1 * time.Second)
+	mockGameWithoutPlayer.TestErrorForPlayerNames = nil
+	mockGameWithoutPlayer.ReturnForPlayerNames = []string{
+		playerNamesAvailableInTest[1],
+		playerNamesAvailableInTest[2],
+	}
+
+	mockPersister.TestErrorForReadAllWithPlayer = nil
+	mockPersister.ReturnForReadAllWithPlayer = []game.ReadonlyState{
+		mockGameWithPlayer,
+		mockGameWithoutPlayer,
+	}
+
+	viewsForPlayer, errorFromViewAll :=
+		gameCollection.ViewAllWithPlayer(playerName)
+
+	if errorFromViewAll == nil {
+		unitTest.Fatalf(
+			"ViewAllWithPlayer(%v) did not produce expected error, instead produced %v",
+			playerName,
+			viewsForPlayer)
+	}
 }
 
 func TestViewsCorrectFromAllForPlayer(unitTest *testing.T) {

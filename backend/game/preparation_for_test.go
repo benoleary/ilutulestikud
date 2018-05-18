@@ -78,6 +78,7 @@ type mockGameState struct {
 	ReturnForPlayerNames                []string
 	TestErrorForTurn                    error
 	TestErrorForCreationTime            error
+	ReturnForCreationTime               time.Time
 	TestErrorForChatLog                 error
 	TestErrorForScore                   error
 	TestErrorForNumberOfReadyHints      error
@@ -112,6 +113,7 @@ func NewMockGameState(
 		ReturnForPlayerNames:                nil,
 		TestErrorForTurn:                    testError,
 		TestErrorForCreationTime:            testError,
+		ReturnForCreationTime:               time.Now(),
 		TestErrorForChatLog:                 testError,
 		TestErrorForScore:                   testError,
 		TestErrorForNumberOfReadyHints:      testError,
