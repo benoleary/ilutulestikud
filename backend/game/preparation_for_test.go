@@ -183,7 +183,7 @@ func (mockGame *mockGameState) CreationTime() time.Time {
 			mockGame.TestErrorForCreationTime)
 	}
 
-	return time.Now()
+	return mockGame.ReturnForCreationTime
 }
 
 // ChatLog gets mocked.

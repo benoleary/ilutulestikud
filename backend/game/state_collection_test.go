@@ -155,7 +155,100 @@ func TestErrorWhenViewErrorOnStateFromAll(unitTest *testing.T) {
 }
 
 func TestViewsCorrectFromAllForPlayer(unitTest *testing.T) {
-	unitTest.Fatalf("Not implemented yet")
+	gameCollection, mockPersister, _ :=
+		prepareCollection(unitTest, playerNamesAvailableInTest)
+	playerName := playerNamesAvailableInTest[0]
+
+	testStartTime := time.Now()
+
+	mockFirstGame :=
+		NewMockGameState(unitTest, fmt.Errorf("first mock game"))
+	mockFirstGame.TestErrorForName = nil
+	mockFirstGame.MockName = "first test game"
+	mockFirstGame.TestErrorForCreationTime = nil
+	mockFirstGame.ReturnForCreationTime = testStartTime.Add(-2 * time.Second)
+	mockFirstGame.TestErrorForRuleset = nil
+	mockFirstGame.ReturnForRuleset = testRuleset
+	mockFirstGame.TestErrorForPlayerNames = nil
+	mockFirstGame.ReturnForPlayerNames = playerNamesAvailableInTest
+
+	mockSecondGame :=
+		NewMockGameState(unitTest, fmt.Errorf("second mock game"))
+	mockSecondGame.TestErrorForName = nil
+	mockSecondGame.MockName = "second test game"
+	mockSecondGame.TestErrorForCreationTime = nil
+	mockSecondGame.ReturnForCreationTime = testStartTime.Add(-1 * time.Second)
+	mockSecondGame.TestErrorForRuleset = nil
+	mockSecondGame.ReturnForRuleset = testRuleset
+	mockSecondGame.TestErrorForPlayerNames = nil
+	mockSecondGame.ReturnForPlayerNames = []string{
+		playerNamesAvailableInTest[1],
+		playerName,
+	}
+
+	mockThirdGame :=
+		NewMockGameState(unitTest, fmt.Errorf("third mock game"))
+	mockThirdGame.TestErrorForName = nil
+	mockThirdGame.MockName = "third test game"
+	mockThirdGame.TestErrorForCreationTime = nil
+	mockThirdGame.ReturnForCreationTime = testStartTime
+	mockThirdGame.TestErrorForRuleset = nil
+	mockThirdGame.ReturnForRuleset = testRuleset
+	mockThirdGame.TestErrorForPlayerNames = nil
+	mockThirdGame.ReturnForPlayerNames = []string{
+		playerName,
+		playerNamesAvailableInTest[2],
+	}
+
+	mockPersister.TestErrorForReadAllWithPlayer = nil
+
+	// We return the games out of order to double-check that sorting works.
+	mockPersister.ReturnForReadAllWithPlayer = []game.ReadonlyState{
+		mockThirdGame,
+		mockFirstGame,
+		mockSecondGame,
+	}
+
+	expectedGames := []game.ReadonlyState{
+		mockFirstGame,
+		mockSecondGame,
+		mockThirdGame,
+	}
+
+	viewsForPlayer, errorFromViewAll :=
+		gameCollection.ViewAllWithPlayer(playerName)
+
+	if errorFromViewAll != nil {
+		unitTest.Fatalf(
+			"ViewAllWithPlayer(%v) produced error %v",
+			playerName,
+			errorFromViewAll)
+	}
+
+	numberOfExpectedGames := len(expectedGames)
+
+	if len(viewsForPlayer) != numberOfExpectedGames {
+		unitTest.Fatalf(
+			"ViewAllWithPlayer(%v) %v had wrong number of games: expected %v",
+			playerName,
+			viewsForPlayer,
+			expectedGames)
+	}
+
+	for gameIndex := 0; gameIndex < numberOfExpectedGames; gameIndex++ {
+		viewForPlayer := viewsForPlayer[gameIndex]
+		expectedGame := expectedGames[gameIndex]
+		// We do not fully test the view as that is done in another test file.
+		if viewForPlayer.GameName() != expectedGame.Name() {
+			unitTest.Fatalf(
+				"ViewAllWithPlayer(%v) %v had wrong name in position %v: actual %v, expected %v",
+				playerName,
+				viewsForPlayer,
+				gameIndex,
+				viewForPlayer.GameName(),
+				expectedGame.Name())
+		}
+	}
 }
 
 func TestRejectAddNewWhenInvalid(unitTest *testing.T) {
