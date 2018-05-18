@@ -65,7 +65,46 @@ func TestViewErrorWhenPlayerNotParticipant(unitTest *testing.T) {
 }
 
 func TestViewCorrectWhenPersisterGivesValidGame(unitTest *testing.T) {
-	unitTest.Fatalf("Not implemented yet")
+	gameName := "Test game"
+	playerName := playerNamesAvailableInTest[0]
+	gameCollection, mockPersister, _ :=
+		prepareCollection(unitTest, playerNamesAvailableInTest)
+
+	mockPersister.TestErrorForReadAndWriteGame = nil
+
+	mockReadAndWriteState :=
+		NewMockGameState(unitTest, fmt.Errorf("No function should be called"))
+	mockReadAndWriteState.TestErrorForName = nil
+	mockReadAndWriteState.MockName = gameName
+	mockReadAndWriteState.TestErrorForRuleset = nil
+	mockReadAndWriteState.ReturnForRuleset = testRuleset
+	mockReadAndWriteState.TestErrorForPlayerNames = nil
+	mockReadAndWriteState.ReturnForPlayerNames = playerNamesAvailableInTest
+
+	mockPersister.ReturnForReadAndWriteGame = mockReadAndWriteState
+
+	viewForPlayer, errorFromViewState :=
+		gameCollection.ViewState(
+			gameName,
+			playerName)
+
+	if errorFromViewState != nil {
+		unitTest.Fatalf(
+			"ViewState(%v, %v) produced error %v",
+			gameName,
+			playerName,
+			errorFromViewState)
+	}
+
+	// We do not fully test the view as that is done in another test file.
+	if viewForPlayer.GameName() != gameName {
+		unitTest.Fatalf(
+			"ViewState(%v, %v) %v did not have expected game name %v",
+			gameName,
+			playerName,
+			viewForPlayer,
+			gameName)
+	}
 }
 
 func TestErrorWhenViewErrorOnStateFromAll(unitTest *testing.T) {
