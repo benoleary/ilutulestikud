@@ -30,9 +30,9 @@ type Ruleset interface {
 	// ColorSuits should return the set of colors used as suits.
 	ColorSuits() []string
 
-	// SequenceIndices returns all the indices for the cards, per card so
-	// including repetitions of indices, as they should be played per suit.
-	SequenceIndices() []int
+	// DistinctPossibleIndices should return all the distinct indices for the cards across
+	// all suits, as it is used to set up the initial state of inferred cards.
+	DistinctPossibleIndices() []int
 
 	// MinimumNumberOfPlayers should return the minimum number of players needed for a game.
 	MinimumNumberOfPlayers() int
@@ -47,6 +47,9 @@ type Ruleset interface {
 	// MaximumNumberOfMistakesAllowed should return the maximum number of mistakes which can
 	// be made without the game ending (i.e. the game ends on the next mistake after that).
 	MaximumNumberOfMistakesAllowed() int
+
+	// PointsPerCard should return the points value of the given card.
+	PointsForCard(cardToEvaluate card.Readonly) int
 }
 
 // ViewForPlayer should encapsulate functions to view the state of the game as seen by a

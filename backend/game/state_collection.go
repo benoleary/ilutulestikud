@@ -219,7 +219,7 @@ func (gameCollection *StateCollection) createPlayerHands(
 				card.NewInferred(
 					initialDeck[cardsInHand],
 					gameRuleset.ColorSuits(),
-					gameRuleset.SequenceIndices())
+					gameRuleset.DistinctPossibleIndices())
 
 			// We should not ever re-visit these cards, but we set them to
 			// represent an error just in case.

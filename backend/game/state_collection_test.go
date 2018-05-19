@@ -255,7 +255,6 @@ func TestRejectAddNewWhenInvalid(unitTest *testing.T) {
 	validGameName := "Test game"
 	errorWhenPlayerProviderShouldNotAllowGet :=
 		fmt.Errorf("mock player provider should not allow Get(...)")
-	fullDeck := testRuleset.CopyOfFullCardset()
 
 	validPlayerNameList :=
 		[]string{
@@ -275,21 +274,21 @@ func TestRejectAddNewWhenInvalid(unitTest *testing.T) {
 			testName:                   "Empty game name",
 			gameName:                   "",
 			playerNames:                validPlayerNameList,
-			initialDeck:                fullDeck,
+			initialDeck:                testRuleset.CopyOfFullCardset(),
 			errorFromPlayerProviderGet: errorWhenPlayerProviderShouldNotAllowGet,
 		},
 		{
 			testName:                   "Nil players",
 			gameName:                   validGameName,
 			playerNames:                nil,
-			initialDeck:                fullDeck,
+			initialDeck:                testRuleset.CopyOfFullCardset(),
 			errorFromPlayerProviderGet: errorWhenPlayerProviderShouldNotAllowGet,
 		},
 		{
 			testName:                   "No players",
 			gameName:                   validGameName,
 			playerNames:                []string{},
-			initialDeck:                fullDeck,
+			initialDeck:                testRuleset.CopyOfFullCardset(),
 			errorFromPlayerProviderGet: errorWhenPlayerProviderShouldNotAllowGet,
 		},
 		{
@@ -298,14 +297,14 @@ func TestRejectAddNewWhenInvalid(unitTest *testing.T) {
 			playerNames: []string{
 				playerNamesAvailableInTest[0],
 			},
-			initialDeck:                fullDeck,
+			initialDeck:                testRuleset.CopyOfFullCardset(),
 			errorFromPlayerProviderGet: errorWhenPlayerProviderShouldNotAllowGet,
 		},
 		{
 			testName:                   "Too many players",
 			gameName:                   validGameName,
 			playerNames:                playerNamesAvailableInTest,
-			initialDeck:                fullDeck,
+			initialDeck:                testRuleset.CopyOfFullCardset(),
 			errorFromPlayerProviderGet: errorWhenPlayerProviderShouldNotAllowGet,
 		},
 		{
@@ -317,7 +316,7 @@ func TestRejectAddNewWhenInvalid(unitTest *testing.T) {
 				playerNamesAvailableInTest[1],
 				playerNamesAvailableInTest[3],
 			},
-			initialDeck:                fullDeck,
+			initialDeck:                testRuleset.CopyOfFullCardset(),
 			errorFromPlayerProviderGet: nil,
 		},
 		{
@@ -329,7 +328,7 @@ func TestRejectAddNewWhenInvalid(unitTest *testing.T) {
 				"Unknown Player",
 				playerNamesAvailableInTest[3],
 			},
-			initialDeck:                fullDeck,
+			initialDeck:                testRuleset.CopyOfFullCardset(),
 			errorFromPlayerProviderGet: errorWhenPlayerProviderShouldNotAllowGet,
 		},
 		{
@@ -340,10 +339,7 @@ func TestRejectAddNewWhenInvalid(unitTest *testing.T) {
 				playerNamesAvailableInTest[1],
 				playerNamesAvailableInTest[3],
 			},
-			initialDeck: []card.Readonly{
-				fullDeck[0],
-				fullDeck[1],
-			},
+			initialDeck:                testRuleset.CopyOfFullCardset()[0:2],
 			errorFromPlayerProviderGet: nil,
 		},
 	}
@@ -372,12 +368,271 @@ func TestRejectAddNewWhenInvalid(unitTest *testing.T) {
 	}
 }
 
-func TestAddNewWithDefaultShuffle(unitTest *testing.T) {
-	unitTest.Fatalf("Not implemented yet")
+func TestAddNewWithGivenShuffle(unitTest *testing.T) {
+	gameName := "Test game"
+
+	// We need at least 16 cards for the test
+	// ((3 players * 5 cards per hand) + 1 for remaining deck).
+	// We choose a sequence that should prove that the cards
+	// have been propagated correctly.
+	testDeck := []card.Readonly{
+		card.NewReadonly("some color for player 1", 2),
+		card.NewReadonly("another color for player 1", 3),
+		card.NewReadonly("player 1 color", 1),
+		card.NewReadonly("some color for player 1", 1),
+		card.NewReadonly("player 1 color", 1),
+		card.NewReadonly("a color for player 2", 2),
+		card.NewReadonly("another color for player 2", 2),
+		card.NewReadonly("player 2 color", 2),
+		card.NewReadonly("some color for player 2", 2),
+		card.NewReadonly("player 2 color", 2),
+		card.NewReadonly("player 3 hand color", 1),
+		card.NewReadonly("player 3 hand color", 2),
+		card.NewReadonly("player 3 hand color", 3),
+		card.NewReadonly("player 3 hand color", 2),
+		card.NewReadonly("player 3 hand color", 1),
+		card.NewReadonly("color which should end up in remaining deck", 1),
+		card.NewReadonly("color which should end up in remaining deck", 2),
+		card.NewReadonly("color which should end up in remaining deck", 1),
+		card.NewReadonly("another color which should end up in remaining deck", 1),
+		card.NewReadonly("color which should end up in remaining deck", 1),
+	}
+
+	// We need a deep copy of the deck as adding the game
+	// modifies the deck given to it.
+	copyOfInputDeck := make([]card.Readonly, len(testDeck))
+	copy(copyOfInputDeck, testDeck)
+
+	gameParticipants :=
+		[]string{
+			playerNamesAvailableInTest[0],
+			playerNamesAvailableInTest[1],
+			playerNamesAvailableInTest[2],
+		}
+
+	gameCollection, mockGamePersister, _ :=
+		prepareCollection(unitTest, playerNamesAvailableInTest)
+
+	mockGamePersister.TestErrorForAddGame = nil
+
+	errorFromAddNew :=
+		gameCollection.AddNewWithGivenDeck(
+			gameName,
+			testRuleset,
+			gameParticipants,
+			testDeck)
+
+	baseIdentifier :=
+		fmt.Sprintf(
+			"AddNewWithGivenDeck(%v, [%v], %v, %v)",
+			gameName,
+			testRuleset,
+			gameParticipants,
+			copyOfInputDeck)
+
+	if errorFromAddNew != nil {
+		unitTest.Fatalf(
+			baseIdentifier+" produced error %v",
+			errorFromAddNew)
+	}
+
+	actualPersistanceCalls := mockGamePersister.ArgumentsForAddGame
+
+	if len(actualPersistanceCalls) != 1 {
+		unitTest.Fatalf(
+			baseIdentifier+" resulted in wrong number of calls to persister: %v",
+			actualPersistanceCalls)
+	}
+
+	actualPersistanceCall := actualPersistanceCalls[0]
+
+	if (actualPersistanceCall.gameName != gameName) ||
+		(actualPersistanceCall.gameRuleset != testRuleset) {
+		unitTest.Fatalf(
+			baseIdentifier+" resulted in wrong call to persister: %v",
+			actualPersistanceCall)
+	}
+
+	numberOfExpectedPlayers := len(gameParticipants)
+	lengthOfExpectedHand :=
+		testRuleset.NumberOfCardsInPlayerHand(numberOfExpectedPlayers)
+	expectedColors := testRuleset.ColorSuits()
+	expectedIndices := testRuleset.DistinctPossibleIndices()
+	playersAndHandsFromCall := actualPersistanceCall.playersInTurnOrderWithInitialHands
+
+	if len(playersAndHandsFromCall) != numberOfExpectedPlayers {
+		unitTest.Fatalf(
+			baseIdentifier+" resulted in wrong call to persister: %v",
+			actualPersistanceCall)
+	}
+
+	for playerIndex := 0; playerIndex < numberOfExpectedPlayers; playerIndex++ {
+		if playersAndHandsFromCall[playerIndex].PlayerName != gameParticipants[playerIndex] {
+			unitTest.Fatalf(
+				baseIdentifier+" resulted in wrong call to persister: %v",
+				actualPersistanceCall)
+		}
+
+		// We take blocks of cards from the start of the deck for each player, as
+		// that is how the collection should deal them to the players: each player
+		// gets all the cards for their hand before the next player gets any.
+		indexOfFirstCardInHand := playerIndex * lengthOfExpectedHand
+		indexOfCardAfterLastCardInHand := indexOfFirstCardInHand + lengthOfExpectedHand
+		expectedVisibleHand :=
+			copyOfInputDeck[indexOfFirstCardInHand:indexOfCardAfterLastCardInHand]
+
+		// We make fresh inferred cards around the visible cards, as we expect the
+		// collection to have done.
+		expectedInferredHand := make([]card.Inferred, lengthOfExpectedHand)
+		for indexInHand := 0; indexInHand < lengthOfExpectedHand; indexInHand++ {
+			expectedInferredHand[indexInHand] =
+				card.NewInferred(
+					expectedVisibleHand[indexInHand],
+					expectedColors,
+					expectedIndices)
+		}
+
+		testIdentifier :=
+			fmt.Sprintf(
+				baseIdentifier+" call to persister/checking hand of player %v",
+				playerIndex)
+		assertInferredCardSlicesMatch(
+			testIdentifier,
+			unitTest,
+			playersAndHandsFromCall[playerIndex].InitialHand,
+			expectedInferredHand)
+	}
+
+	assertReadonlyCardSlicesMatch(
+		baseIdentifier+" call to persister/checking initial deck",
+		unitTest,
+		copyOfInputDeck[numberOfExpectedPlayers*lengthOfExpectedHand:],
+		actualPersistanceCall.initialDeck)
 }
 
-func TestAddNewWithGivenShuffle(unitTest *testing.T) {
-	unitTest.Fatalf("Not implemented yet")
+func TestAddNewWithDefaultShuffle(unitTest *testing.T) {
+	gameName := "Test game"
+
+	expectedFullCardset := testRuleset.CopyOfFullCardset()
+
+	gameParticipants :=
+		[]string{
+			playerNamesAvailableInTest[0],
+			playerNamesAvailableInTest[1],
+			playerNamesAvailableInTest[2],
+		}
+
+	gameCollection, mockGamePersister, _ :=
+		prepareCollection(unitTest, playerNamesAvailableInTest)
+
+	mockGamePersister.TestErrorForAddGame = nil
+	mockGamePersister.TestErrorForRandomSeed = nil
+	mockGamePersister.ReturnForRandomSeed = 1
+
+	errorFromAddNew :=
+		gameCollection.AddNew(
+			gameName,
+			testRuleset,
+			gameParticipants)
+
+	baseIdentifier :=
+		fmt.Sprintf(
+			"AddNew(%v, [%v], %v)",
+			gameName,
+			testRuleset,
+			gameParticipants)
+
+	if errorFromAddNew != nil {
+		unitTest.Fatalf(
+			baseIdentifier+" produced error %v",
+			errorFromAddNew)
+	}
+
+	actualPersistanceCalls := mockGamePersister.ArgumentsForAddGame
+
+	if len(actualPersistanceCalls) != 1 {
+		unitTest.Fatalf(
+			baseIdentifier+" resulted in wrong number of calls to persister: %v",
+			actualPersistanceCalls)
+	}
+
+	actualPersistanceCall := actualPersistanceCalls[0]
+
+	if (actualPersistanceCall.gameName != gameName) ||
+		(actualPersistanceCall.gameRuleset != testRuleset) {
+		unitTest.Fatalf(
+			baseIdentifier+" resulted in wrong call to persister: %v",
+			actualPersistanceCall)
+	}
+
+	numberOfExpectedPlayers := len(gameParticipants)
+	lengthOfExpectedHand :=
+		testRuleset.NumberOfCardsInPlayerHand(numberOfExpectedPlayers)
+	expectedColors := testRuleset.ColorSuits()
+	expectedIndices := testRuleset.DistinctPossibleIndices()
+	playersAndHandsFromCall := actualPersistanceCall.playersInTurnOrderWithInitialHands
+
+	if len(playersAndHandsFromCall) != numberOfExpectedPlayers {
+		unitTest.Fatalf(
+			baseIdentifier+" resulted in wrong call to persister: %v",
+			actualPersistanceCall)
+	}
+
+	// In this case, we cannot be sure of which cards should appear where.
+	// We check that the inferred information is correct (conveniently independent
+	// of what the cards are at the moment when the initial deal has just been made)
+	// and collect all the cards together to check against the initial deck.
+	shuffledCards := make(map[card.Readonly]int, 0)
+	numberOfCardsInTotal := 0
+	for playerIndex := 0; playerIndex < numberOfExpectedPlayers; playerIndex++ {
+		nameAndHand := playersAndHandsFromCall[playerIndex]
+		if (nameAndHand.PlayerName != gameParticipants[playerIndex]) ||
+			(len(nameAndHand.InitialHand) != lengthOfExpectedHand) {
+			unitTest.Fatalf(
+				baseIdentifier+" resulted in wrong call to persister: %v",
+				actualPersistanceCall)
+		}
+
+		for _, inferredCard := range playersAndHandsFromCall[playerIndex].InitialHand {
+			assertInferredCardPossibilitiesCorrect(
+				baseIdentifier+"/inferred card in hand",
+				unitTest,
+				inferredCard,
+				expectedColors,
+				expectedIndices)
+
+			numberOfCopiesBeforeThis := shuffledCards[inferredCard.UnderlyingCard()]
+			shuffledCards[inferredCard.UnderlyingCard()] = numberOfCopiesBeforeThis + 1
+			numberOfCardsInTotal++
+		}
+	}
+
+	for _, remainingCard := range actualPersistanceCall.initialDeck {
+		numberOfCopiesBeforeThis := shuffledCards[remainingCard]
+		shuffledCards[remainingCard] = numberOfCopiesBeforeThis + 1
+		numberOfCardsInTotal++
+	}
+
+	if numberOfCardsInTotal != len(expectedFullCardset) {
+		unitTest.Fatalf(
+			baseIdentifier+" had wrong number of cards in total %v, expected %v",
+			numberOfCardsInTotal,
+			len(expectedFullCardset))
+	}
+
+	for _, expectedCard := range expectedFullCardset {
+		numberOfCopiesBeforeThis := shuffledCards[expectedCard]
+		shuffledCards[expectedCard] = numberOfCopiesBeforeThis - 1
+	}
+
+	for cardKey, numberOfCopies := range shuffledCards {
+		if numberOfCopies != 0 {
+			unitTest.Fatalf(
+				baseIdentifier+" had %v copies of %v after crossing off all expected.",
+				numberOfCopies,
+				cardKey)
+		}
+	}
 }
 
 func TestExecutorErrorWhenPersisterGivesError(unitTest *testing.T) {

@@ -211,7 +211,7 @@ func TestInitialMetadataAreCorrect(unitTest *testing.T) {
 						playedCard)
 				}
 
-				for _, sequenceIndex := range defaultTestRuleset.SequenceIndices() {
+				for _, sequenceIndex := range defaultTestRuleset.DistinctPossibleIndices() {
 					numberOfDiscardedCards := readonlyState.NumberOfDiscardedCards(colorSuit, sequenceIndex)
 					if numberOfDiscardedCards != 0 {
 						unitTest.Fatalf(

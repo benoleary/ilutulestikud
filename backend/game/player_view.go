@@ -11,15 +11,15 @@ import (
 // which provide the information available to a particular player for
 // that state.
 type PlayerView struct {
-	gameState            ReadonlyState
-	gameParticipants     []string
-	numberOfParticipants int
-	playerName           string
-	gameRuleset          Ruleset
-	colorSuits           []string
-	numberOfSuits        int
-	sequenceIndices      []int
-	handSize             int
+	gameState               ReadonlyState
+	gameParticipants        []string
+	numberOfParticipants    int
+	playerName              string
+	gameRuleset             Ruleset
+	colorSuits              []string
+	numberOfSuits           int
+	distinctPossibleIndices []int
+	handSize                int
 }
 
 // ViewOnStateForPlayer creates a PlayerView around the given game
@@ -35,18 +35,19 @@ func ViewOnStateForPlayer(
 			numberOfPlayers := len(participantsInGame)
 			rulesetOfGame := stateOfGame.Ruleset()
 			gameColorSuits := rulesetOfGame.ColorSuits()
+			distinctPossibleIndices := rulesetOfGame.DistinctPossibleIndices()
 
 			playerView :=
 				&PlayerView{
-					gameState:            stateOfGame,
-					gameParticipants:     participantsInGame,
-					numberOfParticipants: numberOfPlayers,
-					playerName:           nameOfPlayer,
-					gameRuleset:          rulesetOfGame,
-					colorSuits:           gameColorSuits,
-					numberOfSuits:        len(gameColorSuits),
-					sequenceIndices:      rulesetOfGame.SequenceIndices(),
-					handSize:             rulesetOfGame.NumberOfCardsInPlayerHand(numberOfPlayers),
+					gameState:               stateOfGame,
+					gameParticipants:        participantsInGame,
+					numberOfParticipants:    numberOfPlayers,
+					playerName:              nameOfPlayer,
+					gameRuleset:             rulesetOfGame,
+					colorSuits:              gameColorSuits,
+					numberOfSuits:           len(gameColorSuits),
+					distinctPossibleIndices: distinctPossibleIndices,
+					handSize:                rulesetOfGame.NumberOfCardsInPlayerHand(numberOfPlayers),
 				}
 
 			return playerView, nil
@@ -170,7 +171,7 @@ func (playerView *PlayerView) DiscardedCards() []card.Readonly {
 	discardedCards := make([]card.Readonly, 0)
 
 	for _, colorSuit := range playerView.colorSuits {
-		for _, sequenceIndex := range playerView.sequenceIndices {
+		for _, sequenceIndex := range playerView.distinctPossibleIndices {
 			numberOfDiscardedCopies :=
 				playerView.gameState.NumberOfDiscardedCards(colorSuit, sequenceIndex)
 			discardedCard := card.NewReadonly(colorSuit, sequenceIndex)

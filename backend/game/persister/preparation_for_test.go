@@ -10,7 +10,7 @@ import (
 
 const testGameName = "test game"
 
-var defaultTestRuleset game.Ruleset = &game.StandardWithoutRainbowRuleset{}
+var defaultTestRuleset game.Ruleset = game.NewStandardWithoutRainbow()
 
 type mockPlayerState struct {
 	mockName  string
