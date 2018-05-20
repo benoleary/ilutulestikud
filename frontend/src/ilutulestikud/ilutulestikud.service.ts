@@ -60,14 +60,13 @@ export class IlutulestikudService {
       this.uriRoot + "game/game-as-seen-by-player/" + encodeURIComponent(gameIdentifier) + "/" + encodeURIComponent(playerIdentifier))
   }
 
-  sendChatMessage(gameIdentifier: string, playerIdentifier: string, chatText: string): Observable<any> {
+  sendChatMessage(gameName: string, playerName: string, chatMessage: string): Observable<any> {
     return this.httpClient.post(
-      this.uriRoot + "game/player-action",
+      this.uriRoot + "game/record-chat-message",
       {
-        "PlayerIdentifier": playerIdentifier,
-        "GameIdentifier": gameIdentifier,
-        "ActionType": "chat",
-        "ChatMessage": chatText
+        "GameName": gameName,
+        "PlayerName": playerName,
+        "ChatMessage": chatMessage
       })
   }
 }

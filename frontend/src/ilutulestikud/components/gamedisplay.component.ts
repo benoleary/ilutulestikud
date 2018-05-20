@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { OnInit, OnDestroy } from '@angular/core/src/metadata/lifecycle_hooks';
 import { Observable } from 'rxjs/Rx';
 import { Subscription } from 'rxjs/Subscription';
@@ -17,6 +17,7 @@ import { nullSafeIsEquivalent } from '@angular/compiler/src/output/output_ast';
   {
     @Input() gameIdentifier: string;
     @Input() playerIdentifier: string;
+    @Output() onError: EventEmitter<any> = new EventEmitter();
     informationText: string;
     gameDataSubscription: Subscription;
     isAwaitingGameData: boolean;
@@ -39,7 +40,7 @@ import { nullSafeIsEquivalent } from '@angular/compiler/src/output/output_ast';
             .takeWhile(() => (this.gameIdentifier != null))
             .subscribe(
               () => this.refreshGameData(),
-              thrownError => this.handleError(thrownError),
+              thrownError => this.onError.emit(thrownError),
               () => {});
     }
   
@@ -66,7 +67,7 @@ import { nullSafeIsEquivalent } from '@angular/compiler/src/output/output_ast';
           .gameAsSeenByPlayer(this.gameIdentifier, this.playerIdentifier)
           .subscribe(
             fetchedGameData => this.parseGameData(fetchedGameData),
-            thrownError => this.handleError(thrownError),
+            thrownError => this.onError.emit(thrownError),
             () => {});
       }
     }
@@ -112,15 +113,9 @@ import { nullSafeIsEquivalent } from '@angular/compiler/src/output/output_ast';
             .sendChatMessage(this.gameIdentifier, this.playerIdentifier, this.chatInput)
             .subscribe(
                 () => {},
-                thrownError => this.handleError(thrownError),
+                thrownError => this.onError.emit(thrownError),
                 () => {});
             this.chatInput = null;
         }
-    }
-
-    handleError(thrownError: Error): void
-    {
-      console.log("Error! " + JSON.stringify(thrownError));
-      this.informationText = "Error! " + JSON.stringify(thrownError["error"]);
     }
   }

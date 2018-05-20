@@ -107,7 +107,7 @@ import { Ruleset } from '../models/ruleset.model'
             {
                 "GameName": this.gameName,
                 "RulesetIdentifier": this.selectedRuleset.Identifier,
-                "PlayerIdentifiers": this.participatingPlayers.map(participatingPlayer => participatingPlayer.Identifier)
+                "PlayerNames": this.participatingPlayers.map(participatingPlayer => participatingPlayer.Name)
             });
     }
 

@@ -61,16 +61,14 @@
       <mat-tab
         *ngFor="let turnSummary of turnSummariesOfGamesWithPlayer"
         label="{{ turnSummary.GameName }}">
-        <ul *ngFor="let summaryLine of turnSummary.asTextLines()">
-          <li>{{ summaryLine }}</li>
-        </ul>
       </mat-tab>
     </mat-tab-group>
   </div>
 
   <game-display *ngIf="selectedGameIdentifier"
     [playerIdentifier]="selectedPlayer.Identifier"
-    [gameIdentifier]="selectedGameIdentifier">
+    [gameIdentifier]="selectedGameIdentifier"
+    (onError)="handleError($event)">
   </game-display>
 </div>
 

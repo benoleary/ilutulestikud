@@ -162,7 +162,7 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
       {
         this.informationText = null;
         this.ilutulestikudService
-          .newGame(resultFromClose["GameName"], resultFromClose["RulesetIdentifier"], resultFromClose["PlayerIdentifiers"])
+          .newGame(resultFromClose["GameName"], resultFromClose["RulesetIdentifier"], resultFromClose["PlayerNames"])
           .subscribe(
             () => {},
             thrownError => this.handleError(thrownError),
@@ -264,6 +264,9 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
 
     // We parse the standard "error" out of thrownError, but the backend sends errors as JSON in the form
     // {"Error": "the error message"}, so we parse out "Error" from the parsed-out "error".
-    this.informationText = thrownError["error"]["Error"];
+    const errorFromError: string = thrownError["error"]
+    const errorFromBackend: string = errorFromError["Error"]
+
+    this.informationText = errorFromBackend ? "Backend: " + errorFromBackend : errorFromError;
   }
 }
