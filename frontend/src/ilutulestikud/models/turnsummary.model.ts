@@ -18,4 +18,9 @@ export class TurnSummary
               turnSummaryObject["GameIdentifier"])
         this.IsPlayerTurn = turnSummaryObject["IsPlayerTurn"];
     }
+
+    GameName(): string
+    {
+        return this.GameForBackend.NameForPost
+    }
 }

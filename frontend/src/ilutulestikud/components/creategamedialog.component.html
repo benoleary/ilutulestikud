@@ -16,7 +16,7 @@
       </mat-select>
     </mat-form-field>
     <ul *ngFor="let participatingPlayer of participatingPlayers; let participantIndex = index">
-        <li>Player {{participantIndex + 1}}: {{participatingPlayer.Name}}</li>
+        <li>Player {{participantIndex + 1}}: {{participatingPlayer.Name()}}</li>
     </ul>
     <mat-form-field *ngIf="isAllowedToAddPlayer()">
       <mat-select
@@ -26,7 +26,7 @@
         <mat-option
           *ngFor="let availablePlayer of availablePlayersCopy"
           [value]="availablePlayer">
-          {{ availablePlayer.Name }}
+          {{ availablePlayer.Name() }}
         </mat-option>
       </mat-select>
     </mat-form-field>

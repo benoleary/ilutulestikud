@@ -34,7 +34,10 @@ export class IlutulestikudService {
   updatePlayer(playerOverride: Player): Observable<any> {
     return this.httpClient.post(
       this.uriRoot + "player/update-player",
-      playerOverride)
+      {
+        "Name": playerOverride.ForBackend.NameForPost,
+        "Color": playerOverride.Color
+      })
   }
 
   availableRulesets(): Observable<any> {

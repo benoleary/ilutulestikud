@@ -268,6 +268,6 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
     const errorFromError: string = thrownError["error"]
     const errorFromBackend: string = errorFromError["Error"]
 
-    this.informationText = errorFromBackend ? "Backend: " + errorFromBackend : errorFromError;
+    this.informationText = errorFromBackend ? "Server: " + errorFromBackend : errorFromError;
   }
 }

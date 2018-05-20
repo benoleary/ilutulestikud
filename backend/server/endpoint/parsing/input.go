@@ -15,15 +15,3 @@ type PlayerChatMessage struct {
 	PlayerName  string
 	ChatMessage string
 }
-
-// PlayerAction is a struct to hold the details of an action performed by a player in a game.
-type PlayerAction struct {
-	PlayerIdentifier string
-	GameIdentifier   string
-	ActionType       string
-	ChatMessage      string
-	CardIndex        int
-	HintRecipient    string
-	HintNumber       int
-	HintColor        string
-}
