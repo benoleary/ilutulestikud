@@ -111,6 +111,17 @@ func (state *State) HandleBackend(
 
 	// If the status is OK, writing the header with OK won't make any difference.
 	httpResponseWriter.WriteHeader(httpStatus)
+
+	errorMessageForBody, isError := objectForBody.(error)
+
+	// Since errors go out just as strings, we wrap the .Error() string in an object recognized
+	// by the frontend.
+	if isError {
+		objectForBody = &parsing.ErrorForBody{
+			Error: errorMessageForBody.Error(),
+		}
+	}
+
 	json.NewEncoder(httpResponseWriter).Encode(objectForBody)
 }
 

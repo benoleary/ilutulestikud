@@ -1,5 +1,12 @@
 package parsing
 
+// Types emitted by server.State:
+
+// ErrorForBody allows a string to be expressed as JSON stating that it is an error.
+type ErrorForBody struct {
+	Error string
+}
+
 // Types emitted by server.playerEndpointHandler:
 
 // PlayerList ensures that the PlayerState list is encapsulated within a single JSON object.

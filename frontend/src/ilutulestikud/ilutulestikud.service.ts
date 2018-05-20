@@ -45,13 +45,13 @@ export class IlutulestikudService {
       this.uriRoot + "game/all-games-with-player/" + encodeURIComponent(playerIdentifier))
   }
 
-  newGame(newGameName: string, rulesetIdentifier: number, playerIdentifiers: string[]): Observable<any> {
+  newGame(newGameName: string, rulesetIdentifier: number, playerNames: string[]): Observable<any> {
     return this.httpClient.post(
       this.uriRoot + "game/create-new-game",
       {
         "GameName": newGameName,
         "RulesetIdentifier": rulesetIdentifier,
-        "PlayerIdentifiers": playerIdentifiers
+        "PlayerNames": playerNames
       })
   }
 

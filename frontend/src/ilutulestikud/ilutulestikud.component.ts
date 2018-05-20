@@ -260,7 +260,10 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
 
   handleError(thrownError: Error): void
   {
-    console.log("Error! " + JSON.stringify(thrownError));
-    this.informationText = "Error! " + JSON.stringify(thrownError["error"]);
+    console.log(thrownError);
+
+    // We parse the standard "error" out of thrownError, but the backend sends errors as JSON in the form
+    // {"Error": "the error message"}, so we parse out "Error" from the parsed-out "error".
+    this.informationText = thrownError["error"]["Error"];
   }
 }
