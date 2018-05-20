@@ -61,7 +61,7 @@ func (mockGame *mockGameState) Name() string {
 
 // Ruleset gets mocked.
 func (mockGame *mockGameState) Ruleset() game_state.Ruleset {
-	return game_state.StandardWithoutRainbowRuleset{}
+	return game_state.NewStandardWithoutRainbow()
 }
 
 // Players gets mocked.
