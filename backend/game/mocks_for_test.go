@@ -62,8 +62,15 @@ func (mockProvider *mockPlayerProvider) Get(
 	return mockPlayer, nil
 }
 
+type stringTriple struct {
+	FirstString  string
+	SecondString string
+	ThirdString  string
+}
+
 type mockGameState struct {
 	testReference                       *testing.T
+	ReturnForNontestError               error
 	MockName                            string
 	MockRuleset                         game.Ruleset
 	MockNamesAndHands                   []game.PlayerNameWithHand
@@ -88,6 +95,7 @@ type mockGameState struct {
 	TestErrorForVisibleCardInHand       error
 	TestErrorForInferredCardInHand      error
 	TestErrorForRecordChatMessage       error
+	ArgumentsFromRecordChatMessage      []stringTriple
 	TestErrorForDrawCard                error
 	TestErrorForReplaceCardInHand       error
 	TestErrorForAddCardToPlayedSequence error
@@ -99,6 +107,7 @@ func NewMockGameState(
 	testError error) *mockGameState {
 	return &mockGameState{
 		testReference:                       testReference,
+		ReturnForNontestError:               nil,
 		MockName:                            "",
 		MockRuleset:                         nil,
 		MockNamesAndHands:                   nil,
@@ -123,6 +132,7 @@ func NewMockGameState(
 		TestErrorForVisibleCardInHand:       testError,
 		TestErrorForInferredCardInHand:      testError,
 		TestErrorForRecordChatMessage:       testError,
+		ArgumentsFromRecordChatMessage:      make([]stringTriple, 0),
 		TestErrorForDrawCard:                testError,
 		TestErrorForReplaceCardInHand:       testError,
 		TestErrorForAddCardToPlayedSequence: testError,
@@ -314,7 +324,15 @@ func (mockGame *mockGameState) RecordChatMessage(
 			mockGame.TestErrorForInferredCardInHand)
 	}
 
-	return nil
+	mockGame.ArgumentsFromRecordChatMessage = append(
+		mockGame.ArgumentsFromRecordChatMessage,
+		stringTriple{
+			FirstString:  actingPlayer.Name(),
+			SecondString: actingPlayer.Color(),
+			ThirdString:  chatMessage,
+		})
+
+	return mockGame.ReturnForNontestError
 }
 
 // DrawCard gets mocked.

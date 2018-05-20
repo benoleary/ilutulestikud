@@ -636,13 +636,132 @@ func TestAddNewWithDefaultShuffle(unitTest *testing.T) {
 }
 
 func TestExecutorErrorWhenPersisterGivesError(unitTest *testing.T) {
-	unitTest.Fatalf("Not implemented yet")
+	gameName := "Test game"
+	playerName := playerNamesAvailableInTest[0]
+	gameCollection, mockPersister, _ :=
+		prepareCollection(unitTest, playerNamesAvailableInTest)
+
+	mockPersister.TestErrorForReadAndWriteGame = nil
+	mockPersister.ReturnForNontestError = fmt.Errorf("Expected error for test")
+
+	executorForPlayer, errorFromExecuteAction :=
+		gameCollection.ExecuteAction(
+			gameName,
+			playerName)
+
+	if errorFromExecuteAction == nil {
+		unitTest.Fatalf(
+			"ExecuteAction(%v, %v) did not produce expected error, instead produced %v",
+			gameName,
+			playerName,
+			executorForPlayer)
+	}
 }
 
 func TestExecutorErrorWhenPlayerNotParticipant(unitTest *testing.T) {
-	unitTest.Fatalf("Not implemented yet")
+	gameName := "Test game"
+	playerName := "Test Player"
+	gameCollection, mockPersister, _ :=
+		prepareCollection(unitTest, playerNamesAvailableInTest)
+
+	mockPersister.TestErrorForReadAndWriteGame = nil
+
+	mockReadAndWriteState :=
+		NewMockGameState(unitTest, fmt.Errorf("No function should be called"))
+	mockReadAndWriteState.TestErrorForName = nil
+	mockReadAndWriteState.MockName = "test game"
+	mockReadAndWriteState.TestErrorForPlayerNames = nil
+	mockReadAndWriteState.ReturnForPlayerNames = []string{
+		"A. Different Player",
+		"A. Nother Different Player",
+	}
+
+	mockPersister.ReturnForReadAndWriteGame = mockReadAndWriteState
+
+	executorForPlayer, errorFromExecuteAction :=
+		gameCollection.ExecuteAction(
+			gameName,
+			playerName)
+
+	if errorFromExecuteAction == nil {
+		unitTest.Fatalf(
+			"ExecuteAction(%v, %v) did not produce expected error, instead produced %v",
+			gameName,
+			playerName,
+			executorForPlayer)
+	}
 }
 
 func TestExecutorCorrectWhenPersisterGivesValidGame(unitTest *testing.T) {
-	unitTest.Fatalf("Not implemented yet")
+	gameName := "Test game"
+	playerName := playerNamesAvailableInTest[0]
+	gameCollection, gamePersister, _ :=
+		prepareCollection(unitTest, playerNamesAvailableInTest)
+
+	mockReadAndWriteState :=
+		NewMockGameState(unitTest, fmt.Errorf("No function should be called"))
+	mockReadAndWriteState.TestErrorForName = nil
+	mockReadAndWriteState.MockName = gameName
+	mockReadAndWriteState.TestErrorForRuleset = nil
+	mockReadAndWriteState.ReturnForRuleset = testRuleset
+	mockReadAndWriteState.TestErrorForPlayerNames = nil
+	mockReadAndWriteState.ReturnForPlayerNames = playerNamesAvailableInTest
+
+	gamePersister.TestErrorForReadAndWriteGame = nil
+	gamePersister.ReturnForReadAndWriteGame = mockReadAndWriteState
+
+	executorForPlayer, errorFromExecuteAction :=
+		gameCollection.ExecuteAction(
+			gameName,
+			playerName)
+
+	if errorFromExecuteAction != nil {
+		unitTest.Fatalf(
+			"ExecuteAction(%v, %v) produced error %v",
+			gameName,
+			playerName,
+			errorFromExecuteAction)
+	}
+
+	// We do not fully test the executor as that is done in another test file.
+	// We just test recording a chat message.
+	testMessage := "Test message!"
+	expectedError := fmt.Errorf("expected error")
+	mockReadAndWriteState.ReturnForNontestError = expectedError
+	mockReadAndWriteState.TestErrorForRecordChatMessage = nil
+
+	errorFromRecordChatMessage :=
+		executorForPlayer.RecordChatMessage(testMessage)
+
+	if errorFromRecordChatMessage != expectedError {
+		unitTest.Fatalf(
+			"ExecuteAction(%v, %v) produced error %v which was not expected error %v",
+			gameName,
+			playerName,
+			errorFromRecordChatMessage,
+			expectedError)
+	}
+
+	actualArguments := mockReadAndWriteState.ArgumentsFromRecordChatMessage
+	if len(actualArguments) != 1 {
+		unitTest.Fatalf(
+			"ExecuteAction(%v, %v) resulted in wrong number of calls to RecordChatMessage(...): %v",
+			gameName,
+			playerName,
+			actualArguments)
+	}
+
+	expectedArguments := stringTriple{
+		FirstString:  playerName,
+		SecondString: mockChatColor,
+		ThirdString:  testMessage,
+	}
+
+	if actualArguments[0] != expectedArguments {
+		unitTest.Fatalf(
+			"ExecuteAction(%v, %v) resulted in wrong call to RecordChatMessage(...): %v",
+			gameName,
+			playerName,
+			actualArguments[0])
+	}
 }

@@ -113,8 +113,9 @@ type ViewForPlayer interface {
 // ExecutorForPlayer should encapsulate functions to execute actions by a particular player
 // on the state of the game.
 type ExecutorForPlayer interface {
-	// RecordChatMessage should records the given chat message from the acting player.
-	RecordChatMessage(chatMessage string)
+	// RecordChatMessage should record the given chat message from the acting player, or
+	// return an error if it was not possible.
+	RecordChatMessage(chatMessage string) error
 }
 
 // ReadonlyState defines the interface for structs which should provide read-only

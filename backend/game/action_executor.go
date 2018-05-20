@@ -49,6 +49,6 @@ func ExecutorOfActionsForPlayer(
 
 // RecordChatMessage records the given chat message from the acting player,
 // or returns an error.
-func (actionExecutor *ActionExecutor) RecordChatMessage(chatMessage string) {
-	actionExecutor.gameState.RecordChatMessage(actionExecutor.actingPlayer, chatMessage)
+func (actionExecutor *ActionExecutor) RecordChatMessage(chatMessage string) error {
+	return actionExecutor.gameState.RecordChatMessage(actionExecutor.actingPlayer, chatMessage)
 }

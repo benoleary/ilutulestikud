@@ -169,7 +169,8 @@ type mockActionExecutor struct {
 }
 
 // RecordChatMessage gets mocked.
-func (mockExecutor *mockActionExecutor) RecordChatMessage(chatMessage string) {
+func (mockExecutor *mockActionExecutor) RecordChatMessage(chatMessage string) error {
+	return mockExecutor.ErrorToReturn
 }
 
 type mockGameCollection struct {
