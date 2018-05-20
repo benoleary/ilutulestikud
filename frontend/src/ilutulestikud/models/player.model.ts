@@ -1,13 +1,18 @@
+import { BackendIdentification } from './backendidentification.model';
+
 export class Player
 {
-    Identifier: string;
-    Name: string;
+    ForBackend: BackendIdentification;
     Color: string;
 
     constructor(playerObject: Object)
     {
-        this.Identifier = playerObject["Identifier"];
-        this.Name = playerObject["Name"];
+        this.ForBackend = BackendIdentification.FromObject(playerObject);
         this.Color = playerObject["Color"];
+    }
+
+    Name(): string
+    {
+        return this.ForBackend.NameForPost
     }
 }

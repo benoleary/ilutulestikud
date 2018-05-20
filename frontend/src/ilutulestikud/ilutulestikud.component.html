@@ -5,7 +5,7 @@
 </mat-toolbar>
 
 <mat-toolbar *ngIf="selectedPlayer">
-  <span>Player:&nbsp;</span><span [ngStyle]="{'color': selectedPlayer.Color}">{{ selectedPlayer.Name }}</span>
+  <span>Player:&nbsp;</span><span [ngStyle]="{'color': selectedPlayer.Color}">{{ selectedPlayer.Name() }}</span>
   <span class="ilutulestikud-spacer"></span>
   <span>Chat:&nbsp;</span>
   <mat-form-field>
@@ -45,7 +45,7 @@
         *ngFor="let registeredPlayer of registeredPlayers"
         [value]="registeredPlayer"
         [ngStyle]="{'color': registeredPlayer.Color, 'background-color': 'black'}">
-        {{ registeredPlayer.Name }}
+        {{ registeredPlayer.Name() }}
       </mat-option>
     </mat-select>
   </mat-form-field>
@@ -65,9 +65,9 @@
     </mat-tab-group>
   </div>
 
-  <game-display *ngIf="selectedGameIdentifier"
-    [playerIdentifier]="selectedPlayer.Identifier"
-    [gameIdentifier]="selectedGameIdentifier"
+  <game-display *ngIf="selectedGameIdentification"
+    [playerIdentifier]="selectedPlayer.ForBackend"
+    [gameIdentifier]="selectedGameIdentification"
     (onError)="handleError($event)">
   </game-display>
 </div>

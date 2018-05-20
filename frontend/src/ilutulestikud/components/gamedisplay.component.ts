@@ -1,12 +1,14 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { OnInit, OnDestroy } from '@angular/core/src/metadata/lifecycle_hooks';
+import { nullSafeIsEquivalent } from '@angular/compiler/src/output/output_ast';
 import { Observable } from 'rxjs/Rx';
 import { Subscription } from 'rxjs/Subscription';
 import { MatListModule } from '@angular/material/list';
 import { MatInputModule } from '@angular/material';
 import { IlutulestikudService } from '../ilutulestikud.service';
 import { ChatMessage } from '../models/chatmessage.model'
-import { nullSafeIsEquivalent } from '@angular/compiler/src/output/output_ast';
+import { BackendIdentification } from '../models/backendidentification.model';
+
 
 
 @Component({
@@ -15,8 +17,8 @@ import { nullSafeIsEquivalent } from '@angular/compiler/src/output/output_ast';
   })
   export class GameDisplayComponent implements OnInit, OnDestroy
   {
-    @Input() gameIdentifier: string;
-    @Input() playerIdentifier: string;
+    @Input() gameIdentification: BackendIdentification;
+    @Input() playerIdentification: BackendIdentification;
     @Output() onError: EventEmitter<any> = new EventEmitter();
     informationText: string;
     gameDataSubscription: Subscription;
@@ -26,8 +28,8 @@ import { nullSafeIsEquivalent } from '@angular/compiler/src/output/output_ast';
 
     constructor(public ilutulestikudService: IlutulestikudService)
     {
-        this.gameIdentifier = null;
-        this.playerIdentifier = null;
+        this.gameIdentification = null;
+        this.playerIdentification = null;
         this.chatLog = [];
         this.chatInput = null;
     }
@@ -37,7 +39,7 @@ import { nullSafeIsEquivalent } from '@angular/compiler/src/output/output_ast';
         this.gameDataSubscription =
           Observable
             .timer(0, 1000)
-            .takeWhile(() => (this.gameIdentifier != null))
+            .takeWhile(() => (this.gameIdentification != null))
             .subscribe(
               () => this.refreshGameData(),
               thrownError => this.onError.emit(thrownError),
@@ -51,7 +53,7 @@ import { nullSafeIsEquivalent } from '@angular/compiler/src/output/output_ast';
         this.gameDataSubscription.unsubscribe();
       }
   
-      this.gameIdentifier = null;
+      this.gameIdentification = null;
     }
 
     refreshGameData(): void
@@ -64,7 +66,7 @@ import { nullSafeIsEquivalent } from '@angular/compiler/src/output/output_ast';
         // response to the request).
         this.isAwaitingGameData = true;
         this.ilutulestikudService
-          .gameAsSeenByPlayer(this.gameIdentifier, this.playerIdentifier)
+          .gameAsSeenByPlayer(this.gameIdentification, this.playerIdentification)
           .subscribe(
             fetchedGameData => this.parseGameData(fetchedGameData),
             thrownError => this.onError.emit(thrownError),
@@ -110,7 +112,7 @@ import { nullSafeIsEquivalent } from '@angular/compiler/src/output/output_ast';
         if (this.chatInput)
         {
             this.ilutulestikudService
-            .sendChatMessage(this.gameIdentifier, this.playerIdentifier, this.chatInput)
+            .sendChatMessage(this.gameIdentification, this.playerIdentification, this.chatInput)
             .subscribe(
                 () => {},
                 thrownError => this.onError.emit(thrownError),

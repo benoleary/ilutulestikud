@@ -5,6 +5,7 @@ import { MatTabChangeEvent } from '@angular/material';
 import { Observable } from 'rxjs/Rx';
 import { Subscription } from 'rxjs/Subscription';
 import { IlutulestikudService } from './ilutulestikud.service';
+import { BackendIdentification } from './models/backendidentification.model';
 import { Player } from './models/player.model'
 import { Ruleset } from './models/ruleset.model'
 import { TurnSummary } from './models/turnsummary.model'
@@ -27,7 +28,7 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
   gameTurnSummariesSubscription: Subscription;
   isAwaitingGameTurnSummaries: boolean;
   selectedGameTabIndex: number;
-  selectedGameIdentifier: string;
+  selectedGameIdentification: BackendIdentification;
   
 
   constructor(public ilutulestikudService: IlutulestikudService, public materialDialog: MatDialog)
@@ -41,7 +42,7 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
     this.gameTurnSummariesSubscription = null;
     this.isAwaitingGameTurnSummaries = false;
     this.selectedGameTabIndex = 0;
-    this.selectedGameIdentifier = null;
+    this.selectedGameIdentification = null;
   }
 
   ngOnInit(): void
@@ -204,7 +205,7 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
       // we get the response to the request).
       this.isAwaitingGameTurnSummaries = true;
       this.ilutulestikudService
-        .gamesWithPlayer(this.selectedPlayer.Identifier)
+        .gamesWithPlayer(this.selectedPlayer.ForBackend)
         .subscribe(
           fetchedGameTurnSummaries => this.parseGameTurnSummaries(fetchedGameTurnSummaries),
           thrownError => this.handleError(thrownError),
@@ -245,17 +246,17 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
 
     if (this.turnSummariesOfGamesWithPlayer
       && (this.turnSummariesOfGamesWithPlayer.length > 0)
-      && !this.selectedGameIdentifier)
+      && !this.selectedGameIdentification)
     {
       this.selectedGameTabIndex = 0;
-      this.selectedGameIdentifier = this.turnSummariesOfGamesWithPlayer[this.selectedGameTabIndex].GameIdentifier;
+      this.selectedGameIdentification = this.turnSummariesOfGamesWithPlayer[this.selectedGameTabIndex].GameForBackend;
     }
   }
 
   selectGameTab(tabSelection: MatTabChangeEvent): void
   {
     this.selectedGameTabIndex = tabSelection.index;
-    this.selectedGameIdentifier = this.turnSummariesOfGamesWithPlayer[this.selectedGameTabIndex].GameIdentifier;
+    this.selectedGameIdentification = this.turnSummariesOfGamesWithPlayer[this.selectedGameTabIndex].GameForBackend;
   }
 
   handleError(thrownError: Error): void

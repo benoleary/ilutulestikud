@@ -2,7 +2,8 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs/Observable';
 import { environment } from '../environments/environment';
-import { Player } from './models/player.model'
+import { BackendIdentification } from './models/backendidentification.model';
+import { Player } from './models/player.model';
 
 @Injectable()
 export class IlutulestikudService {
@@ -40,12 +41,18 @@ export class IlutulestikudService {
     return this.httpClient.get(this.uriRoot + "game/available-rulesets")
   }
 
-  gamesWithPlayer(playerIdentifier: string): Observable<any> {
+  gamesWithPlayer(playerIdentification: BackendIdentification): Observable<any> {
     return this.httpClient.get(
-      this.uriRoot + "game/all-games-with-player/" + encodeURIComponent(playerIdentifier))
+      this.uriRoot
+        + "game/all-games-with-player/"
+        + encodeURIComponent(playerIdentification.IdentifierForGet))
   }
 
-  newGame(newGameName: string, rulesetIdentifier: number, playerNames: string[]): Observable<any> {
+  newGame(
+    newGameName: string,
+    rulesetIdentifier: number,
+    playerIdentifications: BackendIdentification[]): Observable<any> {
+    const playerNames: string[] = playerIdentifications.map(playerIdentification => playerIdentification.NameForPost)
     return this.httpClient.post(
       this.uriRoot + "game/create-new-game",
       {
@@ -55,17 +62,25 @@ export class IlutulestikudService {
       })
   }
 
-  gameAsSeenByPlayer(gameIdentifier: string, playerIdentifier: string): Observable<any> {
+  gameAsSeenByPlayer(
+    gameIdentification: BackendIdentification,
+    playerIdentification: BackendIdentification): Observable<any> {
     return this.httpClient.get(
-      this.uriRoot + "game/game-as-seen-by-player/" + encodeURIComponent(gameIdentifier) + "/" + encodeURIComponent(playerIdentifier))
+      this.uriRoot 
+        + "game/game-as-seen-by-player/"
+        + encodeURIComponent(gameIdentification.IdentifierForGet)
+        + "/" + encodeURIComponent(playerIdentification.IdentifierForGet))
   }
 
-  sendChatMessage(gameName: string, playerName: string, chatMessage: string): Observable<any> {
+  sendChatMessage(
+    gameIdentification: BackendIdentification,
+    playerIdentification: BackendIdentification,
+     chatMessage: string): Observable<any> {
     return this.httpClient.post(
       this.uriRoot + "game/record-chat-message",
       {
-        "GameName": gameName,
-        "PlayerName": playerName,
+        "GameName": gameIdentification.NameForPost,
+        "PlayerName": playerIdentification.NameForPost,
         "ChatMessage": chatMessage
       })
   }

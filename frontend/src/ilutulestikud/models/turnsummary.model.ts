@@ -1,7 +1,8 @@
+import { BackendIdentification } from './backendidentification.model';
+
 export class TurnSummary
 {
-    GameIdentifier: string;
-    GameName: string;
+    GameForBackend: BackendIdentification;
     IsPlayerTurn: boolean;
 
     constructor(turnSummaryObject: Object)
@@ -11,8 +12,10 @@ export class TurnSummary
 
     refreshFromSource(turnSummaryObject: Object)
     {
-        this.GameIdentifier = turnSummaryObject["GameIdentifier"];
-        this.GameName = turnSummaryObject["GameName"];
+        this.GameForBackend
+          = new BackendIdentification(
+              turnSummaryObject["GameName"],
+              turnSummaryObject["GameIdentifier"])
         this.IsPlayerTurn = turnSummaryObject["IsPlayerTurn"];
     }
 }

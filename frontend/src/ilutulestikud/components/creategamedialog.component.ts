@@ -82,7 +82,9 @@ import { Ruleset } from '../models/ruleset.model'
     {
         if (!this.availablePlayersCopy)
         {
-            console.log("Asked to remove player " + playerToRemove.Name + " from non-existent available player list.");
+            console.log("Asked to remove player "
+              + playerToRemove.ForBackend.NameForPost
+              + " from non-existent available player list.");
             return;
         }
 
@@ -107,7 +109,7 @@ import { Ruleset } from '../models/ruleset.model'
             {
                 "GameName": this.gameName,
                 "RulesetIdentifier": this.selectedRuleset.Identifier,
-                "PlayerNames": this.participatingPlayers.map(participatingPlayer => participatingPlayer.Name)
+                "PlayerNames": this.participatingPlayers.map(participatingPlayer => participatingPlayer.ForBackend)
             });
     }
 
