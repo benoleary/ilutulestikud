@@ -203,12 +203,12 @@ func TestInitialMetadataAreCorrect(unitTest *testing.T) {
 			}
 
 			for _, colorSuit := range defaultTestRuleset.ColorSuits() {
-				playedCard, hasAnyBeenPlayed := readonlyState.LastPlayedForColor(colorSuit)
-				if hasAnyBeenPlayed {
+				playedCards := readonlyState.PlayedForColor(colorSuit)
+				if len(playedCards) != 0 {
 					unitTest.Fatalf(
-						"LastPlayedForColor(%v) was %v rather than expected error placeholder",
+						"PlayedForColor(%v) was %v rather than expected empty list",
 						colorSuit,
-						playedCard)
+						playedCards)
 				}
 
 				for _, sequenceIndex := range defaultTestRuleset.DistinctPossibleIndices() {

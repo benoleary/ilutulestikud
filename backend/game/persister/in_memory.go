@@ -126,7 +126,7 @@ type inMemoryState struct {
 	numberOfReadyHints          int
 	numberOfMistakesMade        int
 	undrawnDeck                 []card.Readonly
-	lastPlayedCardForColor      map[string]card.Readonly
+	playedCardsForColor         map[string][]card.Readonly
 	discardedCards              map[card.Readonly]int
 	playerHands                 map[string][]card.Inferred
 }
@@ -161,7 +161,7 @@ func newInMemoryState(
 		numberOfReadyHints:          gameRuleset.MaximumNumberOfHints(),
 		numberOfMistakesMade:        0,
 		undrawnDeck:                 shuffledDeck,
-		lastPlayedCardForColor:      make(map[string]card.Readonly, 0),
+		playedCardsForColor:         make(map[string][]card.Readonly, 0),
 		discardedCards:              make(map[card.Readonly]int, 0),
 		playerHands:                 playerHands,
 	}
@@ -221,15 +221,18 @@ func (gameState *inMemoryState) DeckSize() int {
 	return len(gameState.undrawnDeck)
 }
 
-// LastPlayedForColor returns the last card which has been played correctly for the
-// given color suit along with whether any card has been played in that suit so far,
-// analogously to how a Go map works.
-func (gameState *inMemoryState) LastPlayedForColor(
-	colorSuit string) (card.Readonly, bool) {
-	lastPlayedCard, hasCardBeenPlayedForColor :=
-		gameState.lastPlayedCardForColor[colorSuit]
+// PlayedForColor returns the cards, in order, which have been played
+// correctly for the given color suit.
+func (gameState *inMemoryState) PlayedForColor(
+	colorSuit string) []card.Readonly {
+	playedCards, _ :=
+		gameState.playedCardsForColor[colorSuit]
 
-	return lastPlayedCard, hasCardBeenPlayedForColor
+	if playedCards == nil {
+		return []card.Readonly{}
+	}
+
+	return playedCards
 }
 
 // NumberOfDiscardedCards returns the number of cards with the given suit and index
@@ -338,7 +341,9 @@ func (gameState *inMemoryState) ReplaceCardInHand(
 // AddCardToPlayedSequence adds the given card to the appropriate sequence of played
 // cards (by just over-writing what was the top-most card of the sequence).
 func (gameState *inMemoryState) AddCardToPlayedSequence(playedCard card.Readonly) error {
-	gameState.lastPlayedCardForColor[playedCard.ColorSuit()] = playedCard
+	playedSuit := playedCard.ColorSuit()
+	sequenceBeforeNow := gameState.playedCardsForColor[playedSuit]
+	gameState.playedCardsForColor[playedSuit] = append(sequenceBeforeNow, playedCard)
 	return nil
 }
 

@@ -84,6 +84,14 @@ type CardFromBehind struct {
 }
 
 // GameView contains the information of what a player can see about a game.
+// The hands are arrranged into three groups:
+// 1) those for the players whose next turn is before this player's next
+//    turn, in order;
+// 2) that of this player (as known to this player);
+// 3) those for the players whose next turn is after this player's next
+//    turn, in order.
+// The lists for before and after may be empty, if this player is the first
+// or last in order at the moment, respectively.
 type GameView struct {
 	ChatLog                      []ChatLogMessage
 	ScoreSoFar                   int
@@ -94,6 +102,7 @@ type GameView struct {
 	NumberOfCardsLeftInDeck      int
 	PlayedCards                  [][]VisibleCard
 	DiscardedCards               [][]VisibleCard
+	HandsBeforeThisPlayer        []VisibleHand
 	ThisPlayerHand               []CardFromBehind
-	OtherPlayerHands             []VisibleHand
+	HandsAfterThisPlayer         []VisibleHand
 }

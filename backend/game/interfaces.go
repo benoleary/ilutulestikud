@@ -94,9 +94,8 @@ type ViewForPlayer interface {
 	// DeckSize should just wrap around the read-only game state's DeckSize function.
 	DeckSize() int
 
-	// TopmostPlayedCards should list the top-most cards in play for each suit, leaving out
-	// any color suits which have no cards in play yet.
-	TopmostPlayedCards() []card.Readonly
+	// PlayedCards should list the cards in play, ordered by suit first then by index.
+	PlayedCards() []card.Readonly
 
 	// DiscardedCards should list the discarded cards, ordered by suit first then by index.
 	DiscardedCards() []card.Readonly
@@ -159,10 +158,9 @@ type ReadonlyState interface {
 	// DeckSize should return the number of cards left to draw from the deck.
 	DeckSize() int
 
-	// LastPlayedForColor should return the last card which has been played correctly
-	// for the given color suit along with whether any card has been played in that
-	// suit so far, analogously to how a Go map works.
-	LastPlayedForColor(colorSuit string) (card.Readonly, bool)
+	// PlayedForColor should return the cards, in order, which have been played
+	// correctly for the given color suit.
+	PlayedForColor(colorSuit string) []card.Readonly
 
 	// NumberOfDiscardedCards should return the number of cards with the given suit
 	// and index which were discarded or played incorrectly.

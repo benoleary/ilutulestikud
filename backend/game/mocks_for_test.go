@@ -90,7 +90,7 @@ type mockGameState struct {
 	TestErrorForNumberOfReadyHints      error
 	TestErrorForNumberOfMistakesMade    error
 	TestErrorForDeckSize                error
-	TestErrorForLastPlayedForColor      error
+	TestErrorForPlayedForColor          error
 	TestErrorForNumberOfDiscardedCards  error
 	TestErrorForVisibleCardInHand       error
 	TestErrorForInferredCardInHand      error
@@ -127,7 +127,7 @@ func NewMockGameState(
 		TestErrorForNumberOfReadyHints:      testError,
 		TestErrorForNumberOfMistakesMade:    testError,
 		TestErrorForDeckSize:                testError,
-		TestErrorForLastPlayedForColor:      testError,
+		TestErrorForPlayedForColor:          testError,
 		TestErrorForNumberOfDiscardedCards:  testError,
 		TestErrorForVisibleCardInHand:       testError,
 		TestErrorForInferredCardInHand:      testError,
@@ -250,17 +250,17 @@ func (mockGame *mockGameState) DeckSize() int {
 	return -1
 }
 
-// LastPlayedForColor gets mocked.
-func (mockGame *mockGameState) LastPlayedForColor(
-	colorSuit string) (card.Readonly, bool) {
-	if mockGame.TestErrorForLastPlayedForColor != nil {
+// PlayedForColor gets mocked.
+func (mockGame *mockGameState) PlayedForColor(
+	colorSuit string) []card.Readonly {
+	if mockGame.TestErrorForPlayedForColor != nil {
 		mockGame.testReference.Fatalf(
-			"LastPlayedForColor(%v): %v",
+			"PlayedForColor(%v): %v",
 			colorSuit,
-			mockGame.TestErrorForLastPlayedForColor)
+			mockGame.TestErrorForPlayedForColor)
 	}
 
-	return card.ErrorReadonly(), false
+	return []card.Readonly{}
 }
 
 // NumberOfDiscardedCards gets mocked.

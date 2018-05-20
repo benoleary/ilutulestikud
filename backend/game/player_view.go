@@ -146,24 +146,20 @@ func (playerView *PlayerView) DeckSize() int {
 	return playerView.gameState.DeckSize()
 }
 
-// TopmostPlayedCards lists the top-most cards in play for each suit, leaving out
-// any color suits which have no cards in play yet.
-func (playerView *PlayerView) TopmostPlayedCards() []card.Readonly {
-	topmostCards := make([]card.Readonly, 0)
+// PlayedCards lists the cards in play, ordered by suit first then by index.
+func (playerView *PlayerView) PlayedCards() []card.Readonly {
+	playedCards := make([]card.Readonly, 0)
 
 	for suitIndex := 0; suitIndex < playerView.numberOfSuits; suitIndex++ {
 		suitColor := playerView.colorSuits[suitIndex]
 
-		topmostCardOfSuit, hasSuitAnyPlayedCards :=
-			playerView.gameState.LastPlayedForColor(suitColor)
+		cardsPlayedForSuit :=
+			playerView.gameState.PlayedForColor(suitColor)
 
-			// If a card has been played for the suit, we add it to the list.
-		if hasSuitAnyPlayedCards {
-			topmostCards = append(topmostCards, topmostCardOfSuit)
-		}
+		playedCards = append(playedCards, cardsPlayedForSuit...)
 	}
 
-	return topmostCards
+	return playedCards
 }
 
 // DiscardedCards lists the discarded cards, ordered by suit first then by index.

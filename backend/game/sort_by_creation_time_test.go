@@ -93,12 +93,12 @@ func (mockGame *mockReadonly) DeckSize() int {
 	return -1
 }
 
-// LastPlayedForColor gets mocked.
-func (mockGame *mockReadonly) LastPlayedForColor(colorSuit string) (card.Readonly, bool) {
+// PlayedForColor gets mocked.
+func (mockGame *mockReadonly) PlayedForColor(colorSuit string) []card.Readonly {
 	mockGame.testReference.Fatalf(
-		"LastPlayedForColor(%v) should not be called.",
+		"PlayedForColor(%v) should not be called.",
 		colorSuit)
-	return card.ErrorReadonly(), false
+	return nil
 }
 
 // NumberOfDiscardedCards gets mocked.
