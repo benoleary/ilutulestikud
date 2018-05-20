@@ -154,7 +154,44 @@ func prepareCollection(
 	return stateCollection, colorSet
 }
 
-func TestConstructorAndResetBothAddCorrectly(unitTest *testing.T) {
+func TestFactoryMethodRejectsInvalidColorLists(unitTest *testing.T) {
+	testCases := []struct {
+		testName   string
+		chatColors []string
+	}{
+		{
+			testName:   "Nil color list",
+			chatColors: nil,
+		},
+		{
+			testName:   "Empty color list",
+			chatColors: []string{},
+		},
+	}
+
+	for _, testCase := range testCases {
+		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
+			mockImplementation :=
+				NewMockPersister(unitTest, fmt.Errorf("No functions should be called"))
+			stateCollection, errorFromCreation :=
+				player.NewCollection(
+					mockImplementation,
+					defaultTestPlayerNames,
+					testCase.chatColors)
+
+			if errorFromCreation == nil {
+				unitTest.Fatalf(
+					"player.NewCollection(%v, %v, %v) produced nil error, instead produced %v",
+					mockImplementation,
+					defaultTestPlayerNames,
+					testCase.chatColors,
+					stateCollection)
+			}
+		})
+	}
+}
+
+func TestFactoryFunctionAndResetBothAddCorrectly(unitTest *testing.T) {
 	testCases := []struct {
 		testName           string
 		initialPlayerNames []string
@@ -263,7 +300,7 @@ func TestReturnFromAllIsCorrect(unitTest *testing.T) {
 			actualReturnFromAll := stateCollection.All()
 
 			if len(actualReturnFromAll) != expectedNumberOfPlayers {
-				unitTest.Errorf(
+				unitTest.Fatalf(
 					"Number of players from All() unexpected: expected %v; actual %v",
 					testCase.expectedReturn,
 					actualReturnFromAll)
