@@ -1,22 +1,22 @@
-package chat_test
+package log_test
 
 import (
 	"fmt"
 	"testing"
 
-	"github.com/benoleary/ilutulestikud/backend/game/chat"
+	"github.com/benoleary/ilutulestikud/backend/game/log"
 )
 
 func PrepareMessages(
 	numberOfMessages int,
 	playerNames []string,
-	chatColors []string) []chat.Message {
+	chatColors []string) []log.Message {
 	numberOfPlayers := len(playerNames)
 	numberOfColors := len(chatColors)
-	preparedMessages := make([]chat.Message, numberOfMessages)
+	preparedMessages := make([]log.Message, numberOfMessages)
 	for messageIndex := 0; messageIndex < numberOfMessages; messageIndex++ {
 		preparedMessages[messageIndex] =
-			chat.Message{
+			log.Message{
 				PlayerName:  playerNames[messageIndex%numberOfPlayers],
 				ChatColor:   chatColors[messageIndex%numberOfColors],
 				MessageText: fmt.Sprintf("Test message %v", messageIndex),
@@ -30,7 +30,7 @@ func TestSortedLogAfterAppending(unitTest *testing.T) {
 	playerNames := []string{"Player One", "Player Two"}
 	chatColors := []string{"red", "green", "blue"}
 	type testArguments struct {
-		messagesToAppend []chat.Message
+		messagesToAppend []log.Message
 	}
 
 	testCases := []struct {
@@ -40,7 +40,7 @@ func TestSortedLogAfterAppending(unitTest *testing.T) {
 		{
 			name: "No messages",
 			arguments: testArguments{
-				messagesToAppend: []chat.Message{},
+				messagesToAppend: []log.Message{},
 			},
 		},
 		{
@@ -58,20 +58,20 @@ func TestSortedLogAfterAppending(unitTest *testing.T) {
 		{
 			name: "Full log",
 			arguments: testArguments{
-				messagesToAppend: PrepareMessages(chat.LogSize, playerNames, chatColors),
+				messagesToAppend: PrepareMessages(log.LogSize, playerNames, chatColors),
 			},
 		},
 		{
 			name: "Overfull log",
 			arguments: testArguments{
-				messagesToAppend: PrepareMessages(chat.LogSize+1, playerNames, chatColors),
+				messagesToAppend: PrepareMessages(log.LogSize+1, playerNames, chatColors),
 			},
 		},
 	}
 
 	for _, testCase := range testCases {
 		unitTest.Run(testCase.name, func(unitTest *testing.T) {
-			chatLog := chat.NewLog()
+			chatLog := log.NewLog()
 
 			for _, chatMessage := range testCase.arguments.messagesToAppend {
 				chatLog.AppendNewMessage(
@@ -98,20 +98,20 @@ func TestSortedLogAfterAppending(unitTest *testing.T) {
 func assertLogIsCorrect(
 	unitTest *testing.T,
 	testIdentifier string,
-	expectedWithoutEmpties []chat.Message,
-	actualWithEmpties []chat.Message) {
-	if len(actualWithEmpties) != chat.LogSize {
+	expectedWithoutEmpties []log.Message,
+	actualWithEmpties []log.Message) {
+	if len(actualWithEmpties) != log.LogSize {
 		unitTest.Fatalf(
 			testIdentifier+" - log did not have correct size: expected %v messages, but log was %v",
-			chat.LogSize,
+			log.LogSize,
 			actualWithEmpties)
 	}
 
 	numberOfSentMessages := len(expectedWithoutEmpties)
 
 	// We work our way backwards from the latest message.
-	for reverseIndex := 1; reverseIndex <= chat.LogSize; reverseIndex++ {
-		loggedMessage := actualWithEmpties[chat.LogSize-reverseIndex]
+	for reverseIndex := 1; reverseIndex <= log.LogSize; reverseIndex++ {
+		loggedMessage := actualWithEmpties[log.LogSize-reverseIndex]
 
 		if reverseIndex > numberOfSentMessages {
 			if (loggedMessage.PlayerName != "") ||
@@ -119,7 +119,7 @@ func assertLogIsCorrect(
 				(loggedMessage.MessageText != "") {
 				unitTest.Errorf(
 					"Expected empty message with index %v, instead was %v",
-					chat.LogSize-reverseIndex,
+					log.LogSize-reverseIndex,
 					loggedMessage)
 			}
 		} else {
@@ -130,7 +130,7 @@ func assertLogIsCorrect(
 				(loggedMessage.MessageText != expectedMessage.MessageText) {
 				unitTest.Errorf(
 					"For log index %v, expected %v, instead was %v",
-					chat.LogSize-reverseIndex,
+					log.LogSize-reverseIndex,
 					expectedMessage,
 					loggedMessage)
 			}

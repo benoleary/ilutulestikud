@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/benoleary/ilutulestikud/backend/game/card"
-	"github.com/benoleary/ilutulestikud/backend/game/chat"
+	"github.com/benoleary/ilutulestikud/backend/game/log"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
@@ -62,7 +62,7 @@ type ViewForPlayer interface {
 	RulesetDescription() string
 
 	// SortedChatLog should sort the read-only game state's ChatLog and return the sorted log.
-	SortedChatLog() []chat.Message
+	SortedChatLog() []log.Message
 
 	// CurrentTurnOrder should return the names of the participants of the game in the
 	// order which their next turns are in, along with true if the view is for
@@ -135,7 +135,7 @@ type ReadonlyState interface {
 	CreationTime() time.Time
 
 	// ChatLog should return the chat log of the game at the current moment.
-	ChatLog() *chat.Log
+	ChatLog() *log.Log
 
 	// Turn should given the number of the turn (with the first turn being 1 rather
 	// than 0) which is the current turn in the game (assuming 1 turn per player,

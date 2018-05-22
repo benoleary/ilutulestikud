@@ -7,7 +7,7 @@ import (
 
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/game/card"
-	"github.com/benoleary/ilutulestikud/backend/game/chat"
+	"github.com/benoleary/ilutulestikud/backend/game/log"
 )
 
 type mockReadonly struct {
@@ -56,7 +56,7 @@ func (mockGame *mockReadonly) CreationTime() time.Time {
 }
 
 // ChatLog gets mocked.
-func (mockGame *mockReadonly) ChatLog() *chat.Log {
+func (mockGame *mockReadonly) ChatLog() *log.Log {
 	mockGame.testReference.Fatalf("ChatLog() should not be called.")
 	return nil
 }

@@ -5,14 +5,14 @@ import (
 	"time"
 
 	"github.com/benoleary/ilutulestikud/backend/game/card"
+	"github.com/benoleary/ilutulestikud/backend/game/log"
 
 	"github.com/benoleary/ilutulestikud/backend/game"
-	"github.com/benoleary/ilutulestikud/backend/game/chat"
 )
 
 func TestInitialMetadataAreCorrect(unitTest *testing.T) {
 	testStartTime := time.Now()
-	emptyMessage := chat.Message{}
+	emptyMessage := log.Message{}
 
 	threePlayersWithHands :=
 		[]game.PlayerNameWithHand{
@@ -152,14 +152,14 @@ func TestInitialMetadataAreCorrect(unitTest *testing.T) {
 
 			logMessages := chatLog.Sorted()
 
-			if len(logMessages) != chat.LogSize {
+			if len(logMessages) != log.LogSize {
 				unitTest.Fatalf(
 					"ChatLog() had wrong number of messages %v, expected %v",
 					logMessages,
-					chat.LogSize)
+					log.LogSize)
 			}
 
-			for messageIndex := 0; messageIndex < chat.LogSize; messageIndex++ {
+			for messageIndex := 0; messageIndex < log.LogSize; messageIndex++ {
 				if logMessages[messageIndex] != emptyMessage {
 					unitTest.Errorf(
 						"ChatLog() %v had non-empty message",

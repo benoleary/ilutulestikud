@@ -7,7 +7,7 @@ import (
 
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/game/card"
-	"github.com/benoleary/ilutulestikud/backend/game/chat"
+	"github.com/benoleary/ilutulestikud/backend/game/log"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
@@ -76,7 +76,7 @@ type mockGameState struct {
 	MockNamesAndHands                   []game.PlayerNameWithHand
 	MockDeck                            []card.Readonly
 	MockTurn                            int
-	MockChatLog                         *chat.Log
+	MockChatLog                         *log.Log
 	TestErrorForName                    error
 	TestErrorForRuleset                 error
 	ReturnForRuleset                    game.Ruleset
@@ -196,7 +196,7 @@ func (mockGame *mockGameState) CreationTime() time.Time {
 }
 
 // ChatLog gets mocked.
-func (mockGame *mockGameState) ChatLog() *chat.Log {
+func (mockGame *mockGameState) ChatLog() *log.Log {
 	if mockGame.TestErrorForChatLog != nil {
 		mockGame.testReference.Fatalf(
 			"ChatLog(): %v",

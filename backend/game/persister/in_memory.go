@@ -8,7 +8,7 @@ import (
 
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/game/card"
-	"github.com/benoleary/ilutulestikud/backend/game/chat"
+	"github.com/benoleary/ilutulestikud/backend/game/log"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
@@ -120,7 +120,7 @@ type inMemoryState struct {
 	gameRuleset                 game.Ruleset
 	creationTime                time.Time
 	participantNamesInTurnOrder []string
-	chatLog                     *chat.Log
+	chatLog                     *log.Log
 	turnNumber                  int
 	currentScore                int
 	numberOfReadyHints          int
@@ -156,7 +156,7 @@ func newInMemoryState(
 		gameRuleset:                 gameRuleset,
 		creationTime:                time.Now(),
 		participantNamesInTurnOrder: participantNamesInTurnOrder,
-		chatLog:                     chat.NewLog(),
+		chatLog:                     log.NewLog(),
 		turnNumber:                  1,
 		numberOfReadyHints:          gameRuleset.MaximumNumberOfHints(),
 		numberOfMistakesMade:        0,
@@ -189,7 +189,7 @@ func (gameState *inMemoryState) CreationTime() time.Time {
 }
 
 // ChatLog returns the chat log of the game at the current moment.
-func (gameState *inMemoryState) ChatLog() *chat.Log {
+func (gameState *inMemoryState) ChatLog() *log.Log {
 	return gameState.chatLog
 }
 

@@ -5,7 +5,7 @@ import (
 
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/game/card"
-	"github.com/benoleary/ilutulestikud/backend/game/chat"
+	"github.com/benoleary/ilutulestikud/backend/game/log"
 )
 
 // This file defines mock implementations of interfaces.
@@ -45,8 +45,8 @@ func (mockView *mockViewForPlayer) RulesetDescription() string {
 }
 
 // SortedChatLog gets mocked.
-func (mockView *mockViewForPlayer) SortedChatLog() []chat.Message {
-	return make([]chat.Message, chat.LogSize)
+func (mockView *mockViewForPlayer) SortedChatLog() []log.Message {
+	return make([]log.Message, log.LogSize)
 }
 
 // CurrentTurnOrder gets mocked.

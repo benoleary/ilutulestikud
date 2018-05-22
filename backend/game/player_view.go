@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/benoleary/ilutulestikud/backend/game/card"
-	"github.com/benoleary/ilutulestikud/backend/game/chat"
+	"github.com/benoleary/ilutulestikud/backend/game/log"
 )
 
 // PlayerView encapsulates the functions on a game's read-only state
@@ -76,7 +76,7 @@ func (playerView *PlayerView) RulesetDescription() string {
 }
 
 // SortedChatLog sorts the read-only game state's ChatLog and returns the sorted log.
-func (playerView *PlayerView) SortedChatLog() []chat.Message {
+func (playerView *PlayerView) SortedChatLog() []log.Message {
 	return playerView.gameState.ChatLog().Sorted()
 }
 

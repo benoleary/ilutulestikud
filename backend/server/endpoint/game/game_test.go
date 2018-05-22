@@ -14,7 +14,7 @@ import (
 
 	"github.com/benoleary/ilutulestikud/backend/defaults"
 	game_state "github.com/benoleary/ilutulestikud/backend/game"
-	"github.com/benoleary/ilutulestikud/backend/game/chat"
+	"github.com/benoleary/ilutulestikud/backend/game/log"
 	game_endpoint "github.com/benoleary/ilutulestikud/backend/server/endpoint/game"
 	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
@@ -616,7 +616,7 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 	playerName := testPlayers[0]
 	chatColor := "some valid color"
 
-	expectedChatLog := chat.NewLog()
+	expectedChatLog := log.NewLog()
 	expectedChatLog.AppendNewMessage(playerName, chatColor, "first message")
 	expectedChatLog.AppendNewMessage(playerName, chatColor, "second message")
 
