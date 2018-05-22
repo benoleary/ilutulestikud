@@ -11,6 +11,7 @@ import (
 // the functions of the interface.
 type StateCollection struct {
 	statePersister StatePersister
+	chatLogLength  int
 	playerProvider ReadonlyPlayerProvider
 }
 
@@ -18,9 +19,11 @@ type StateCollection struct {
 // of rulesets.
 func NewCollection(
 	statePersister StatePersister,
+	chatLogLength int,
 	playerProvider ReadonlyPlayerProvider) *StateCollection {
 	return &StateCollection{
 		statePersister: statePersister,
+		chatLogLength:  chatLogLength,
 		playerProvider: playerProvider,
 	}
 }
@@ -120,6 +123,7 @@ func (gameCollection *StateCollection) AddNewWithGivenDeck(
 
 	return gameCollection.statePersister.AddGame(
 		gameName,
+		gameCollection.chatLogLength,
 		gameRuleset,
 		namesWithHands,
 		initialDeck)

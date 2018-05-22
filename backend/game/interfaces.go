@@ -64,6 +64,9 @@ type ViewForPlayer interface {
 	// SortedChatLog should sort the read-only game state's ChatLog and return the sorted log.
 	SortedChatLog() []log.Message
 
+	// SortedActionLog should sort the read-only game state's ActionLog and return the sorted log.
+	SortedActionLog() []log.Message
+
 	// CurrentTurnOrder should return the names of the participants of the game in the
 	// order which their next turns are in, along with true if the view is for
 	// the first player in that list or false otherwise.
@@ -135,7 +138,10 @@ type ReadonlyState interface {
 	CreationTime() time.Time
 
 	// ChatLog should return the chat log of the game at the current moment.
-	ChatLog() *log.Log
+	ChatLog() *log.RollingAppender
+
+	// ActionLog should return the action log of the game at the current moment.
+	ActionLog() *log.RollingAppender
 
 	// Turn should given the number of the turn (with the first turn being 1 rather
 	// than 0) which is the current turn in the game (assuming 1 turn per player,
@@ -239,6 +245,7 @@ type StatePersister interface {
 	// if a game with the given name already exists.
 	AddGame(
 		gameName string,
+		chatLogLength int,
 		gameRuleset Ruleset,
 		playersInTurnOrderWithInitialHands []PlayerNameWithHand,
 		initialDeck []card.Readonly) error

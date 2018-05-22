@@ -150,16 +150,16 @@ func TestInitialMetadataAreCorrect(unitTest *testing.T) {
 				unitTest.Fatalf("ChatLog() was nil")
 			}
 
-			logMessages := chatLog.Sorted()
+			logMessages := chatLog.SortedCopyOfMessages()
 
-			if len(logMessages) != log.LogSize {
+			if len(logMessages) != logLengthForTest {
 				unitTest.Fatalf(
 					"ChatLog() had wrong number of messages %v, expected %v",
 					logMessages,
-					log.LogSize)
+					logLengthForTest)
 			}
 
-			for messageIndex := 0; messageIndex < log.LogSize; messageIndex++ {
+			for messageIndex := 0; messageIndex < logLengthForTest; messageIndex++ {
 				if logMessages[messageIndex] != emptyMessage {
 					unitTest.Errorf(
 						"ChatLog() %v had non-empty message",

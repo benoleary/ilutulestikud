@@ -77,7 +77,12 @@ func (playerView *PlayerView) RulesetDescription() string {
 
 // SortedChatLog sorts the read-only game state's ChatLog and returns the sorted log.
 func (playerView *PlayerView) SortedChatLog() []log.Message {
-	return playerView.gameState.ChatLog().Sorted()
+	return playerView.gameState.ChatLog().SortedCopyOfMessages()
+}
+
+// SortedActionLog sorts the read-only game state's ActionLog and return the sorted log.
+func (playerView *PlayerView) SortedActionLog() []log.Message {
+	return playerView.gameState.ActionLog().SortedCopyOfMessages()
 }
 
 // CurrentTurnOrder returns the names of the participants of the game in the

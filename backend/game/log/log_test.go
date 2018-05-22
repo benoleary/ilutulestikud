@@ -7,18 +7,20 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/game/log"
 )
 
+const logSizeForTest = 8
+
 func PrepareMessages(
 	numberOfMessages int,
 	playerNames []string,
-	chatColors []string) []log.Message {
+	textColors []string) []log.Message {
 	numberOfPlayers := len(playerNames)
-	numberOfColors := len(chatColors)
+	numberOfColors := len(textColors)
 	preparedMessages := make([]log.Message, numberOfMessages)
 	for messageIndex := 0; messageIndex < numberOfMessages; messageIndex++ {
 		preparedMessages[messageIndex] =
 			log.Message{
 				PlayerName:  playerNames[messageIndex%numberOfPlayers],
-				ChatColor:   chatColors[messageIndex%numberOfColors],
+				TextColor:   textColors[messageIndex%numberOfColors],
 				MessageText: fmt.Sprintf("Test message %v", messageIndex),
 			}
 	}
@@ -28,7 +30,7 @@ func PrepareMessages(
 
 func TestSortedLogAfterAppending(unitTest *testing.T) {
 	playerNames := []string{"Player One", "Player Two"}
-	chatColors := []string{"red", "green", "blue"}
+	textColors := []string{"red", "green", "blue"}
 	type testArguments struct {
 		messagesToAppend []log.Message
 	}
@@ -46,41 +48,41 @@ func TestSortedLogAfterAppending(unitTest *testing.T) {
 		{
 			name: "One message",
 			arguments: testArguments{
-				messagesToAppend: PrepareMessages(1, playerNames, chatColors),
+				messagesToAppend: PrepareMessages(1, playerNames, textColors),
 			},
 		},
 		{
 			name: "Two messages",
 			arguments: testArguments{
-				messagesToAppend: PrepareMessages(2, playerNames, chatColors),
+				messagesToAppend: PrepareMessages(2, playerNames, textColors),
 			},
 		},
 		{
 			name: "Full log",
 			arguments: testArguments{
-				messagesToAppend: PrepareMessages(log.LogSize, playerNames, chatColors),
+				messagesToAppend: PrepareMessages(logSizeForTest, playerNames, textColors),
 			},
 		},
 		{
 			name: "Overfull log",
 			arguments: testArguments{
-				messagesToAppend: PrepareMessages(log.LogSize+1, playerNames, chatColors),
+				messagesToAppend: PrepareMessages(logSizeForTest+1, playerNames, textColors),
 			},
 		},
 	}
 
 	for _, testCase := range testCases {
 		unitTest.Run(testCase.name, func(unitTest *testing.T) {
-			chatLog := log.NewLog()
+			chatLog := log.NewRollingAppender(logSizeForTest)
 
 			for _, chatMessage := range testCase.arguments.messagesToAppend {
 				chatLog.AppendNewMessage(
 					chatMessage.PlayerName,
-					chatMessage.ChatColor,
+					chatMessage.TextColor,
 					chatMessage.MessageText)
 			}
 
-			loggedMessages := chatLog.Sorted()
+			loggedMessages := chatLog.SortedCopyOfMessages()
 
 			assertLogIsCorrect(
 				unitTest,
@@ -100,37 +102,37 @@ func assertLogIsCorrect(
 	testIdentifier string,
 	expectedWithoutEmpties []log.Message,
 	actualWithEmpties []log.Message) {
-	if len(actualWithEmpties) != log.LogSize {
+	if len(actualWithEmpties) != logSizeForTest {
 		unitTest.Fatalf(
 			testIdentifier+" - log did not have correct size: expected %v messages, but log was %v",
-			log.LogSize,
+			logSizeForTest,
 			actualWithEmpties)
 	}
 
 	numberOfSentMessages := len(expectedWithoutEmpties)
 
 	// We work our way backwards from the latest message.
-	for reverseIndex := 1; reverseIndex <= log.LogSize; reverseIndex++ {
-		loggedMessage := actualWithEmpties[log.LogSize-reverseIndex]
+	for reverseIndex := 1; reverseIndex <= logSizeForTest; reverseIndex++ {
+		loggedMessage := actualWithEmpties[logSizeForTest-reverseIndex]
 
 		if reverseIndex > numberOfSentMessages {
 			if (loggedMessage.PlayerName != "") ||
-				(loggedMessage.ChatColor != "") ||
+				(loggedMessage.TextColor != "") ||
 				(loggedMessage.MessageText != "") {
 				unitTest.Errorf(
 					"Expected empty message with index %v, instead was %v",
-					log.LogSize-reverseIndex,
+					logSizeForTest-reverseIndex,
 					loggedMessage)
 			}
 		} else {
 			expectedMessage :=
 				expectedWithoutEmpties[numberOfSentMessages-reverseIndex]
 			if (loggedMessage.PlayerName != expectedMessage.PlayerName) ||
-				(loggedMessage.ChatColor != expectedMessage.ChatColor) ||
+				(loggedMessage.TextColor != expectedMessage.TextColor) ||
 				(loggedMessage.MessageText != expectedMessage.MessageText) {
 				unitTest.Errorf(
 					"For log index %v, expected %v, instead was %v",
-					log.LogSize-reverseIndex,
+					logSizeForTest-reverseIndex,
 					expectedMessage,
 					loggedMessage)
 			}

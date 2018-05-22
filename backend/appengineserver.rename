@@ -32,6 +32,7 @@ func main() {
 	gameCollection :=
 		game.NewCollection(
 			gamePersister,
+			8,
 			playerCollection)
 
 	// We could load the allowed origin from a file, but this app is very specific to a set of fixed addresses.

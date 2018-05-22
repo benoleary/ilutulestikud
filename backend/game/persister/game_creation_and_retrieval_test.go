@@ -114,6 +114,7 @@ func TestRejectAddGameWithExistingName(unitTest *testing.T) {
 				errorFromInitialAdd :=
 					statePersister.GamePersister.AddGame(
 						gameName,
+						logLengthForTest,
 						defaultTestRuleset,
 						twoPlayersWithNilHands,
 						nil)
@@ -144,6 +145,7 @@ func TestRejectAddGameWithExistingName(unitTest *testing.T) {
 				errorFromSecondAdd :=
 					statePersister.GamePersister.AddGame(
 						gameName,
+						logLengthForTest,
 						defaultTestRuleset,
 						threePlayersWithNilHands,
 						nil)

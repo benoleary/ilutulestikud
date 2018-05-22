@@ -56,8 +56,14 @@ func (mockGame *mockReadonly) CreationTime() time.Time {
 }
 
 // ChatLog gets mocked.
-func (mockGame *mockReadonly) ChatLog() *log.Log {
+func (mockGame *mockReadonly) ChatLog() *log.RollingAppender {
 	mockGame.testReference.Fatalf("ChatLog() should not be called.")
+	return nil
+}
+
+// ActionLog gets mocked.
+func (mockGame *mockReadonly) ActionLog() *log.RollingAppender {
+	mockGame.testReference.Fatalf("ActionLog() should not be called.")
 	return nil
 }
 

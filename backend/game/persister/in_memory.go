@@ -77,6 +77,7 @@ func (gamePersister *inMemoryPersister) ReadAllWithPlayer(
 // already exists.
 func (gamePersister *inMemoryPersister) AddGame(
 	gameName string,
+	chatLogLength int,
 	gameRuleset game.Ruleset,
 	playersInTurnOrderWithInitialHands []game.PlayerNameWithHand,
 	initialDeck []card.Readonly) error {
@@ -93,6 +94,7 @@ func (gamePersister *inMemoryPersister) AddGame(
 	newGame :=
 		newInMemoryState(
 			gameName,
+			chatLogLength,
 			gameRuleset,
 			playersInTurnOrderWithInitialHands,
 			initialDeck)
@@ -120,7 +122,8 @@ type inMemoryState struct {
 	gameRuleset                 game.Ruleset
 	creationTime                time.Time
 	participantNamesInTurnOrder []string
-	chatLog                     *log.Log
+	chatLog                     *log.RollingAppender
+	actionLog                   *log.RollingAppender
 	turnNumber                  int
 	currentScore                int
 	numberOfReadyHints          int
@@ -135,6 +138,7 @@ type inMemoryState struct {
 // given shuffled deck.
 func newInMemoryState(
 	gameName string,
+	chatLogLength int,
 	gameRuleset game.Ruleset,
 	playersInTurnOrderWithInitialHands []game.PlayerNameWithHand,
 	shuffledDeck []card.Readonly) game.ReadAndWriteState {
@@ -156,7 +160,8 @@ func newInMemoryState(
 		gameRuleset:                 gameRuleset,
 		creationTime:                time.Now(),
 		participantNamesInTurnOrder: participantNamesInTurnOrder,
-		chatLog:                     log.NewLog(),
+		chatLog:                     log.NewRollingAppender(chatLogLength),
+		actionLog:                   log.NewRollingAppender(numberOfParticipants),
 		turnNumber:                  1,
 		numberOfReadyHints:          gameRuleset.MaximumNumberOfHints(),
 		numberOfMistakesMade:        0,
@@ -189,7 +194,12 @@ func (gameState *inMemoryState) CreationTime() time.Time {
 }
 
 // ChatLog returns the chat log of the game at the current moment.
-func (gameState *inMemoryState) ChatLog() *log.Log {
+func (gameState *inMemoryState) ChatLog() *log.RollingAppender {
+	return gameState.chatLog
+}
+
+// ActionLog returns the action log of the game at the current moment.
+func (gameState *inMemoryState) ActionLog() *log.RollingAppender {
 	return gameState.chatLog
 }
 

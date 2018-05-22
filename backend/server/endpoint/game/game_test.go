@@ -19,6 +19,8 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
 
+const logLengthForTest = 8
+
 var colorsAvailableInTest []string = defaults.AvailableColors()
 
 var testPlayers = []string{
@@ -616,7 +618,7 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 	playerName := testPlayers[0]
 	chatColor := "some valid color"
 
-	expectedChatLog := log.NewLog()
+	expectedChatLog := log.NewRollingAppender(logLengthForTest)
 	expectedChatLog.AppendNewMessage(playerName, chatColor, "first message")
 	expectedChatLog.AppendNewMessage(playerName, chatColor, "second message")
 
@@ -660,7 +662,7 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 			returnedInterface)
 	}
 
-	expectedMessages := expectedChatLog.Sorted()
+	expectedMessages := expectedChatLog.SortedCopyOfMessages()
 	numberOfExpectedMessages := len(expectedMessages)
 
 	if len(responseGameView.ChatLog) != numberOfExpectedMessages {

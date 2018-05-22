@@ -9,6 +9,8 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/game/persister"
 )
 
+const logLengthForTest = 8
+
 var playerNamesAvailableInTest []string = []string{"A", "B", "C", "D", "E", "F", "G"}
 var testRuleset game.Ruleset = game.NewStandardWithoutRainbow()
 
@@ -20,7 +22,7 @@ func prepareCollection(
 	mockGamePersister :=
 		NewMockGamePersister(unitTest, fmt.Errorf("initial error for every function"))
 	mockPlayerProvider := NewMockPlayerProvider(initialPlayers)
-	mockCollection := game.NewCollection(mockGamePersister, mockPlayerProvider)
+	mockCollection := game.NewCollection(mockGamePersister, logLengthForTest, mockPlayerProvider)
 	return mockCollection, mockGamePersister, mockPlayerProvider
 }
 
@@ -78,6 +80,7 @@ func prepareCollections(unitTest *testing.T) []collectionAndDescription {
 		stateCollection :=
 			game.NewCollection(
 				gamePersister.GamePersister,
+				logLengthForTest,
 				mockProvider)
 		stateCollections[persisterIndex] = collectionAndDescription{
 			GameCollection:        stateCollection,

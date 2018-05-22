@@ -46,7 +46,12 @@ func (mockView *mockViewForPlayer) RulesetDescription() string {
 
 // SortedChatLog gets mocked.
 func (mockView *mockViewForPlayer) SortedChatLog() []log.Message {
-	return make([]log.Message, log.LogSize)
+	return make([]log.Message, logLengthForTest)
+}
+
+// SortedActionLog gets mocked.
+func (mockView *mockViewForPlayer) SortedActionLog() []log.Message {
+	return make([]log.Message, logLengthForTest)
 }
 
 // CurrentTurnOrder gets mocked.

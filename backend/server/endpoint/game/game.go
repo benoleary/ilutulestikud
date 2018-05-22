@@ -222,7 +222,7 @@ func (handler *Handler) writeGameForPlayer(
 		chatLogForFrontend[messageIndex] = parsing.ChatLogMessage{
 			TimestampInSeconds: chatMessage.CreationTime.Unix(),
 			PlayerName:         chatMessage.PlayerName,
-			ChatColor:          chatMessage.ChatColor,
+			ChatColor:          chatMessage.TextColor,
 			MessageText:        chatMessage.MessageText,
 		}
 	}

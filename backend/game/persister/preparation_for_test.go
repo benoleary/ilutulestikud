@@ -9,6 +9,7 @@ import (
 )
 
 const testGameName = "test game"
+const logLengthForTest = 8
 
 var defaultTestRuleset game.Ruleset = game.NewStandardWithoutRainbow()
 
@@ -75,6 +76,7 @@ func prepareGameStates(
 		errorFromAdd :=
 			statePersister.GamePersister.AddGame(
 				testGameName,
+				logLengthForTest,
 				gameRuleset,
 				playersInTurnOrderWithInitialHands,
 				initialDeck)

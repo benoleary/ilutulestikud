@@ -76,7 +76,7 @@ type mockGameState struct {
 	MockNamesAndHands                   []game.PlayerNameWithHand
 	MockDeck                            []card.Readonly
 	MockTurn                            int
-	MockChatLog                         *log.Log
+	MockChatLog                         *log.RollingAppender
 	TestErrorForName                    error
 	TestErrorForRuleset                 error
 	ReturnForRuleset                    game.Ruleset
@@ -86,6 +86,7 @@ type mockGameState struct {
 	TestErrorForCreationTime            error
 	ReturnForCreationTime               time.Time
 	TestErrorForChatLog                 error
+	TestErrorForActionLog               error
 	TestErrorForScore                   error
 	TestErrorForNumberOfReadyHints      error
 	TestErrorForNumberOfMistakesMade    error
@@ -123,6 +124,7 @@ func NewMockGameState(
 		TestErrorForCreationTime:            testError,
 		ReturnForCreationTime:               time.Now(),
 		TestErrorForChatLog:                 testError,
+		TestErrorForActionLog:               testError,
 		TestErrorForScore:                   testError,
 		TestErrorForNumberOfReadyHints:      testError,
 		TestErrorForNumberOfMistakesMade:    testError,
@@ -196,11 +198,22 @@ func (mockGame *mockGameState) CreationTime() time.Time {
 }
 
 // ChatLog gets mocked.
-func (mockGame *mockGameState) ChatLog() *log.Log {
+func (mockGame *mockGameState) ChatLog() *log.RollingAppender {
 	if mockGame.TestErrorForChatLog != nil {
 		mockGame.testReference.Fatalf(
 			"ChatLog(): %v",
 			mockGame.TestErrorForChatLog)
+	}
+
+	return nil
+}
+
+// ActionLog gets mocked.
+func (mockGame *mockGameState) ActionLog() *log.RollingAppender {
+	if mockGame.TestErrorForActionLog != nil {
+		mockGame.testReference.Fatalf(
+			"ActionLog(): %v",
+			mockGame.TestErrorForActionLog)
 	}
 
 	return nil
@@ -391,6 +404,7 @@ func (mockGame *mockGameState) AddCardToDiscardPile(
 
 type mockGameDefinition struct {
 	gameName                           string
+	chatLogLength                      int
 	gameRuleset                        game.Ruleset
 	playersInTurnOrderWithInitialHands []game.PlayerNameWithHand
 	initialDeck                        []card.Readonly
@@ -464,13 +478,15 @@ func (mockImplementation *mockGamePersister) ReadAllWithPlayer(
 
 func (mockImplementation *mockGamePersister) AddGame(
 	gameName string,
+	chatLogLength int,
 	gameRuleset game.Ruleset,
 	playersInTurnOrderWithInitialHands []game.PlayerNameWithHand,
 	initialDeck []card.Readonly) error {
 	if mockImplementation.TestErrorForAddGame != nil {
 		mockImplementation.TestReference.Fatalf(
-			"AddGame(%v, %v, %v, %v): %v",
+			"AddGame(%v, %v, %v, %v, %v): %v",
 			gameName,
+			chatLogLength,
 			gameRuleset,
 			playersInTurnOrderWithInitialHands,
 			initialDeck,
@@ -480,6 +496,7 @@ func (mockImplementation *mockGamePersister) AddGame(
 	addedGame :=
 		mockGameDefinition{
 			gameName:                           gameName,
+			chatLogLength:                      chatLogLength,
 			gameRuleset:                        gameRuleset,
 			playersInTurnOrderWithInitialHands: playersInTurnOrderWithInitialHands,
 			initialDeck:                        initialDeck,
