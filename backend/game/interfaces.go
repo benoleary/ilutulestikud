@@ -201,7 +201,7 @@ type ReadAndWriteState interface {
 	ReplaceCardInHand(
 		holdingPlayerName string,
 		indexInHand int,
-		replacementCard card.Inferred) (card.Readonly, error)
+		replacementCard card.InHand) (card.Readonly, error)
 
 	// AddCardToPlayedSequence should add the given card to the appropriate sequence of
 	// played cards.
@@ -217,7 +217,7 @@ type ReadAndWriteState interface {
 // the order of the player names, but a slice of these structs does.)
 type PlayerNameWithHand struct {
 	PlayerName  string
-	InitialHand []card.Inferred
+	InitialHand []card.InHand
 }
 
 // StatePersister defines the interface for structs which should be able to create

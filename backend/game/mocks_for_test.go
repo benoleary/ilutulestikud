@@ -363,7 +363,7 @@ func (mockGame *mockGameState) DrawCard() (card.Readonly, error) {
 func (mockGame *mockGameState) ReplaceCardInHand(
 	holdingPlayerName string,
 	indexInHand int,
-	replacementCard card.Inferred) (card.Readonly, error) {
+	replacementCard card.InHand) (card.Readonly, error) {
 	if mockGame.TestErrorForReplaceCardInHand != nil {
 		mockGame.testReference.Fatalf(
 			"ReplaceCardInHand(%v, %v, %v): %v",

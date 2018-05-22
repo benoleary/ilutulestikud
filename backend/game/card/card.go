@@ -40,19 +40,16 @@ func (readonlyCard *Readonly) SequenceIndex() int {
 // Inferred encapsulates the information known to a player about a card
 // held by that player.
 type Inferred struct {
-	underlyingCard  Readonly
 	possibleColors  []string
 	possibleIndices []int
 }
 
-// NewInferred returns a new inferred card around a given read-only card.
+// NewInferred returns a new inferred card meant to  read-only card.
 // The possible suits and indices must be provided externally.
 func NewInferred(
-	underlyingCard Readonly,
 	possibleColors []string,
 	possibleIndices []int) Inferred {
 	return Inferred{
-		underlyingCard:  underlyingCard,
 		possibleColors:  possibleColors,
 		possibleIndices: possibleIndices,
 	}
@@ -60,12 +57,7 @@ func NewInferred(
 
 // ErrorInferred returns a card signalling that there was an error.
 func ErrorInferred() Inferred {
-	return NewInferred(ErrorReadonly(), nil, nil)
-}
-
-// UnderlyingCard returns the card as seen by the other players.
-func (inferredCard *Inferred) UnderlyingCard() Readonly {
-	return inferredCard.underlyingCard
+	return NewInferred(nil, nil)
 }
 
 // PossibleColors returns the color suits which this card could have and
@@ -78,6 +70,24 @@ func (inferredCard *Inferred) PossibleColors() []string {
 // and have not yet been eliminated by hints.
 func (inferredCard *Inferred) PossibleIndices() []int {
 	return inferredCard.possibleIndices
+}
+
+// InHand bundles together a card with the information about it known to
+// the player holding it.
+type InHand struct {
+	Readonly
+	Inferred
+}
+
+// NewInHand returns a struct bundling the given card with the information
+// about it known to the player holding it.
+func NewInHand(
+	underlyingCard Readonly,
+	knownInformation Inferred) InHand {
+	return InHand{
+		Readonly: underlyingCard,
+		Inferred: knownInformation,
+	}
 }
 
 // ShuffleInPlace shuffles the given cards in place (using the Fisher-Yates

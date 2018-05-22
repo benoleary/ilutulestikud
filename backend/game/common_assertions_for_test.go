@@ -39,11 +39,11 @@ func assertReadonlyCardSlicesMatch(
 	}
 }
 
-func assertInferredCardSlicesMatch(
+func assertInHandCardSlicesMatch(
 	testIdentifier string,
 	unitTest *testing.T,
-	actualCards []card.Inferred,
-	expectedCards []card.Inferred) {
+	actualCards []card.InHand,
+	expectedCards []card.InHand) {
 	numberOfExpectedCards := len(expectedCards)
 
 	if len(actualCards) != numberOfExpectedCards {
@@ -58,11 +58,11 @@ func assertInferredCardSlicesMatch(
 		actualCard := actualCards[cardIndex]
 		expectedCard := expectedCards[cardIndex]
 
-		actualUnderlyingCard := actualCard.UnderlyingCard()
-		expectedUnderlyingCard := expectedCard.UnderlyingCard()
+		actualReadonly := actualCard.Readonly
+		expectedReadonly := expectedCard.Readonly
 
-		if (actualUnderlyingCard.ColorSuit() != expectedUnderlyingCard.ColorSuit()) ||
-			(actualUnderlyingCard.SequenceIndex() != expectedUnderlyingCard.SequenceIndex()) {
+		if (actualReadonly.ColorSuit() != expectedReadonly.ColorSuit()) ||
+			(actualReadonly.SequenceIndex() != expectedReadonly.SequenceIndex()) {
 			unitTest.Fatalf(
 				testIdentifier+
 					"/Card slices do not match in element %v - actual: %v; expected %v"+
@@ -77,7 +77,7 @@ func assertInferredCardSlicesMatch(
 		assertInferredCardPossibilitiesCorrect(
 			testIdentifier,
 			unitTest,
-			actualCard,
+			actualCard.Inferred,
 			expectedCard.PossibleColors(),
 			expectedCard.PossibleIndices())
 	}

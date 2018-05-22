@@ -216,14 +216,15 @@ func (gameCollection *StateCollection) createPlayerHands(
 
 		uniquePlayerNames[playerName] = true
 
-		playerHand := make([]card.Inferred, handSize)
+		playerHand := make([]card.InHand, handSize)
 
 		for cardsInHand := 0; cardsInHand < handSize; cardsInHand++ {
 			playerHand[cardsInHand] =
-				card.NewInferred(
+				card.NewInHand(
 					initialDeck[cardsInHand],
-					gameRuleset.ColorSuits(),
-					gameRuleset.DistinctPossibleIndices())
+					card.NewInferred(
+						gameRuleset.ColorSuits(),
+						gameRuleset.DistinctPossibleIndices()))
 
 			// We should not ever re-visit these cards, but we set them to
 			// represent an error just in case.

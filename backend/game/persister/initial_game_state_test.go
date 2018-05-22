@@ -18,77 +18,92 @@ func TestSetUpInitialMetadataCorrectly(unitTest *testing.T) {
 		[]game.PlayerNameWithHand{
 			game.PlayerNameWithHand{
 				PlayerName: defaultTestPlayers[0],
-				InitialHand: []card.Inferred{
-					card.NewInferred(
+				InitialHand: []card.InHand{
+					card.NewInHand(
 						card.NewReadonly("a", 1),
-						[]string{"a", "b", "c"},
-						[]int{1, 2, 3}),
-					card.NewInferred(
+						card.NewInferred(
+							[]string{"a", "b", "c"},
+							[]int{1, 2, 3})),
+					card.NewInHand(
 						card.NewReadonly("a", 1),
-						[]string{"a", "b", "c"},
-						[]int{1, 2, 3}),
-					card.NewInferred(
+						card.NewInferred(
+							[]string{"a", "b", "c"},
+							[]int{1, 2, 3})),
+					card.NewInHand(
 						card.NewReadonly("a", 2),
-						[]string{"a", "b", "c"},
-						[]int{1, 2, 3}),
-					card.NewInferred(
+						card.NewInferred(
+							[]string{"a", "b", "c"},
+							[]int{1, 2, 3})),
+					card.NewInHand(
 						card.NewReadonly("a", 1),
-						[]string{"a", "b", "c"},
-						[]int{1, 2, 3}),
-					card.NewInferred(
+						card.NewInferred(
+							[]string{"a", "b", "c"},
+							[]int{1, 2, 3})),
+					card.NewInHand(
 						card.NewReadonly("a", 2),
-						[]string{"a", "b", "c"},
-						[]int{1, 2, 3}),
+						card.NewInferred(
+							[]string{"a", "b", "c"},
+							[]int{1, 2, 3})),
 				},
 			},
 			game.PlayerNameWithHand{
 				PlayerName: defaultTestPlayers[1],
-				InitialHand: []card.Inferred{
-					card.NewInferred(
+				InitialHand: []card.InHand{
+					card.NewInHand(
 						card.NewReadonly("a", 1),
-						[]string{"a", "b", "c"},
-						[]int{1, 2, 3, 4}),
-					card.NewInferred(
+						card.NewInferred(
+							[]string{"a", "b", "c"},
+							[]int{1, 2, 3, 4})),
+					card.NewInHand(
 						card.NewReadonly("b", 1),
-						[]string{"a", "b", "c", "d"},
-						[]int{1, 2, 3}),
-					card.NewInferred(
+						card.NewInferred(
+							[]string{"a", "b", "c", "d"},
+							[]int{1, 2, 3})),
+					card.NewInHand(
 						card.NewReadonly("b", 2),
-						[]string{"a", "b", "c"},
-						[]int{1, 2, 3}),
-					card.NewInferred(
+						card.NewInferred(
+							[]string{"a", "b", "c"},
+							[]int{1, 2, 3})),
+					card.NewInHand(
 						card.NewReadonly("c", 2),
-						[]string{"a", "b", "c"},
-						[]int{1, 2, 3}),
-					card.NewInferred(
+						card.NewInferred(
+							[]string{"a", "b", "c"},
+							[]int{1, 2, 3})),
+					card.NewInHand(
 						card.NewReadonly("c", 3),
-						[]string{"a", "b", "c"},
-						[]int{1, 2, 3}),
+						card.NewInferred(
+							[]string{"a", "b", "c"},
+							[]int{1, 2, 3})),
 				},
 			},
 			game.PlayerNameWithHand{
 				PlayerName: defaultTestPlayers[2],
-				InitialHand: []card.Inferred{
-					card.NewInferred(
+				InitialHand: []card.InHand{
+					card.NewInHand(
 						card.NewReadonly("c", 3),
-						[]string{"a", "b", "c"},
-						[]int{1, 2, 3, 4}),
-					card.NewInferred(
+						card.NewInferred(
+							[]string{"a", "b", "c"},
+							[]int{1, 2, 3, 4})),
+					card.NewInHand(
 						card.NewReadonly("b", 3),
-						[]string{"a", "b", "c"},
-						[]int{1, 2, 3}),
-					card.NewInferred(
+						card.NewInferred(
+							[]string{"a", "b", "c"},
+							[]int{1, 2, 3})),
+					card.NewInHand(
 						card.NewReadonly("a", 3),
-						[]string{"a", "b", "c"},
-						[]int{1, 2, 3}),
-					card.NewInferred(
+						card.NewInferred(
+							[]string{"a", "b", "c"},
+							[]int{1, 2, 3})),
+					card.NewInHand(
 						card.NewReadonly("d", 3),
-						[]string{"a", "b", "c", "d"},
-						[]int{1, 2, 3}),
-					card.NewInferred(
+						card.NewInferred(
+							[]string{"a", "b", "c", "d"},
+							[]int{1, 2, 3})),
+					card.NewInHand(
 						card.NewReadonly("d", 1),
-						[]string{"a", "b", "c", "d"},
-						[]int{1, 2, 3}),
+						card.NewInferred(
+							[]string{"a", "b", "c", "d"},
+							[]int{1, 2, 3})),
 				},
 			},
 		}
@@ -240,9 +255,10 @@ func TestSetUpInitialMetadataCorrectly(unitTest *testing.T) {
 				playerName := playerWithHand.PlayerName
 
 				for indexInHand := 0; indexInHand < numberOfCardsInHand; indexInHand++ {
-					expectedInferred :=
+					expectedInHand :=
 						expectedNameWithHand.InitialHand[indexInHand]
-					expectedVisible := expectedInferred.UnderlyingCard()
+					expectedVisible := expectedInHand.Readonly
+					expectedInferred := expectedInHand.Inferred
 
 					actualVisible, errorFromVisible :=
 						readonlyState.VisibleCardInHand(playerName, indexInHand)
@@ -275,15 +291,6 @@ func TestSetUpInitialMetadataCorrectly(unitTest *testing.T) {
 							indexInHand,
 							actualInferred,
 							errorFromInferred)
-					}
-
-					if actualInferred.UnderlyingCard() != expectedVisible {
-						unitTest.Errorf(
-							"InferredCardInHand(%v, %v) %v was not expected %v",
-							playerName,
-							indexInHand,
-							actualInferred,
-							expectedInferred)
 					}
 
 					assertStringSlicesMatch(

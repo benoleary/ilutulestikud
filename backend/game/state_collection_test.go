@@ -483,24 +483,25 @@ func TestAddNewWithGivenShuffle(unitTest *testing.T) {
 
 		// We make fresh inferred cards around the visible cards, as we expect the
 		// collection to have done.
-		expectedInferredHand := make([]card.Inferred, lengthOfExpectedHand)
+		expectedPlayerHand := make([]card.InHand, lengthOfExpectedHand)
 		for indexInHand := 0; indexInHand < lengthOfExpectedHand; indexInHand++ {
-			expectedInferredHand[indexInHand] =
-				card.NewInferred(
+			expectedPlayerHand[indexInHand] =
+				card.NewInHand(
 					expectedVisibleHand[indexInHand],
-					expectedColors,
-					expectedIndices)
+					card.NewInferred(
+						expectedColors,
+						expectedIndices))
 		}
 
 		testIdentifier :=
 			fmt.Sprintf(
 				baseIdentifier+" call to persister/checking hand of player %v",
 				playerIndex)
-		assertInferredCardSlicesMatch(
+		assertInHandCardSlicesMatch(
 			testIdentifier,
 			unitTest,
 			playersAndHandsFromCall[playerIndex].InitialHand,
-			expectedInferredHand)
+			expectedPlayerHand)
 	}
 
 	assertReadonlyCardSlicesMatch(
@@ -593,16 +594,16 @@ func TestAddNewWithDefaultShuffle(unitTest *testing.T) {
 				actualPersistanceCall)
 		}
 
-		for _, inferredCard := range playersAndHandsFromCall[playerIndex].InitialHand {
+		for _, inHandCard := range playersAndHandsFromCall[playerIndex].InitialHand {
 			assertInferredCardPossibilitiesCorrect(
 				baseIdentifier+"/inferred card in hand",
 				unitTest,
-				inferredCard,
+				inHandCard.Inferred,
 				expectedColors,
 				expectedIndices)
 
-			numberOfCopiesBeforeThis := shuffledCards[inferredCard.UnderlyingCard()]
-			shuffledCards[inferredCard.UnderlyingCard()] = numberOfCopiesBeforeThis + 1
+			numberOfCopiesBeforeThis := shuffledCards[inHandCard.Readonly]
+			shuffledCards[inHandCard.Readonly] = numberOfCopiesBeforeThis + 1
 			numberOfCardsInTotal++
 		}
 	}

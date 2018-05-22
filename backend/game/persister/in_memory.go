@@ -131,7 +131,7 @@ type inMemoryState struct {
 	undrawnDeck                 []card.Readonly
 	playedCardsForColor         map[string][]card.Readonly
 	discardedCards              map[card.Readonly]int
-	playerHands                 map[string][]card.Inferred
+	playerHands                 map[string][]card.InHand
 }
 
 // newInMemoryState creates a new game given the required information, using the
@@ -144,7 +144,7 @@ func newInMemoryState(
 	shuffledDeck []card.Readonly) game.ReadAndWriteState {
 	numberOfParticipants := len(playersInTurnOrderWithInitialHands)
 	participantNamesInTurnOrder := make([]string, numberOfParticipants)
-	playerHands := make(map[string][]card.Inferred, numberOfParticipants)
+	playerHands := make(map[string][]card.InHand, numberOfParticipants)
 	for playerIndex := 0; playerIndex < numberOfParticipants; playerIndex++ {
 		playerName := playersInTurnOrderWithInitialHands[playerIndex].PlayerName
 		participantNamesInTurnOrder[playerIndex] = playerName
@@ -269,7 +269,7 @@ func (gameState *inMemoryState) VisibleCardInHand(
 		return card.ErrorReadonly(), fmt.Errorf("Player has no hand")
 	}
 
-	return playerHand[indexInHand].UnderlyingCard(), nil
+	return playerHand[indexInHand].Readonly, nil
 }
 
 // InferredCardInHand returns the inferred information about the card held by the given
@@ -283,7 +283,7 @@ func (gameState *inMemoryState) InferredCardInHand(
 		return card.ErrorInferred(), fmt.Errorf("Player has no hand")
 	}
 
-	return playerHand[indexInHand], nil
+	return playerHand[indexInHand].Inferred, nil
 }
 
 // Read returns the gameState itself as a read-only object for the purposes of reading
@@ -327,7 +327,7 @@ func (gameState *inMemoryState) DrawCard() (card.Readonly, error) {
 func (gameState *inMemoryState) ReplaceCardInHand(
 	holdingPlayerName string,
 	indexInHand int,
-	replacementCard card.Inferred) (card.Readonly, error) {
+	replacementCard card.InHand) (card.Readonly, error) {
 	if indexInHand < 0 {
 		return card.ErrorReadonly(), fmt.Errorf("Index %v is out of allowed range", indexInHand)
 	}
@@ -345,7 +345,7 @@ func (gameState *inMemoryState) ReplaceCardInHand(
 	cardBeingReplaced := playerHand[indexInHand]
 	playerHand[indexInHand] = replacementCard
 
-	return cardBeingReplaced.UnderlyingCard(), nil
+	return cardBeingReplaced.Readonly, nil
 }
 
 // AddCardToPlayedSequence adds the given card to the appropriate sequence of played
