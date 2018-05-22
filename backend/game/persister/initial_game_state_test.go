@@ -10,7 +10,7 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/game"
 )
 
-func TestInitialMetadataAreCorrect(unitTest *testing.T) {
+func TestSetUpInitialMetadataCorrectly(unitTest *testing.T) {
 	testStartTime := time.Now()
 	emptyMessage := log.Message{}
 

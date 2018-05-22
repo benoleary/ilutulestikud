@@ -51,11 +51,11 @@ type TurnSummaryList struct {
 	TurnSummaries []TurnSummary
 }
 
-// ChatLogMessage is a struct to hold the details of a single outgoing chat message.
-type ChatLogMessage struct {
+// LogMessage is a struct to hold the details of a single outgoing log message.
+type LogMessage struct {
 	TimestampInSeconds int64
 	PlayerName         string
-	ChatColor          string
+	TextColor          string
 	MessageText        string
 }
 
@@ -93,7 +93,8 @@ type CardFromBehind struct {
 // The lists for before and after may be empty, if this player is the first
 // or last in order at the moment, respectively.
 type GameView struct {
-	ChatLog                      []ChatLogMessage
+	ChatLog                      []LogMessage
+	ActionLog                    []LogMessage
 	ScoreSoFar                   int
 	NumberOfReadyHints           int
 	NumberOfSpentHints           int

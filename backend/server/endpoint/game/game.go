@@ -215,21 +215,35 @@ func (handler *Handler) writeGameForPlayer(
 	}
 
 	chatMessages := gameView.SortedChatLog()
-	numberOfMessages := len(chatMessages)
-	chatLogForFrontend := make([]parsing.ChatLogMessage, numberOfMessages)
-	for messageIndex := 0; messageIndex < numberOfMessages; messageIndex++ {
+	numberOfChatMessages := len(chatMessages)
+	chatLogForFrontend := make([]parsing.LogMessage, numberOfChatMessages)
+	for messageIndex := 0; messageIndex < numberOfChatMessages; messageIndex++ {
 		chatMessage := chatMessages[messageIndex]
-		chatLogForFrontend[messageIndex] = parsing.ChatLogMessage{
+		chatLogForFrontend[messageIndex] = parsing.LogMessage{
 			TimestampInSeconds: chatMessage.CreationTime.Unix(),
 			PlayerName:         chatMessage.PlayerName,
-			ChatColor:          chatMessage.TextColor,
+			TextColor:          chatMessage.TextColor,
 			MessageText:        chatMessage.MessageText,
+		}
+	}
+
+	actionMessages := gameView.SortedChatLog()
+	numberOfActionMessages := len(actionMessages)
+	actionLogForFrontend := make([]parsing.LogMessage, numberOfActionMessages)
+	for messageIndex := 0; messageIndex < numberOfActionMessages; messageIndex++ {
+		actionMessage := actionMessages[messageIndex]
+		actionLogForFrontend[messageIndex] = parsing.LogMessage{
+			TimestampInSeconds: actionMessage.CreationTime.Unix(),
+			PlayerName:         actionMessage.PlayerName,
+			TextColor:          actionMessage.TextColor,
+			MessageText:        actionMessage.MessageText,
 		}
 	}
 
 	endpointObject :=
 		parsing.GameView{
 			ChatLog:                      chatLogForFrontend,
+			ActionLog:                    actionLogForFrontend,
 			ScoreSoFar:                   gameView.Score(),
 			NumberOfReadyHints:           gameView.NumberOfReadyHints(),
 			NumberOfSpentHints:           gameView.NumberOfSpentHints(),
