@@ -129,11 +129,11 @@ func (handler *Handler) writeTurnSummariesForPlayer(
 
 	for gameIndex := 0; gameIndex < numberOfGamesWithPlayer; gameIndex++ {
 		gameView := allGamesWithPlayer[gameIndex]
-		_, isPlayerTurn := gameView.CurrentTurnOrder()
+		_, playerTurnIndex := gameView.CurrentTurnOrder()
 		turnSummaries[gameIndex] = parsing.TurnSummary{
 			GameIdentifier: handler.segmentTranslator.ToSegment(gameView.GameName()),
 			GameName:       gameView.GameName(),
-			IsPlayerTurn:   isPlayerTurn,
+			IsPlayerTurn:   playerTurnIndex == 0,
 		}
 	}
 
@@ -188,30 +188,34 @@ func (handler *Handler) handleNewGame(
 func (handler *Handler) writeGameForPlayer(
 	relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 2 {
-		return "Not enough segments in URI to determine game name and player name", http.StatusBadRequest
+		errorBecauseNotEnoughSegments :=
+			fmt.Errorf("Not enough segments in URI to determine game name and player name")
+		return errorBecauseNotEnoughSegments, http.StatusBadRequest
 	}
 
+	THIS WHOLE FUNCTION NEEDS TO BE BE BROKEN UP INTO SMALLER FUNCTIONS!
+
 	gameIdentifier := relevantSegments[0]
-	gameName, gameerrorFromIdentification :=
+	gameName, errorFromGameIdentification :=
 		handler.segmentTranslator.FromSegment(gameIdentifier)
 
-	if gameerrorFromIdentification != nil {
-		return gameerrorFromIdentification, http.StatusBadRequest
+	if errorFromGameIdentification != nil {
+		return errorFromGameIdentification, http.StatusBadRequest
 	}
 
 	playerIdentifier := relevantSegments[1]
-	playerName, playererrorFromIdentification :=
+	playerName, errorFromPlayerIdentification :=
 		handler.segmentTranslator.FromSegment(playerIdentifier)
 
-	if playererrorFromIdentification != nil {
-		return playererrorFromIdentification, http.StatusBadRequest
+	if errorFromPlayerIdentification != nil {
+		return errorFromPlayerIdentification, http.StatusBadRequest
 	}
 
-	gameView, errorFromView :=
+	gameView, errorFromGameView :=
 		handler.stateCollection.ViewState(gameName, playerName)
 
-	if errorFromView != nil {
-		return errorFromView, http.StatusBadRequest
+	if errorFromGameView != nil {
+		return errorFromGameView, http.StatusBadRequest
 	}
 
 	chatMessages := gameView.SortedChatLog()
@@ -240,6 +244,58 @@ func (handler *Handler) writeGameForPlayer(
 		}
 	}
 
+	playersInTurnOrder, playerIndexInTurnOrder := gameView.CurrentTurnOrder()
+	numberOfPlayers := len(playersInTurnOrder)
+
+	allVisibleHands := make([]parsing.VisibleHand, numberOfPlayers-1)
+
+	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
+		if playerIndex != playerIndexInTurnOrder {
+			playerWithVisibleHand := playersInTurnOrder[playerIndex]
+			visibleHandFromView, errorFromVisibleHand :=
+				gameView.VisibleHand(playerWithVisibleHand)
+			if errorFromVisibleHand != nil {
+				return errorFromVisibleHand, http.StatusInternalServerError
+			}
+
+			numberOfCardsInHand := len(visibleHandFromView)
+			handCards := make([]parsing.VisibleCard, numberOfCardsInHand)
+			for cardIndex := 0; cardIndex < numberOfCardsInHand; cardIndex++ {
+				visibleCard := visibleHandFromView[cardIndex]
+				handCards[cardIndex] = parsing.VisibleCard{
+					ColorSuit:     visibleCard.ColorSuit(),
+					SequenceIndex: visibleCard.SequenceIndex(),
+				}
+			}
+
+			visibleHandForFrontend := parsing.VisibleHand{
+				PlayerName: playerWithVisibleHand,
+				HandCards:  handCards,
+			}
+
+			if playerIndex < playerIndexInTurnOrder {
+				allVisibleHands[playerIndex] = visibleHandForFrontend
+			} else {
+				allVisibleHands[playerIndex-1] = visibleHandForFrontend
+			}
+		}
+	}
+
+	inferredHandFromView, errorFromInferredHand := gameView.KnowledgeOfOwnHand()
+	if errorFromInferredHand != nil {
+		return errorFromInferredHand, http.StatusInternalServerError
+	}
+
+	numberOfCardsInHand := len(inferredHandFromView)
+	handOfThisPlayer := make([]parsing.CardFromBehind, numberOfCardsInHand)
+	for cardIndex := 0; cardIndex < numberOfCardsInHand; cardIndex++ {
+		inferredCard := inferredHandFromView[cardIndex]
+		handOfThisPlayer[cardIndex] = parsing.CardFromBehind{
+			PossibleColorSuits:      inferredCard.PossibleColors(),
+			PossibleSequenceIndices: inferredCard.PossibleIndices(),
+		}
+	}
+
 	endpointObject :=
 		parsing.GameView{
 			ChatLog:                      chatLogForFrontend,
@@ -249,6 +305,11 @@ func (handler *Handler) writeGameForPlayer(
 			NumberOfSpentHints:           gameView.NumberOfSpentHints(),
 			NumberOfMistakesStillAllowed: gameView.NumberOfMistakesStillAllowed(),
 			NumberOfMistakesMade:         gameView.NumberOfMistakesMade(),
+			PlayedCards:                  gameView.PlayedCards(),
+			DiscardedCards:               gameView.DiscardedCards(),
+			HandsBeforeThisPlayer:        allVisibleHands[:playerIndexInTurnOrder],
+			HandOfThisPlayer:             handOfThisPlayer,
+			HandsAfterThisPlayer:         allVisibleHands[playerIndexInTurnOrder:],
 		}
 
 	return endpointObject, http.StatusOK

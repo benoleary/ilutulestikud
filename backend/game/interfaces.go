@@ -68,9 +68,9 @@ type ViewForPlayer interface {
 	SortedActionLog() []log.Message
 
 	// CurrentTurnOrder should return the names of the participants of the game in the
-	// order which their next turns are in, along with true if the view is for
-	// the first player in that list or false otherwise.
-	CurrentTurnOrder() ([]string, bool)
+	// order which their next turns are in, along with the index of the viewing
+	// player in that list.
+	CurrentTurnOrder() ([]string, int)
 
 	// Turn should just wrap around the read-only game state's Turn function.
 	Turn() int
@@ -97,8 +97,8 @@ type ViewForPlayer interface {
 	// DeckSize should just wrap around the read-only game state's DeckSize function.
 	DeckSize() int
 
-	// PlayedCards should list the cards in play, ordered by suit first then by index.
-	PlayedCards() []card.Readonly
+	// PlayedCards should list the cards in play, in slices per suit.
+	PlayedCards() [][]card.Readonly
 
 	// DiscardedCards should list the discarded cards, ordered by suit first then by index.
 	DiscardedCards() []card.Readonly

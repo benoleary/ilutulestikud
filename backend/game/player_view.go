@@ -86,13 +86,13 @@ func (playerView *PlayerView) SortedActionLog() []log.Message {
 }
 
 // CurrentTurnOrder returns the names of the participants of the game in the
-// order which their next turns are in, along with true if the view is for
-// the first player in that list or false otherwise.
-func (playerView *PlayerView) CurrentTurnOrder() ([]string, bool) {
+// order which their next turns are in, along with the index of the viewing
+// player in that list.
+func (playerView *PlayerView) CurrentTurnOrder() ([]string, int) {
 	playerNamesInTurnOrder := make([]string, playerView.numberOfParticipants)
 
 	gameTurn := playerView.gameState.Turn()
-	isPlayerTurn := false
+	playerIndexInTurnOrder := -1
 	for playerIndex := 0; playerIndex < playerView.numberOfParticipants; playerIndex++ {
 		// Game turns begin with 1 rather than 0, so this sets the player names in order,
 		// wrapping index back to 0 when at the end of the list.
@@ -103,11 +103,11 @@ func (playerView *PlayerView) CurrentTurnOrder() ([]string, bool) {
 		playerNamesInTurnOrder[playerIndex] = playerInTurnOrder
 
 		if playerView.playerName == playerInTurnOrder {
-			isPlayerTurn = true
+			playerIndexInTurnOrder = playerIndex
 		}
 	}
 
-	return playerNamesInTurnOrder, isPlayerTurn
+	return playerNamesInTurnOrder, playerIndexInTurnOrder
 }
 
 // Turn just wraps around the read-only game state's Turn function.
@@ -151,9 +151,9 @@ func (playerView *PlayerView) DeckSize() int {
 	return playerView.gameState.DeckSize()
 }
 
-// PlayedCards lists the cards in play, ordered by suit first then by index.
-func (playerView *PlayerView) PlayedCards() []card.Readonly {
-	playedCards := make([]card.Readonly, 0)
+// PlayedCards lists the cards in play, in slices per suit.
+func (playerView *PlayerView) PlayedCards() [][]card.Readonly {
+	playedCards := make([][]card.Readonly, playerView.numberOfSuits)
 
 	for suitIndex := 0; suitIndex < playerView.numberOfSuits; suitIndex++ {
 		suitColor := playerView.colorSuits[suitIndex]
@@ -161,7 +161,7 @@ func (playerView *PlayerView) PlayedCards() []card.Readonly {
 		cardsPlayedForSuit :=
 			playerView.gameState.PlayedForColor(suitColor)
 
-		playedCards = append(playedCards, cardsPlayedForSuit...)
+		playedCards[suitIndex] = cardsPlayedForSuit
 	}
 
 	return playedCards
