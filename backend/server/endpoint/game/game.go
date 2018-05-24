@@ -8,6 +8,10 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/benoleary/ilutulestikud/backend/game/card"
+
+	"github.com/benoleary/ilutulestikud/backend/game/log"
+
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
@@ -187,129 +191,39 @@ func (handler *Handler) handleNewGame(
 // with the given name for the player with the given name.
 func (handler *Handler) writeGameForPlayer(
 	relevantSegments []string) (interface{}, int) {
-	if len(relevantSegments) < 2 {
-		errorBecauseNotEnoughSegments :=
-			fmt.Errorf("Not enough segments in URI to determine game name and player name")
-		return errorBecauseNotEnoughSegments, http.StatusBadRequest
+	gameView, errorFromView := handler.viewForPlayer(relevantSegments)
+	if errorFromView != nil {
+		// It could be that the error really justifies a response of BAD REQUEST,
+		// but it's not worth the effort of sorting it out.
+		return errorFromView, http.StatusInternalServerError
 	}
 
-	THIS WHOLE FUNCTION NEEDS TO BE BE BROKEN UP INTO SMALLER FUNCTIONS!
-
-	gameIdentifier := relevantSegments[0]
-	gameName, errorFromGameIdentification :=
-		handler.segmentTranslator.FromSegment(gameIdentifier)
-
-	if errorFromGameIdentification != nil {
-		return errorFromGameIdentification, http.StatusBadRequest
+	handsBeforeThisPlayer, handsAfterThisPlayer, errorFromVisibleHands :=
+		handler.visibleHandsBeforeAndAfter(gameView)
+	if errorFromVisibleHands != nil {
+		return errorFromVisibleHands, http.StatusInternalServerError
 	}
 
-	playerIdentifier := relevantSegments[1]
-	playerName, errorFromPlayerIdentification :=
-		handler.segmentTranslator.FromSegment(playerIdentifier)
-
-	if errorFromPlayerIdentification != nil {
-		return errorFromPlayerIdentification, http.StatusBadRequest
-	}
-
-	gameView, errorFromGameView :=
-		handler.stateCollection.ViewState(gameName, playerName)
-
-	if errorFromGameView != nil {
-		return errorFromGameView, http.StatusBadRequest
-	}
-
-	chatMessages := gameView.SortedChatLog()
-	numberOfChatMessages := len(chatMessages)
-	chatLogForFrontend := make([]parsing.LogMessage, numberOfChatMessages)
-	for messageIndex := 0; messageIndex < numberOfChatMessages; messageIndex++ {
-		chatMessage := chatMessages[messageIndex]
-		chatLogForFrontend[messageIndex] = parsing.LogMessage{
-			TimestampInSeconds: chatMessage.CreationTime.Unix(),
-			PlayerName:         chatMessage.PlayerName,
-			TextColor:          chatMessage.TextColor,
-			MessageText:        chatMessage.MessageText,
-		}
-	}
-
-	actionMessages := gameView.SortedChatLog()
-	numberOfActionMessages := len(actionMessages)
-	actionLogForFrontend := make([]parsing.LogMessage, numberOfActionMessages)
-	for messageIndex := 0; messageIndex < numberOfActionMessages; messageIndex++ {
-		actionMessage := actionMessages[messageIndex]
-		actionLogForFrontend[messageIndex] = parsing.LogMessage{
-			TimestampInSeconds: actionMessage.CreationTime.Unix(),
-			PlayerName:         actionMessage.PlayerName,
-			TextColor:          actionMessage.TextColor,
-			MessageText:        actionMessage.MessageText,
-		}
-	}
-
-	playersInTurnOrder, playerIndexInTurnOrder := gameView.CurrentTurnOrder()
-	numberOfPlayers := len(playersInTurnOrder)
-
-	allVisibleHands := make([]parsing.VisibleHand, numberOfPlayers-1)
-
-	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
-		if playerIndex != playerIndexInTurnOrder {
-			playerWithVisibleHand := playersInTurnOrder[playerIndex]
-			visibleHandFromView, errorFromVisibleHand :=
-				gameView.VisibleHand(playerWithVisibleHand)
-			if errorFromVisibleHand != nil {
-				return errorFromVisibleHand, http.StatusInternalServerError
-			}
-
-			numberOfCardsInHand := len(visibleHandFromView)
-			handCards := make([]parsing.VisibleCard, numberOfCardsInHand)
-			for cardIndex := 0; cardIndex < numberOfCardsInHand; cardIndex++ {
-				visibleCard := visibleHandFromView[cardIndex]
-				handCards[cardIndex] = parsing.VisibleCard{
-					ColorSuit:     visibleCard.ColorSuit(),
-					SequenceIndex: visibleCard.SequenceIndex(),
-				}
-			}
-
-			visibleHandForFrontend := parsing.VisibleHand{
-				PlayerName: playerWithVisibleHand,
-				HandCards:  handCards,
-			}
-
-			if playerIndex < playerIndexInTurnOrder {
-				allVisibleHands[playerIndex] = visibleHandForFrontend
-			} else {
-				allVisibleHands[playerIndex-1] = visibleHandForFrontend
-			}
-		}
-	}
-
-	inferredHandFromView, errorFromInferredHand := gameView.KnowledgeOfOwnHand()
+	handOfThisPlayer, errorFromInferredHand :=
+		handler.handOfViewingPlayer(gameView)
 	if errorFromInferredHand != nil {
 		return errorFromInferredHand, http.StatusInternalServerError
 	}
 
-	numberOfCardsInHand := len(inferredHandFromView)
-	handOfThisPlayer := make([]parsing.CardFromBehind, numberOfCardsInHand)
-	for cardIndex := 0; cardIndex < numberOfCardsInHand; cardIndex++ {
-		inferredCard := inferredHandFromView[cardIndex]
-		handOfThisPlayer[cardIndex] = parsing.CardFromBehind{
-			PossibleColorSuits:      inferredCard.PossibleColors(),
-			PossibleSequenceIndices: inferredCard.PossibleIndices(),
-		}
-	}
-
 	endpointObject :=
 		parsing.GameView{
-			ChatLog:                      chatLogForFrontend,
-			ActionLog:                    actionLogForFrontend,
+			ChatLog:                      handler.logForFrontend(gameView.SortedChatLog()),
+			ActionLog:                    handler.logForFrontend(gameView.SortedActionLog()),
 			ScoreSoFar:                   gameView.Score(),
 			NumberOfReadyHints:           gameView.NumberOfReadyHints(),
 			NumberOfSpentHints:           gameView.NumberOfSpentHints(),
 			NumberOfMistakesStillAllowed: gameView.NumberOfMistakesStillAllowed(),
 			NumberOfMistakesMade:         gameView.NumberOfMistakesMade(),
-			PlayedCards:                  gameView.PlayedCards(),
-			DiscardedCards:               gameView.DiscardedCards(),
-			HandsBeforeThisPlayer:        allVisibleHands[:playerIndexInTurnOrder],
+			PlayedCards:                  playedCards(gameView.PlayedCards()),
+			DiscardedCards:               cardsForFrontend(gameView.DiscardedCards()),
+			HandsBeforeThisPlayer:        handsBeforeThisPlayer,
 			HandOfThisPlayer:             handOfThisPlayer,
-			HandsAfterThisPlayer:         allVisibleHands[playerIndexInTurnOrder:],
+			HandsAfterThisPlayer:         handsAfterThisPlayer,
 		}
 
 	return endpointObject, http.StatusOK
@@ -338,4 +252,143 @@ func (handler *Handler) handleRecordChatMessage(
 	actionExecutor.RecordChatMessage(playerChatMessage.ChatMessage)
 
 	return "OK", http.StatusOK
+}
+
+func (handler *Handler) viewForPlayer(
+	relevantSegments []string) (game.ViewForPlayer, error) {
+	if len(relevantSegments) < 2 {
+		errorBecauseNotEnoughSegments :=
+			fmt.Errorf("Not enough segments in URI to determine game name and player name")
+		return nil, errorBecauseNotEnoughSegments
+	}
+
+	gameIdentifier := relevantSegments[0]
+	gameName, errorFromGameIdentification :=
+		handler.segmentTranslator.FromSegment(gameIdentifier)
+
+	if errorFromGameIdentification != nil {
+		return nil, errorFromGameIdentification
+	}
+
+	playerIdentifier := relevantSegments[1]
+	playerName, errorFromPlayerIdentification :=
+		handler.segmentTranslator.FromSegment(playerIdentifier)
+
+	if errorFromPlayerIdentification != nil {
+		return nil, errorFromPlayerIdentification
+	}
+
+	return handler.stateCollection.ViewState(gameName, playerName)
+}
+
+func (handler *Handler) logForFrontend(
+	backendMessages []log.Message) []parsing.LogMessage {
+	numberOfMessages := len(backendMessages)
+	logForFrontend := make([]parsing.LogMessage, numberOfMessages)
+	for messageIndex := 0; messageIndex < numberOfMessages; messageIndex++ {
+		backendMessage := backendMessages[messageIndex]
+		logForFrontend[messageIndex] = parsing.LogMessage{
+			TimestampInSeconds: backendMessage.CreationTime.Unix(),
+			PlayerName:         backendMessage.PlayerName,
+			TextColor:          backendMessage.TextColor,
+			MessageText:        backendMessage.MessageText,
+		}
+	}
+
+	return logForFrontend
+}
+
+func (handler *Handler) visibleHandsBeforeAndAfter(
+	gameView game.ViewForPlayer) ([]parsing.VisibleHand, []parsing.VisibleHand, error) {
+	playersInTurnOrder, playerIndexInTurnOrder := gameView.CurrentTurnOrder()
+	numberOfPlayers := len(playersInTurnOrder)
+
+	allVisibleHands := make([]parsing.VisibleHand, numberOfPlayers-1)
+
+	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
+		if playerIndex != playerIndexInTurnOrder {
+			playerWithVisibleHand := playersInTurnOrder[playerIndex]
+			visibleHandFromView, errorFromVisibleHand :=
+				gameView.VisibleHand(playerWithVisibleHand)
+			if errorFromVisibleHand != nil {
+				return nil, nil, errorFromVisibleHand
+			}
+
+			numberOfCardsInHand := len(visibleHandFromView)
+			handCards := make([]parsing.VisibleCard, numberOfCardsInHand)
+			for cardIndex := 0; cardIndex < numberOfCardsInHand; cardIndex++ {
+				visibleCard := visibleHandFromView[cardIndex]
+				handCards[cardIndex] = parsing.VisibleCard{
+					ColorSuit:     visibleCard.ColorSuit(),
+					SequenceIndex: visibleCard.SequenceIndex(),
+				}
+			}
+
+			visibleHandForFrontend := parsing.VisibleHand{
+				PlayerName: playerWithVisibleHand,
+				HandCards:  handCards,
+			}
+
+			if playerIndex < playerIndexInTurnOrder {
+				allVisibleHands[playerIndex] = visibleHandForFrontend
+			} else {
+				allVisibleHands[playerIndex-1] = visibleHandForFrontend
+			}
+		}
+	}
+
+	handsBeforeViewingPlayer := allVisibleHands[:playerIndexInTurnOrder]
+	handsAfterViewingPlayer := allVisibleHands[playerIndexInTurnOrder:]
+
+	return handsBeforeViewingPlayer, handsAfterViewingPlayer, nil
+}
+
+func (handler *Handler) handOfViewingPlayer(
+	gameView game.ViewForPlayer) ([]parsing.CardFromBehind, error) {
+	inferredHandFromView, errorFromInferredHand := gameView.KnowledgeOfOwnHand()
+	if errorFromInferredHand != nil {
+		return nil, errorFromInferredHand
+	}
+
+	numberOfCardsInHand := len(inferredHandFromView)
+	handOfThisPlayer := make([]parsing.CardFromBehind, numberOfCardsInHand)
+	for cardIndex := 0; cardIndex < numberOfCardsInHand; cardIndex++ {
+		inferredCard := inferredHandFromView[cardIndex]
+		handOfThisPlayer[cardIndex] = parsing.CardFromBehind{
+			PossibleColorSuits:      inferredCard.PossibleColors(),
+			PossibleSequenceIndices: inferredCard.PossibleIndices(),
+		}
+	}
+
+	return handOfThisPlayer, nil
+}
+
+func playedCards(playedPilesFromView [][]card.Readonly) [][]parsing.VisibleCard {
+	numberOfPiles := len(playedPilesFromView)
+
+	playedPilesForFrontend := make([][]parsing.VisibleCard, numberOfPiles)
+
+	for pileIndex := 0; pileIndex < numberOfPiles; pileIndex++ {
+		playedPilesForFrontend[pileIndex] =
+			cardsForFrontend(playedPilesFromView[pileIndex])
+	}
+
+	return playedPilesForFrontend
+}
+
+func cardsForFrontend(backendCards []card.Readonly) []parsing.VisibleCard {
+	numberOfCards := len(backendCards)
+
+	forFrontend := make([]parsing.VisibleCard, numberOfCards)
+
+	for cardIndex := 0; cardIndex < numberOfCards; cardIndex++ {
+		backendCard := backendCards[cardIndex]
+
+		forFrontend[cardIndex] = parsing.VisibleCard{
+			ColorSuit:     backendCard.ColorSuit(),
+			SequenceIndex: backendCard.SequenceIndex(),
+		}
+	}
+
+	return forFrontend
 }
