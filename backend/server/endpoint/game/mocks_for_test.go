@@ -19,18 +19,18 @@ import (
 // that it is read-only, so there should never be a problem with any
 // tested code ever reading various properties.
 type mockViewForPlayer struct {
-	MockGameName     string
-	MockPlayers      []string
-	IsMockPlayerTurn bool
-	MockScore        int
+	MockGameName        string
+	MockPlayers         []string
+	MockPlayerTurnIndex int
+	MockScore           int
 }
 
 func NewMockView() *mockViewForPlayer {
 	return &mockViewForPlayer{
-		MockGameName:     "",
-		MockPlayers:      nil,
-		IsMockPlayerTurn: false,
-		MockScore:        -1,
+		MockGameName:        "",
+		MockPlayers:         nil,
+		MockPlayerTurnIndex: -1,
+		MockScore:           -1,
 	}
 }
 
@@ -55,8 +55,8 @@ func (mockView *mockViewForPlayer) SortedActionLog() []log.Message {
 }
 
 // CurrentTurnOrder gets mocked.
-func (mockView *mockViewForPlayer) CurrentTurnOrder() ([]string, bool) {
-	return mockView.MockPlayers, mockView.IsMockPlayerTurn
+func (mockView *mockViewForPlayer) CurrentTurnOrder() ([]string, int) {
+	return mockView.MockPlayers, mockView.MockPlayerTurnIndex
 }
 
 // Turn gets mocked.
@@ -95,8 +95,8 @@ func (mockView *mockViewForPlayer) DeckSize() int {
 }
 
 // PlayedCards gets mocked.
-func (mockView *mockViewForPlayer) PlayedCards() []card.Readonly {
-	return []card.Readonly{}
+func (mockView *mockViewForPlayer) PlayedCards() [][]card.Readonly {
+	return [][]card.Readonly{}
 }
 
 // DiscardedCards gets mocked.

@@ -388,21 +388,21 @@ func TestGetAllGamesWithPlayerWhenThreeGames(unitTest *testing.T) {
 
 	firstTestView := NewMockView()
 	firstTestView.MockPlayers = testPlayers
-	firstTestView.IsMockPlayerTurn = true
+	firstTestView.MockPlayerTurnIndex = 0
 
 	secondTestView := NewMockView()
 	secondTestView.MockPlayers = []string{
 		testPlayers[1],
 		testPlayers[0],
 	}
-	secondTestView.IsMockPlayerTurn = false
+	secondTestView.MockPlayerTurnIndex = 1
 
 	thirdTestView := NewMockView()
 	thirdTestView.MockPlayers = []string{
 		testPlayers[0],
 		testPlayers[1],
 	}
-	thirdTestView.IsMockPlayerTurn = false
+	thirdTestView.MockPlayerTurnIndex = 2
 
 	expectedViews := []game_state.ViewForPlayer{
 		firstTestView,
@@ -460,10 +460,10 @@ func TestGetAllGamesWithPlayerWhenThreeGames(unitTest *testing.T) {
 		foundGame := false
 		for _, actualTurnSummary := range responseTurnSummaryList.TurnSummaries {
 			expectedIdentifier := segmentTranslatorForTest().ToSegment(expectedView.GameName())
-			_, expectedIsPlayerTurn := expectedView.CurrentTurnOrder()
+			_, expectedPlayerTurnIndex := expectedView.CurrentTurnOrder()
 			if (actualTurnSummary.GameIdentifier == expectedIdentifier) &&
 				(actualTurnSummary.GameName == expectedView.GameName()) &&
-				(actualTurnSummary.IsPlayerTurn == expectedIsPlayerTurn) {
+				(actualTurnSummary.IsPlayerTurn == (expectedPlayerTurnIndex == 0)) {
 				foundGame = true
 			}
 		}
@@ -589,10 +589,10 @@ func TestGetGameForPlayerRejectedIfCollectionRejectsIt(unitTest *testing.T) {
 	_, responseCode :=
 		testHandler.HandleGet([]string{"game-as-seen-by-player", mockGameIdentifier, mockPlayerIdentifier})
 
-	if responseCode != http.StatusBadRequest {
+	if responseCode != http.StatusInternalServerError {
 		unitTest.Fatalf(
 			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
-			http.StatusBadRequest,
+			http.StatusInternalServerError,
 			responseCode)
 	}
 
@@ -623,6 +623,8 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 	expectedChatLog.AppendNewMessage(playerName, chatColor, "second message")
 
 	testView := NewMockView()
+	testView.MockPlayerTurnIndex = 0
+	testView.MockPlayers = []string{"Lonely Player"}
 
 	mockCollection.ReturnForViewState = testView
 

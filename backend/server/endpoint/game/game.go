@@ -191,10 +191,13 @@ func (handler *Handler) handleNewGame(
 // with the given name for the player with the given name.
 func (handler *Handler) writeGameForPlayer(
 	relevantSegments []string) (interface{}, int) {
-	gameView, errorFromView := handler.viewForPlayer(relevantSegments)
+	gameName, playerName, errorFromParsing := handler.parseGameAndPlayer(relevantSegments)
+	if errorFromParsing != nil {
+		return errorFromParsing, http.StatusBadRequest
+	}
+
+	gameView, errorFromView := handler.stateCollection.ViewState(gameName, playerName)
 	if errorFromView != nil {
-		// It could be that the error really justifies a response of BAD REQUEST,
-		// but it's not worth the effort of sorting it out.
 		return errorFromView, http.StatusInternalServerError
 	}
 
@@ -254,12 +257,12 @@ func (handler *Handler) handleRecordChatMessage(
 	return "OK", http.StatusOK
 }
 
-func (handler *Handler) viewForPlayer(
-	relevantSegments []string) (game.ViewForPlayer, error) {
+func (handler *Handler) parseGameAndPlayer(
+	relevantSegments []string) (string, string, error) {
 	if len(relevantSegments) < 2 {
 		errorBecauseNotEnoughSegments :=
 			fmt.Errorf("Not enough segments in URI to determine game name and player name")
-		return nil, errorBecauseNotEnoughSegments
+		return "error", "error", errorBecauseNotEnoughSegments
 	}
 
 	gameIdentifier := relevantSegments[0]
@@ -267,7 +270,7 @@ func (handler *Handler) viewForPlayer(
 		handler.segmentTranslator.FromSegment(gameIdentifier)
 
 	if errorFromGameIdentification != nil {
-		return nil, errorFromGameIdentification
+		return "error", "error", errorFromGameIdentification
 	}
 
 	playerIdentifier := relevantSegments[1]
@@ -275,10 +278,10 @@ func (handler *Handler) viewForPlayer(
 		handler.segmentTranslator.FromSegment(playerIdentifier)
 
 	if errorFromPlayerIdentification != nil {
-		return nil, errorFromPlayerIdentification
+		return "error", "error", errorFromPlayerIdentification
 	}
 
-	return handler.stateCollection.ViewState(gameName, playerName)
+	return gameName, playerName, nil
 }
 
 func (handler *Handler) logForFrontend(
