@@ -69,6 +69,50 @@ func TestReturnEmptyListWhenPlayerHasNoGames(unitTest *testing.T) {
 	}
 }
 
+func TestRejectAddGameWithNoName(unitTest *testing.T) {
+	statePersisters := preparePersisters()
+
+	threePlayersWithNilHands :=
+		[]game.PlayerNameWithHand{
+			game.PlayerNameWithHand{
+				PlayerName:  defaultTestPlayers[0],
+				InitialHand: nil,
+			},
+			game.PlayerNameWithHand{
+				PlayerName:  defaultTestPlayers[1],
+				InitialHand: nil,
+			},
+			game.PlayerNameWithHand{
+				PlayerName:  defaultTestPlayers[2],
+				InitialHand: nil,
+			},
+		}
+
+	for _, statePersister := range statePersisters {
+		testIdentifier :=
+			"Reject Add(game with existing name)/" + statePersister.PersisterDescription
+
+		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			errorFromInvalidAdd :=
+				statePersister.GamePersister.AddGame(
+					"",
+					logLengthForTest,
+					defaultTestRuleset,
+					threePlayersWithNilHands,
+					nil)
+
+			// If there was no error, then something went wrong.
+			if errorFromInvalidAdd == nil {
+				unitTest.Fatalf(
+					"AddGame([empty game name], %v, %v, %v, nil) did not produce an error",
+					logLengthForTest,
+					defaultTestRuleset,
+					threePlayersWithNilHands)
+			}
+		})
+	}
+}
+
 func TestRejectAddGameWithExistingName(unitTest *testing.T) {
 	statePersisters := preparePersisters()
 
@@ -121,8 +165,9 @@ func TestRejectAddGameWithExistingName(unitTest *testing.T) {
 
 				if errorFromInitialAdd != nil {
 					unitTest.Fatalf(
-						"AddGame(%v, %v, %v, nil) produced an error: %v",
+						"AddGame(%v, %v, %v, %v, nil) produced an error: %v",
 						gameName,
+						logLengthForTest,
 						defaultTestRuleset,
 						twoPlayersWithNilHands,
 						errorFromInitialAdd)
@@ -167,8 +212,9 @@ func TestRejectAddGameWithExistingName(unitTest *testing.T) {
 				// If there was no error, then something went wrong.
 				if errorFromSecondAdd == nil {
 					unitTest.Fatalf(
-						"AddGame(%v, %v, %v, nil) did not produce an error",
+						"AddGame(%v, %v, %v, %v, nil) did not produce an error",
 						gameName,
+						logLengthForTest,
 						defaultTestRuleset,
 						defaultTestPlayers)
 				}

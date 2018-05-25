@@ -4,109 +4,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/benoleary/ilutulestikud/backend/game/card"
 	"github.com/benoleary/ilutulestikud/backend/game/log"
-
-	"github.com/benoleary/ilutulestikud/backend/game"
 )
+
+var emptyMessage = log.Message{}
 
 func TestSetUpInitialMetadataCorrectly(unitTest *testing.T) {
 	testStartTime := time.Now()
-	emptyMessage := log.Message{}
-
-	threePlayersWithHands :=
-		[]game.PlayerNameWithHand{
-			game.PlayerNameWithHand{
-				PlayerName: defaultTestPlayers[0],
-				InitialHand: []card.InHand{
-					card.NewInHand(
-						card.NewReadonly("a", 1),
-						card.NewInferred(
-							[]string{"a", "b", "c"},
-							[]int{1, 2, 3})),
-					card.NewInHand(
-						card.NewReadonly("a", 1),
-						card.NewInferred(
-							[]string{"a", "b", "c"},
-							[]int{1, 2, 3})),
-					card.NewInHand(
-						card.NewReadonly("a", 2),
-						card.NewInferred(
-							[]string{"a", "b", "c"},
-							[]int{1, 2, 3})),
-					card.NewInHand(
-						card.NewReadonly("a", 1),
-						card.NewInferred(
-							[]string{"a", "b", "c"},
-							[]int{1, 2, 3})),
-					card.NewInHand(
-						card.NewReadonly("a", 2),
-						card.NewInferred(
-							[]string{"a", "b", "c"},
-							[]int{1, 2, 3})),
-				},
-			},
-			game.PlayerNameWithHand{
-				PlayerName: defaultTestPlayers[1],
-				InitialHand: []card.InHand{
-					card.NewInHand(
-						card.NewReadonly("a", 1),
-						card.NewInferred(
-							[]string{"a", "b", "c"},
-							[]int{1, 2, 3, 4})),
-					card.NewInHand(
-						card.NewReadonly("b", 1),
-						card.NewInferred(
-							[]string{"a", "b", "c", "d"},
-							[]int{1, 2, 3})),
-					card.NewInHand(
-						card.NewReadonly("b", 2),
-						card.NewInferred(
-							[]string{"a", "b", "c"},
-							[]int{1, 2, 3})),
-					card.NewInHand(
-						card.NewReadonly("c", 2),
-						card.NewInferred(
-							[]string{"a", "b", "c"},
-							[]int{1, 2, 3})),
-					card.NewInHand(
-						card.NewReadonly("c", 3),
-						card.NewInferred(
-							[]string{"a", "b", "c"},
-							[]int{1, 2, 3})),
-				},
-			},
-			game.PlayerNameWithHand{
-				PlayerName: defaultTestPlayers[2],
-				InitialHand: []card.InHand{
-					card.NewInHand(
-						card.NewReadonly("c", 3),
-						card.NewInferred(
-							[]string{"a", "b", "c"},
-							[]int{1, 2, 3, 4})),
-					card.NewInHand(
-						card.NewReadonly("b", 3),
-						card.NewInferred(
-							[]string{"a", "b", "c"},
-							[]int{1, 2, 3})),
-					card.NewInHand(
-						card.NewReadonly("a", 3),
-						card.NewInferred(
-							[]string{"a", "b", "c"},
-							[]int{1, 2, 3})),
-					card.NewInHand(
-						card.NewReadonly("d", 3),
-						card.NewInferred(
-							[]string{"a", "b", "c", "d"},
-							[]int{1, 2, 3})),
-					card.NewInHand(
-						card.NewReadonly("d", 1),
-						card.NewInferred(
-							[]string{"a", "b", "c", "d"},
-							[]int{1, 2, 3})),
-				},
-			},
-		}
 
 	numberOfParticipants := len(threePlayersWithHands)
 	initialDeck := defaultTestRuleset.CopyOfFullCardset()
@@ -160,27 +64,17 @@ func TestSetUpInitialMetadataCorrectly(unitTest *testing.T) {
 					comparisonTime)
 			}
 
-			chatLog := readonlyState.ChatLog()
-			if chatLog == nil {
-				unitTest.Fatalf("ChatLog() was nil")
-			}
+			assertLogIsEmpty(
+				testIdentifier+"/ChatLog()",
+				unitTest,
+				readonlyState.ChatLog(),
+				logLengthForTest)
 
-			logMessages := chatLog.SortedCopyOfMessages()
-
-			if len(logMessages) != logLengthForTest {
-				unitTest.Fatalf(
-					"ChatLog() had wrong number of messages %v, expected %v",
-					logMessages,
-					logLengthForTest)
-			}
-
-			for messageIndex := 0; messageIndex < logLengthForTest; messageIndex++ {
-				if logMessages[messageIndex] != emptyMessage {
-					unitTest.Errorf(
-						"ChatLog() %v had non-empty message",
-						logMessages)
-				}
-			}
+			assertLogIsEmpty(
+				testIdentifier+"/ActionLog()",
+				unitTest,
+				readonlyState.ActionLog(),
+				numberOfParticipants)
 
 			if readonlyState.Turn() != 1 {
 				unitTest.Fatalf(
@@ -307,5 +201,32 @@ func TestSetUpInitialMetadataCorrectly(unitTest *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func assertLogIsEmpty(
+	testIdentifier string,
+	unitTest *testing.T,
+	actualLog *log.RollingAppender,
+	expectedLogLength int) {
+	if actualLog == nil {
+		unitTest.Fatalf("log was nil")
+	}
+
+	logMessages := actualLog.SortedCopyOfMessages()
+
+	if len(logMessages) != expectedLogLength {
+		unitTest.Fatalf(
+			"ChatLog() had wrong number of messages %v, expected %v",
+			logMessages,
+			expectedLogLength)
+	}
+
+	for messageIndex := 0; messageIndex < expectedLogLength; messageIndex++ {
+		if logMessages[messageIndex] != emptyMessage {
+			unitTest.Errorf(
+				"ChatLog() %v had non-empty message",
+				logMessages)
+		}
 	}
 }

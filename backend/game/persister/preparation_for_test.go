@@ -41,6 +41,99 @@ func playerNameSet(namesWithHands []game.PlayerNameWithHand) map[string]bool {
 	return playerNameMap
 }
 
+var threePlayersWithHands = []game.PlayerNameWithHand{
+	game.PlayerNameWithHand{
+		PlayerName: defaultTestPlayers[0],
+		InitialHand: []card.InHand{
+			card.NewInHand(
+				card.NewReadonly("a", 1),
+				card.NewInferred(
+					[]string{"a", "b", "c"},
+					[]int{1, 2, 3})),
+			card.NewInHand(
+				card.NewReadonly("a", 1),
+				card.NewInferred(
+					[]string{"a", "b", "c"},
+					[]int{1, 2, 3})),
+			card.NewInHand(
+				card.NewReadonly("a", 2),
+				card.NewInferred(
+					[]string{"a", "b", "c"},
+					[]int{1, 2, 3})),
+			card.NewInHand(
+				card.NewReadonly("a", 1),
+				card.NewInferred(
+					[]string{"a", "b", "c"},
+					[]int{1, 2, 3})),
+			card.NewInHand(
+				card.NewReadonly("a", 2),
+				card.NewInferred(
+					[]string{"a", "b", "c"},
+					[]int{1, 2, 3})),
+		},
+	},
+	game.PlayerNameWithHand{
+		PlayerName: defaultTestPlayers[1],
+		InitialHand: []card.InHand{
+			card.NewInHand(
+				card.NewReadonly("a", 1),
+				card.NewInferred(
+					[]string{"a", "b", "c"},
+					[]int{1, 2, 3, 4})),
+			card.NewInHand(
+				card.NewReadonly("b", 1),
+				card.NewInferred(
+					[]string{"a", "b", "c", "d"},
+					[]int{1, 2, 3})),
+			card.NewInHand(
+				card.NewReadonly("b", 2),
+				card.NewInferred(
+					[]string{"a", "b", "c"},
+					[]int{1, 2, 3})),
+			card.NewInHand(
+				card.NewReadonly("c", 2),
+				card.NewInferred(
+					[]string{"a", "b", "c"},
+					[]int{1, 2, 3})),
+			card.NewInHand(
+				card.NewReadonly("c", 3),
+				card.NewInferred(
+					[]string{"a", "b", "c"},
+					[]int{1, 2, 3})),
+		},
+	},
+	game.PlayerNameWithHand{
+		PlayerName: defaultTestPlayers[2],
+		InitialHand: []card.InHand{
+			card.NewInHand(
+				card.NewReadonly("c", 3),
+				card.NewInferred(
+					[]string{"a", "b", "c"},
+					[]int{1, 2, 3, 4})),
+			card.NewInHand(
+				card.NewReadonly("b", 3),
+				card.NewInferred(
+					[]string{"a", "b", "c"},
+					[]int{1, 2, 3})),
+			card.NewInHand(
+				card.NewReadonly("a", 3),
+				card.NewInferred(
+					[]string{"a", "b", "c"},
+					[]int{1, 2, 3})),
+			card.NewInHand(
+				card.NewReadonly("d", 3),
+				card.NewInferred(
+					[]string{"a", "b", "c", "d"},
+					[]int{1, 2, 3})),
+			card.NewInHand(
+				card.NewReadonly("d", 1),
+				card.NewInferred(
+					[]string{"a", "b", "c", "d"},
+					[]int{1, 2, 3})),
+		},
+	},
+}
+
 type persisterAndDescription struct {
 	GamePersister        game.StatePersister
 	PersisterDescription string

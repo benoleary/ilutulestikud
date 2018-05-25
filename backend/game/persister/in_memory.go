@@ -200,7 +200,7 @@ func (gameState *inMemoryState) ChatLog() *log.RollingAppender {
 
 // ActionLog returns the action log of the game at the current moment.
 func (gameState *inMemoryState) ActionLog() *log.RollingAppender {
-	return gameState.chatLog
+	return gameState.actionLog
 }
 
 // Turn returns the value of the private turnNumber int.
