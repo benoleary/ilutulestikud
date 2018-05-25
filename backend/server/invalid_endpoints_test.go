@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/benoleary/ilutulestikud/backend/server"
+	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
 
 type mockEndpointHandler struct {
@@ -244,5 +245,52 @@ func TestSelectCorrectHandlerForValidRequest(unitTest *testing.T) {
 					http.StatusOK)
 			}
 		})
+	}
+}
+
+func TestWrapReturnedError(unitTest *testing.T) {
+	testHandler := ErrorEndpointHandler(unitTest)
+	testHandler.TestErrorForGet = nil
+	expectedError := fmt.Errorf("expected error")
+	testHandler.ReturnInterface = expectedError
+	testHandler.ReturnCode = http.StatusBadRequest
+
+	httpRequest :=
+		httptest.NewRequest(
+			http.MethodGet,
+			"/backend/player",
+			nil)
+
+	serverState :=
+		server.NewWithGivenHandlers(
+			"irrelevant to tests",
+			nil,
+			testHandler,
+			nil)
+
+	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
+	responseRecorder := httptest.NewRecorder()
+	serverState.HandleBackend(responseRecorder, httpRequest)
+
+	if responseRecorder.Code != testHandler.ReturnCode {
+		unitTest.Errorf(
+			"GET returned wrong status %v instead of expected %v",
+			responseRecorder.Code,
+			testHandler.ReturnCode)
+	}
+
+	var errorForBody parsing.ErrorForBody
+	errorFromUnmarshall := json.Unmarshal(responseRecorder.Body.Bytes(), &errorForBody)
+	if errorFromUnmarshall != nil {
+		unitTest.Errorf(
+			"error when unmarshalling JSON: %v",
+			errorFromUnmarshall)
+	}
+
+	if errorForBody.Error != expectedError.Error() {
+		unitTest.Errorf(
+			"response body %v did not have expected Error %v",
+			testHandler.ReturnInterface,
+			expectedError)
 	}
 }
