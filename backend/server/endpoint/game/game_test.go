@@ -30,6 +30,7 @@ var testPlayers = []string{
 	"Player One",
 	"Player Two",
 	"Player Three",
+	"Player Four",
 }
 
 // segmentTranslatorForTest returns the standard base-32 translator.
@@ -690,28 +691,33 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 
 	testView := NewMockView()
 	testView.MockPlayerTurnIndex = 0
-	testView.MockPlayers = testPlayers
+	testView.MockPlayers = []string{
+		testPlayers[2],
+		playerName,
+		testPlayers[3],
+		testPlayers[1],
+	}
 	testView.MockPlayerTurnIndex = 1
 	testView.ReturnForVisibleHand = []card.Readonly{
-		card.ErrorReadonly(),
-		card.ErrorReadonly(),
-		card.ErrorReadonly(),
+		card.NewReadonly("some color", 1),
+		card.NewReadonly("some color", 2),
+		card.NewReadonly("another color", 1),
 	}
 	testView.ReturnForKnowledgeOfOwnHand = []card.Inferred{
-		card.ErrorInferred(),
-		card.ErrorInferred(),
-		card.ErrorInferred(),
+		card.NewInferred([]string{"some color", "another color"}, []int{1, 2, 3}),
+		card.NewInferred([]string{"some color", "yet another color"}, []int{1, 2}),
+		card.NewInferred([]string{"some color"}, []int{3}),
 	}
 	testView.ReturnForPlayedCards = [][]card.Readonly{
 		[]card.Readonly{
-			card.ErrorReadonly(),
-			card.ErrorReadonly(),
+			card.NewReadonly("another color", 1),
+			card.NewReadonly("another color", 2),
+			card.NewReadonly("another color", 3),
 		},
 		[]card.Readonly{},
 		[]card.Readonly{
-			card.ErrorReadonly(),
-			card.ErrorReadonly(),
-			card.ErrorReadonly(),
+			card.NewReadonly("some color", 1),
+			card.NewReadonly("some color", 2),
 		},
 	}
 
@@ -765,12 +771,70 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 	}
 
 	// We only test score because it's not worth setting up all the functionality
-	// of a view in the mock implementation.
+	// of a view in the mock implementation, though we do check that the hands and
+	// played cards get propagated correctly too.
 	if responseGameView.ScoreSoFar != testView.Score() {
 		unitTest.Fatalf(
-			testIdentifier+"/game view %v was not same as expected view %v",
+			testIdentifier+"/game view %+v was not same as expected view %v",
 			responseGameView,
 			testView)
+	}
+
+	if len(responseGameView.HandsBeforeThisPlayer) != 1 {
+		unitTest.Fatalf(
+			testIdentifier+"/game view %+v had wrong number of hands before viewing player, expected %v",
+			responseGameView,
+			1)
+	}
+
+	assertVisibleHandCorrect(
+		testIdentifier,
+		unitTest,
+		responseGameView.HandsBeforeThisPlayer[0],
+		testView.MockPlayers[0],
+		testView.ReturnForVisibleHand)
+
+	assertInferredCardSlicesCorrect(
+		testIdentifier,
+		unitTest,
+		responseGameView.HandOfThisPlayer,
+		testView.ReturnForKnowledgeOfOwnHand)
+
+	if len(responseGameView.HandsAfterThisPlayer) != 2 {
+		unitTest.Fatalf(
+			testIdentifier+"/game view %+v had wrong number of hands after viewing player",
+			responseGameView,
+			2)
+	}
+
+	assertVisibleHandCorrect(
+		testIdentifier,
+		unitTest,
+		responseGameView.HandsAfterThisPlayer[0],
+		testView.MockPlayers[2],
+		testView.ReturnForVisibleHand)
+
+	assertVisibleHandCorrect(
+		testIdentifier,
+		unitTest,
+		responseGameView.HandsAfterThisPlayer[1],
+		testView.MockPlayers[3],
+		testView.ReturnForVisibleHand)
+
+	numberOfExpectedPiles := len(testView.ReturnForPlayedCards)
+	if len(responseGameView.PlayedCards) != numberOfExpectedPiles {
+		unitTest.Fatalf(
+			testIdentifier+"/game view %+v did not have expected piles of played cards %v",
+			responseGameView,
+			testView.ReturnForPlayedCards)
+	}
+
+	for pileIndex := 0; pileIndex < numberOfExpectedPiles; pileIndex++ {
+		assertVisibleCardSlicesCorrect(
+			testIdentifier,
+			unitTest,
+			responseGameView.PlayedCards[pileIndex],
+			testView.ReturnForPlayedCards[pileIndex])
 	}
 }
 
@@ -1100,4 +1164,156 @@ func TestAcceptValidNewGame(unitTest *testing.T) {
 			FunctionArgument: expectedFunctionArgument,
 		},
 		testIdentifier)
+}
+
+func assertVisibleHandCorrect(
+	testIdentifier string,
+	unitTest *testing.T,
+	actualHand parsing.VisibleHand,
+	expectedPlayer string,
+	expectedCards []card.Readonly) {
+	if actualHand.PlayerName != expectedPlayer {
+		unitTest.Fatalf(
+			testIdentifier+
+				"/actuals hand %v did not have expected player name %v",
+			actualHand,
+			expectedPlayer)
+	}
+
+	assertVisibleCardSlicesCorrect(
+		testIdentifier,
+		unitTest,
+		actualHand.HandCards,
+		expectedCards)
+}
+
+func assertVisibleCardSlicesCorrect(
+	testIdentifier string,
+	unitTest *testing.T,
+	actualCards []parsing.VisibleCard,
+	expectedCards []card.Readonly) {
+	numberOfExpectedCards := len(expectedCards)
+
+	// We compare the possible colors and indices as sets. Then it is
+	// sufficient to check that the lengths are the same and that every
+	// actual value is found in the map of expected values.
+	if len(actualCards) != numberOfExpectedCards {
+		unitTest.Fatalf(
+			testIdentifier+
+				"/actuals card %v did not match expected cards %v",
+			actualCards,
+			expectedCards)
+	}
+
+	for cardIndex := 0; cardIndex < numberOfExpectedCards; cardIndex++ {
+		actualCard := actualCards[cardIndex]
+		expectedCard := expectedCards[cardIndex]
+
+		if (actualCard.ColorSuit != expectedCard.ColorSuit()) ||
+			(actualCard.SequenceIndex != expectedCard.SequenceIndex()) {
+			unitTest.Fatalf(
+				testIdentifier+
+					"/actuals card %v did not match expected cards %v",
+				actualCards,
+				expectedCards)
+		}
+	}
+}
+
+func assertInferredCardSlicesCorrect(
+	testIdentifier string,
+	unitTest *testing.T,
+	actualCards []parsing.CardFromBehind,
+	expectedCards []card.Inferred) {
+	numberOfExpectedCards := len(expectedCards)
+
+	// We compare the possible colors and indices as sets. Then it is
+	// sufficient to check that the lengths are the same and that every
+	// actual value is found in the map of expected values.
+	if len(actualCards) != numberOfExpectedCards {
+		unitTest.Fatalf(
+			testIdentifier+
+				"/actuals card %v did not match expected cards %v",
+			actualCards,
+			expectedCards)
+	}
+
+	for cardIndex := 0; cardIndex < numberOfExpectedCards; cardIndex++ {
+		actualCard := actualCards[cardIndex]
+		expectedCard := expectedCards[cardIndex]
+
+		assertInferredCardPossibilitiesCorrect(
+			testIdentifier,
+			unitTest,
+			actualCard,
+			expectedCard.PossibleColors(),
+			expectedCard.PossibleIndices())
+	}
+}
+
+func assertInferredCardPossibilitiesCorrect(
+	testIdentifier string,
+	unitTest *testing.T,
+	actualCard parsing.CardFromBehind,
+	expectedColors []string,
+	expectedIndices []int) {
+
+	// We compare the possible colors and indices as sets. Then it is
+	// sufficient to check that the lengths are the same and that every
+	// actual value is found in the map of expected values.
+	if (len(actualCard.PossibleColorSuits) != len(expectedColors)) ||
+		(len(actualCard.PossibleSequenceIndices) != len(expectedIndices)) {
+		unitTest.Fatalf(
+			testIdentifier+
+				"/inferred card %v did not match expected colors %v and indices %v",
+			actualCard,
+			expectedColors,
+			expectedIndices)
+	}
+
+	expectedColorMap := make(map[string]bool)
+	for _, expectedColor := range expectedColors {
+		if expectedColorMap[expectedColor] {
+			unitTest.Fatalf(
+				testIdentifier+
+					"/expected colors %v had duplicate(s)",
+				expectedColors)
+		}
+
+		expectedColorMap[expectedColor] = true
+	}
+
+	for _, actualColor := range actualCard.PossibleColorSuits {
+		if !expectedColorMap[actualColor] {
+			unitTest.Fatalf(
+				testIdentifier+
+					"/inferred card %v did not match expected colors %v and indices %v",
+				actualCard,
+				expectedColors,
+				expectedIndices)
+		}
+	}
+
+	expectedIndexMap := make(map[int]bool)
+	for _, expectedIndex := range expectedIndices {
+		if expectedIndexMap[expectedIndex] {
+			unitTest.Fatalf(
+				testIdentifier+
+					"/expected indices %v had duplicate(s)",
+				expectedIndices)
+		}
+
+		expectedIndexMap[expectedIndex] = true
+	}
+
+	for _, actualIndex := range actualCard.PossibleSequenceIndices {
+		if !expectedIndexMap[actualIndex] {
+			unitTest.Fatalf(
+				testIdentifier+
+					"/inferred card %v did not match expected colors %v and indices %v",
+				actualCard,
+				expectedColors,
+				expectedIndices)
+		}
+	}
 }
