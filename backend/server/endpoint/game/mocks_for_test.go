@@ -19,18 +19,28 @@ import (
 // that it is read-only, so there should never be a problem with any
 // tested code ever reading various properties.
 type mockViewForPlayer struct {
-	MockGameName        string
-	MockPlayers         []string
-	MockPlayerTurnIndex int
-	MockScore           int
+	MockGameName                string
+	MockPlayers                 []string
+	MockPlayerTurnIndex         int
+	MockScore                   int
+	ErrorForVisibleHand         error
+	ReturnForVisibleHand        []card.Readonly
+	ErrorForKnowledgeOfOwnHand  error
+	ReturnForKnowledgeOfOwnHand []card.Inferred
+	ReturnForPlayedCards        [][]card.Readonly
 }
 
 func NewMockView() *mockViewForPlayer {
 	return &mockViewForPlayer{
-		MockGameName:        "",
-		MockPlayers:         nil,
-		MockPlayerTurnIndex: -1,
-		MockScore:           -1,
+		MockGameName:                "",
+		MockPlayers:                 nil,
+		MockPlayerTurnIndex:         -1,
+		MockScore:                   -1,
+		ErrorForVisibleHand:         nil,
+		ReturnForVisibleHand:        nil,
+		ErrorForKnowledgeOfOwnHand:  nil,
+		ReturnForKnowledgeOfOwnHand: nil,
+		ReturnForPlayedCards:        nil,
 	}
 }
 
@@ -96,7 +106,7 @@ func (mockView *mockViewForPlayer) DeckSize() int {
 
 // PlayedCards gets mocked.
 func (mockView *mockViewForPlayer) PlayedCards() [][]card.Readonly {
-	return [][]card.Readonly{}
+	return mockView.ReturnForPlayedCards
 }
 
 // DiscardedCards gets mocked.
@@ -107,12 +117,12 @@ func (mockView *mockViewForPlayer) DiscardedCards() []card.Readonly {
 // VisibleHand gets mocked.
 func (mockView *mockViewForPlayer) VisibleHand(
 	playerName string) ([]card.Readonly, error) {
-	return []card.Readonly{}, nil
+	return mockView.ReturnForVisibleHand, mockView.ErrorForVisibleHand
 }
 
 // KnowledgeOfOwnHand gets mocked.
 func (mockView *mockViewForPlayer) KnowledgeOfOwnHand() ([]card.Inferred, error) {
-	return []card.Inferred{}, nil
+	return mockView.ReturnForKnowledgeOfOwnHand, mockView.ErrorForKnowledgeOfOwnHand
 }
 
 // mockGameDefinition takes up to five players, not as an array so that

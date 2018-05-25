@@ -9,8 +9,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"testing"
+
+	"github.com/benoleary/ilutulestikud/backend/game/card"
 
 	"github.com/benoleary/ilutulestikud/backend/defaults"
 	game_state "github.com/benoleary/ilutulestikud/backend/game"
@@ -611,6 +614,69 @@ func TestGetGameForPlayerRejectedIfCollectionRejectsIt(unitTest *testing.T) {
 		testIdentifier)
 }
 
+func TestGetGameForPlayerRejectedIfViewStateYieldsError(unitTest *testing.T) {
+	testCases := []struct {
+		testName                   string
+		errorForVisibleHand        error
+		errorForKnowledgeOfOwnHand error
+	}{
+		{
+			testName:                   "error from VisibleHand",
+			errorForVisibleHand:        fmt.Errorf("mock error"),
+			errorForKnowledgeOfOwnHand: nil,
+		},
+		{
+			testName:                   "error from KnowledgeOfOwnHand",
+			errorForVisibleHand:        nil,
+			errorForKnowledgeOfOwnHand: fmt.Errorf("mock error"),
+		},
+	}
+
+	for _, testCase := range testCases {
+		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
+			testIdentifier :=
+				"GET game-as-seen-by-player getting error from ViewState/" + testCase.testName
+			mockCollection, testHandler := newGameCollectionAndHandler()
+			mockPlayerName := "Mock Player"
+			mockPlayerIdentifier := segmentTranslatorForTest().ToSegment(mockPlayerName)
+			mockGameName := "Mock game"
+			mockGameIdentifier := segmentTranslatorForTest().ToSegment(mockGameName)
+
+			mockView := NewMockView()
+			mockView.MockPlayers = testPlayers
+			mockView.MockPlayerTurnIndex = 1
+			mockView.ErrorForVisibleHand = testCase.errorForVisibleHand
+			mockView.ErrorForKnowledgeOfOwnHand = testCase.errorForKnowledgeOfOwnHand
+
+			mockCollection.ReturnForViewState = mockView
+
+			_, responseCode :=
+				testHandler.HandleGet([]string{"game-as-seen-by-player", mockGameIdentifier, mockPlayerIdentifier})
+
+			if responseCode != http.StatusInternalServerError {
+				unitTest.Fatalf(
+					testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+					http.StatusInternalServerError,
+					responseCode)
+			}
+
+			functionRecord :=
+				mockCollection.getFirstAndEnsureOnly(
+					unitTest,
+					testIdentifier)
+
+			assertFunctionRecordIsCorrect(
+				unitTest,
+				functionRecord,
+				functionNameAndArgument{
+					FunctionName:     "ViewState",
+					FunctionArgument: stringPair{first: mockGameName, second: mockPlayerName},
+				},
+				testIdentifier)
+		})
+	}
+}
+
 func TestGetGameForPlayer(unitTest *testing.T) {
 	testIdentifier := "GET game-as-seen-by-player"
 	mockCollection, testHandler := newGameCollectionAndHandler()
@@ -624,7 +690,30 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 
 	testView := NewMockView()
 	testView.MockPlayerTurnIndex = 0
-	testView.MockPlayers = []string{"Lonely Player"}
+	testView.MockPlayers = testPlayers
+	testView.MockPlayerTurnIndex = 1
+	testView.ReturnForVisibleHand = []card.Readonly{
+		card.ErrorReadonly(),
+		card.ErrorReadonly(),
+		card.ErrorReadonly(),
+	}
+	testView.ReturnForKnowledgeOfOwnHand = []card.Inferred{
+		card.ErrorInferred(),
+		card.ErrorInferred(),
+		card.ErrorInferred(),
+	}
+	testView.ReturnForPlayedCards = [][]card.Readonly{
+		[]card.Readonly{
+			card.ErrorReadonly(),
+			card.ErrorReadonly(),
+		},
+		[]card.Readonly{},
+		[]card.Readonly{
+			card.ErrorReadonly(),
+			card.ErrorReadonly(),
+			card.ErrorReadonly(),
+		},
+	}
 
 	mockCollection.ReturnForViewState = testView
 
