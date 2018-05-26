@@ -292,6 +292,17 @@ func (gameState *inMemoryState) Read() game.ReadonlyState {
 	return gameState
 }
 
+// RecordActionMessage records a log message about an action by the given player.
+func (gameState *inMemoryState) RecordActionMessage(
+	actingPlayer player.ReadonlyState,
+	actionMessage string) error {
+	gameState.actionLog.AppendNewMessage(
+		actingPlayer.Name(),
+		actingPlayer.Color(),
+		actionMessage)
+	return nil
+}
+
 // RecordChatMessage records a chat message from the given player.
 func (gameState *inMemoryState) RecordChatMessage(
 	actingPlayer player.ReadonlyState,

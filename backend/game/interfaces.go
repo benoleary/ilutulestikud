@@ -188,6 +188,9 @@ type ReadAndWriteState interface {
 	// properties.
 	Read() ReadonlyState
 
+	// RecordActionMessage should record a log message about an action by the given player.
+	RecordActionMessage(actingPlayer player.ReadonlyState, actionMessage string) error
+
 	// RecordChatMessage should record a chat message from the given player.
 	RecordChatMessage(actingPlayer player.ReadonlyState, chatMessage string) error
 

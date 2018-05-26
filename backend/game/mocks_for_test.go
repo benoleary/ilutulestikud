@@ -85,8 +85,8 @@ type mockGameState struct {
 	TestErrorForTurn                    error
 	TestErrorForCreationTime            error
 	ReturnForCreationTime               time.Time
-	TestErrorForChatLog                 error
 	TestErrorForActionLog               error
+	TestErrorForChatLog                 error
 	TestErrorForScore                   error
 	TestErrorForNumberOfReadyHints      error
 	TestErrorForNumberOfMistakesMade    error
@@ -95,6 +95,8 @@ type mockGameState struct {
 	TestErrorForNumberOfDiscardedCards  error
 	TestErrorForVisibleCardInHand       error
 	TestErrorForInferredCardInHand      error
+	TestErrorForRecordActionMessage     error
+	ArgumentsFromRecordActionMessage    []stringTriple
 	TestErrorForRecordChatMessage       error
 	ArgumentsFromRecordChatMessage      []stringTriple
 	TestErrorForDrawCard                error
@@ -123,8 +125,8 @@ func NewMockGameState(
 		TestErrorForTurn:                    testError,
 		TestErrorForCreationTime:            testError,
 		ReturnForCreationTime:               time.Now(),
-		TestErrorForChatLog:                 testError,
 		TestErrorForActionLog:               testError,
+		TestErrorForChatLog:                 testError,
 		TestErrorForScore:                   testError,
 		TestErrorForNumberOfReadyHints:      testError,
 		TestErrorForNumberOfMistakesMade:    testError,
@@ -133,6 +135,8 @@ func NewMockGameState(
 		TestErrorForNumberOfDiscardedCards:  testError,
 		TestErrorForVisibleCardInHand:       testError,
 		TestErrorForInferredCardInHand:      testError,
+		TestErrorForRecordActionMessage:     testError,
+		ArgumentsFromRecordActionMessage:    make([]stringTriple, 0),
 		TestErrorForRecordChatMessage:       testError,
 		ArgumentsFromRecordChatMessage:      make([]stringTriple, 0),
 		TestErrorForDrawCard:                testError,
@@ -197,23 +201,23 @@ func (mockGame *mockGameState) CreationTime() time.Time {
 	return mockGame.ReturnForCreationTime
 }
 
-// ChatLog gets mocked.
-func (mockGame *mockGameState) ChatLog() *log.RollingAppender {
-	if mockGame.TestErrorForChatLog != nil {
-		mockGame.testReference.Fatalf(
-			"ChatLog(): %v",
-			mockGame.TestErrorForChatLog)
-	}
-
-	return nil
-}
-
 // ActionLog gets mocked.
 func (mockGame *mockGameState) ActionLog() *log.RollingAppender {
 	if mockGame.TestErrorForActionLog != nil {
 		mockGame.testReference.Fatalf(
 			"ActionLog(): %v",
 			mockGame.TestErrorForActionLog)
+	}
+
+	return nil
+}
+
+// ChatLog gets mocked.
+func (mockGame *mockGameState) ChatLog() *log.RollingAppender {
+	if mockGame.TestErrorForChatLog != nil {
+		mockGame.testReference.Fatalf(
+			"ChatLog(): %v",
+			mockGame.TestErrorForChatLog)
 	}
 
 	return nil
@@ -326,6 +330,28 @@ func (mockGame *mockGameState) Read() game.ReadonlyState {
 	return mockGame
 }
 
+// RecordActionMessage gets mocked.
+func (mockGame *mockGameState) RecordActionMessage(
+	actingPlayer player.ReadonlyState, actionMessage string) error {
+	if mockGame.TestErrorForRecordActionMessage != nil {
+		mockGame.testReference.Fatalf(
+			"RecordActionMessage(%v, %v): %v",
+			actingPlayer,
+			actionMessage,
+			mockGame.TestErrorForRecordActionMessage)
+	}
+
+	mockGame.ArgumentsFromRecordActionMessage = append(
+		mockGame.ArgumentsFromRecordActionMessage,
+		stringTriple{
+			FirstString:  actingPlayer.Name(),
+			SecondString: actingPlayer.Color(),
+			ThirdString:  actionMessage,
+		})
+
+	return mockGame.ReturnForNontestError
+}
+
 // RecordChatMessage gets mocked.
 func (mockGame *mockGameState) RecordChatMessage(
 	actingPlayer player.ReadonlyState, chatMessage string) error {
@@ -334,7 +360,7 @@ func (mockGame *mockGameState) RecordChatMessage(
 			"RecordChatMessage(%v, %v): %v",
 			actingPlayer,
 			chatMessage,
-			mockGame.TestErrorForInferredCardInHand)
+			mockGame.TestErrorForRecordChatMessage)
 	}
 
 	mockGame.ArgumentsFromRecordChatMessage = append(
