@@ -21,6 +21,7 @@ import (
 type mockViewForPlayer struct {
 	MockGameName                string
 	MockPlayers                 []string
+	MockChatLog                 []message.Readonly
 	MockPlayerTurnIndex         int
 	MockScore                   int
 	ErrorForVisibleHand         error
@@ -34,6 +35,7 @@ func NewMockView() *mockViewForPlayer {
 	return &mockViewForPlayer{
 		MockGameName:                "",
 		MockPlayers:                 nil,
+		MockChatLog:                 nil,
 		MockPlayerTurnIndex:         -1,
 		MockScore:                   -1,
 		ErrorForVisibleHand:         nil,
@@ -56,7 +58,7 @@ func (mockView *mockViewForPlayer) RulesetDescription() string {
 
 // ChatLog gets mocked.
 func (mockView *mockViewForPlayer) ChatLog() []message.Readonly {
-	return make([]message.Readonly, logLengthForTest)
+	return mockView.MockChatLog
 }
 
 // ActionLog gets mocked.

@@ -13,11 +13,10 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/benoleary/ilutulestikud/backend/game/card"
-
 	"github.com/benoleary/ilutulestikud/backend/defaults"
 	game_state "github.com/benoleary/ilutulestikud/backend/game"
-	"github.com/benoleary/ilutulestikud/backend/game/log"
+	"github.com/benoleary/ilutulestikud/backend/game/card"
+	"github.com/benoleary/ilutulestikud/backend/game/message"
 	game_endpoint "github.com/benoleary/ilutulestikud/backend/server/endpoint/game"
 	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
@@ -685,9 +684,10 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 	playerName := testPlayers[0]
 	chatColor := "some valid color"
 
-	expectedChatLog := log.NewRollingAppender(logLengthForTest)
-	expectedChatLog.AppendNewMessage(playerName, chatColor, "first message")
-	expectedChatLog.AppendNewMessage(playerName, chatColor, "second message")
+	expectedChatLog := []message.Readonly{
+		message.NewReadonly(playerName, chatColor, "first message"),
+		message.NewReadonly(playerName, chatColor, "second message"),
+	}
 
 	testView := NewMockView()
 	testView.MockPlayerTurnIndex = 0
@@ -697,6 +697,7 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 		testPlayers[3],
 		testPlayers[1],
 	}
+	testView.MockChatLog = expectedChatLog
 	testView.MockPlayerTurnIndex = 1
 	testView.ReturnForVisibleHand = []card.Readonly{
 		card.NewReadonly("some color", 1),
@@ -755,19 +756,18 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 
 	if !isInterfaceCorrect {
 		unitTest.Fatalf(
-			testIdentifier+"/received %v instead of expected parsing.GameView",
+			testIdentifier+"/received %+v instead of expected parsing.GameView",
 			returnedInterface)
 	}
 
-	expectedMessages := expectedChatLog.SortedCopyOfMessages()
-	numberOfExpectedMessages := len(expectedMessages)
+	numberOfExpectedMessages := len(expectedChatLog)
 
 	if len(responseGameView.ChatLog) != numberOfExpectedMessages {
 		unitTest.Fatalf(
-			testIdentifier+"/game view chat log %v did not have same length %v as expected chat log %v",
+			testIdentifier+"/game view chat log %+v did not have same length %v as expected chat log %+v",
 			responseGameView.ChatLog,
 			numberOfExpectedMessages,
-			expectedMessages)
+			expectedChatLog)
 	}
 
 	// We only test score because it's not worth setting up all the functionality
