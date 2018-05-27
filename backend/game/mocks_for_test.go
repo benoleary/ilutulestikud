@@ -5,9 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/benoleary/ilutulestikud/backend/game/message"
+
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/game/card"
-	"github.com/benoleary/ilutulestikud/backend/game/log"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
@@ -76,7 +77,7 @@ type mockGameState struct {
 	MockNamesAndHands                   []game.PlayerNameWithHand
 	MockDeck                            []card.Readonly
 	MockTurn                            int
-	MockChatLog                         *log.RollingAppender
+	MockChatLog                         []message.Readonly
 	TestErrorForName                    error
 	TestErrorForRuleset                 error
 	ReturnForRuleset                    game.Ruleset
@@ -202,7 +203,7 @@ func (mockGame *mockGameState) CreationTime() time.Time {
 }
 
 // ActionLog gets mocked.
-func (mockGame *mockGameState) ActionLog() *log.RollingAppender {
+func (mockGame *mockGameState) ActionLog() []message.Readonly {
 	if mockGame.TestErrorForActionLog != nil {
 		mockGame.testReference.Fatalf(
 			"ActionLog(): %v",
@@ -213,7 +214,7 @@ func (mockGame *mockGameState) ActionLog() *log.RollingAppender {
 }
 
 // ChatLog gets mocked.
-func (mockGame *mockGameState) ChatLog() *log.RollingAppender {
+func (mockGame *mockGameState) ChatLog() []message.Readonly {
 	if mockGame.TestErrorForChatLog != nil {
 		mockGame.testReference.Fatalf(
 			"ChatLog(): %v",
@@ -505,14 +506,16 @@ func (mockImplementation *mockGamePersister) ReadAllWithPlayer(
 func (mockImplementation *mockGamePersister) AddGame(
 	gameName string,
 	chatLogLength int,
+	initialActionLog []message.Readonly,
 	gameRuleset game.Ruleset,
 	playersInTurnOrderWithInitialHands []game.PlayerNameWithHand,
 	initialDeck []card.Readonly) error {
 	if mockImplementation.TestErrorForAddGame != nil {
 		mockImplementation.TestReference.Fatalf(
-			"AddGame(%v, %v, %v, %v, %v): %v",
+			"AddGame(%v, %v, %v, %v, %v, %v): %v",
 			gameName,
 			chatLogLength,
+			initialActionLog,
 			gameRuleset,
 			playersInTurnOrderWithInitialHands,
 			initialDeck,

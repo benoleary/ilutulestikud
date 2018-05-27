@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/benoleary/ilutulestikud/backend/game/card"
-	"github.com/benoleary/ilutulestikud/backend/game/log"
+	"github.com/benoleary/ilutulestikud/backend/game/message"
 )
 
 // PlayerView encapsulates the functions on a game's read-only state
@@ -75,14 +75,14 @@ func (playerView *PlayerView) RulesetDescription() string {
 	return playerView.gameState.Ruleset().FrontendDescription()
 }
 
-// SortedChatLog sorts the read-only game state's ChatLog and returns the sorted log.
-func (playerView *PlayerView) SortedChatLog() []log.Message {
-	return playerView.gameState.ChatLog().SortedCopyOfMessages()
+// ChatLog just wraps around the read-only game state's ChatLog function.
+func (playerView *PlayerView) ChatLog() []message.Readonly {
+	return playerView.gameState.ChatLog()
 }
 
-// SortedActionLog sorts the read-only game state's ActionLog and return the sorted log.
-func (playerView *PlayerView) SortedActionLog() []log.Message {
-	return playerView.gameState.ActionLog().SortedCopyOfMessages()
+// ActionLog just wraps around the read-only game state's ActionLog function.
+func (playerView *PlayerView) ActionLog() []message.Readonly {
+	return playerView.gameState.ActionLog()
 }
 
 // CurrentTurnOrder returns the names of the participants of the game in the

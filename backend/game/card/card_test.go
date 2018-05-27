@@ -14,7 +14,7 @@ func TestNewValidReadonly(unitTest *testing.T) {
 	if (validReadonly.ColorSuit() != testColor) ||
 		(validReadonly.SequenceIndex() != testIndex) {
 		unitTest.Fatalf(
-			"NewReadonly(%v, %v) produced unexpected %v",
+			"NewReadonly(%v, %v) produced unexpected %+v",
 			testColor,
 			testIndex,
 			validReadonly)
@@ -27,7 +27,7 @@ func TestNewErrorReadonly(unitTest *testing.T) {
 	if (validReadonly.ColorSuit() != "error") ||
 		(validReadonly.SequenceIndex() != -1) {
 		unitTest.Fatalf(
-			"ErrorReadonly() produced unexpected %v",
+			"ErrorReadonly() produced unexpected %+v",
 			validReadonly)
 	}
 }

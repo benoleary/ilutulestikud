@@ -5,7 +5,7 @@ import (
 
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/game/card"
-	"github.com/benoleary/ilutulestikud/backend/game/log"
+	"github.com/benoleary/ilutulestikud/backend/game/message"
 )
 
 // This file defines mock implementations of interfaces.
@@ -54,14 +54,14 @@ func (mockView *mockViewForPlayer) RulesetDescription() string {
 	return ""
 }
 
-// SortedChatLog gets mocked.
-func (mockView *mockViewForPlayer) SortedChatLog() []log.Message {
-	return make([]log.Message, logLengthForTest)
+// ChatLog gets mocked.
+func (mockView *mockViewForPlayer) ChatLog() []message.Readonly {
+	return make([]message.Readonly, logLengthForTest)
 }
 
-// SortedActionLog gets mocked.
-func (mockView *mockViewForPlayer) SortedActionLog() []log.Message {
-	return make([]log.Message, logLengthForTest)
+// ActionLog gets mocked.
+func (mockView *mockViewForPlayer) ActionLog() []message.Readonly {
+	return make([]message.Readonly, logLengthForTest)
 }
 
 // CurrentTurnOrder gets mocked.

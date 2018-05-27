@@ -7,12 +7,15 @@ import (
 
 func TestErrorFromInvalidPlayerVisibleHand(unitTest *testing.T) {
 	initialDeck := defaultTestRuleset.CopyOfFullCardset()
+
+	// A nil initial action log should not be a problem for this test.
 	gamesAndDescriptions :=
 		prepareGameStates(
 			unitTest,
 			defaultTestRuleset,
 			threePlayersWithHands,
-			initialDeck)
+			initialDeck,
+			nil)
 
 	for _, gameAndDescription := range gamesAndDescriptions {
 		testIdentifier :=
@@ -37,12 +40,15 @@ func TestErrorFromInvalidPlayerVisibleHand(unitTest *testing.T) {
 
 func TestErrorFromInvalidPlayerInferredHand(unitTest *testing.T) {
 	initialDeck := defaultTestRuleset.CopyOfFullCardset()
+
+	// A nil initial action log should not be a problem for this test.
 	gamesAndDescriptions :=
 		prepareGameStates(
 			unitTest,
 			defaultTestRuleset,
 			threePlayersWithHands,
-			initialDeck)
+			initialDeck,
+			nil)
 
 	for _, gameAndDescription := range gamesAndDescriptions {
 		testIdentifier :=
@@ -68,12 +74,15 @@ func TestErrorFromInvalidPlayerInferredHand(unitTest *testing.T) {
 func TestRecordAndRetrieveSingleChatMessage(unitTest *testing.T) {
 	testStartTime := time.Now()
 	initialDeck := defaultTestRuleset.CopyOfFullCardset()
+
+	// A nil initial action log should not be a problem for this test.
 	gamesAndDescriptions :=
 		prepareGameStates(
 			unitTest,
 			defaultTestRuleset,
 			threePlayersWithHands,
-			initialDeck)
+			initialDeck,
+			nil)
 
 	chattingPlayer := &mockPlayerState{
 		threePlayersWithHands[0].PlayerName,
@@ -99,28 +108,27 @@ func TestRecordAndRetrieveSingleChatMessage(unitTest *testing.T) {
 			}
 
 			retrievedChatLog := gameAndDescription.GameState.Read().ChatLog()
-			logMessages := retrievedChatLog.SortedCopyOfMessages()
 
-			if len(logMessages) != logLengthForTest {
+			if len(retrievedChatLog) != logLengthForTest {
 				unitTest.Fatalf(
 					"ChatLog() had wrong number of messages %v, expected %v",
-					logMessages,
+					retrievedChatLog,
 					logLengthForTest)
 			}
 
 			// The first message starts at the end of the log, since there
 			// have been no other messages.
-			firstMessage := logMessages[logLengthForTest-1]
-			if (firstMessage.PlayerName != chattingPlayer.Name()) ||
-				(firstMessage.TextColor != chattingPlayer.Color()) ||
-				(firstMessage.MessageText != testMessage) {
+			firstMessage := retrievedChatLog[logLengthForTest-1]
+			if (firstMessage.PlayerName() != chattingPlayer.Name()) ||
+				(firstMessage.TextColor() != chattingPlayer.Color()) ||
+				(firstMessage.MessageText() != testMessage) {
 				unitTest.Fatalf(
-					"first message %v did not have expected player %v",
+					"first message %+v did not have expected player %+v",
 					firstMessage,
 					chattingPlayer)
 			}
 
-			recordingTime := firstMessage.CreationTime
+			recordingTime := firstMessage.CreationTime()
 			currentTime := time.Now()
 			if (recordingTime.Before(testStartTime)) ||
 				(recordingTime.After(currentTime)) {
@@ -132,10 +140,12 @@ func TestRecordAndRetrieveSingleChatMessage(unitTest *testing.T) {
 			}
 
 			for messageIndex := 0; messageIndex < logLengthForTest-1; messageIndex++ {
-				if logMessages[messageIndex] != emptyMessage {
+				if (retrievedChatLog[messageIndex].PlayerName() != "") ||
+					(retrievedChatLog[messageIndex].TextColor() != "") ||
+					(retrievedChatLog[messageIndex].MessageText() != "") {
 					unitTest.Errorf(
-						"ChatLog() %v had non-empty message",
-						logMessages)
+						"ChatLog() %+v had non-empty message",
+						retrievedChatLog)
 				}
 			}
 		})

@@ -4,10 +4,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/benoleary/ilutulestikud/backend/game/log"
+	"github.com/benoleary/ilutulestikud/backend/game/message"
 )
-
-var emptyMessage = log.Message{}
 
 func TestSetUpInitialMetadataCorrectly(unitTest *testing.T) {
 	testStartTime := time.Now()
@@ -15,12 +13,21 @@ func TestSetUpInitialMetadataCorrectly(unitTest *testing.T) {
 	numberOfParticipants := len(threePlayersWithHands)
 	initialDeck := defaultTestRuleset.CopyOfFullCardset()
 
+	// For this test, it is most convenient to check that both
+	// logs have empty messages.
+	initialActionLog := []message.Readonly{
+		message.NewReadonly("", "", ""),
+		message.NewReadonly("", "", ""),
+		message.NewReadonly("", "", ""),
+	}
+
 	gamesAndDescriptions :=
 		prepareGameStates(
 			unitTest,
 			defaultTestRuleset,
 			threePlayersWithHands,
-			initialDeck)
+			initialDeck,
+			initialActionLog)
 
 	for _, gameAndDescription := range gamesAndDescriptions {
 		testIdentifier :=
@@ -207,26 +214,26 @@ func TestSetUpInitialMetadataCorrectly(unitTest *testing.T) {
 func assertLogIsEmpty(
 	testIdentifier string,
 	unitTest *testing.T,
-	actualLog *log.RollingAppender,
+	actualLog []message.Readonly,
 	expectedLogLength int) {
 	if actualLog == nil {
 		unitTest.Fatalf("log was nil")
 	}
 
-	logMessages := actualLog.SortedCopyOfMessages()
-
-	if len(logMessages) != expectedLogLength {
+	if len(actualLog) != expectedLogLength {
 		unitTest.Fatalf(
-			"ChatLog() had wrong number of messages %v, expected %v",
-			logMessages,
+			testIdentifier+"/log %+v had wrong number of messages, expected %v",
+			actualLog,
 			expectedLogLength)
 	}
 
 	for messageIndex := 0; messageIndex < expectedLogLength; messageIndex++ {
-		if logMessages[messageIndex] != emptyMessage {
+		if (actualLog[messageIndex].PlayerName() != "") ||
+			(actualLog[messageIndex].TextColor() != "") ||
+			(actualLog[messageIndex].MessageText() != "") {
 			unitTest.Errorf(
-				"ChatLog() %v had non-empty message",
-				logMessages)
+				testIdentifier+"/log %+v had non-empty message",
+				actualLog)
 		}
 	}
 }

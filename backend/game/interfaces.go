@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/benoleary/ilutulestikud/backend/game/card"
-	"github.com/benoleary/ilutulestikud/backend/game/log"
+	"github.com/benoleary/ilutulestikud/backend/game/message"
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
@@ -61,11 +61,11 @@ type ViewForPlayer interface {
 	// RulesetDescription should return the description given by the ruleset of the game.
 	RulesetDescription() string
 
-	// SortedChatLog should sort the read-only game state's ChatLog and return the sorted log.
-	SortedChatLog() []log.Message
+	// ChatLog should return the chat log of the read-only game state.
+	ChatLog() []message.Readonly
 
-	// SortedActionLog should sort the read-only game state's ActionLog and return the sorted log.
-	SortedActionLog() []log.Message
+	// ActionLog should return the action log of the read-only game state.
+	ActionLog() []message.Readonly
 
 	// CurrentTurnOrder should return the names of the participants of the game in the
 	// order which their next turns are in, along with the index of the viewing
@@ -138,10 +138,10 @@ type ReadonlyState interface {
 	CreationTime() time.Time
 
 	// ChatLog should return the chat log of the game at the current moment.
-	ChatLog() *log.RollingAppender
+	ChatLog() []message.Readonly
 
 	// ActionLog should return the action log of the game at the current moment.
-	ActionLog() *log.RollingAppender
+	ActionLog() []message.Readonly
 
 	// Turn should given the number of the turn (with the first turn being 1 rather
 	// than 0) which is the current turn in the game (assuming 1 turn per player,
@@ -249,6 +249,7 @@ type StatePersister interface {
 	AddGame(
 		gameName string,
 		chatLogLength int,
+		initialActionLog []message.Readonly,
 		gameRuleset Ruleset,
 		playersInTurnOrderWithInitialHands []PlayerNameWithHand,
 		initialDeck []card.Readonly) error

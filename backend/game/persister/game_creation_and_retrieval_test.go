@@ -97,6 +97,7 @@ func TestRejectAddGameWithNoName(unitTest *testing.T) {
 				statePersister.GamePersister.AddGame(
 					"",
 					logLengthForTest,
+					nil,
 					defaultTestRuleset,
 					threePlayersWithNilHands,
 					nil)
@@ -104,7 +105,7 @@ func TestRejectAddGameWithNoName(unitTest *testing.T) {
 			// If there was no error, then something went wrong.
 			if errorFromInvalidAdd == nil {
 				unitTest.Fatalf(
-					"AddGame([empty game name], %v, %v, %v, nil) did not produce an error",
+					"AddGame([empty game name], %v, nil, %v, %v, nil) did not produce an error",
 					logLengthForTest,
 					defaultTestRuleset,
 					threePlayersWithNilHands)
@@ -159,13 +160,14 @@ func TestRejectAddGameWithExistingName(unitTest *testing.T) {
 					statePersister.GamePersister.AddGame(
 						gameName,
 						logLengthForTest,
+						nil,
 						defaultTestRuleset,
 						twoPlayersWithNilHands,
 						nil)
 
 				if errorFromInitialAdd != nil {
 					unitTest.Fatalf(
-						"AddGame(%v, %v, %v, %v, nil) produced an error: %v",
+						"AddGame(%v, %v, nil, %v, %v, nil) produced an error: %v",
 						gameName,
 						logLengthForTest,
 						defaultTestRuleset,
@@ -191,6 +193,7 @@ func TestRejectAddGameWithExistingName(unitTest *testing.T) {
 					statePersister.GamePersister.AddGame(
 						gameName,
 						logLengthForTest,
+						nil,
 						defaultTestRuleset,
 						threePlayersWithNilHands,
 						nil)

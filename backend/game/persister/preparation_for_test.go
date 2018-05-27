@@ -5,6 +5,7 @@ import (
 
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/game/card"
+	"github.com/benoleary/ilutulestikud/backend/game/message"
 	"github.com/benoleary/ilutulestikud/backend/game/persister"
 )
 
@@ -157,7 +158,8 @@ func prepareGameStates(
 	unitTest *testing.T,
 	gameRuleset game.Ruleset,
 	playersInTurnOrderWithInitialHands []game.PlayerNameWithHand,
-	initialDeck []card.Readonly) []gameAndDescription {
+	initialDeck []card.Readonly,
+	initialActionLog []message.Readonly) []gameAndDescription {
 	statePersisters := preparePersisters()
 
 	numberOfPersisters := len(statePersisters)
@@ -166,10 +168,12 @@ func prepareGameStates(
 
 	for persisterIndex := 0; persisterIndex < numberOfPersisters; persisterIndex++ {
 		statePersister := statePersisters[persisterIndex]
+
 		errorFromAdd :=
 			statePersister.GamePersister.AddGame(
 				testGameName,
 				logLengthForTest,
+				initialActionLog,
 				gameRuleset,
 				playersInTurnOrderWithInitialHands,
 				initialDeck)

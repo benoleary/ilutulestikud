@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"github.com/benoleary/ilutulestikud/backend/game/card"
+	"github.com/benoleary/ilutulestikud/backend/game/message"
 )
 
 // StateCollection wraps around a game.StatePersister to encapsulate logic acting on
@@ -111,7 +112,7 @@ func (gameCollection *StateCollection) AddNewWithGivenDeck(
 		return fmt.Errorf("Game must have a name")
 	}
 
-	namesWithHands, initialDeck, errorFromHands :=
+	namesWithHands, initialDeck, initialActionLog, errorFromHands :=
 		gameCollection.createPlayerHands(
 			playerNames,
 			gameRuleset,
@@ -124,6 +125,7 @@ func (gameCollection *StateCollection) AddNewWithGivenDeck(
 	return gameCollection.statePersister.AddGame(
 		gameName,
 		gameCollection.chatLogLength,
+		initialActionLog,
 		gameRuleset,
 		namesWithHands,
 		initialDeck)
@@ -158,12 +160,17 @@ func (gameCollection *StateCollection) ExecuteAction(
 }
 
 // createPlayerHands deals out each player's hand (a full hand per player rather
-// than one card each time to each player) and then returns a map of player names
-// to hands along with the remaining deck.
+// than one card each time to each player) and then returns a list of player names
+// paired with their initial hands, the remaining deck, the initial action log, and
+// a possible error.
 func (gameCollection *StateCollection) createPlayerHands(
 	playerNames []string,
 	gameRuleset Ruleset,
-	initialDeck []card.Readonly) ([]PlayerNameWithHand, []card.Readonly, error) {
+	initialDeck []card.Readonly) (
+	[]PlayerNameWithHand,
+	[]card.Readonly,
+	[]message.Readonly,
+	error) {
 	// A nil slice still has a length of 0, so this is OK.
 	numberOfPlayers := len(playerNames)
 
@@ -172,7 +179,7 @@ func (gameCollection *StateCollection) createPlayerHands(
 			fmt.Errorf(
 				"Game must have at least %v players",
 				gameRuleset.MinimumNumberOfPlayers())
-		return nil, nil, tooFewPlayersError
+		return nil, nil, nil, tooFewPlayersError
 	}
 
 	if numberOfPlayers > gameRuleset.MaximumNumberOfPlayers() {
@@ -180,7 +187,7 @@ func (gameCollection *StateCollection) createPlayerHands(
 			fmt.Errorf(
 				"Game must have no more than %v players",
 				gameRuleset.MaximumNumberOfPlayers())
-		return nil, nil, tooManyPlayersError
+		return nil, nil, nil, tooManyPlayersError
 	}
 
 	handSize := gameRuleset.NumberOfCardsInPlayerHand(numberOfPlayers)
@@ -191,19 +198,20 @@ func (gameCollection *StateCollection) createPlayerHands(
 			fmt.Errorf(
 				"Game must have at least %v cards",
 				minimumNumberOfCardsRequired)
-		return nil, nil, tooFewCardsError
+		return nil, nil, nil, tooFewCardsError
 	}
 
 	namesWithHands := make([]PlayerNameWithHand, numberOfPlayers)
+	actionLog := make([]message.Readonly, numberOfPlayers)
 	uniquePlayerNames := make(map[string]bool, numberOfPlayers)
 
 	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
 		playerName := playerNames[playerIndex]
 
-		_, errorFromPlayerProvider := gameCollection.playerProvider.Get(playerName)
+		playerState, errorFromPlayerProvider := gameCollection.playerProvider.Get(playerName)
 
 		if errorFromPlayerProvider != nil {
-			return nil, nil, errorFromPlayerProvider
+			return nil, nil, nil, errorFromPlayerProvider
 		}
 
 		if uniquePlayerNames[playerName] {
@@ -211,7 +219,7 @@ func (gameCollection *StateCollection) createPlayerHands(
 				fmt.Errorf(
 					"Player with name %v appears more than once in the list of players",
 					playerName)
-			return nil, nil, degenerateNameError
+			return nil, nil, nil, degenerateNameError
 		}
 
 		uniquePlayerNames[playerName] = true
@@ -231,6 +239,9 @@ func (gameCollection *StateCollection) createPlayerHands(
 			initialDeck[cardsInHand] = card.ErrorReadonly()
 		}
 
+		actionLog[playerIndex] =
+			message.NewReadonly(playerName, playerState.Color(), "receieved initial hand")
+
 		// Now we ensure that the cards just dealt out are no longer part of the deck.
 		initialDeck = initialDeck[handSize:]
 
@@ -241,7 +252,7 @@ func (gameCollection *StateCollection) createPlayerHands(
 			}
 	}
 
-	return namesWithHands, initialDeck, nil
+	return namesWithHands, initialDeck, actionLog, nil
 }
 
 // ByCreationTime implements sort interface for []ReadonlyState based on the return

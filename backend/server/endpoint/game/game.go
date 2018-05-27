@@ -9,8 +9,7 @@ import (
 	"strings"
 
 	"github.com/benoleary/ilutulestikud/backend/game/card"
-
-	"github.com/benoleary/ilutulestikud/backend/game/log"
+	"github.com/benoleary/ilutulestikud/backend/game/message"
 
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
@@ -215,8 +214,8 @@ func (handler *Handler) writeGameForPlayer(
 
 	endpointObject :=
 		parsing.GameView{
-			ChatLog:                      handler.logForFrontend(gameView.SortedChatLog()),
-			ActionLog:                    handler.logForFrontend(gameView.SortedActionLog()),
+			ChatLog:                      handler.logForFrontend(gameView.ChatLog()),
+			ActionLog:                    handler.logForFrontend(gameView.ActionLog()),
 			ScoreSoFar:                   gameView.Score(),
 			NumberOfReadyHints:           gameView.NumberOfReadyHints(),
 			NumberOfSpentHints:           gameView.NumberOfSpentHints(),
@@ -285,16 +284,16 @@ func (handler *Handler) parseGameAndPlayer(
 }
 
 func (handler *Handler) logForFrontend(
-	backendMessages []log.Message) []parsing.LogMessage {
+	backendMessages []message.Readonly) []parsing.LogMessage {
 	numberOfMessages := len(backendMessages)
 	logForFrontend := make([]parsing.LogMessage, numberOfMessages)
 	for messageIndex := 0; messageIndex < numberOfMessages; messageIndex++ {
 		backendMessage := backendMessages[messageIndex]
 		logForFrontend[messageIndex] = parsing.LogMessage{
-			TimestampInSeconds: backendMessage.CreationTime.Unix(),
-			PlayerName:         backendMessage.PlayerName,
-			TextColor:          backendMessage.TextColor,
-			MessageText:        backendMessage.MessageText,
+			TimestampInSeconds: backendMessage.CreationTime().Unix(),
+			PlayerName:         backendMessage.PlayerName(),
+			TextColor:          backendMessage.TextColor(),
+			MessageText:        backendMessage.MessageText(),
 		}
 	}
 
