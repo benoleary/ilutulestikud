@@ -46,91 +46,106 @@ var threePlayersWithHands = []game.PlayerNameWithHand{
 	game.PlayerNameWithHand{
 		PlayerName: defaultTestPlayers[0],
 		InitialHand: []card.InHand{
-			card.NewInHand(
-				card.NewReadonly("a", 1),
-				card.NewInferred(
+			card.InHand{
+				Readonly: card.NewReadonly("a", 1),
+				Inferred: card.NewInferred(
 					[]string{"a", "b", "c"},
-					[]int{1, 2, 3})),
-			card.NewInHand(
-				card.NewReadonly("a", 1),
-				card.NewInferred(
+					[]int{1, 2, 3}),
+			},
+			card.InHand{
+				Readonly: card.NewReadonly("a", 1),
+				Inferred: card.NewInferred(
 					[]string{"a", "b", "c"},
-					[]int{1, 2, 3})),
-			card.NewInHand(
-				card.NewReadonly("a", 2),
-				card.NewInferred(
+					[]int{1, 2, 3}),
+			},
+			card.InHand{
+				Readonly: card.NewReadonly("a", 2),
+				Inferred: card.NewInferred(
 					[]string{"a", "b", "c"},
-					[]int{1, 2, 3})),
-			card.NewInHand(
-				card.NewReadonly("a", 1),
-				card.NewInferred(
+					[]int{1, 2, 3}),
+			},
+			card.InHand{
+				Readonly: card.NewReadonly("a", 1),
+				Inferred: card.NewInferred(
 					[]string{"a", "b", "c"},
-					[]int{1, 2, 3})),
-			card.NewInHand(
-				card.NewReadonly("a", 2),
-				card.NewInferred(
+					[]int{1, 2, 3}),
+			},
+			card.InHand{
+				Readonly: card.NewReadonly("a", 2),
+				Inferred: card.NewInferred(
 					[]string{"a", "b", "c"},
-					[]int{1, 2, 3})),
+					[]int{1, 2, 3}),
+			},
 		},
 	},
 	game.PlayerNameWithHand{
 		PlayerName: defaultTestPlayers[1],
 		InitialHand: []card.InHand{
-			card.NewInHand(
-				card.NewReadonly("a", 1),
-				card.NewInferred(
+			card.InHand{
+				Readonly: card.NewReadonly("a", 1),
+				Inferred: card.NewInferred(
 					[]string{"a", "b", "c"},
-					[]int{1, 2, 3, 4})),
-			card.NewInHand(
-				card.NewReadonly("b", 1),
-				card.NewInferred(
+					[]int{1, 2, 3, 4}),
+			},
+			card.InHand{
+				Readonly: card.NewReadonly("b", 1),
+				Inferred: card.NewInferred(
 					[]string{"a", "b", "c", "d"},
-					[]int{1, 2, 3})),
-			card.NewInHand(
-				card.NewReadonly("b", 2),
-				card.NewInferred(
+					[]int{1, 2, 3}),
+			},
+			card.InHand{
+				Readonly: card.NewReadonly("b", 2),
+				Inferred: card.NewInferred(
 					[]string{"a", "b", "c"},
-					[]int{1, 2, 3})),
-			card.NewInHand(
-				card.NewReadonly("c", 2),
-				card.NewInferred(
+					[]int{1, 2, 3}),
+			},
+			card.InHand{
+				Readonly: card.NewReadonly("c", 2),
+				Inferred: card.NewInferred(
 					[]string{"a", "b", "c"},
-					[]int{1, 2, 3})),
-			card.NewInHand(
-				card.NewReadonly("c", 3),
-				card.NewInferred(
+					[]int{1, 2, 3}),
+			},
+			card.InHand{
+				Readonly: card.NewReadonly("c", 3),
+				Inferred: card.NewInferred(
 					[]string{"a", "b", "c"},
-					[]int{1, 2, 3})),
+					[]int{1, 2, 3}),
+			},
 		},
 	},
 	game.PlayerNameWithHand{
 		PlayerName: defaultTestPlayers[2],
 		InitialHand: []card.InHand{
-			card.NewInHand(
-				card.NewReadonly("c", 3),
-				card.NewInferred(
+			card.InHand{
+				Readonly: card.NewReadonly("c", 3),
+				Inferred: card.NewInferred(
 					[]string{"a", "b", "c"},
-					[]int{1, 2, 3, 4})),
-			card.NewInHand(
-				card.NewReadonly("b", 3),
-				card.NewInferred(
+					[]int{1, 2, 3, 4}),
+			},
+			card.InHand{
+				Readonly: card.NewReadonly("b", 3),
+				Inferred: card.NewInferred(
 					[]string{"a", "b", "c"},
-					[]int{1, 2, 3})),
-			card.NewInHand(
-				card.NewReadonly("a", 3),
-				card.NewInferred(
+					[]int{1, 2, 3}),
+			},
+			card.InHand{
+				Readonly: card.NewReadonly("a", 3),
+				Inferred: card.NewInferred(
 					[]string{"a", "b", "c"},
-					[]int{1, 2, 3})),
-			card.NewInHand(
-				card.NewReadonly("d", 3),
-				card.NewInferred(
+					[]int{1, 2, 3}),
+			},
+			card.InHand{
+				Readonly: card.NewReadonly("d", 3),
+				Inferred: card.NewInferred(
 					[]string{"a", "b", "c", "d"},
-					[]int{1, 2, 3})),
-			card.NewInHand(
-				card.NewReadonly("d", 1),
-				card.NewInferred(
+					[]int{1, 2, 3}),
+			},
+			card.InHand{
+				Readonly: card.NewReadonly("d", 1),
+				Inferred: card.NewInferred(
 					[]string{"a", "b", "c", "d"},
-					[]int{1, 2, 3})),
+					[]int{1, 2, 3}),
+			},
 		},
 	},
 }

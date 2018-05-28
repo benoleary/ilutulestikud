@@ -486,11 +486,12 @@ func TestAddNewWithGivenShuffle(unitTest *testing.T) {
 		expectedPlayerHand := make([]card.InHand, lengthOfExpectedHand)
 		for indexInHand := 0; indexInHand < lengthOfExpectedHand; indexInHand++ {
 			expectedPlayerHand[indexInHand] =
-				card.NewInHand(
-					expectedVisibleHand[indexInHand],
-					card.NewInferred(
+				card.InHand{
+					Readonly: expectedVisibleHand[indexInHand],
+					Inferred: card.NewInferred(
 						expectedColors,
-						expectedIndices))
+						expectedIndices),
+				}
 		}
 
 		testIdentifier :=

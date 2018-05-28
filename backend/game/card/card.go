@@ -79,17 +79,6 @@ type InHand struct {
 	Inferred
 }
 
-// NewInHand returns a struct bundling the given card with the information
-// about it known to the player holding it.
-func NewInHand(
-	underlyingCard Readonly,
-	knownInformation Inferred) InHand {
-	return InHand{
-		Readonly: underlyingCard,
-		Inferred: knownInformation,
-	}
-}
-
 // ShuffleInPlace shuffles the given cards in place (using the Fisher-Yates
 // algorithm).
 func ShuffleInPlace(cardsToShuffle []Readonly, randomSeed int64) {
