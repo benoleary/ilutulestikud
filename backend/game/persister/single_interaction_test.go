@@ -3,6 +3,8 @@ package persister_test
 import (
 	"testing"
 	"time"
+
+	"github.com/benoleary/ilutulestikud/backend/game/message"
 )
 
 func TestErrorFromInvalidPlayerVisibleHand(unitTest *testing.T) {
@@ -71,22 +73,59 @@ func TestErrorFromInvalidPlayerInferredHand(unitTest *testing.T) {
 	}
 }
 
-func TestRecordAndRetrieveSingleChatMessage(unitTest *testing.T) {
+func TestRecordAndRetrieveSingleMessages(unitTest *testing.T) {
 	testStartTime := time.Now()
 	initialDeck := defaultTestRuleset.CopyOfFullCardset()
 
-	// A nil initial action log should not be a problem for this test.
+	testColor := "test color"
+
+	initialActionMessages :=
+		[]string{
+			"initial player one action",
+			"initial player two action",
+			"initial player three action",
+		}
+
+	initialActionLog :=
+		[]message.Readonly{
+			message.NewReadonly(
+				threePlayersWithHands[0].PlayerName,
+				testColor,
+				initialActionMessages[0]),
+			message.NewReadonly(
+				threePlayersWithHands[1].PlayerName,
+				testColor,
+				initialActionMessages[1]),
+			message.NewReadonly(
+				threePlayersWithHands[2].PlayerName,
+				testColor,
+				initialActionMessages[2]),
+		}
+
+	comparisonActionLog := make([]message.Readonly, 3)
+	numberOfCopiedMessages := copy(comparisonActionLog, initialActionLog)
+	if numberOfCopiedMessages != 3 {
+		unitTest.Fatalf(
+			"copy(%v, %v) returned %v",
+			comparisonActionLog,
+			initialActionLog,
+			numberOfCopiedMessages)
+	}
+
+	// Default message.Readonly structs should have empty strings as expected.
+	initialChatLog := make([]message.Readonly, logLengthForTest)
+
 	gamesAndDescriptions :=
 		prepareGameStates(
 			unitTest,
 			defaultTestRuleset,
 			threePlayersWithHands,
 			initialDeck,
-			nil)
+			initialActionLog)
 
-	chattingPlayer := &mockPlayerState{
+	testPlayer := &mockPlayerState{
 		threePlayersWithHands[0].PlayerName,
-		"test color",
+		testColor,
 	}
 
 	testMessage := "test message!"
@@ -96,58 +135,129 @@ func TestRecordAndRetrieveSingleChatMessage(unitTest *testing.T) {
 			"single chat message/" + gameAndDescription.PersisterDescription
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			errorFromRecord :=
-				gameAndDescription.GameState.RecordChatMessage(chattingPlayer, testMessage)
+			errorFromChat :=
+				gameAndDescription.GameState.RecordChatMessage(testPlayer, testMessage)
 
-			if errorFromRecord != nil {
+			if errorFromChat != nil {
 				unitTest.Fatalf(
 					"RecordChatMessage(%v, %v) produced error %v",
-					chattingPlayer,
+					testPlayer,
 					testMessage,
-					errorFromRecord)
+					errorFromChat)
 			}
 
-			retrievedChatLog := gameAndDescription.GameState.Read().ChatLog()
+			assertLogWithSingleMessageIsCorrect(
+				testIdentifier+"/chat log",
+				unitTest,
+				gameAndDescription.GameState.Read().ChatLog(),
+				logLengthForTest,
+				testPlayer.Name(),
+				testPlayer.Color(),
+				testMessage,
+				initialChatLog,
+				testStartTime,
+				time.Now())
 
-			if len(retrievedChatLog) != logLengthForTest {
+			// We check the initial action log before recording an action message
+			// as well as after. In this case though, the "last" message is the
+			// original last message.
+			assertLogWithSingleMessageIsCorrect(
+				testIdentifier+"/action log before recording",
+				unitTest,
+				gameAndDescription.GameState.Read().ActionLog(),
+				len(comparisonActionLog),
+				comparisonActionLog[2].PlayerName(),
+				comparisonActionLog[2].TextColor(),
+				comparisonActionLog[2].MessageText(),
+				comparisonActionLog,
+				comparisonActionLog[2].CreationTime(),
+				time.Now())
+
+			errorFromAction :=
+				gameAndDescription.GameState.RecordActionMessage(testPlayer, testMessage)
+
+			if errorFromAction != nil {
 				unitTest.Fatalf(
-					"ChatLog() had wrong number of messages %v, expected %v",
-					retrievedChatLog,
-					logLengthForTest)
+					"RecordActionMessage(%v, %v) produced error %v",
+					testPlayer,
+					testMessage,
+					errorFromAction)
 			}
 
-			// The first message starts at the end of the log, since there
-			// have been no other messages.
-			firstMessage := retrievedChatLog[logLengthForTest-1]
-			if (firstMessage.PlayerName() != chattingPlayer.Name()) ||
-				(firstMessage.TextColor() != chattingPlayer.Color()) ||
-				(firstMessage.MessageText() != testMessage) {
-				unitTest.Fatalf(
-					"first message %+v did not have expected player %+v",
-					firstMessage,
-					chattingPlayer)
-			}
-
-			recordingTime := firstMessage.CreationTime()
-			currentTime := time.Now()
-			if (recordingTime.Before(testStartTime)) ||
-				(recordingTime.After(currentTime)) {
-				unitTest.Fatalf(
-					"first message %v was not between %v and %v",
-					firstMessage,
-					testStartTime,
-					currentTime)
-			}
-
-			for messageIndex := 0; messageIndex < logLengthForTest-1; messageIndex++ {
-				if (retrievedChatLog[messageIndex].PlayerName() != "") ||
-					(retrievedChatLog[messageIndex].TextColor() != "") ||
-					(retrievedChatLog[messageIndex].MessageText() != "") {
-					unitTest.Errorf(
-						"ChatLog() %+v had non-empty message",
-						retrievedChatLog)
-				}
-			}
+			// For comparison after recording, we take a slice which misses out on the old
+			// first message.
+			assertLogWithSingleMessageIsCorrect(
+				testIdentifier+"/action log after recording",
+				unitTest,
+				gameAndDescription.GameState.Read().ActionLog(),
+				len(comparisonActionLog),
+				testPlayer.Name(),
+				testPlayer.Color(),
+				testMessage,
+				comparisonActionLog[1:],
+				testStartTime,
+				time.Now())
 		})
+	}
+}
+
+func assertLogWithSingleMessageIsCorrect(
+	testIdentifier string,
+	unitTest *testing.T,
+	logMessages []message.Readonly,
+	expectedLogLength int,
+	expectedPlayerName string,
+	expectedTextColor string,
+	expectedSingleMessage string,
+	expectedInitialMessages []message.Readonly,
+	earliestTimeForMessage time.Time,
+	latestTimeForMessage time.Time) {
+
+	if len(logMessages) != expectedLogLength {
+		unitTest.Fatalf(
+			testIdentifier+"/wrong number of messages %v, expected %v",
+			logMessages,
+			expectedLogLength)
+	}
+
+	// The first message starts at the end of the log, since there
+	// have been no other messages.
+	firstMessage := logMessages[expectedLogLength-1]
+	if (firstMessage.PlayerName() != expectedPlayerName) ||
+		(firstMessage.TextColor() != expectedTextColor) ||
+		(firstMessage.MessageText() != expectedSingleMessage) {
+		unitTest.Fatalf(
+			testIdentifier+
+				"/first message %+v was not as expected: player name %v, text color %v, message %v",
+			firstMessage,
+			expectedPlayerName,
+			expectedTextColor,
+			expectedSingleMessage)
+	}
+
+	recordingTime := firstMessage.CreationTime()
+
+	if (recordingTime.Before(earliestTimeForMessage)) ||
+		(recordingTime.After(latestTimeForMessage)) {
+		unitTest.Fatalf(
+			testIdentifier+
+				"/first message %v was not between %v and %v",
+			firstMessage,
+			earliestTimeForMessage,
+			latestTimeForMessage)
+	}
+
+	for messageIndex := 0; messageIndex < expectedLogLength-1; messageIndex++ {
+		expectedMessage := expectedInitialMessages[messageIndex]
+		actualMessage := logMessages[messageIndex]
+		if (actualMessage.PlayerName() != expectedMessage.PlayerName()) ||
+			(actualMessage.TextColor() != expectedMessage.TextColor()) ||
+			(actualMessage.MessageText() != expectedMessage.MessageText()) {
+			unitTest.Errorf(
+				testIdentifier+
+					"/log\n %+v\n did not have expected other messages\n %+v\n",
+				logMessages,
+				expectedInitialMessages)
+		}
 	}
 }

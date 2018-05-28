@@ -363,7 +363,7 @@ func (gameState *inMemoryState) ReplaceCardInHand(
 }
 
 // AddCardToPlayedSequence adds the given card to the appropriate sequence of played
-// cards (by just over-writing what was the top-most card of the sequence).
+// cards.
 func (gameState *inMemoryState) AddCardToPlayedSequence(playedCard card.Readonly) error {
 	playedSuit := playedCard.ColorSuit()
 	sequenceBeforeNow := gameState.playedCardsForColor[playedSuit]
