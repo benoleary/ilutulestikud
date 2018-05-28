@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/benoleary/ilutulestikud/backend/game/card"
 	"github.com/benoleary/ilutulestikud/backend/game/message"
 )
 
@@ -197,6 +198,93 @@ func TestRecordAndRetrieveSingleMessages(unitTest *testing.T) {
 				comparisonActionLog[1:],
 				testStartTime,
 				time.Now())
+		})
+	}
+}
+
+func TestErrorFromDrawingFromEmptyDeck(unitTest *testing.T) {
+	initialDeck := []card.Readonly{}
+
+	// A nil initial action log should not be a problem for this test.
+	gamesAndDescriptions :=
+		prepareGameStates(
+			unitTest,
+			defaultTestRuleset,
+			threePlayersWithHands,
+			initialDeck,
+			nil)
+
+	for _, gameAndDescription := range gamesAndDescriptions {
+		testIdentifier :=
+			"drawing from empty deck/" + gameAndDescription.PersisterDescription
+
+		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			drawnCard, errorFromDraw :=
+				gameAndDescription.GameState.DrawCard()
+
+			if errorFromDraw == nil {
+				unitTest.Fatalf(
+					"DrawCard() %v did not produce expected error",
+					drawnCard)
+			}
+		})
+	}
+}
+
+func TestDrawingFromValidDeck(unitTest *testing.T) {
+	expectedCard := card.NewReadonly("a", 3)
+	initialDeck :=
+		[]card.Readonly{
+			expectedCard,
+			card.NewReadonly("b", 2),
+			card.NewReadonly("c", 1),
+		}
+
+	initialDeckSize := len(initialDeck)
+
+	// A nil initial action log should not be a problem for this test.
+	gamesAndDescriptions :=
+		prepareGameStates(
+			unitTest,
+			defaultTestRuleset,
+			threePlayersWithHands,
+			initialDeck,
+			nil)
+
+	for _, gameAndDescription := range gamesAndDescriptions {
+		testIdentifier :=
+			"drawing from valid deck/" + gameAndDescription.PersisterDescription
+
+		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			if gameAndDescription.GameState.Read().DeckSize() != initialDeckSize {
+				unitTest.Fatalf(
+					"initial DeckSize() %v did not match expected %v",
+					gameAndDescription.GameState.Read().DeckSize(),
+					initialDeckSize)
+			}
+
+			drawnCard, errorFromDraw :=
+				gameAndDescription.GameState.DrawCard()
+
+			if errorFromDraw != nil {
+				unitTest.Fatalf(
+					"DrawCard() produced error %v",
+					errorFromDraw)
+			}
+
+			if drawnCard != expectedCard {
+				unitTest.Fatalf(
+					"DrawCard() %v did not match expected %v",
+					drawnCard,
+					expectedCard)
+			}
+
+			if gameAndDescription.GameState.Read().DeckSize() != (initialDeckSize - 1) {
+				unitTest.Fatalf(
+					"after drawing, DeckSize() %v did not match expected %v",
+					gameAndDescription.GameState.Read().DeckSize(),
+					initialDeckSize-1)
+			}
 		})
 	}
 }
