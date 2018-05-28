@@ -4,9 +4,41 @@ import (
 	"testing"
 	"time"
 
+	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/game/card"
 	"github.com/benoleary/ilutulestikud/backend/game/message"
 )
+
+type expectedState struct {
+	Name                   string
+	Ruleset                game.Ruleset
+	PlayerNames            []string
+	CreationTime           time.Time
+	ChatLog                []message.Readonly
+	ActionLog              []message.Readonly
+	Turn                   int
+	Score                  int
+	NumberOfReadyHints     int
+	NumberOfMistakesMade   int
+	DeckSize               int
+	PlayedForColor         map[string][]card.Readonly
+	NumberOfDiscardedCards map[card.Readonly]int
+	VisibleCardInHand      map[string][]card.Readonly
+	InferredCardInHand     map[string][]card.Inferred
+}
+
+func expectNoChanges(
+	unitTest *testing.T,
+	pristineState game.ReadonlyState) expectedState {
+	unitTest.Fatalf("Not yet implemented!")
+	return expectedState{}
+}
+
+func (expectedGame expectedState) assertAsExpected(
+	unitTest *testing.T,
+	pristineState game.ReadonlyState) {
+	unitTest.Fatalf("Not yet implemented!")
+}
 
 func TestErrorFromInvalidPlayerVisibleHand(unitTest *testing.T) {
 	initialDeck := defaultTestRuleset.CopyOfFullCardset()
@@ -25,6 +57,8 @@ func TestErrorFromInvalidPlayerVisibleHand(unitTest *testing.T) {
 			"visible hand for invalid player/" + gameAndDescription.PersisterDescription
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			pristineState := expectNoChanges(unitTest, gameAndDescription.GameState.Read())
+
 			invalidPlayer := "Invalid Player"
 			soughtIndex := 0
 			visibleCard, errorFromGet :=
@@ -37,6 +71,8 @@ func TestErrorFromInvalidPlayerVisibleHand(unitTest *testing.T) {
 					soughtIndex,
 					visibleCard)
 			}
+
+			pristineState.assertAsExpected(unitTest, gameAndDescription.GameState.Read())
 		})
 	}
 }
