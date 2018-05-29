@@ -630,6 +630,117 @@ func TestAddCardsToTwoSequences(unitTest *testing.T) {
 	}
 }
 
+func TestAddCardsOfTwoColorsToDiscardPile(unitTest *testing.T) {
+	// Using nil for the initial action log and for the initial deck
+	// should not be problematic for this test.
+	gamesAndDescriptions :=
+		prepareGameStates(
+			unitTest,
+			defaultTestRuleset,
+			threePlayersWithHands,
+			nil,
+			nil)
+
+	colorsInTest := defaultTestRuleset.ColorSuits()
+	firstColor := colorsInTest[0]
+	secondColor := colorsInTest[1]
+
+	for _, gameAndDescription := range gamesAndDescriptions {
+		testIdentifier :=
+			"add cards to discard pile/" + gameAndDescription.PersisterDescription
+
+		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
+
+			firstCardOfFirstColor := card.NewReadonly(firstColor, 1)
+
+			errorFromFirstDiscard :=
+				gameAndDescription.GameState.AddCardToDiscardPile(
+					firstCardOfFirstColor)
+
+			if errorFromFirstDiscard != nil {
+				unitTest.Fatalf(
+					"AddCardToDiscardPile(%+v) produced error %v",
+					firstCardOfFirstColor,
+					errorFromFirstDiscard)
+			}
+
+			// There should have been no other changes.
+			pristineState.NumberOfDiscardedCards[firstCardOfFirstColor] = 1
+			assertGameStateAsExpected(
+				testIdentifier,
+				unitTest,
+				gameAndDescription.GameState.Read(),
+				pristineState)
+
+			secondCardOfFirstColor := card.NewReadonly(firstColor, 2)
+
+			errorFromSecondDiscard :=
+				gameAndDescription.GameState.AddCardToDiscardPile(
+					secondCardOfFirstColor)
+
+			if errorFromSecondDiscard != nil {
+				unitTest.Fatalf(
+					"AddCardToDiscardPile(%+v) produced error %v",
+					secondCardOfFirstColor,
+					errorFromSecondDiscard)
+			}
+
+			// There should have been no other changes.
+			pristineState.NumberOfDiscardedCards[secondCardOfFirstColor] = 1
+			assertGameStateAsExpected(
+				testIdentifier,
+				unitTest,
+				gameAndDescription.GameState.Read(),
+				pristineState)
+
+			firstCardOfSecondColor := card.NewReadonly(secondColor, 1)
+
+			errorFromThirdDiscard :=
+				gameAndDescription.GameState.AddCardToDiscardPile(
+					firstCardOfSecondColor)
+
+			if errorFromThirdDiscard != nil {
+				unitTest.Fatalf(
+					"AddCardToDiscardPile(%+v) produced error %v",
+					firstCardOfSecondColor,
+					errorFromThirdDiscard)
+			}
+
+			// There should have been no other changes.
+			pristineState.NumberOfDiscardedCards[firstCardOfSecondColor] = 1
+			assertGameStateAsExpected(
+				testIdentifier,
+				unitTest,
+				gameAndDescription.GameState.Read(),
+				pristineState)
+
+			// The next card is a duplicate of a card already in the pile.
+			thirdCardOfFirstColor := card.NewReadonly(firstColor, 2)
+
+			errorFromFourthDiscard :=
+				gameAndDescription.GameState.AddCardToDiscardPile(
+					thirdCardOfFirstColor)
+
+			if errorFromFourthDiscard != nil {
+				unitTest.Fatalf(
+					"AddCardToDiscardPile(%+v) produced error %v",
+					secondCardOfFirstColor,
+					errorFromFourthDiscard)
+			}
+
+			// There are now two copies of the last discarded card.
+			// There should have been no other changes.
+			pristineState.NumberOfDiscardedCards[thirdCardOfFirstColor] = 2
+			assertGameStateAsExpected(
+				testIdentifier,
+				unitTest,
+				gameAndDescription.GameState.Read(),
+				pristineState)
+		})
+	}
+}
+
 func assertLogWithSingleMessageIsCorrect(
 	testIdentifier string,
 	unitTest *testing.T,
