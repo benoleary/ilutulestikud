@@ -25,7 +25,7 @@ func TestErrorFromInvalidPlayerVisibleHand(unitTest *testing.T) {
 			"visible hand for invalid player/" + gameAndDescription.PersisterDescription
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			pristineState := expectNoChanges(unitTest, gameAndDescription.GameState.Read())
+			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
 
 			invalidPlayer := "Invalid Player"
 			soughtIndex := 0
@@ -40,7 +40,12 @@ func TestErrorFromInvalidPlayerVisibleHand(unitTest *testing.T) {
 					visibleCard)
 			}
 
-			pristineState.assertAsExpected(unitTest, gameAndDescription.GameState.Read())
+			// There should have been no visible side-effects at all.
+			assertGameStateAsExpected(
+				testIdentifier,
+				unitTest,
+				gameAndDescription.GameState.Read(),
+				pristineState)
 		})
 	}
 }
@@ -62,7 +67,7 @@ func TestErrorFromInvalidPlayerInferredHand(unitTest *testing.T) {
 			"inferred hand for invalid player/" + gameAndDescription.PersisterDescription
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			pristineState := expectNoChanges(unitTest, gameAndDescription.GameState.Read())
+			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
 
 			invalidPlayer := "Invalid Player"
 			soughtIndex := 0
@@ -78,7 +83,11 @@ func TestErrorFromInvalidPlayerInferredHand(unitTest *testing.T) {
 			}
 
 			// There should have been no visible side-effects at all.
-			pristineState.assertAsExpected(unitTest, gameAndDescription.GameState.Read())
+			assertGameStateAsExpected(
+				testIdentifier,
+				unitTest,
+				gameAndDescription.GameState.Read(),
+				pristineState)
 		})
 	}
 }
@@ -145,6 +154,8 @@ func TestRecordAndRetrieveSingleMessages(unitTest *testing.T) {
 			"single chat message/" + gameAndDescription.PersisterDescription
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
+
 			errorFromChat :=
 				gameAndDescription.GameState.RecordChatMessage(testPlayer, testMessage)
 
@@ -167,6 +178,14 @@ func TestRecordAndRetrieveSingleMessages(unitTest *testing.T) {
 				initialChatLog,
 				testStartTime,
 				time.Now())
+
+			// There should have been no other changes.
+			pristineState.ChatLog = gameAndDescription.GameState.Read().ChatLog()
+			assertGameStateAsExpected(
+				testIdentifier,
+				unitTest,
+				gameAndDescription.GameState.Read(),
+				pristineState)
 
 			// We check the initial action log before recording an action message
 			// as well as after. In this case though, the "last" message is the
@@ -207,6 +226,14 @@ func TestRecordAndRetrieveSingleMessages(unitTest *testing.T) {
 				comparisonActionLog[1:],
 				testStartTime,
 				time.Now())
+
+			// There should have been no other changes.
+			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
+			assertGameStateAsExpected(
+				testIdentifier,
+				unitTest,
+				gameAndDescription.GameState.Read(),
+				pristineState)
 		})
 	}
 }
@@ -228,6 +255,7 @@ func TestErrorFromDrawingFromEmptyDeck(unitTest *testing.T) {
 			"drawing from empty deck/" + gameAndDescription.PersisterDescription
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
 			drawnCard, errorFromDraw :=
 				gameAndDescription.GameState.DrawCard()
 
@@ -236,6 +264,13 @@ func TestErrorFromDrawingFromEmptyDeck(unitTest *testing.T) {
 					"DrawCard() %v did not produce expected error",
 					drawnCard)
 			}
+
+			// There should have been no visible side-effects at all.
+			assertGameStateAsExpected(
+				testIdentifier,
+				unitTest,
+				gameAndDescription.GameState.Read(),
+				pristineState)
 		})
 	}
 }
@@ -265,6 +300,8 @@ func TestDrawingFromValidDeck(unitTest *testing.T) {
 			"drawing from valid deck/" + gameAndDescription.PersisterDescription
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
+
 			if gameAndDescription.GameState.Read().DeckSize() != initialDeckSize {
 				unitTest.Fatalf(
 					"initial DeckSize() %v did not match expected %v",
@@ -294,7 +331,87 @@ func TestDrawingFromValidDeck(unitTest *testing.T) {
 					gameAndDescription.GameState.Read().DeckSize(),
 					initialDeckSize-1)
 			}
+
+			// There should have been no other changes.
+			pristineState.DeckSize = initialDeckSize - 1
+			assertGameStateAsExpected(
+				testIdentifier,
+				unitTest,
+				gameAndDescription.GameState.Read(),
+				pristineState)
 		})
+	}
+}
+
+func TestErrorFromInvalidReplacementInHand(unitTest *testing.T) {
+	// Using nil for the initial action log and for the initial deck
+	// should not be problematic for this test.
+	gamesAndDescriptions :=
+		prepareGameStates(
+			unitTest,
+			defaultTestRuleset,
+			threePlayersWithHands,
+			nil,
+			nil)
+
+	cardToInsert := card.InHand{
+		Readonly: card.NewReadonly("replacement color", 5),
+		Inferred: card.NewInferred([]string{"no idea", "not a clue"}, []int{1, 2, 3}),
+	}
+
+	testCases := []struct {
+		testName    string
+		playerName  string
+		indexInHand int
+	}{
+		{
+			testName:    "player with no hand",
+			playerName:  "Invalid Player",
+			indexInHand: 0,
+		},
+		{
+			testName:    "negative index",
+			playerName:  defaultTestPlayers[0],
+			indexInHand: -1,
+		},
+		{
+			testName:    "too large index",
+			playerName:  defaultTestPlayers[0],
+			indexInHand: 10,
+		},
+	}
+
+	for _, gameAndDescription := range gamesAndDescriptions {
+		testIdentifier :=
+			"invalid replacement of card in hand/" + gameAndDescription.PersisterDescription
+
+		for _, testCase := range testCases {
+			unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+				pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
+
+				cardFromOriginalHand, errorFromReplacement :=
+					gameAndDescription.GameState.ReplaceCardInHand(
+						testCase.playerName,
+						testCase.indexInHand,
+						cardToInsert)
+
+				if errorFromReplacement == nil {
+					unitTest.Fatalf(
+						"ReplaceCardInHand(%v, %v, %+v) %+v did not produce expected error",
+						testCase.playerName,
+						testCase.indexInHand,
+						cardToInsert,
+						cardFromOriginalHand)
+				}
+
+				// There should have been no visible side-effects at all.
+				assertGameStateAsExpected(
+					testIdentifier,
+					unitTest,
+					gameAndDescription.GameState.Read(),
+					pristineState)
+			})
+		}
 	}
 }
 

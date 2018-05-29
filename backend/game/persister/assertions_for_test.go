@@ -2,6 +2,9 @@ package persister_test
 
 import (
 	"testing"
+
+	"github.com/benoleary/ilutulestikud/backend/game"
+	"github.com/benoleary/ilutulestikud/backend/game/card"
 )
 
 func assertPlayersMatchNames(
@@ -72,6 +75,158 @@ func assertIntSlicesMatch(
 				testIdentifier+"/actual %v did not match expected %v",
 				actualSlice,
 				expectedSlice)
+		}
+	}
+}
+
+func assertGameStateAsExpected(
+	testIdentifier string,
+	unitTest *testing.T,
+	actualGame game.ReadonlyState,
+	expectedGame expectedState) {
+	if (actualGame.Name() != expectedGame.Name) ||
+		(actualGame.Ruleset() != expectedGame.Ruleset) ||
+		(actualGame.CreationTime() != expectedGame.CreationTime) ||
+		(actualGame.Turn() != expectedGame.Turn) ||
+		(actualGame.Score() != expectedGame.Score) ||
+		(actualGame.NumberOfReadyHints() != expectedGame.NumberOfReadyHints) ||
+		(actualGame.NumberOfMistakesMade() != expectedGame.NumberOfMistakesMade) ||
+		(actualGame.DeckSize() != expectedGame.DeckSize) ||
+		(len(actualGame.PlayerNames()) != len(expectedGame.PlayerNames)) ||
+		(len(actualGame.ChatLog()) != len(expectedGame.ChatLog)) ||
+		(len(actualGame.ActionLog()) != len(expectedGame.ActionLog)) {
+		unitTest.Fatalf(
+			testIdentifier+"/actual %+v did not match expected %+v in easy comparisons",
+			actualGame,
+			expectedGame)
+	}
+
+	for chatIndex, chatMessage := range actualGame.ChatLog() {
+		if chatMessage != expectedGame.ChatLog[chatIndex] {
+			unitTest.Fatalf(
+				testIdentifier+"/actual %+v did not match expected %+v in chat log",
+				actualGame,
+				expectedGame)
+		}
+	}
+
+	for actionIndex, actionMessage := range actualGame.ActionLog() {
+		if actionMessage != expectedGame.ActionLog[actionIndex] {
+			unitTest.Fatalf(
+				testIdentifier+"/actual %+v did not match expected %+v in action log",
+				actualGame,
+				expectedGame)
+		}
+	}
+
+	for _, colorSuit := range actualGame.Ruleset().ColorSuits() {
+		actualPlayedCards := actualGame.PlayedForColor(colorSuit)
+		expectedPlayedCards := expectedGame.PlayedForColor[colorSuit]
+		if len(actualPlayedCards) != len(expectedPlayedCards) {
+			unitTest.Fatalf(
+				testIdentifier+"/actual %+v did not match expected %+v in PlayedForColor",
+				actualGame,
+				expectedGame)
+		}
+
+		for cardIndex, actualPlayedCard := range actualPlayedCards {
+			if actualPlayedCard != expectedPlayedCards[cardIndex] {
+				unitTest.Fatalf(
+					testIdentifier+"/actual %+v did not match expected %+v in PlayedForColor",
+					actualGame,
+					expectedGame)
+			}
+		}
+
+		for _, sequenceIndex := range actualGame.Ruleset().DistinctPossibleIndices() {
+			actualNumberOfDiscardedCopies :=
+				actualGame.NumberOfDiscardedCards(colorSuit, sequenceIndex)
+			discardedCard := card.NewReadonly(colorSuit, sequenceIndex)
+			expectedNumberOfDiscardedCopies :=
+				expectedGame.NumberOfDiscardedCards[discardedCard]
+
+			if actualNumberOfDiscardedCopies != expectedNumberOfDiscardedCopies {
+				unitTest.Fatalf(
+					testIdentifier+"/actual %+v did not match expected %+v in NumberOfDiscardedCards",
+					actualGame,
+					expectedGame)
+			}
+		}
+	}
+
+	handSize :=
+		actualGame.Ruleset().NumberOfCardsInPlayerHand(len(actualGame.PlayerNames()))
+
+	for playerIndex, playerName := range actualGame.PlayerNames() {
+		if playerName != expectedGame.PlayerNames[playerIndex] {
+			unitTest.Fatalf(
+				testIdentifier+"/actual %+v did not match expected %+v in player names",
+				actualGame,
+				expectedGame)
+		}
+
+		expectedVisibleHand := expectedGame.VisibleCardInHand[playerName]
+		expectedInferredHand := expectedGame.InferredCardInHand[playerName]
+
+		for handIndex := 0; handIndex < handSize; handIndex++ {
+			visibleCard, errorFromVisible :=
+				actualGame.VisibleCardInHand(playerName, handIndex)
+
+			if errorFromVisible != nil {
+				unitTest.Fatalf(
+					testIdentifier+"/VisibleCardInHand(%+v, %+v) produced error %v",
+					playerName,
+					handIndex,
+					errorFromVisible)
+			}
+
+			if visibleCard != expectedVisibleHand[handIndex] {
+				unitTest.Fatalf(
+					testIdentifier+"/actual %+v did not match expected %+v in visible hands",
+					actualGame,
+					expectedGame)
+			}
+
+			inferredCard, errorFromInferred :=
+				actualGame.InferredCardInHand(playerName, handIndex)
+
+			if errorFromInferred != nil {
+				unitTest.Fatalf(
+					testIdentifier+"/InferredCardInHand(%+v, %+v) produced error %v",
+					playerName,
+					handIndex,
+					errorFromInferred)
+			}
+
+			expectedInferred := expectedInferredHand[handIndex]
+			expectedColors := expectedInferred.PossibleColors()
+			expectedIndices := expectedInferred.PossibleIndices()
+
+			if (len(inferredCard.PossibleColors()) != len(expectedColors)) ||
+				(len(inferredCard.PossibleIndices()) != len(expectedIndices)) {
+				unitTest.Fatalf(
+					testIdentifier+"/actual %+v did not match expected %+v in inferred hands",
+					actualGame,
+					expectedGame)
+			}
+
+			for colorIndex, actualColor := range inferredCard.PossibleColors() {
+				if actualColor != expectedColors[colorIndex] {
+					unitTest.Fatalf(
+						"actual %+v did not match expected %+v in inferred hand colors",
+						actualGame,
+						expectedGame)
+				}
+			}
+
+			for indexIndex, actualIndex := range inferredCard.PossibleIndices() {
+				if actualIndex != expectedIndices[indexIndex] {
+					unitTest.Fatalf(
+						testIdentifier+"/actual %+v did not match expected %+v in inferred hand indices",
+						actualGame,
+						expectedGame)
+				}
+			}
 		}
 	}
 }
