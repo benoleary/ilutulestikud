@@ -70,80 +70,72 @@ type stringTriple struct {
 }
 
 type mockGameState struct {
-	testReference                       *testing.T
-	ReturnForNontestError               error
-	MockName                            string
-	MockRuleset                         game.Ruleset
-	MockNamesAndHands                   []game.PlayerNameWithHand
-	MockDeck                            []card.Readonly
-	MockTurn                            int
-	MockChatLog                         []message.Readonly
-	TestErrorForName                    error
-	TestErrorForRuleset                 error
-	ReturnForRuleset                    game.Ruleset
-	TestErrorForPlayerNames             error
-	ReturnForPlayerNames                []string
-	TestErrorForTurn                    error
-	TestErrorForCreationTime            error
-	ReturnForCreationTime               time.Time
-	TestErrorForActionLog               error
-	TestErrorForChatLog                 error
-	TestErrorForScore                   error
-	TestErrorForNumberOfReadyHints      error
-	TestErrorForNumberOfMistakesMade    error
-	TestErrorForDeckSize                error
-	TestErrorForPlayedForColor          error
-	TestErrorForNumberOfDiscardedCards  error
-	TestErrorForVisibleCardInHand       error
-	TestErrorForInferredCardInHand      error
-	TestErrorForRecordActionMessage     error
-	ArgumentsFromRecordActionMessage    []stringTriple
-	TestErrorForRecordChatMessage       error
-	ArgumentsFromRecordChatMessage      []stringTriple
-	TestErrorForDrawCard                error
-	TestErrorForReplaceCardInHand       error
-	TestErrorForAddCardToPlayedSequence error
-	TestErrorForAddCardToDiscardPile    error
+	testReference                                                  *testing.T
+	ReturnForNontestError                                          error
+	MockName                                                       string
+	MockRuleset                                                    game.Ruleset
+	MockNamesAndHands                                              []game.PlayerNameWithHand
+	MockDeck                                                       []card.Readonly
+	MockTurn                                                       int
+	MockChatLog                                                    []message.Readonly
+	TestErrorForName                                               error
+	TestErrorForRuleset                                            error
+	ReturnForRuleset                                               game.Ruleset
+	TestErrorForPlayerNames                                        error
+	ReturnForPlayerNames                                           []string
+	TestErrorForTurn                                               error
+	TestErrorForCreationTime                                       error
+	ReturnForCreationTime                                          time.Time
+	TestErrorForActionLog                                          error
+	TestErrorForChatLog                                            error
+	TestErrorForScore                                              error
+	TestErrorForNumberOfReadyHints                                 error
+	TestErrorForNumberOfMistakesMade                               error
+	TestErrorForDeckSize                                           error
+	TestErrorForPlayedForColor                                     error
+	TestErrorForNumberOfDiscardedCards                             error
+	TestErrorForVisibleCardInHand                                  error
+	TestErrorForInferredCardInHand                                 error
+	TestErrorForRecordChatMessage                                  error
+	ArgumentsFromRecordChatMessage                                 []stringTriple
+	TestErrorForMoveCardFromHandToDiscardPileAndReplaceFromDeck    error
+	TestErrorForMoveCardFromHandToPlayedSequenceAndReplaceFromDeck error
 }
 
 func NewMockGameState(
 	testReference *testing.T,
 	testError error) *mockGameState {
 	return &mockGameState{
-		testReference:                       testReference,
-		ReturnForNontestError:               nil,
-		MockName:                            "",
-		MockRuleset:                         nil,
-		MockNamesAndHands:                   nil,
-		MockDeck:                            nil,
-		MockTurn:                            -1,
-		MockChatLog:                         nil,
-		TestErrorForName:                    testError,
-		TestErrorForRuleset:                 testError,
-		ReturnForRuleset:                    nil,
-		TestErrorForPlayerNames:             testError,
-		ReturnForPlayerNames:                nil,
-		TestErrorForTurn:                    testError,
-		TestErrorForCreationTime:            testError,
-		ReturnForCreationTime:               time.Now(),
-		TestErrorForActionLog:               testError,
-		TestErrorForChatLog:                 testError,
-		TestErrorForScore:                   testError,
-		TestErrorForNumberOfReadyHints:      testError,
-		TestErrorForNumberOfMistakesMade:    testError,
-		TestErrorForDeckSize:                testError,
-		TestErrorForPlayedForColor:          testError,
-		TestErrorForNumberOfDiscardedCards:  testError,
-		TestErrorForVisibleCardInHand:       testError,
-		TestErrorForInferredCardInHand:      testError,
-		TestErrorForRecordActionMessage:     testError,
-		ArgumentsFromRecordActionMessage:    make([]stringTriple, 0),
-		TestErrorForRecordChatMessage:       testError,
-		ArgumentsFromRecordChatMessage:      make([]stringTriple, 0),
-		TestErrorForDrawCard:                testError,
-		TestErrorForReplaceCardInHand:       testError,
-		TestErrorForAddCardToPlayedSequence: testError,
-		TestErrorForAddCardToDiscardPile:    testError,
+		testReference:                                                  testReference,
+		ReturnForNontestError:                                          nil,
+		MockName:                                                       "",
+		MockRuleset:                                                    nil,
+		MockNamesAndHands:                                              nil,
+		MockDeck:                                                       nil,
+		MockTurn:                                                       -1,
+		MockChatLog:                                                    nil,
+		TestErrorForName:                                               testError,
+		TestErrorForRuleset:                                            testError,
+		ReturnForRuleset:                                               nil,
+		TestErrorForPlayerNames:                                        testError,
+		ReturnForPlayerNames:                                           nil,
+		TestErrorForTurn:                                               testError,
+		TestErrorForCreationTime:                                       testError,
+		ReturnForCreationTime:                                          time.Now(),
+		TestErrorForActionLog:                                          testError,
+		TestErrorForChatLog:                                            testError,
+		TestErrorForScore:                                              testError,
+		TestErrorForNumberOfReadyHints:                                 testError,
+		TestErrorForNumberOfMistakesMade:                               testError,
+		TestErrorForDeckSize:                                           testError,
+		TestErrorForPlayedForColor:                                     testError,
+		TestErrorForNumberOfDiscardedCards:                             testError,
+		TestErrorForVisibleCardInHand:                                  testError,
+		TestErrorForInferredCardInHand:                                 testError,
+		TestErrorForRecordChatMessage:                                  testError,
+		ArgumentsFromRecordChatMessage:                                 make([]stringTriple, 0),
+		TestErrorForMoveCardFromHandToDiscardPileAndReplaceFromDeck:    testError,
+		TestErrorForMoveCardFromHandToPlayedSequenceAndReplaceFromDeck: testError,
 	}
 }
 
@@ -331,28 +323,6 @@ func (mockGame *mockGameState) Read() game.ReadonlyState {
 	return mockGame
 }
 
-// RecordActionMessage gets mocked.
-func (mockGame *mockGameState) RecordActionMessage(
-	actingPlayer player.ReadonlyState, actionMessage string) error {
-	if mockGame.TestErrorForRecordActionMessage != nil {
-		mockGame.testReference.Fatalf(
-			"RecordActionMessage(%v, %v): %v",
-			actingPlayer,
-			actionMessage,
-			mockGame.TestErrorForRecordActionMessage)
-	}
-
-	mockGame.ArgumentsFromRecordActionMessage = append(
-		mockGame.ArgumentsFromRecordActionMessage,
-		stringTriple{
-			FirstString:  actingPlayer.Name(),
-			SecondString: actingPlayer.Color(),
-			ThirdString:  actionMessage,
-		})
-
-	return mockGame.ReturnForNontestError
-}
-
 // RecordChatMessage gets mocked.
 func (mockGame *mockGameState) RecordChatMessage(
 	actingPlayer player.ReadonlyState, chatMessage string) error {
@@ -375,58 +345,48 @@ func (mockGame *mockGameState) RecordChatMessage(
 	return mockGame.ReturnForNontestError
 }
 
-// DrawCard gets mocked.
-func (mockGame *mockGameState) DrawCard() (card.Readonly, error) {
-	if mockGame.TestErrorForDrawCard != nil {
+// MoveCardFromHandToDiscardPileAndReplaceFromDeck gets mocked.
+func (mockGame *mockGameState) MoveCardFromHandToDiscardPileAndReplaceFromDeck(
+	actionMessage string,
+	actingPlayer player.ReadonlyState,
+	indexInHand int,
+	knowledgeOfDrawnCard card.Inferred,
+	numberOfReadyHintsToAdd int,
+	numberOfMistakesMadeToAdd int) (bool, error) {
+	if mockGame.TestErrorForMoveCardFromHandToDiscardPileAndReplaceFromDeck != nil {
 		mockGame.testReference.Fatalf(
-			"DrawCard(): %v",
-			mockGame.TestErrorForDrawCard)
+			"MoveCardFromHandToDiscardPileAndReplaceFromDeck(%v, %v, %v, %v, %v, %v): %v",
+			actionMessage,
+			actingPlayer,
+			indexInHand,
+			knowledgeOfDrawnCard,
+			numberOfReadyHintsToAdd,
+			numberOfMistakesMadeToAdd,
+			mockGame.TestErrorForMoveCardFromHandToDiscardPileAndReplaceFromDeck)
 	}
 
-	return card.ErrorReadonly(), nil
+	return false, nil
 }
 
 // ReplaceCardInHand gets mocked.
-func (mockGame *mockGameState) ReplaceCardInHand(
-	holdingPlayerName string,
+func (mockGame *mockGameState) MoveCardFromHandToPlayedSequenceAndReplaceFromDeck(
+	actionMessage string,
+	actingPlayer player.ReadonlyState,
 	indexInHand int,
-	replacementCard card.InHand) (card.Readonly, error) {
-	if mockGame.TestErrorForReplaceCardInHand != nil {
+	knowledgeOfDrawnCard card.Inferred,
+	numberOfReadyHintsToAdd int) (bool, error) {
+	if mockGame.TestErrorForMoveCardFromHandToPlayedSequenceAndReplaceFromDeck != nil {
 		mockGame.testReference.Fatalf(
-			"ReplaceCardInHand(%v, %v, %v): %v",
-			holdingPlayerName,
+			"MoveCardFromHandToPlayedSequenceAndReplaceFromDeck(%v, %v, %v, %v, %v): %v",
+			actionMessage,
+			actingPlayer,
 			indexInHand,
-			replacementCard,
-			mockGame.TestErrorForReplaceCardInHand)
+			knowledgeOfDrawnCard,
+			numberOfReadyHintsToAdd,
+			mockGame.TestErrorForMoveCardFromHandToPlayedSequenceAndReplaceFromDeck)
 	}
 
-	return card.ErrorReadonly(), nil
-}
-
-// AddCardToPlayedSequence gets mocked.
-func (mockGame *mockGameState) AddCardToPlayedSequence(
-	playedCard card.Readonly) error {
-	if mockGame.TestErrorForAddCardToPlayedSequence != nil {
-		mockGame.testReference.Fatalf(
-			"AddCardToPlayedSequence(%v): %v",
-			playedCard,
-			mockGame.TestErrorForAddCardToPlayedSequence)
-	}
-
-	return nil
-}
-
-// AddCardToDiscardPile gets mocked.
-func (mockGame *mockGameState) AddCardToDiscardPile(
-	discardedCard card.Readonly) error {
-	if mockGame.TestErrorForAddCardToDiscardPile != nil {
-		mockGame.testReference.Fatalf(
-			"AddCardToDiscardPile(%v): %v",
-			discardedCard,
-			mockGame.TestErrorForAddCardToDiscardPile)
-	}
-
-	return nil
+	return false, nil
 }
 
 type mockGameDefinition struct {

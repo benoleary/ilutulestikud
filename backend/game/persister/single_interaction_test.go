@@ -92,55 +92,23 @@ func TestErrorFromInvalidPlayerInferredHand(unitTest *testing.T) {
 	}
 }
 
-func TestRecordAndRetrieveSingleMessages(unitTest *testing.T) {
+func TestRecordAndRetrieveSingleChatMessage(unitTest *testing.T) {
 	testStartTime := time.Now()
 	initialDeck := defaultTestRuleset.CopyOfFullCardset()
 
 	testColor := "test color"
 
-	initialActionMessages :=
-		[]string{
-			"initial player one action",
-			"initial player two action",
-			"initial player three action",
-		}
-
-	initialActionLog :=
-		[]message.Readonly{
-			message.NewReadonly(
-				threePlayersWithHands[0].PlayerName,
-				testColor,
-				initialActionMessages[0]),
-			message.NewReadonly(
-				threePlayersWithHands[1].PlayerName,
-				testColor,
-				initialActionMessages[1]),
-			message.NewReadonly(
-				threePlayersWithHands[2].PlayerName,
-				testColor,
-				initialActionMessages[2]),
-		}
-
-	comparisonActionLog := make([]message.Readonly, 3)
-	numberOfCopiedMessages := copy(comparisonActionLog, initialActionLog)
-	if numberOfCopiedMessages != 3 {
-		unitTest.Fatalf(
-			"copy(%v, %v) returned %v",
-			comparisonActionLog,
-			initialActionLog,
-			numberOfCopiedMessages)
-	}
-
 	// Default message.Readonly structs should have empty strings as expected.
 	initialChatLog := make([]message.Readonly, logLengthForTest)
 
+	// A nil initial action log should not be a problem for this test.
 	gamesAndDescriptions :=
 		prepareGameStates(
 			unitTest,
 			defaultTestRuleset,
 			threePlayersWithHands,
 			initialDeck,
-			initialActionLog)
+			nil)
 
 	testPlayer := &mockPlayerState{
 		threePlayersWithHands[0].PlayerName,
@@ -186,105 +154,21 @@ func TestRecordAndRetrieveSingleMessages(unitTest *testing.T) {
 				unitTest,
 				gameAndDescription.GameState.Read(),
 				pristineState)
-
-			// We check the initial action log before recording an action message
-			// as well as after. In this case though, the "last" message is the
-			// original last message.
-			assertLogWithSingleMessageIsCorrect(
-				testIdentifier+"/action log before recording",
-				unitTest,
-				gameAndDescription.GameState.Read().ActionLog(),
-				len(comparisonActionLog),
-				comparisonActionLog[2].PlayerName(),
-				comparisonActionLog[2].TextColor(),
-				comparisonActionLog[2].MessageText(),
-				comparisonActionLog,
-				comparisonActionLog[2].CreationTime(),
-				time.Now())
-
-			errorFromAction :=
-				gameAndDescription.GameState.RecordActionMessage(testPlayer, testMessage)
-
-			if errorFromAction != nil {
-				unitTest.Fatalf(
-					"RecordActionMessage(%v, %v) produced error %v",
-					testPlayer,
-					testMessage,
-					errorFromAction)
-			}
-
-			// For comparison after recording, we take a slice which misses out on the old
-			// first message.
-			assertLogWithSingleMessageIsCorrect(
-				testIdentifier+"/action log after recording",
-				unitTest,
-				gameAndDescription.GameState.Read().ActionLog(),
-				len(comparisonActionLog),
-				testPlayer.Name(),
-				testPlayer.Color(),
-				testMessage,
-				comparisonActionLog[1:],
-				testStartTime,
-				time.Now())
-
-			// There should have been no other changes.
-			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
-			assertGameStateAsExpected(
-				testIdentifier,
-				unitTest,
-				gameAndDescription.GameState.Read(),
-				pristineState)
 		})
 	}
 }
 
-func TestErrorFromDrawingFromEmptyDeck(unitTest *testing.T) {
+func TestErrorFromActionsInvalidlyTakingCardFromHand(unitTest *testing.T) {
 	initialDeck := []card.Readonly{}
 
-	// A nil initial action log should not be a problem for this test.
-	gamesAndDescriptions :=
-		prepareGameStates(
-			unitTest,
-			defaultTestRuleset,
-			threePlayersWithHands,
-			initialDeck,
-			nil)
-
-	for _, gameAndDescription := range gamesAndDescriptions {
-		testIdentifier :=
-			"drawing from empty deck/" + gameAndDescription.PersisterDescription
-
-		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
-			drawnCard, errorFromDraw :=
-				gameAndDescription.GameState.DrawCard()
-
-			if errorFromDraw == nil {
-				unitTest.Fatalf(
-					"DrawCard() %v did not produce expected error",
-					drawnCard)
-			}
-
-			// There should have been no visible side-effects at all.
-			assertGameStateAsExpected(
-				testIdentifier,
-				unitTest,
-				gameAndDescription.GameState.Read(),
-				pristineState)
-		})
-	}
-}
-
-func TestDrawingFromValidDeck(unitTest *testing.T) {
-	expectedCard := card.NewReadonly("a", 3)
-	initialDeck :=
-		[]card.Readonly{
-			expectedCard,
-			card.NewReadonly("b", 2),
-			card.NewReadonly("c", 1),
-		}
-
-	initialDeckSize := len(initialDeck)
+	actionMessage := "action message"
+	testColor := "test color"
+	numberOfHintsToAdd := 2
+	numberOfMistakesToAdd := -1
+	knowledgeOfNewCard :=
+		card.NewInferred(
+			[]string{"no idea", "not a clue"},
+			[]int{1, 2, 3})
 
 	// A nil initial action log should not be a problem for this test.
 	gamesAndDescriptions :=
@@ -294,70 +178,6 @@ func TestDrawingFromValidDeck(unitTest *testing.T) {
 			threePlayersWithHands,
 			initialDeck,
 			nil)
-
-	for _, gameAndDescription := range gamesAndDescriptions {
-		testIdentifier :=
-			"drawing from valid deck/" + gameAndDescription.PersisterDescription
-
-		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
-
-			if gameAndDescription.GameState.Read().DeckSize() != initialDeckSize {
-				unitTest.Fatalf(
-					"initial DeckSize() %v did not match expected %v",
-					gameAndDescription.GameState.Read().DeckSize(),
-					initialDeckSize)
-			}
-
-			drawnCard, errorFromDraw :=
-				gameAndDescription.GameState.DrawCard()
-
-			if errorFromDraw != nil {
-				unitTest.Fatalf(
-					"DrawCard() produced error %v",
-					errorFromDraw)
-			}
-
-			if drawnCard != expectedCard {
-				unitTest.Fatalf(
-					"DrawCard() %v did not match expected %v",
-					drawnCard,
-					expectedCard)
-			}
-
-			if gameAndDescription.GameState.Read().DeckSize() != (initialDeckSize - 1) {
-				unitTest.Fatalf(
-					"after drawing, DeckSize() %v did not match expected %v",
-					gameAndDescription.GameState.Read().DeckSize(),
-					initialDeckSize-1)
-			}
-
-			// There should have been no other changes.
-			pristineState.DeckSize = initialDeckSize - 1
-			assertGameStateAsExpected(
-				testIdentifier,
-				unitTest,
-				gameAndDescription.GameState.Read(),
-				pristineState)
-		})
-	}
-}
-
-func TestErrorFromInvalidReplacementInHand(unitTest *testing.T) {
-	// Using nil for the initial action log and for the initial deck
-	// should not be problematic for this test.
-	gamesAndDescriptions :=
-		prepareGameStates(
-			unitTest,
-			defaultTestRuleset,
-			threePlayersWithHands,
-			nil,
-			nil)
-
-	cardToInsert := card.InHand{
-		Readonly: card.NewReadonly("replacement color", 5),
-		Inferred: card.NewInferred([]string{"no idea", "not a clue"}, []int{1, 2, 3}),
-	}
 
 	handSize :=
 		defaultTestRuleset.NumberOfCardsInPlayerHand(len(threePlayersWithHands))
@@ -385,26 +205,67 @@ func TestErrorFromInvalidReplacementInHand(unitTest *testing.T) {
 	}
 
 	for _, gameAndDescription := range gamesAndDescriptions {
-		testIdentifier :=
-			"invalid replacement of card in hand/" + gameAndDescription.PersisterDescription
-
 		for _, testCase := range testCases {
+			testIdentifier :=
+				"invalid take-card-from-hand action/" +
+					gameAndDescription.PersisterDescription +
+					"/" + testCase.testName
+
+			testPlayer := &mockPlayerState{
+				testCase.playerName,
+				testColor,
+			}
+
 			unitTest.Run(testIdentifier, func(unitTest *testing.T) {
 				pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
 
-				cardFromOriginalHand, errorFromReplacement :=
-					gameAndDescription.GameState.ReplaceCardInHand(
-						testCase.playerName,
+				hasDeckCardsLeftAfterDiscarding, errorFromDiscardingCard :=
+					gameAndDescription.GameState.MoveCardFromHandToDiscardPileAndReplaceFromDeck(
+						actionMessage,
+						testPlayer,
 						testCase.indexInHand,
-						cardToInsert)
+						knowledgeOfNewCard,
+						numberOfHintsToAdd,
+						numberOfMistakesToAdd)
 
-				if errorFromReplacement == nil {
+				if errorFromDiscardingCard == nil {
 					unitTest.Fatalf(
-						"ReplaceCardInHand(%v, %v, %+v) %+v did not produce expected error",
-						testCase.playerName,
+						"MoveCardFromHandToDiscardPileAndReplaceFromDeck(%v, %v, %v, %v, %v, %v) %v"+
+							" did not produce expected error",
+						actionMessage,
+						testPlayer,
 						testCase.indexInHand,
-						cardToInsert,
-						cardFromOriginalHand)
+						knowledgeOfNewCard,
+						numberOfHintsToAdd,
+						numberOfMistakesToAdd,
+						hasDeckCardsLeftAfterDiscarding)
+				}
+
+				// There should have been no visible side-effects at all.
+				assertGameStateAsExpected(
+					testIdentifier,
+					unitTest,
+					gameAndDescription.GameState.Read(),
+					pristineState)
+
+				hasDeckCardsLeftAfterPlaying, errorFromPlayingCard :=
+					gameAndDescription.GameState.MoveCardFromHandToPlayedSequenceAndReplaceFromDeck(
+						actionMessage,
+						testPlayer,
+						testCase.indexInHand,
+						knowledgeOfNewCard,
+						numberOfHintsToAdd)
+
+				if errorFromPlayingCard == nil {
+					unitTest.Fatalf(
+						"MoveCardFromHandToPlayedSequenceAndReplaceFromDeck(%v, %v, %v, %v, %v) %v"+
+							" did not produce expected error",
+						actionMessage,
+						testPlayer,
+						testCase.indexInHand,
+						knowledgeOfNewCard,
+						numberOfHintsToAdd,
+						hasDeckCardsLeftAfterPlaying)
 				}
 
 				// There should have been no visible side-effects at all.
@@ -418,320 +279,121 @@ func TestErrorFromInvalidReplacementInHand(unitTest *testing.T) {
 	}
 }
 
-func TestReplaceCardInHand(unitTest *testing.T) {
-	// Using nil for the initial action log and for the initial deck
-	// should not be problematic for this test.
+func TestValidPlayOfCard(unitTest *testing.T) {
+	expectedCard := card.NewReadonly("a", 3)
+	initialDeck :=
+		[]card.Readonly{
+			expectedCard,
+			card.NewReadonly("b", 2),
+			card.NewReadonly("c", 1),
+		}
+
+	initialDeckSize := len(initialDeck)
+	initialActionMessages :=
+		[]string{
+			"initial player one action",
+			"initial player two action",
+			"initial player three action",
+		}
+
+	testColor := "test color"
+	actionMessage := "action message"
+	numberOfHintsToAdd := -2
+	knowledgeOfNewCard :=
+		card.NewInferred(
+			[]string{"no idea", "not a clue"},
+			[]int{1, 2, 3})
+
+	initialActionLog :=
+		[]message.Readonly{
+			message.NewReadonly(
+				threePlayersWithHands[0].PlayerName,
+				testColor,
+				initialActionMessages[0]),
+			message.NewReadonly(
+				threePlayersWithHands[1].PlayerName,
+				testColor,
+				initialActionMessages[1]),
+			message.NewReadonly(
+				threePlayersWithHands[2].PlayerName,
+				testColor,
+				initialActionMessages[2]),
+		}
+
+	comparisonActionLog := make([]message.Readonly, 3)
+	numberOfCopiedMessages := copy(comparisonActionLog, initialActionLog)
+	if numberOfCopiedMessages != 3 {
+		unitTest.Fatalf(
+			"copy(%v, %v) returned %v",
+			comparisonActionLog,
+			initialActionLog,
+			numberOfCopiedMessages)
+	}
+
+	testPlayer := &mockPlayerState{
+		threePlayersWithHands[0].PlayerName,
+		testColor,
+	}
+
+	indexInHand := 1
+
 	gamesAndDescriptions :=
 		prepareGameStates(
 			unitTest,
 			defaultTestRuleset,
 			threePlayersWithHands,
-			nil,
+			initialDeck,
 			nil)
-
-	playerForTest := defaultTestPlayers[1]
-	handSize :=
-		defaultTestRuleset.NumberOfCardsInPlayerHand(len(threePlayersWithHands))
-
-	cardsToInsert := []card.InHand{
-		card.InHand{
-			Readonly: card.NewReadonly("first replacement color", 5),
-			Inferred: card.NewInferred([]string{"no idea", "not a clue"}, []int{5, 15}),
-		},
-		card.InHand{
-			Readonly: card.NewReadonly("second replacement color", 4),
-			Inferred: card.NewInferred([]string{"no idea", "not a clue"}, []int{4, 14}),
-		},
-		card.InHand{
-			Readonly: card.NewReadonly("third replacement color", 3),
-			Inferred: card.NewInferred([]string{"no idea", "not a clue"}, []int{3, 13}),
-		},
-		card.InHand{
-			Readonly: card.NewReadonly("fourth replacement color", 2),
-			Inferred: card.NewInferred([]string{"no idea", "not a clue"}, []int{2, 12}),
-		},
-		card.InHand{
-			Readonly: card.NewReadonly("fifth replacement color", 1),
-			Inferred: card.NewInferred([]string{"no idea", "not a clue"}, []int{1, 10}),
-		},
-	}
 
 	for _, gameAndDescription := range gamesAndDescriptions {
 		testIdentifier :=
-			"valid replacement of card in hand/" + gameAndDescription.PersisterDescription
+			"valid play of card/" + gameAndDescription.PersisterDescription
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
 			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
 
-			for indexInHand := 0; indexInHand < handSize; indexInHand++ {
-				cardToInsert := cardsToInsert[indexInHand]
-
-				expectedCardFromHand :=
-					pristineState.VisibleCardInHand[playerForTest][indexInHand]
-				cardFromOriginalHand, errorFromReplacement :=
-					gameAndDescription.GameState.ReplaceCardInHand(
-						playerForTest,
-						indexInHand,
-						cardToInsert)
-
-				if errorFromReplacement != nil {
-					unitTest.Fatalf(
-						"ReplaceCardInHand(%v, %v, %+v) produced error %v",
-						playerForTest,
-						indexInHand,
-						cardToInsert,
-						cardFromOriginalHand)
-				}
-
-				if cardFromOriginalHand != expectedCardFromHand {
-					unitTest.Fatalf(
-						"ReplaceCardInHand(%v, %v, %+v) %+v did not return expected %+v",
-						playerForTest,
-						indexInHand,
-						cardToInsert,
-						cardFromOriginalHand,
-						expectedCardFromHand)
-				}
-
-				// There should have been no other changes.
-				pristineState.VisibleCardInHand[playerForTest][indexInHand] = cardToInsert.Readonly
-				pristineState.InferredCardInHand[playerForTest][indexInHand] = cardToInsert.Inferred
-				assertGameStateAsExpected(
-					testIdentifier,
-					unitTest,
-					gameAndDescription.GameState.Read(),
-					pristineState)
-			}
-		})
-	}
-}
-
-func TestAddCardsToTwoSequences(unitTest *testing.T) {
-	// Using nil for the initial action log and for the initial deck
-	// should not be problematic for this test.
-	gamesAndDescriptions :=
-		prepareGameStates(
-			unitTest,
-			defaultTestRuleset,
-			threePlayersWithHands,
-			nil,
-			nil)
-
-	colorsInTest := defaultTestRuleset.ColorSuits()
-	firstColor := colorsInTest[0]
-	secondColor := colorsInTest[1]
-
-	for _, gameAndDescription := range gamesAndDescriptions {
-		testIdentifier :=
-			"add cards to sequences/" + gameAndDescription.PersisterDescription
-
-		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
-
-			firstCardOfFirstColor := card.NewReadonly(firstColor, 1)
-
-			errorFromFirstPlay :=
-				gameAndDescription.GameState.AddCardToPlayedSequence(
-					firstCardOfFirstColor)
-
-			if errorFromFirstPlay != nil {
+			if gameAndDescription.GameState.Read().DeckSize() != initialDeckSize {
 				unitTest.Fatalf(
-					"AddCardToPlayedSequence(%+v) produced error %v",
-					firstCardOfFirstColor,
-					errorFromFirstPlay)
+					"initial DeckSize() %v did not match expected %v",
+					gameAndDescription.GameState.Read().DeckSize(),
+					initialDeckSize)
+			}
+
+			hasDeckCardsLeftAfterPlaying, errorFromPlayingCard :=
+				gameAndDescription.GameState.MoveCardFromHandToPlayedSequenceAndReplaceFromDeck(
+					actionMessage,
+					testPlayer,
+					indexInHand,
+					knowledgeOfNewCard,
+					numberOfHintsToAdd)
+
+			if errorFromPlayingCard != nil {
+				unitTest.Fatalf(
+					"MoveCardFromHandToPlayedSequenceAndReplaceFromDeck(%v, %v, %v, %v, %v)"+
+						" produced error %v ",
+					actionMessage,
+					testPlayer,
+					indexInHand,
+					knowledgeOfNewCard,
+					numberOfHintsToAdd,
+					errorFromPlayingCard)
+			}
+
+			if !hasDeckCardsLeftAfterPlaying {
+				unitTest.Fatalf(
+					"MoveCardFromHandToPlayedSequenceAndReplaceFromDeck(%v, %v, %v, %v, %v)"+
+						" produced %v instead of expected %v",
+					actionMessage,
+					testPlayer,
+					indexInHand,
+					knowledgeOfNewCard,
+					numberOfHintsToAdd,
+					hasDeckCardsLeftAfterPlaying,
+					true)
 			}
 
 			// There should have been no other changes.
-			pristineState.PlayedForColor[firstColor] =
-				[]card.Readonly{
-					firstCardOfFirstColor,
-				}
-			assertGameStateAsExpected(
-				testIdentifier,
-				unitTest,
-				gameAndDescription.GameState.Read(),
-				pristineState)
-
-			secondCardOfFirstColor := card.NewReadonly(firstColor, 2)
-
-			errorFromSecondPlay :=
-				gameAndDescription.GameState.AddCardToPlayedSequence(
-					secondCardOfFirstColor)
-
-			if errorFromSecondPlay != nil {
-				unitTest.Fatalf(
-					"AddCardToPlayedSequence(%+v) produced error %v",
-					secondCardOfFirstColor,
-					errorFromSecondPlay)
-			}
-
-			// There should have been no other changes.
-			pristineState.PlayedForColor[firstColor] =
-				[]card.Readonly{
-					firstCardOfFirstColor,
-					secondCardOfFirstColor,
-				}
-			assertGameStateAsExpected(
-				testIdentifier,
-				unitTest,
-				gameAndDescription.GameState.Read(),
-				pristineState)
-
-			firstCardOfSecondColor := card.NewReadonly(secondColor, 1)
-
-			errorFromThirdPlay :=
-				gameAndDescription.GameState.AddCardToPlayedSequence(
-					firstCardOfSecondColor)
-
-			if errorFromThirdPlay != nil {
-				unitTest.Fatalf(
-					"AddCardToPlayedSequence(%+v) produced error %v",
-					firstCardOfSecondColor,
-					errorFromThirdPlay)
-			}
-
-			// There should have been no other changes.
-			pristineState.PlayedForColor[secondColor] =
-				[]card.Readonly{
-					firstCardOfSecondColor,
-				}
-			assertGameStateAsExpected(
-				testIdentifier,
-				unitTest,
-				gameAndDescription.GameState.Read(),
-				pristineState)
-
-			thirdCardOfFirstColor := card.NewReadonly(firstColor, 3)
-
-			errorFromFourthPlay :=
-				gameAndDescription.GameState.AddCardToPlayedSequence(
-					thirdCardOfFirstColor)
-
-			if errorFromFourthPlay != nil {
-				unitTest.Fatalf(
-					"AddCardToPlayedSequence(%+v) produced error %v",
-					secondCardOfFirstColor,
-					errorFromFourthPlay)
-			}
-
-			// There should have been no other changes.
-			pristineState.PlayedForColor[firstColor] =
-				[]card.Readonly{
-					firstCardOfFirstColor,
-					secondCardOfFirstColor,
-					thirdCardOfFirstColor,
-				}
-			assertGameStateAsExpected(
-				testIdentifier,
-				unitTest,
-				gameAndDescription.GameState.Read(),
-				pristineState)
-		})
-	}
-}
-
-func TestAddCardsOfTwoColorsToDiscardPile(unitTest *testing.T) {
-	// Using nil for the initial action log and for the initial deck
-	// should not be problematic for this test.
-	gamesAndDescriptions :=
-		prepareGameStates(
-			unitTest,
-			defaultTestRuleset,
-			threePlayersWithHands,
-			nil,
-			nil)
-
-	colorsInTest := defaultTestRuleset.ColorSuits()
-	firstColor := colorsInTest[0]
-	secondColor := colorsInTest[1]
-
-	for _, gameAndDescription := range gamesAndDescriptions {
-		testIdentifier :=
-			"add cards to discard pile/" + gameAndDescription.PersisterDescription
-
-		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
-
-			firstCardOfFirstColor := card.NewReadonly(firstColor, 1)
-
-			errorFromFirstDiscard :=
-				gameAndDescription.GameState.AddCardToDiscardPile(
-					firstCardOfFirstColor)
-
-			if errorFromFirstDiscard != nil {
-				unitTest.Fatalf(
-					"AddCardToDiscardPile(%+v) produced error %v",
-					firstCardOfFirstColor,
-					errorFromFirstDiscard)
-			}
-
-			// There should have been no other changes.
-			pristineState.NumberOfDiscardedCards[firstCardOfFirstColor] = 1
-			assertGameStateAsExpected(
-				testIdentifier,
-				unitTest,
-				gameAndDescription.GameState.Read(),
-				pristineState)
-
-			secondCardOfFirstColor := card.NewReadonly(firstColor, 2)
-
-			errorFromSecondDiscard :=
-				gameAndDescription.GameState.AddCardToDiscardPile(
-					secondCardOfFirstColor)
-
-			if errorFromSecondDiscard != nil {
-				unitTest.Fatalf(
-					"AddCardToDiscardPile(%+v) produced error %v",
-					secondCardOfFirstColor,
-					errorFromSecondDiscard)
-			}
-
-			// There should have been no other changes.
-			pristineState.NumberOfDiscardedCards[secondCardOfFirstColor] = 1
-			assertGameStateAsExpected(
-				testIdentifier,
-				unitTest,
-				gameAndDescription.GameState.Read(),
-				pristineState)
-
-			firstCardOfSecondColor := card.NewReadonly(secondColor, 1)
-
-			errorFromThirdDiscard :=
-				gameAndDescription.GameState.AddCardToDiscardPile(
-					firstCardOfSecondColor)
-
-			if errorFromThirdDiscard != nil {
-				unitTest.Fatalf(
-					"AddCardToDiscardPile(%+v) produced error %v",
-					firstCardOfSecondColor,
-					errorFromThirdDiscard)
-			}
-
-			// There should have been no other changes.
-			pristineState.NumberOfDiscardedCards[firstCardOfSecondColor] = 1
-			assertGameStateAsExpected(
-				testIdentifier,
-				unitTest,
-				gameAndDescription.GameState.Read(),
-				pristineState)
-
-			// The next card is a duplicate of a card already in the pile.
-			thirdCardOfFirstColor := card.NewReadonly(firstColor, 2)
-
-			errorFromFourthDiscard :=
-				gameAndDescription.GameState.AddCardToDiscardPile(
-					thirdCardOfFirstColor)
-
-			if errorFromFourthDiscard != nil {
-				unitTest.Fatalf(
-					"AddCardToDiscardPile(%+v) produced error %v",
-					secondCardOfFirstColor,
-					errorFromFourthDiscard)
-			}
-
-			// There are now two copies of the last discarded card.
-			// There should have been no other changes.
-			pristineState.NumberOfDiscardedCards[thirdCardOfFirstColor] = 2
+			pristineState.DeckSize = initialDeckSize - 1
 			assertGameStateAsExpected(
 				testIdentifier,
 				unitTest,

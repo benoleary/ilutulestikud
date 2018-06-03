@@ -188,30 +188,40 @@ type ReadAndWriteState interface {
 	// properties.
 	Read() ReadonlyState
 
-	// RecordActionMessage should record a log message about an action by the given player.
-	RecordActionMessage(actingPlayer player.ReadonlyState, actionMessage string) error
-
 	// RecordChatMessage should record a chat message from the given player.
 	RecordChatMessage(actingPlayer player.ReadonlyState, chatMessage string) error
 
-	// DrawCard should return the top-most card of the deck, or a card representing an
-	// error  along with an actual Golang error if there are no cards left.
-	DrawCard() (card.Readonly, error)
-
-	// ReplaceCardInHand should replace the card at the given index in the hand of the
-	// given player with the given replacement card, and return the card which has just
-	// been replaced.
-	ReplaceCardInHand(
-		holdingPlayerName string,
+	// MoveCardFromHandToDiscardPileAndReplaceFromDeck should move the card in the
+	// acting player's hand at the given index into the discard pile, and replace
+	// it in the player's hand with the next card from the deck, bundled with the
+	// given knowledge about the new card from the deck which the player should have
+	// (which should always be that any color suit is possible and any sequence index
+	// is possible). It should also add the given numbers to the counts of available
+	// hints and mistakes made respectively. It should return true if there are any
+	// cards left in the deck after the replacement.
+	MoveCardFromHandToDiscardPileAndReplaceFromDeck(
+		actionMessage string,
+		actingPlayer player.ReadonlyState,
 		indexInHand int,
-		replacementCard card.InHand) (card.Readonly, error)
+		knowledgeOfDrawnCard card.Inferred,
+		numberOfReadyHintsToAdd int,
+		numberOfMistakesMadeToAdd int) (bool, error)
 
-	// AddCardToPlayedSequence should add the given card to the appropriate sequence of
-	// played cards.
-	AddCardToPlayedSequence(playedCard card.Readonly) error
-
-	// AddCardToDiscardPile should add the given card to the pile of discarded cards.
-	AddCardToDiscardPile(discardedCard card.Readonly) error
+	// MoveCardFromHandToPlayedSequenceAndReplaceFromDeck should move the card in
+	// the acting player's hand at the given index into the appropriate color
+	// sequence, and replace it in the player's hand with the next card from the deck,
+	// bundled with the given knowledge about the new card from the deck which the
+	// player should have (which should always be that any color suit is possible and
+	// any sequence index is possible). It should also add the given number of hints
+	// to the count of ready hints available (such as when playing the end of sequence
+	// gives a bonus hint). It should return true if there are any cards
+	// left in the deck after the replacement.
+	MoveCardFromHandToPlayedSequenceAndReplaceFromDeck(
+		actionMessage string,
+		actingPlayer player.ReadonlyState,
+		indexInHand int,
+		knowledgeOfDrawnCard card.Inferred,
+		numberOfReadyHintsToAdd int) (bool, error)
 }
 
 // PlayerNameWithHand is a struct to keep the initial hand of a player with the name,

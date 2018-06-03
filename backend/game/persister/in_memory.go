@@ -295,17 +295,6 @@ func (gameState *inMemoryState) Read() game.ReadonlyState {
 	return gameState
 }
 
-// RecordActionMessage records a log message about an action by the given player.
-func (gameState *inMemoryState) RecordActionMessage(
-	actingPlayer player.ReadonlyState,
-	actionMessage string) error {
-	gameState.actionLog.appendNewMessage(
-		actingPlayer.Name(),
-		actingPlayer.Color(),
-		actionMessage)
-	return nil
-}
-
 // RecordChatMessage records a chat message from the given player.
 func (gameState *inMemoryState) RecordChatMessage(
 	actingPlayer player.ReadonlyState,
@@ -317,31 +306,109 @@ func (gameState *inMemoryState) RecordChatMessage(
 	return nil
 }
 
-// DrawCard returns the top-most card of the deck, or a card representing an error
-// along with an actual Golang error if there are no cards left.
-func (gameState *inMemoryState) DrawCard() (card.Readonly, error) {
-	if len(gameState.undrawnDeck) <= 0 {
-		return card.ErrorReadonly(), fmt.Errorf("No cards left to draw")
+// MoveCardFromHandToDiscardPileAndReplaceFromDeck moves the card in the acting
+// player's hand at the given index into the discard pile, and replaces it in the
+// player's hand with the next card from the deck, bundled with the given
+// knowledge about the new card from the deck which the player should have
+// (which should always be that any color suit is possible and any sequence index
+// is possible). It also adds the given numbers to the counts of available hints
+// and mistakes made respectively. It returns true if there are any cards left in
+// the deck after the replacement.
+func (gameState *inMemoryState) MoveCardFromHandToDiscardPileAndReplaceFromDeck(
+	actionMessage string,
+	actingPlayer player.ReadonlyState,
+	indexInHand int,
+	knowledgeOfDrawnCard card.Inferred,
+	numberOfReadyHintsToAdd int,
+	numberOfMistakesMadeToAdd int) (bool, error) {
+	discardedCard, errorFromTakingCard :=
+		gameState.takeCardFromHandReplacingIfPossible(
+			actingPlayer.Name(),
+			indexInHand,
+			knowledgeOfDrawnCard)
+
+	hasDeckAnyCardsLeft := (len(gameState.undrawnDeck) > 0)
+
+	if errorFromTakingCard != nil {
+		gameState.recordActionMessage(
+			actingPlayer,
+			errorFromTakingCard.Error())
+
+		return hasDeckAnyCardsLeft, errorFromTakingCard
 	}
 
-	drawnCard := gameState.undrawnDeck[0]
+	discardedCopiesUntilNow, _ := gameState.discardedCards[discardedCard]
+	gameState.discardedCards[discardedCard] = discardedCopiesUntilNow + 1
 
-	// We should not ever re-visit this card, but in case we do somehow, we ensure
-	// that this element represents an error.
-	gameState.undrawnDeck[0] = card.ErrorReadonly()
+	gameState.numberOfReadyHints += numberOfReadyHintsToAdd
+	gameState.numberOfMistakesMade += numberOfMistakesMadeToAdd
 
-	gameState.undrawnDeck = gameState.undrawnDeck[1:]
+	gameState.recordActionMessage(
+		actingPlayer,
+		actionMessage)
 
-	return drawnCard, nil
+	return hasDeckAnyCardsLeft, nil
+}
+
+// MoveCardFromHandToPlayedSequenceAndReplaceFromDeck moves the card in the acting
+// player's hand at the given index into the appropriate color sequence, and
+// replaces it in the player's hand with the next card from the deck, bundled with
+// the given knowledge about the new card from the deck which the player should
+// have (which should always be that any color suit is possible and any sequence
+// index is possible). It also adds the given number of hints to the count of ready
+// hints available (such as when playing the end of sequence gives a bonus hint).
+// It returns true if there are any cards left in the deck after the replacement.
+func (gameState *inMemoryState) MoveCardFromHandToPlayedSequenceAndReplaceFromDeck(
+	actionMessage string,
+	actingPlayer player.ReadonlyState,
+	indexInHand int,
+	knowledgeOfDrawnCard card.Inferred,
+	numberOfReadyHintsToAdd int) (bool, error) {
+	playedCard, errorFromTakingCard :=
+		gameState.takeCardFromHandReplacingIfPossible(
+			actingPlayer.Name(),
+			indexInHand,
+			knowledgeOfDrawnCard)
+
+	hasDeckAnyCardsLeft := (len(gameState.undrawnDeck) > 0)
+
+	if errorFromTakingCard != nil {
+		gameState.recordActionMessage(
+			actingPlayer,
+			errorFromTakingCard.Error())
+
+		return hasDeckAnyCardsLeft, errorFromTakingCard
+	}
+
+	playedSuit := playedCard.ColorSuit()
+	sequenceBeforeNow := gameState.playedCardsForColor[playedSuit]
+	gameState.playedCardsForColor[playedSuit] = append(sequenceBeforeNow, playedCard)
+
+	gameState.numberOfReadyHints += numberOfReadyHintsToAdd
+
+	gameState.recordActionMessage(
+		actingPlayer,
+		actionMessage)
+
+	return hasDeckAnyCardsLeft, nil
+}
+
+func (gameState *inMemoryState) recordActionMessage(
+	actingPlayer player.ReadonlyState,
+	actionMessage string) {
+	gameState.actionLog.appendNewMessage(
+		actingPlayer.Name(),
+		actingPlayer.Color(),
+		actionMessage)
 }
 
 // ReplaceCardInHand replaces the card at the given index in the hand of the given
 // player with the given replacement card, and returns the card which has just been
 // replaced.
-func (gameState *inMemoryState) ReplaceCardInHand(
+func (gameState *inMemoryState) takeCardFromHandReplacingIfPossible(
 	holdingPlayerName string,
 	indexInHand int,
-	replacementCard card.InHand) (card.Readonly, error) {
+	knowledgeOfDrawnCard card.Inferred) (card.Readonly, error) {
 	if indexInHand < 0 {
 		return card.ErrorReadonly(), fmt.Errorf("Index %v is out of allowed range", indexInHand)
 	}
@@ -357,29 +424,46 @@ func (gameState *inMemoryState) ReplaceCardInHand(
 	}
 
 	cardBeingReplaced := playerHand[indexInHand]
-	playerHand[indexInHand] = replacementCard
+
+	gameState.updatePlayerHand(
+		holdingPlayerName,
+		indexInHand,
+		knowledgeOfDrawnCard,
+		playerHand)
 
 	return cardBeingReplaced.Readonly, nil
 }
 
-// AddCardToPlayedSequence adds the given card to the appropriate sequence of played
-// cards.
-func (gameState *inMemoryState) AddCardToPlayedSequence(playedCard card.Readonly) error {
-	playedSuit := playedCard.ColorSuit()
-	sequenceBeforeNow := gameState.playedCardsForColor[playedSuit]
-	gameState.playedCardsForColor[playedSuit] = append(sequenceBeforeNow, playedCard)
-	return nil
-}
+func (gameState *inMemoryState) updatePlayerHand(
+	holdingPlayerName string,
+	indexInHand int,
+	knowledgeOfDrawnCard card.Inferred,
+	playerHand []card.InHand) {
+	if len(gameState.undrawnDeck) <= 0 {
+		// If we have run out of replacement cards, we just reduce the size of the
+		// player's hand. We could do this in a slightly faster way as we do not
+		// strictly need to preserve order, but it is probably less confusing for
+		// the player to see the order of the cards in the hand stay unchanged.
+		// We also do not worry about the card at the end of the array which is no
+		// longer visible to the slice, as it can only ever be one card per player
+		// before the game ends.
+		gameState.playerHands[holdingPlayerName] =
+			append(playerHand[:indexInHand], playerHand[indexInHand+1:]...)
+	} else {
+		// If we have a replacement card, we bundle it with the information about it
+		// which the player should have.
+		playerHand[indexInHand] =
+			card.InHand{
+				Readonly: gameState.undrawnDeck[0],
+				Inferred: knowledgeOfDrawnCard,
+			}
 
-// AddCardToDiscardPile adds the given card to the pile of discarded cards (by just
-// incrementing the number of copies of that card marked as discarded). This assumes
-// that the given card was emitted by an instance of inMemoryState and so is a
-// simpleCard instance, as each key of the map so far has been. If it is not, no error
-// is returned, and the number of copies of that implementation gets incremented.
-func (gameState *inMemoryState) AddCardToDiscardPile(discardedCard card.Readonly) error {
-	discardedCopiesUntilNow, _ := gameState.discardedCards[discardedCard]
-	gameState.discardedCards[discardedCard] = discardedCopiesUntilNow + 1
-	return nil
+		// We should not ever re-visit this card, but in case we do somehow, we ensure
+		// that this element represents an error.
+		gameState.undrawnDeck[0] = card.ErrorReadonly()
+
+		gameState.undrawnDeck = gameState.undrawnDeck[1:]
+	}
 }
 
 // rollingMessageAppender holds a fixed number of messages, discarding the
