@@ -306,35 +306,32 @@ func (gameState *inMemoryState) RecordChatMessage(
 	return nil
 }
 
-// MoveCardFromHandToDiscardPileAndReplaceFromDeck moves the card in the acting
-// player's hand at the given index into the discard pile, and replaces it in the
-// player's hand with the next card from the deck, bundled with the given
-// knowledge about the new card from the deck which the player should have
-// (which should always be that any color suit is possible and any sequence index
-// is possible). It also adds the given numbers to the counts of available hints
-// and mistakes made respectively. It returns true if there are any cards left in
-// the deck after the replacement.
-func (gameState *inMemoryState) MoveCardFromHandToDiscardPileAndReplaceFromDeck(
+// EnactTurnByDiscardingAndReplacing increments the turn number and moves the
+// card in the acting player's hand at the given index into the discard pile,
+// and replaces it in the player's hand with the next card from the deck,
+// bundled with the given knowledge about the new card from the deck which the
+// player should have (which should always be that any color suit is possible
+// and any sequence index is possible). It also adds the given numbers to the
+// counts of available hints and mistakes made respectively.
+func (gameState *inMemoryState) EnactTurnByDiscardingAndReplacing(
 	actionMessage string,
 	actingPlayer player.ReadonlyState,
 	indexInHand int,
 	knowledgeOfDrawnCard card.Inferred,
 	numberOfReadyHintsToAdd int,
-	numberOfMistakesMadeToAdd int) (bool, error) {
+	numberOfMistakesMadeToAdd int) error {
 	discardedCard, errorFromTakingCard :=
 		gameState.takeCardFromHandReplacingIfPossible(
 			actingPlayer.Name(),
 			indexInHand,
 			knowledgeOfDrawnCard)
 
-	hasDeckAnyCardsLeft := (len(gameState.undrawnDeck) > 0)
-
 	if errorFromTakingCard != nil {
 		gameState.recordActionMessage(
 			actingPlayer,
 			errorFromTakingCard.Error())
 
-		return hasDeckAnyCardsLeft, errorFromTakingCard
+		return errorFromTakingCard
 	}
 
 	discardedCopiesUntilNow, _ := gameState.discardedCards[discardedCard]
@@ -342,42 +339,41 @@ func (gameState *inMemoryState) MoveCardFromHandToDiscardPileAndReplaceFromDeck(
 
 	gameState.numberOfReadyHints += numberOfReadyHintsToAdd
 	gameState.numberOfMistakesMade += numberOfMistakesMadeToAdd
+	gameState.turnNumber++
 
 	gameState.recordActionMessage(
 		actingPlayer,
 		actionMessage)
 
-	return hasDeckAnyCardsLeft, nil
+	return nil
 }
 
-// MoveCardFromHandToPlayedSequenceAndReplaceFromDeck moves the card in the acting
-// player's hand at the given index into the appropriate color sequence, and
-// replaces it in the player's hand with the next card from the deck, bundled with
-// the given knowledge about the new card from the deck which the player should
-// have (which should always be that any color suit is possible and any sequence
-// index is possible). It also adds the given number of hints to the count of ready
-// hints available (such as when playing the end of sequence gives a bonus hint).
-// It returns true if there are any cards left in the deck after the replacement.
-func (gameState *inMemoryState) MoveCardFromHandToPlayedSequenceAndReplaceFromDeck(
+// EnactTurnByPlayingAndReplacing increments the turn number and moves the card
+// in the acting player's hand at the given index into the appropriate color
+// sequence, and replaces it in the player's hand with the next card from the
+// deck, bundled with the given knowledge about the new card from the deck which
+// the player should have (which should always be that any color suit is possible
+// and any sequence index is possible). It also adds the given number of hints to
+// the count of ready hints available (such as when playing the end of sequence
+// gives a bonus hint).
+func (gameState *inMemoryState) EnactTurnByPlayingAndReplacing(
 	actionMessage string,
 	actingPlayer player.ReadonlyState,
 	indexInHand int,
 	knowledgeOfDrawnCard card.Inferred,
-	numberOfReadyHintsToAdd int) (bool, error) {
+	numberOfReadyHintsToAdd int) error {
 	playedCard, errorFromTakingCard :=
 		gameState.takeCardFromHandReplacingIfPossible(
 			actingPlayer.Name(),
 			indexInHand,
 			knowledgeOfDrawnCard)
 
-	hasDeckAnyCardsLeft := (len(gameState.undrawnDeck) > 0)
-
 	if errorFromTakingCard != nil {
 		gameState.recordActionMessage(
 			actingPlayer,
 			errorFromTakingCard.Error())
 
-		return hasDeckAnyCardsLeft, errorFromTakingCard
+		return errorFromTakingCard
 	}
 
 	playedSuit := playedCard.ColorSuit()
@@ -385,12 +381,13 @@ func (gameState *inMemoryState) MoveCardFromHandToPlayedSequenceAndReplaceFromDe
 	gameState.playedCardsForColor[playedSuit] = append(sequenceBeforeNow, playedCard)
 
 	gameState.numberOfReadyHints += numberOfReadyHintsToAdd
+	gameState.turnNumber++
 
 	gameState.recordActionMessage(
 		actingPlayer,
 		actionMessage)
 
-	return hasDeckAnyCardsLeft, nil
+	return nil
 }
 
 func (gameState *inMemoryState) recordActionMessage(

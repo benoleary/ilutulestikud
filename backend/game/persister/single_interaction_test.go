@@ -214,8 +214,8 @@ func TestErrorFromActionsInvalidlyTakingCardFromHand(unitTest *testing.T) {
 			unitTest.Run(testIdentifier, func(unitTest *testing.T) {
 				pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
 
-				hasDeckCardsLeftAfterDiscarding, errorFromDiscardingCard :=
-					gameAndDescription.GameState.MoveCardFromHandToDiscardPileAndReplaceFromDeck(
+				errorFromDiscardingCard :=
+					gameAndDescription.GameState.EnactTurnByDiscardingAndReplacing(
 						actionMessage,
 						testPlayer,
 						testCase.indexInHand,
@@ -225,15 +225,14 @@ func TestErrorFromActionsInvalidlyTakingCardFromHand(unitTest *testing.T) {
 
 				if errorFromDiscardingCard == nil {
 					unitTest.Fatalf(
-						"MoveCardFromHandToDiscardPileAndReplaceFromDeck(%v, %v, %v, %v, %v, %v) %v"+
+						"EnactTurnByDiscardingAndReplacing(%v, %v, %v, %v, %v, %v)"+
 							" did not produce expected error",
 						actionMessage,
 						testPlayer,
 						testCase.indexInHand,
 						knowledgeOfNewCard,
 						numberOfHintsToAdd,
-						numberOfMistakesToAdd,
-						hasDeckCardsLeftAfterDiscarding)
+						numberOfMistakesToAdd)
 				}
 
 				// There should have been no visible side-effects apart from a change in the action log.
@@ -244,8 +243,8 @@ func TestErrorFromActionsInvalidlyTakingCardFromHand(unitTest *testing.T) {
 					gameAndDescription.GameState.Read(),
 					pristineState)
 
-				hasDeckCardsLeftAfterPlaying, errorFromPlayingCard :=
-					gameAndDescription.GameState.MoveCardFromHandToPlayedSequenceAndReplaceFromDeck(
+				errorFromPlayingCard :=
+					gameAndDescription.GameState.EnactTurnByPlayingAndReplacing(
 						actionMessage,
 						testPlayer,
 						testCase.indexInHand,
@@ -254,14 +253,13 @@ func TestErrorFromActionsInvalidlyTakingCardFromHand(unitTest *testing.T) {
 
 				if errorFromPlayingCard == nil {
 					unitTest.Fatalf(
-						"MoveCardFromHandToPlayedSequenceAndReplaceFromDeck(%v, %v, %v, %v, %v) %v"+
+						"EnactTurnByPlayingAndReplacing(%v, %v, %v, %v, %v)"+
 							" did not produce expected error",
 						actionMessage,
 						testPlayer,
 						testCase.indexInHand,
 						knowledgeOfNewCard,
-						numberOfHintsToAdd,
-						hasDeckCardsLeftAfterPlaying)
+						numberOfHintsToAdd)
 				}
 
 				// There should have been no visible side-effects apart from a change in the action log.
@@ -333,8 +331,8 @@ func TestValidPlayOfCard(unitTest *testing.T) {
 					initialDeckSize)
 			}
 
-			hasDeckCardsLeftAfterPlaying, errorFromPlayingCard :=
-				gameAndDescription.GameState.MoveCardFromHandToPlayedSequenceAndReplaceFromDeck(
+			errorFromPlayingCard :=
+				gameAndDescription.GameState.EnactTurnByPlayingAndReplacing(
 					actionMessage,
 					testPlayer,
 					indexInHand,
@@ -343,7 +341,7 @@ func TestValidPlayOfCard(unitTest *testing.T) {
 
 			if errorFromPlayingCard != nil {
 				unitTest.Fatalf(
-					"MoveCardFromHandToPlayedSequenceAndReplaceFromDeck(%v, %v, %v, %v, %v)"+
+					"EnactTurnByPlayingAndReplacing(%v, %v, %v, %v, %v)"+
 						" produced error %v ",
 					actionMessage,
 					testPlayer,
@@ -353,22 +351,11 @@ func TestValidPlayOfCard(unitTest *testing.T) {
 					errorFromPlayingCard)
 			}
 
-			if !hasDeckCardsLeftAfterPlaying {
-				unitTest.Fatalf(
-					"MoveCardFromHandToPlayedSequenceAndReplaceFromDeck(%v, %v, %v, %v, %v)"+
-						" produced %v instead of expected %v",
-					actionMessage,
-					testPlayer,
-					indexInHand,
-					knowledgeOfNewCard,
-					numberOfHintsToAdd,
-					hasDeckCardsLeftAfterPlaying,
-					true)
-			}
-
 			// There should have been no other changes.
 			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
 			pristineState.DeckSize = initialDeckSize - 1
+			pristineState.NumberOfReadyHints += numberOfHintsToAdd
+			pristineState.Turn += 1
 			assertGameStateAsExpected(
 				testIdentifier,
 				unitTest,

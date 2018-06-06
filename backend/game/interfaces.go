@@ -191,37 +191,35 @@ type ReadAndWriteState interface {
 	// RecordChatMessage should record a chat message from the given player.
 	RecordChatMessage(actingPlayer player.ReadonlyState, chatMessage string) error
 
-	// MoveCardFromHandToDiscardPileAndReplaceFromDeck should move the card in the
-	// acting player's hand at the given index into the discard pile, and replace
-	// it in the player's hand with the next card from the deck, bundled with the
-	// given knowledge about the new card from the deck which the player should have
-	// (which should always be that any color suit is possible and any sequence index
-	// is possible). It should also add the given numbers to the counts of available
-	// hints and mistakes made respectively. It should return true if there are any
-	// cards left in the deck after the replacement.
-	MoveCardFromHandToDiscardPileAndReplaceFromDeck(
+	// EnactTurnByDiscardingAndReplacing should increment the turn number and move the
+	// card in the acting player's hand at the given index into the discard pile, and
+	// replace it in the player's hand with the next card from the deck, bundled with
+	// the given knowledge about the new card from the deck which the player should
+	// have (which should always be that any color suit is possible and any sequence
+	// index is possible). It should also add the given numbers to the counts of
+	// available hints and mistakes made respectively.
+	EnactTurnByDiscardingAndReplacing(
 		actionMessage string,
 		actingPlayer player.ReadonlyState,
 		indexInHand int,
 		knowledgeOfDrawnCard card.Inferred,
 		numberOfReadyHintsToAdd int,
-		numberOfMistakesMadeToAdd int) (bool, error)
+		numberOfMistakesMadeToAdd int) error
 
-	// MoveCardFromHandToPlayedSequenceAndReplaceFromDeck should move the card in
-	// the acting player's hand at the given index into the appropriate color
+	// EnactTurnByPlayingAndReplacing should increment the turn number and move the
+	// card in the acting player's hand at the given index into the appropriate color
 	// sequence, and replace it in the player's hand with the next card from the deck,
 	// bundled with the given knowledge about the new card from the deck which the
 	// player should have (which should always be that any color suit is possible and
 	// any sequence index is possible). It should also add the given number of hints
 	// to the count of ready hints available (such as when playing the end of sequence
-	// gives a bonus hint). It should return true if there are any cards
-	// left in the deck after the replacement.
-	MoveCardFromHandToPlayedSequenceAndReplaceFromDeck(
+	// gives a bonus hint).
+	EnactTurnByPlayingAndReplacing(
 		actionMessage string,
 		actingPlayer player.ReadonlyState,
 		indexInHand int,
 		knowledgeOfDrawnCard card.Inferred,
-		numberOfReadyHintsToAdd int) (bool, error)
+		numberOfReadyHintsToAdd int) error
 }
 
 // PlayerNameWithHand is a struct to keep the initial hand of a player with the name,
