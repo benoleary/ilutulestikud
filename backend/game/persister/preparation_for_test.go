@@ -151,6 +151,29 @@ var threePlayersWithHands = []game.PlayerNameWithHand{
 	},
 }
 
+var initialActionMessagesForDefaultThreePlayers = []string{
+	"initial player one action",
+	"initial player two action",
+	"initial player three action",
+}
+
+var defaultTestColor = "default test color"
+
+var initialActionLogForDefaultThreePlayers = []message.Readonly{
+	message.NewReadonly(
+		threePlayersWithHands[0].PlayerName,
+		defaultTestColor,
+		initialActionMessagesForDefaultThreePlayers[0]),
+	message.NewReadonly(
+		threePlayersWithHands[1].PlayerName,
+		defaultTestColor,
+		initialActionMessagesForDefaultThreePlayers[1]),
+	message.NewReadonly(
+		threePlayersWithHands[2].PlayerName,
+		defaultTestColor,
+		initialActionMessagesForDefaultThreePlayers[2]),
+}
+
 type persisterAndDescription struct {
 	GamePersister        game.StatePersister
 	PersisterDescription string

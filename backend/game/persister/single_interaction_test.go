@@ -53,14 +53,13 @@ func TestErrorFromInvalidPlayerVisibleHand(unitTest *testing.T) {
 func TestErrorFromInvalidPlayerInferredHand(unitTest *testing.T) {
 	initialDeck := defaultTestRuleset.CopyOfFullCardset()
 
-	// A nil initial action log should not be a problem for this test.
 	gamesAndDescriptions :=
 		prepareGameStates(
 			unitTest,
 			defaultTestRuleset,
 			threePlayersWithHands,
 			initialDeck,
-			nil)
+			initialActionLogForDefaultThreePlayers)
 
 	for _, gameAndDescription := range gamesAndDescriptions {
 		testIdentifier :=
@@ -96,23 +95,20 @@ func TestRecordAndRetrieveSingleChatMessage(unitTest *testing.T) {
 	testStartTime := time.Now()
 	initialDeck := defaultTestRuleset.CopyOfFullCardset()
 
-	testColor := "test color"
-
 	// Default message.Readonly structs should have empty strings as expected.
 	initialChatLog := make([]message.Readonly, logLengthForTest)
 
-	// A nil initial action log should not be a problem for this test.
 	gamesAndDescriptions :=
 		prepareGameStates(
 			unitTest,
 			defaultTestRuleset,
 			threePlayersWithHands,
 			initialDeck,
-			nil)
+			initialActionLogForDefaultThreePlayers)
 
 	testPlayer := &mockPlayerState{
 		threePlayersWithHands[0].PlayerName,
-		testColor,
+		defaultTestColor,
 	}
 
 	testMessage := "test message!"
@@ -170,14 +166,13 @@ func TestErrorFromActionsInvalidlyTakingCardFromHand(unitTest *testing.T) {
 			[]string{"no idea", "not a clue"},
 			[]int{1, 2, 3})
 
-	// A nil initial action log should not be a problem for this test.
 	gamesAndDescriptions :=
 		prepareGameStates(
 			unitTest,
 			defaultTestRuleset,
 			threePlayersWithHands,
 			initialDeck,
-			nil)
+			initialActionLogForDefaultThreePlayers)
 
 	handSize :=
 		defaultTestRuleset.NumberOfCardsInPlayerHand(len(threePlayersWithHands))
@@ -241,7 +236,8 @@ func TestErrorFromActionsInvalidlyTakingCardFromHand(unitTest *testing.T) {
 						hasDeckCardsLeftAfterDiscarding)
 				}
 
-				// There should have been no visible side-effects at all.
+				// There should have been no visible side-effects apart from a change in the action log.
+				pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
 				assertGameStateAsExpected(
 					testIdentifier,
 					unitTest,
@@ -268,7 +264,8 @@ func TestErrorFromActionsInvalidlyTakingCardFromHand(unitTest *testing.T) {
 						hasDeckCardsLeftAfterPlaying)
 				}
 
-				// There should have been no visible side-effects at all.
+				// There should have been no visible side-effects apart from a change in the action log.
+				pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
 				assertGameStateAsExpected(
 					testIdentifier,
 					unitTest,
@@ -289,50 +286,27 @@ func TestValidPlayOfCard(unitTest *testing.T) {
 		}
 
 	initialDeckSize := len(initialDeck)
-	initialActionMessages :=
-		[]string{
-			"initial player one action",
-			"initial player two action",
-			"initial player three action",
-		}
-
-	testColor := "test color"
-	actionMessage := "action message"
 	numberOfHintsToAdd := -2
 	knowledgeOfNewCard :=
 		card.NewInferred(
 			[]string{"no idea", "not a clue"},
 			[]int{1, 2, 3})
 
-	initialActionLog :=
-		[]message.Readonly{
-			message.NewReadonly(
-				threePlayersWithHands[0].PlayerName,
-				testColor,
-				initialActionMessages[0]),
-			message.NewReadonly(
-				threePlayersWithHands[1].PlayerName,
-				testColor,
-				initialActionMessages[1]),
-			message.NewReadonly(
-				threePlayersWithHands[2].PlayerName,
-				testColor,
-				initialActionMessages[2]),
-		}
-
+	actionMessage := "action message"
 	comparisonActionLog := make([]message.Readonly, 3)
-	numberOfCopiedMessages := copy(comparisonActionLog, initialActionLog)
+	numberOfCopiedMessages :=
+		copy(comparisonActionLog, initialActionLogForDefaultThreePlayers)
 	if numberOfCopiedMessages != 3 {
 		unitTest.Fatalf(
 			"copy(%v, %v) returned %v",
 			comparisonActionLog,
-			initialActionLog,
+			initialActionLogForDefaultThreePlayers,
 			numberOfCopiedMessages)
 	}
 
 	testPlayer := &mockPlayerState{
 		threePlayersWithHands[0].PlayerName,
-		testColor,
+		defaultTestColor,
 	}
 
 	indexInHand := 1
@@ -343,7 +317,7 @@ func TestValidPlayOfCard(unitTest *testing.T) {
 			defaultTestRuleset,
 			threePlayersWithHands,
 			initialDeck,
-			nil)
+			initialActionLogForDefaultThreePlayers)
 
 	for _, gameAndDescription := range gamesAndDescriptions {
 		testIdentifier :=
@@ -393,6 +367,7 @@ func TestValidPlayOfCard(unitTest *testing.T) {
 			}
 
 			// There should have been no other changes.
+			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
 			pristineState.DeckSize = initialDeckSize - 1
 			assertGameStateAsExpected(
 				testIdentifier,
