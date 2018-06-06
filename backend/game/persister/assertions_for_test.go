@@ -154,9 +154,6 @@ func assertGameStateAsExpected(
 		}
 	}
 
-	handSize :=
-		actualGame.Ruleset().NumberOfCardsInPlayerHand(len(actualGame.PlayerNames()))
-
 	for playerIndex, playerName := range actualGame.PlayerNames() {
 		if playerName != expectedGame.PlayerNames[playerIndex] {
 			unitTest.Fatalf(
@@ -167,6 +164,9 @@ func assertGameStateAsExpected(
 
 		expectedVisibleHand := expectedGame.VisibleCardInHand[playerName]
 		expectedInferredHand := expectedGame.InferredCardInHand[playerName]
+
+		// It could be that the hand size is less than the ruleset decrees, if we're on the last turn.
+		handSize := len(expectedVisibleHand)
 
 		for handIndex := 0; handIndex < handSize; handIndex++ {
 			visibleCard, errorFromVisible :=

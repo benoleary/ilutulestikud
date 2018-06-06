@@ -14,6 +14,12 @@ const testGameName = "test game"
 const logLengthForTest = 8
 
 var defaultTestRuleset game.Ruleset = game.NewStandardWithoutRainbow()
+var colorsForTest = defaultTestRuleset.ColorSuits()
+var threeColors = []string{colorsForTest[0], colorsForTest[1], colorsForTest[2]}
+var fourColors = []string{colorsForTest[0], colorsForTest[1], colorsForTest[2], colorsForTest[3]}
+var indicesForTest = defaultTestRuleset.DistinctPossibleIndices()
+var threeIndices = []int{indicesForTest[0], indicesForTest[1], indicesForTest[2]}
+var fourIndices = []int{indicesForTest[0], indicesForTest[1], indicesForTest[2], indicesForTest[3]}
 
 type mockPlayerState struct {
 	mockName  string
@@ -48,34 +54,44 @@ var threePlayersWithHands = []game.PlayerNameWithHand{
 		PlayerName: defaultTestPlayers[0],
 		InitialHand: []card.InHand{
 			card.InHand{
-				Readonly: card.NewReadonly("a", 1),
+				Readonly: card.NewReadonly(
+					colorsForTest[0],
+					indicesForTest[0]),
 				Inferred: card.NewInferred(
-					[]string{"a", "b", "c"},
-					[]int{1, 2, 3}),
+					threeColors,
+					threeIndices),
 			},
 			card.InHand{
-				Readonly: card.NewReadonly("a", 1),
+				Readonly: card.NewReadonly(
+					colorsForTest[0],
+					indicesForTest[0]),
 				Inferred: card.NewInferred(
-					[]string{"a", "b", "c"},
-					[]int{1, 2, 3}),
+					threeColors,
+					threeIndices),
 			},
 			card.InHand{
-				Readonly: card.NewReadonly("a", 2),
+				Readonly: card.NewReadonly(
+					colorsForTest[0],
+					indicesForTest[1]),
 				Inferred: card.NewInferred(
-					[]string{"a", "b", "c"},
-					[]int{1, 2, 3}),
+					threeColors,
+					threeIndices),
 			},
 			card.InHand{
-				Readonly: card.NewReadonly("a", 1),
+				Readonly: card.NewReadonly(
+					colorsForTest[0],
+					indicesForTest[0]),
 				Inferred: card.NewInferred(
-					[]string{"a", "b", "c"},
-					[]int{1, 2, 3}),
+					threeColors,
+					threeIndices),
 			},
 			card.InHand{
-				Readonly: card.NewReadonly("a", 2),
+				Readonly: card.NewReadonly(
+					colorsForTest[0],
+					indicesForTest[1]),
 				Inferred: card.NewInferred(
-					[]string{"a", "b", "c"},
-					[]int{1, 2, 3}),
+					threeColors,
+					threeIndices),
 			},
 		},
 	},
@@ -83,34 +99,44 @@ var threePlayersWithHands = []game.PlayerNameWithHand{
 		PlayerName: defaultTestPlayers[1],
 		InitialHand: []card.InHand{
 			card.InHand{
-				Readonly: card.NewReadonly("a", 1),
+				Readonly: card.NewReadonly(
+					colorsForTest[0],
+					indicesForTest[0]),
 				Inferred: card.NewInferred(
-					[]string{"a", "b", "c"},
-					[]int{1, 2, 3, 4}),
+					threeColors,
+					fourIndices),
 			},
 			card.InHand{
-				Readonly: card.NewReadonly("b", 1),
+				Readonly: card.NewReadonly(
+					colorsForTest[1],
+					indicesForTest[0]),
 				Inferred: card.NewInferred(
-					[]string{"a", "b", "c", "d"},
-					[]int{1, 2, 3}),
+					fourColors,
+					threeIndices),
 			},
 			card.InHand{
-				Readonly: card.NewReadonly("b", 2),
+				Readonly: card.NewReadonly(
+					colorsForTest[1],
+					indicesForTest[1]),
 				Inferred: card.NewInferred(
-					[]string{"a", "b", "c"},
-					[]int{1, 2, 3}),
+					threeColors,
+					threeIndices),
 			},
 			card.InHand{
-				Readonly: card.NewReadonly("c", 2),
+				Readonly: card.NewReadonly(
+					colorsForTest[2],
+					indicesForTest[1]),
 				Inferred: card.NewInferred(
-					[]string{"a", "b", "c"},
-					[]int{1, 2, 3}),
+					threeColors,
+					threeIndices),
 			},
 			card.InHand{
-				Readonly: card.NewReadonly("c", 3),
+				Readonly: card.NewReadonly(
+					colorsForTest[2],
+					indicesForTest[2]),
 				Inferred: card.NewInferred(
-					[]string{"a", "b", "c"},
-					[]int{1, 2, 3}),
+					threeColors,
+					threeIndices),
 			},
 		},
 	},
@@ -118,34 +144,44 @@ var threePlayersWithHands = []game.PlayerNameWithHand{
 		PlayerName: defaultTestPlayers[2],
 		InitialHand: []card.InHand{
 			card.InHand{
-				Readonly: card.NewReadonly("c", 3),
+				Readonly: card.NewReadonly(
+					colorsForTest[2],
+					indicesForTest[2]),
 				Inferred: card.NewInferred(
-					[]string{"a", "b", "c"},
-					[]int{1, 2, 3, 4}),
+					threeColors,
+					fourIndices),
 			},
 			card.InHand{
-				Readonly: card.NewReadonly("b", 3),
+				Readonly: card.NewReadonly(
+					colorsForTest[1],
+					indicesForTest[2]),
 				Inferred: card.NewInferred(
-					[]string{"a", "b", "c"},
-					[]int{1, 2, 3}),
+					threeColors,
+					threeIndices),
 			},
 			card.InHand{
-				Readonly: card.NewReadonly("a", 3),
+				Readonly: card.NewReadonly(
+					colorsForTest[0],
+					indicesForTest[2]),
 				Inferred: card.NewInferred(
-					[]string{"a", "b", "c"},
-					[]int{1, 2, 3}),
+					threeColors,
+					threeIndices),
 			},
 			card.InHand{
-				Readonly: card.NewReadonly("d", 3),
+				Readonly: card.NewReadonly(
+					colorsForTest[3],
+					indicesForTest[2]),
 				Inferred: card.NewInferred(
-					[]string{"a", "b", "c", "d"},
-					[]int{1, 2, 3}),
+					fourColors,
+					threeIndices),
 			},
 			card.InHand{
-				Readonly: card.NewReadonly("d", 1),
+				Readonly: card.NewReadonly(
+					colorsForTest[3],
+					indicesForTest[0]),
 				Inferred: card.NewInferred(
-					[]string{"a", "b", "c", "d"},
-					[]int{1, 2, 3}),
+					fourColors,
+					threeIndices),
 			},
 		},
 	},

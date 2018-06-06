@@ -274,11 +274,309 @@ func TestErrorFromActionsInvalidlyTakingCardFromHand(unitTest *testing.T) {
 	}
 }
 
-func TestValidPlayOfCard(unitTest *testing.T) {
-	expectedCard := card.NewReadonly("a", 3)
+func TestValidDiscardOfCardWhenDeckAlreadyEmpty(unitTest *testing.T) {
+	initialDeck := []card.Readonly{}
+
+	initialDeckSize := len(initialDeck)
+	numberOfHintsToAdd := -3
+	numberOfMistakesToAdd := 2
+	knowledgeOfNewCard :=
+		card.NewInferred(
+			[]string{"no idea", "not a clue"},
+			[]int{1, 2, 3})
+
+	actionMessage := "action message"
+	comparisonActionLog := make([]message.Readonly, 3)
+	numberOfCopiedMessages :=
+		copy(comparisonActionLog, initialActionLogForDefaultThreePlayers)
+	if numberOfCopiedMessages != 3 {
+		unitTest.Fatalf(
+			"copy(%v, %v) returned %v",
+			comparisonActionLog,
+			initialActionLogForDefaultThreePlayers,
+			numberOfCopiedMessages)
+	}
+
+	playerName := threePlayersWithHands[0].PlayerName
+
+	testPlayer := &mockPlayerState{
+		playerName,
+		defaultTestColor,
+	}
+
+	indexInHand := 1
+	expectedDiscardedCard := threePlayersWithHands[0].InitialHand[indexInHand]
+
+	gamesAndDescriptions :=
+		prepareGameStates(
+			unitTest,
+			defaultTestRuleset,
+			threePlayersWithHands,
+			initialDeck,
+			initialActionLogForDefaultThreePlayers)
+
+	for _, gameAndDescription := range gamesAndDescriptions {
+		testIdentifier :=
+			"valid play of card when deck already empty/" +
+				gameAndDescription.PersisterDescription
+
+		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
+
+			if gameAndDescription.GameState.Read().DeckSize() != initialDeckSize {
+				unitTest.Fatalf(
+					"initial DeckSize() %v did not match expected %v",
+					gameAndDescription.GameState.Read().DeckSize(),
+					initialDeckSize)
+			}
+
+			errorFromDiscardingCard :=
+				gameAndDescription.GameState.EnactTurnByDiscardingAndReplacing(
+					actionMessage,
+					testPlayer,
+					indexInHand,
+					knowledgeOfNewCard,
+					numberOfHintsToAdd,
+					numberOfMistakesToAdd)
+
+			if errorFromDiscardingCard != nil {
+				unitTest.Fatalf(
+					"EnactTurnByDiscardingAndReplacing(%v, %v, %v, %v, %v, %v)"+
+						" produced error %v ",
+					actionMessage,
+					testPlayer,
+					indexInHand,
+					knowledgeOfNewCard,
+					numberOfHintsToAdd,
+					numberOfMistakesToAdd,
+					errorFromDiscardingCard)
+			}
+
+			// There should have been no other changes.
+			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
+			pristineState.DeckSize = initialDeckSize
+			pristineState.NumberOfReadyHints += numberOfHintsToAdd
+			pristineState.NumberOfMistakesMade += numberOfMistakesToAdd
+			pristineState.Turn += 1
+			pristineVisibleHand := pristineState.VisibleCardInHand[playerName]
+			pristineState.VisibleCardInHand[playerName] =
+				append(pristineVisibleHand[:indexInHand], pristineVisibleHand[indexInHand+1:]...)
+			pristineInferredHand := pristineState.InferredCardInHand[playerName]
+			pristineState.InferredCardInHand[playerName] =
+				append(pristineInferredHand[:indexInHand], pristineInferredHand[indexInHand+1:]...)
+			pristineState.NumberOfDiscardedCards[expectedDiscardedCard.Readonly] = 1
+			assertGameStateAsExpected(
+				testIdentifier,
+				unitTest,
+				gameAndDescription.GameState.Read(),
+				pristineState)
+		})
+	}
+}
+
+func TestValidDiscardOfCardWhenDeckNotYetEmpty(unitTest *testing.T) {
+	expectedReplacementCard := card.NewReadonly("a", 3)
 	initialDeck :=
 		[]card.Readonly{
-			expectedCard,
+			expectedReplacementCard,
+			card.NewReadonly("b", 2),
+			card.NewReadonly("c", 1),
+		}
+
+	initialDeckSize := len(initialDeck)
+	numberOfHintsToAdd := -3
+	numberOfMistakesToAdd := 2
+	knowledgeOfNewCard :=
+		card.NewInferred(
+			[]string{"no idea", "not a clue"},
+			[]int{1, 2, 3})
+
+	actionMessage := "action message"
+	comparisonActionLog := make([]message.Readonly, 3)
+	numberOfCopiedMessages :=
+		copy(comparisonActionLog, initialActionLogForDefaultThreePlayers)
+	if numberOfCopiedMessages != 3 {
+		unitTest.Fatalf(
+			"copy(%v, %v) returned %v",
+			comparisonActionLog,
+			initialActionLogForDefaultThreePlayers,
+			numberOfCopiedMessages)
+	}
+
+	playerName := threePlayersWithHands[0].PlayerName
+
+	testPlayer := &mockPlayerState{
+		playerName,
+		defaultTestColor,
+	}
+
+	indexInHand := 1
+	expectedDiscardedCard := threePlayersWithHands[0].InitialHand[indexInHand]
+
+	gamesAndDescriptions :=
+		prepareGameStates(
+			unitTest,
+			defaultTestRuleset,
+			threePlayersWithHands,
+			initialDeck,
+			initialActionLogForDefaultThreePlayers)
+
+	for _, gameAndDescription := range gamesAndDescriptions {
+		testIdentifier :=
+			"valid play of card when deck not yet empty/" +
+				gameAndDescription.PersisterDescription
+
+		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
+
+			if gameAndDescription.GameState.Read().DeckSize() != initialDeckSize {
+				unitTest.Fatalf(
+					"initial DeckSize() %v did not match expected %v",
+					gameAndDescription.GameState.Read().DeckSize(),
+					initialDeckSize)
+			}
+
+			errorFromDiscardingCard :=
+				gameAndDescription.GameState.EnactTurnByDiscardingAndReplacing(
+					actionMessage,
+					testPlayer,
+					indexInHand,
+					knowledgeOfNewCard,
+					numberOfHintsToAdd,
+					numberOfMistakesToAdd)
+
+			if errorFromDiscardingCard != nil {
+				unitTest.Fatalf(
+					"EnactTurnByDiscardingAndReplacing(%v, %v, %v, %v, %v, %v)"+
+						" produced error %v ",
+					actionMessage,
+					testPlayer,
+					indexInHand,
+					knowledgeOfNewCard,
+					numberOfHintsToAdd,
+					numberOfMistakesToAdd,
+					errorFromDiscardingCard)
+			}
+
+			// There should have been no other changes.
+			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
+			pristineState.DeckSize = initialDeckSize - 1
+			pristineState.NumberOfReadyHints += numberOfHintsToAdd
+			pristineState.NumberOfMistakesMade += numberOfMistakesToAdd
+			pristineState.Turn += 1
+			pristineState.VisibleCardInHand[playerName][indexInHand] = expectedReplacementCard
+			pristineState.InferredCardInHand[playerName][indexInHand] = knowledgeOfNewCard
+			pristineState.NumberOfDiscardedCards[expectedDiscardedCard.Readonly] = 1
+			assertGameStateAsExpected(
+				testIdentifier,
+				unitTest,
+				gameAndDescription.GameState.Read(),
+				pristineState)
+		})
+	}
+}
+func TestValidPlayOfCardWhenDeckAlreadyEmpty(unitTest *testing.T) {
+	initialDeck := []card.Readonly{}
+
+	initialDeckSize := len(initialDeck)
+	numberOfHintsToAdd := -2
+	knowledgeOfNewCard :=
+		card.NewInferred(
+			[]string{"no idea", "not a clue"},
+			[]int{1, 2, 3})
+
+	actionMessage := "action message"
+	comparisonActionLog := make([]message.Readonly, 3)
+	numberOfCopiedMessages :=
+		copy(comparisonActionLog, initialActionLogForDefaultThreePlayers)
+	if numberOfCopiedMessages != 3 {
+		unitTest.Fatalf(
+			"copy(%v, %v) returned %v",
+			comparisonActionLog,
+			initialActionLogForDefaultThreePlayers,
+			numberOfCopiedMessages)
+	}
+
+	playerName := threePlayersWithHands[0].PlayerName
+
+	testPlayer := &mockPlayerState{
+		playerName,
+		defaultTestColor,
+	}
+
+	indexInHand := 1
+	expectedPlayedCard := threePlayersWithHands[0].InitialHand[indexInHand]
+
+	gamesAndDescriptions :=
+		prepareGameStates(
+			unitTest,
+			defaultTestRuleset,
+			threePlayersWithHands,
+			initialDeck,
+			initialActionLogForDefaultThreePlayers)
+
+	for _, gameAndDescription := range gamesAndDescriptions {
+		testIdentifier :=
+			"valid play of card when deck already empty/" +
+				gameAndDescription.PersisterDescription
+
+		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
+
+			if gameAndDescription.GameState.Read().DeckSize() != initialDeckSize {
+				unitTest.Fatalf(
+					"initial DeckSize() %v did not match expected %v",
+					gameAndDescription.GameState.Read().DeckSize(),
+					initialDeckSize)
+			}
+
+			errorFromPlayingCard :=
+				gameAndDescription.GameState.EnactTurnByPlayingAndReplacing(
+					actionMessage,
+					testPlayer,
+					indexInHand,
+					knowledgeOfNewCard,
+					numberOfHintsToAdd)
+
+			if errorFromPlayingCard != nil {
+				unitTest.Fatalf(
+					"EnactTurnByPlayingAndReplacing(%v, %v, %v, %v, %v)"+
+						" produced error %v ",
+					actionMessage,
+					testPlayer,
+					indexInHand,
+					knowledgeOfNewCard,
+					numberOfHintsToAdd,
+					errorFromPlayingCard)
+			}
+
+			// There should have been no other changes.
+			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
+			pristineState.DeckSize = initialDeckSize
+			pristineState.NumberOfReadyHints += numberOfHintsToAdd
+			pristineState.Turn += 1
+			pristineVisibleHand := pristineState.VisibleCardInHand[playerName]
+			pristineState.VisibleCardInHand[playerName] =
+				append(pristineVisibleHand[:indexInHand], pristineVisibleHand[indexInHand+1:]...)
+			pristineInferredHand := pristineState.InferredCardInHand[playerName]
+			pristineState.InferredCardInHand[playerName] =
+				append(pristineInferredHand[:indexInHand], pristineInferredHand[indexInHand+1:]...)
+			pristineState.PlayedForColor[expectedPlayedCard.ColorSuit()] =
+				[]card.Readonly{expectedPlayedCard.Readonly}
+			assertGameStateAsExpected(
+				testIdentifier,
+				unitTest,
+				gameAndDescription.GameState.Read(),
+				pristineState)
+		})
+	}
+}
+
+func TestValidPlayOfCardWhenDeckNotYetEmpty(unitTest *testing.T) {
+	expectedReplacementCard := card.NewReadonly("a", 3)
+	initialDeck :=
+		[]card.Readonly{
+			expectedReplacementCard,
 			card.NewReadonly("b", 2),
 			card.NewReadonly("c", 1),
 		}
@@ -302,12 +600,15 @@ func TestValidPlayOfCard(unitTest *testing.T) {
 			numberOfCopiedMessages)
 	}
 
+	playerName := threePlayersWithHands[0].PlayerName
+
 	testPlayer := &mockPlayerState{
-		threePlayersWithHands[0].PlayerName,
+		playerName,
 		defaultTestColor,
 	}
 
 	indexInHand := 1
+	expectedPlayedCard := threePlayersWithHands[0].InitialHand[indexInHand]
 
 	gamesAndDescriptions :=
 		prepareGameStates(
@@ -319,7 +620,8 @@ func TestValidPlayOfCard(unitTest *testing.T) {
 
 	for _, gameAndDescription := range gamesAndDescriptions {
 		testIdentifier :=
-			"valid play of card/" + gameAndDescription.PersisterDescription
+			"valid play of card when deck not yet empty/" +
+				gameAndDescription.PersisterDescription
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
 			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
@@ -356,6 +658,10 @@ func TestValidPlayOfCard(unitTest *testing.T) {
 			pristineState.DeckSize = initialDeckSize - 1
 			pristineState.NumberOfReadyHints += numberOfHintsToAdd
 			pristineState.Turn += 1
+			pristineState.VisibleCardInHand[playerName][indexInHand] = expectedReplacementCard
+			pristineState.InferredCardInHand[playerName][indexInHand] = knowledgeOfNewCard
+			pristineState.PlayedForColor[expectedPlayedCard.ColorSuit()] =
+				[]card.Readonly{expectedPlayedCard.Readonly}
 			assertGameStateAsExpected(
 				testIdentifier,
 				unitTest,
