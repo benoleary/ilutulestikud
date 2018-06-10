@@ -12,12 +12,12 @@ func TestWrapperFunctions(unitTest *testing.T) {
 		prepareCollection(unitTest, playerNamesAvailableInTest)
 
 	mockReadAndWriteState :=
-		NewMockGameState(unitTest, fmt.Errorf("No function should be called"))
-	mockReadAndWriteState.TestErrorForName = nil
-	mockReadAndWriteState.MockName = gameName
-	mockReadAndWriteState.TestErrorForRuleset = nil
+		NewMockGameState(unitTest, fmt.Errorf("No write function should be called"))
+	mockReadAndWriteState.ReturnForName = gameName
 	mockReadAndWriteState.ReturnForRuleset = testRuleset
-	mockReadAndWriteState.TestErrorForPlayerNames = nil
+
+	testTurn := 3
+	mockReadAndWriteState.ReturnForTurn = testTurn
 	mockReadAndWriteState.ReturnForPlayerNames = playerNamesAvailableInTest
 
 	mockPersister.TestErrorForReadAndWriteGame = nil
@@ -37,8 +37,8 @@ func TestWrapperFunctions(unitTest *testing.T) {
 	}
 
 	if (viewForPlayer.GameName() != gameName) ||
-		(viewForPlayer.RulesetDescription() != gameName) ||
-		(viewForPlayer.Turn() != 0) ||
+		(viewForPlayer.RulesetDescription() != testRuleset.FrontendDescription()) ||
+		(viewForPlayer.Turn() != testTurn) ||
 		(viewForPlayer.Score() != 0) ||
 		(viewForPlayer.NumberOfReadyHints() != 0) ||
 		(viewForPlayer.NumberOfSpentHints() != 0) ||
