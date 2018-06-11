@@ -81,10 +81,13 @@ type mockGameState struct {
 	ReturnForCreationTime                         time.Time
 	ReturnForChatLog                              []message.Readonly
 	ReturnForActionLog                            []message.Readonly
-	MockNamesAndHands                             []game.PlayerNameWithHand
-	MockDeck                                      []card.Readonly
 	ReturnForTurn                                 int
 	ReturnForScore                                int
+	ReturnForNumberOfReadyHints                   int
+	ReturnForNumberOfMistakesMade                 int
+	ReturnForDeckSize                             int
+	MockNamesAndHands                             []game.PlayerNameWithHand
+	MockDeck                                      []card.Readonly
 	TestErrorForRecordChatMessage                 error
 	ArgumentsFromRecordChatMessage                []stringTriple
 	TestErrorForEnactTurnByDiscardingAndReplacing error
@@ -101,11 +104,15 @@ func NewMockGameState(
 		ReturnForRuleset:                              nil,
 		ReturnForPlayerNames:                          nil,
 		ReturnForCreationTime:                         time.Now(),
-		MockNamesAndHands:                             nil,
-		MockDeck:                                      nil,
+		ReturnForActionLog:                            nil,
 		ReturnForChatLog:                              nil,
 		ReturnForTurn:                                 -1,
 		ReturnForScore:                                -1,
+		ReturnForNumberOfReadyHints:                   -1,
+		ReturnForNumberOfMistakesMade:                 -1,
+		ReturnForDeckSize:                             -1,
+		MockNamesAndHands:                             nil,
+		MockDeck:                                      nil,
 		TestErrorForRecordChatMessage:                 testError,
 		ArgumentsFromRecordChatMessage:                make([]stringTriple, 0),
 		TestErrorForEnactTurnByDiscardingAndReplacing: testError,
@@ -155,17 +162,17 @@ func (mockGame *mockGameState) Score() int {
 
 // NumberOfReadyHints gets mocked.
 func (mockGame *mockGameState) NumberOfReadyHints() int {
-	return -1
+	return mockGame.ReturnForNumberOfReadyHints
 }
 
 // NumberOfMistakesMade gets mocked.
 func (mockGame *mockGameState) NumberOfMistakesMade() int {
-	return -1
+	return mockGame.ReturnForNumberOfMistakesMade
 }
 
 // DeckSize gets mocked.
 func (mockGame *mockGameState) DeckSize() int {
-	return -1
+	return mockGame.ReturnForDeckSize
 }
 
 // PlayedForColor gets mocked.

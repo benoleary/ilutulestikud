@@ -13,11 +13,28 @@ func TestWrapperFunctions(unitTest *testing.T) {
 
 	mockReadAndWriteState :=
 		NewMockGameState(unitTest, fmt.Errorf("No write function should be called"))
+
 	mockReadAndWriteState.ReturnForName = gameName
+
 	mockReadAndWriteState.ReturnForRuleset = testRuleset
 
 	testTurn := 3
 	mockReadAndWriteState.ReturnForTurn = testTurn
+
+	testScore := 7
+	mockReadAndWriteState.ReturnForScore = testScore
+
+	testReadyHints := 5
+	testSpentHints := (testRuleset.MaximumNumberOfHints() - testReadyHints)
+	mockReadAndWriteState.ReturnForNumberOfReadyHints = testReadyHints
+
+	testMistakesMade := 5
+	testMistakesAllowed := (testRuleset.MaximumNumberOfMistakesAllowed() - testMistakesMade)
+	mockReadAndWriteState.ReturnForNumberOfMistakesMade = testMistakesMade
+
+	testDeckSize := 11
+	mockReadAndWriteState.ReturnForDeckSize = testDeckSize
+
 	mockReadAndWriteState.ReturnForPlayerNames = playerNamesAvailableInTest
 
 	mockPersister.TestErrorForReadAndWriteGame = nil
@@ -39,12 +56,34 @@ func TestWrapperFunctions(unitTest *testing.T) {
 	if (viewForPlayer.GameName() != gameName) ||
 		(viewForPlayer.RulesetDescription() != testRuleset.FrontendDescription()) ||
 		(viewForPlayer.Turn() != testTurn) ||
-		(viewForPlayer.Score() != 0) ||
-		(viewForPlayer.NumberOfReadyHints() != 0) ||
-		(viewForPlayer.NumberOfSpentHints() != 0) ||
-		(viewForPlayer.NumberOfMistakesStillAllowed() != 0) ||
-		(viewForPlayer.NumberOfMistakesMade() != 0) ||
-		(viewForPlayer.DeckSize() != 0) {
-		unitTest.Fatalf("test not yet ready")
+		(viewForPlayer.Score() != testScore) ||
+		(viewForPlayer.NumberOfReadyHints() != testReadyHints) ||
+		(viewForPlayer.NumberOfSpentHints() != testSpentHints) ||
+		(viewForPlayer.NumberOfMistakesStillAllowed() != testMistakesAllowed) ||
+		(viewForPlayer.NumberOfMistakesMade() != testMistakesMade) ||
+		(viewForPlayer.DeckSize() != testDeckSize) {
+		unitTest.Fatalf(
+			"player view %+v not as expected"+
+				" (name %v,"+
+				" ruleset description %v,"+
+				" turn %v,"+
+				" score %v,"+
+				" ready hints %v,"+
+				" spent hints %v,"+
+				" mistakes allowed %v,"+
+				" mistakes made %v,"+
+				" deck size %v)",
+			viewForPlayer,
+			gameName,
+			testRuleset.FrontendDescription(),
+			testTurn,
+			testScore,
+			testReadyHints,
+			testSpentHints,
+			testMistakesAllowed,
+			testMistakesMade,
+			testDeckSize)
 	}
+
+	unitTest.Fatalf("test not yet ready")
 }
