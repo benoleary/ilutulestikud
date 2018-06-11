@@ -93,17 +93,18 @@ func (playerView *PlayerView) CurrentTurnOrder() ([]string, int) {
 
 	gameTurn := playerView.gameState.Turn()
 	playerIndexInTurnOrder := -1
-	for playerIndex := 0; playerIndex < playerView.numberOfParticipants; playerIndex++ {
+
+	for currentTurnIndex := 0; currentTurnIndex < playerView.numberOfParticipants; currentTurnIndex++ {
 		// Game turns begin with 1 rather than 0, so this sets the player names in order,
 		// wrapping index back to 0 when at the end of the list.
 		// E.g. turn 3, 5 players: playerNamesInTurnOrder will start with
 		// gameParticipants[2], then [3], then [4], then [0], then [1].
-		playerIndex := (playerIndex + gameTurn - 1) % playerView.numberOfParticipants
-		playerInTurnOrder := playerView.gameParticipants[playerIndex]
-		playerNamesInTurnOrder[playerIndex] = playerInTurnOrder
+		indexInOriginalOrder := (currentTurnIndex + gameTurn - 1) % playerView.numberOfParticipants
+		playerInTurnOrder := playerView.gameParticipants[indexInOriginalOrder]
+		playerNamesInTurnOrder[currentTurnIndex] = playerInTurnOrder
 
 		if playerView.playerName == playerInTurnOrder {
-			playerIndexInTurnOrder = playerIndex
+			playerIndexInTurnOrder = currentTurnIndex
 		}
 	}
 
