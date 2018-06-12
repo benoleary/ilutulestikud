@@ -147,13 +147,14 @@ func (gameCollection *StateCollection) ExecuteAction(
 		gameCollection.statePersister.ReadAndWriteGame(gameName)
 
 	if errorFromGet != nil {
-		overallError :=
+		errorWrappingErrorFromGet :=
 			fmt.Errorf(
 				"Could not find game %v (%v), cannot execute action for player %v",
 				gameName,
 				errorFromGet,
 				playerName)
-		return nil, overallError
+
+		return nil, errorWrappingErrorFromGet
 	}
 
 	return ExecutorOfActionsForPlayer(gameState, actingPlayer)

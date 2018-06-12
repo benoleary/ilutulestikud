@@ -636,9 +636,9 @@ func TestExecutorErrorWhenPersisterGivesError(unitTest *testing.T) {
 	}
 }
 
-func TestExecutorErrorWhenPlayerNotParticipant(unitTest *testing.T) {
+func TestExecutorErrorWhenPlayerNotRegistered(unitTest *testing.T) {
 	gameName := "Test game"
-	playerName := "Test Player"
+	playerName := "Not Registered"
 	gameCollection, mockPersister, _ :=
 		prepareCollection(unitTest, playerNamesAvailableInTest)
 
@@ -646,10 +646,43 @@ func TestExecutorErrorWhenPlayerNotParticipant(unitTest *testing.T) {
 
 	mockReadAndWriteState :=
 		NewMockGameState(unitTest, fmt.Errorf("No function should be called"))
-	mockReadAndWriteState.ReturnForName = "test game"
+	mockReadAndWriteState.ReturnForName = gameName
 	mockReadAndWriteState.ReturnForPlayerNames = []string{
-		"A. Different Player",
-		"A. Nother Different Player",
+		playerNamesAvailableInTest[0],
+		playerNamesAvailableInTest[1],
+		playerNamesAvailableInTest[2],
+	}
+
+	mockPersister.ReturnForReadAndWriteGame = mockReadAndWriteState
+
+	executorForPlayer, errorFromExecuteAction :=
+		gameCollection.ExecuteAction(
+			gameName,
+			playerName)
+
+	if errorFromExecuteAction == nil {
+		unitTest.Fatalf(
+			"ExecuteAction(%v, %v) did not produce expected error, instead produced %v",
+			gameName,
+			playerName,
+			executorForPlayer)
+	}
+}
+
+func TestExecutorErrorWhenPlayerNotParticipant(unitTest *testing.T) {
+	gameName := "Test game"
+	playerName := playerNamesAvailableInTest[0]
+	gameCollection, mockPersister, _ :=
+		prepareCollection(unitTest, playerNamesAvailableInTest)
+
+	mockPersister.TestErrorForReadAndWriteGame = nil
+
+	mockReadAndWriteState :=
+		NewMockGameState(unitTest, fmt.Errorf("No function should be called"))
+	mockReadAndWriteState.ReturnForName = gameName
+	mockReadAndWriteState.ReturnForPlayerNames = []string{
+		playerNamesAvailableInTest[1],
+		playerNamesAvailableInTest[2],
 	}
 
 	mockPersister.ReturnForReadAndWriteGame = mockReadAndWriteState

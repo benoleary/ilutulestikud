@@ -23,6 +23,7 @@ func ExecutorOfActionsForPlayer(
 	stateOfGame ReadAndWriteState,
 	actingPlayer player.ReadonlyState) (ExecutorForPlayer, error) {
 	gameParticipants := stateOfGame.Read().PlayerNames()
+
 	for _, gameParticipant := range gameParticipants {
 		if gameParticipant == actingPlayer.Name() {
 			actionExecutor :=
