@@ -206,18 +206,29 @@ func TestPlayedSequencesWhenSomeAreEmpty(unitTest *testing.T) {
 	expectedPlayedCards := make(map[string][]card.Readonly, 0)
 	colorSuits := testRuleset.ColorSuits()
 	numberOfSuits := len(colorSuits)
+	if numberOfSuits < 3 {
+		unitTest.Fatalf(
+			"testRuleset.ColorSuits() %v has not enough colors (test needs at least 3)",
+			testRuleset.ColorSuits())
+	}
+	sequenceIndices := testRuleset.DistinctPossibleIndices()
+	if len(sequenceIndices) < 4 {
+		unitTest.Fatalf(
+			"testRuleset.DistinctPossibleIndices() %v has not enough indices (test needs at least 4)",
+			testRuleset.DistinctPossibleIndices())
+	}
 	colorWithSeveralCards := colorSuits[0]
 	severalCardsForColor :=
 		[]card.Readonly{
-			card.NewReadonly(colorWithSeveralCards, 1),
-			card.NewReadonly(colorWithSeveralCards, 2),
-			card.NewReadonly(colorWithSeveralCards, 4),
+			card.NewReadonly(colorWithSeveralCards, sequenceIndices[0]),
+			card.NewReadonly(colorWithSeveralCards, sequenceIndices[1]),
+			card.NewReadonly(colorWithSeveralCards, sequenceIndices[3]),
 		}
 	numberWhichIsSeveral := len(severalCardsForColor)
 	expectedPlayedCards[colorWithSeveralCards] = severalCardsForColor
 
 	colorWithSingleCard := colorSuits[2]
-	singleCardForColor := card.NewReadonly(colorWithSingleCard, 1)
+	singleCardForColor := card.NewReadonly(colorWithSingleCard, sequenceIndices[0])
 	expectedPlayedCards[colorWithSingleCard] =
 		[]card.Readonly{
 			singleCardForColor,
@@ -339,12 +350,24 @@ func TestPlayedSequencesWhenAllAreNonempty(unitTest *testing.T) {
 	expectedPlayedCards := make(map[string][]card.Readonly, 0)
 	colorSuits := testRuleset.ColorSuits()
 	numberOfSuits := len(colorSuits)
+	if numberOfSuits < 2 {
+		unitTest.Fatalf(
+			"testRuleset.ColorSuits() %v has not enough colors (test needs at least 2)",
+			testRuleset.ColorSuits())
+	}
+	sequenceIndices := testRuleset.DistinctPossibleIndices()
+	if len(sequenceIndices) < numberOfSuits {
+		unitTest.Fatalf(
+			"testRuleset.DistinctPossibleIndices() %v has not enough indices (test needs at least %v)",
+			testRuleset.DistinctPossibleIndices(),
+			numberOfSuits)
+	}
 
 	for colorCount := 0; colorCount < numberOfSuits; colorCount++ {
 		colorSuit := colorSuits[colorCount]
 		sequenceForColor := make([]card.Readonly, colorCount+1)
 		for cardCount := 0; cardCount <= colorCount; cardCount++ {
-			sequenceForColor[cardCount] = card.NewReadonly(colorSuit, cardCount+1)
+			sequenceForColor[cardCount] = card.NewReadonly(colorSuit, sequenceIndices[cardCount])
 		}
 
 		expectedPlayedCards[colorSuit] = sequenceForColor
@@ -407,6 +430,81 @@ func TestPlayedSequencesWhenAllAreNonempty(unitTest *testing.T) {
 					expectedPile,
 					pileColor)
 			}
+		}
+	}
+}
+func TestDiscardedCards(unitTest *testing.T) {
+	gameName := "Test game"
+	testPlayersInOriginalOrder :=
+		[]string{
+			playerNamesAvailableInTest[0],
+			playerNamesAvailableInTest[1],
+			playerNamesAvailableInTest[2],
+			playerNamesAvailableInTest[3],
+		}
+	playerName := testPlayersInOriginalOrder[0]
+	gameCollection, mockPersister, _ :=
+		prepareCollection(unitTest, testPlayersInOriginalOrder)
+
+	mockReadAndWriteState :=
+		NewMockGameState(unitTest, fmt.Errorf("No write function should be called"))
+	mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
+	mockReadAndWriteState.ReturnForRuleset = testRuleset
+
+	expectedDiscardedCards := make(map[card.Readonly]int, 0)
+	colorSuits := testRuleset.ColorSuits()
+	numberOfSuits := len(colorSuits)
+	if numberOfSuits < 3 {
+		unitTest.Fatalf(
+			"testRuleset.ColorSuits() %v has not enough colors (test needs at least 3)",
+			testRuleset.ColorSuits())
+	}
+	sequenceIndices := testRuleset.DistinctPossibleIndices()
+	if len(sequenceIndices) < 4 {
+		unitTest.Fatalf(
+			"testRuleset.DistinctPossibleIndices() %v has not enough indices (test needs at least 4)",
+			testRuleset.DistinctPossibleIndices())
+	}
+
+	// We set up with several copies each of cards with the same color and different indices.
+	expectedDiscardedCards[card.NewReadonly(colorSuits[0], sequenceIndices[0])] = 3
+	expectedDiscardedCards[card.NewReadonly(colorSuits[0], sequenceIndices[1])] = 1
+	expectedDiscardedCards[card.NewReadonly(colorSuits[0], sequenceIndices[3])] = 1
+
+	// We also add several copies of a single sequence index of a different color.
+	expectedDiscardedCards[card.NewReadonly(colorSuits[2], sequenceIndices[1])] = 2
+
+	mockReadAndWriteState.ReturnForNumberOfDiscardedCards = expectedDiscardedCards
+
+	mockPersister.TestErrorForReadAndWriteGame = nil
+	mockPersister.ReturnForReadAndWriteGame = mockReadAndWriteState
+
+	viewForPlayer, errorFromViewState :=
+		gameCollection.ViewState(
+			gameName,
+			playerName)
+
+	if errorFromViewState != nil {
+		unitTest.Fatalf(
+			"ViewState(%v, %v) produced error %v",
+			gameName,
+			playerName,
+			errorFromViewState)
+	}
+
+	actualDiscardedCards := viewForPlayer.DiscardedCards()
+
+	for _, discardedCard := range actualDiscardedCards {
+		expectedDiscardedCards[discardedCard] -= 1
+	}
+
+	for _, remainingCount := range expectedDiscardedCards {
+		if remainingCount != 0 {
+			unitTest.Fatalf(
+				"player view %+v after removing actual discards %v from expected had %v remaining expected",
+				viewForPlayer,
+				actualDiscardedCards,
+				expectedDiscardedCards)
 		}
 	}
 }
