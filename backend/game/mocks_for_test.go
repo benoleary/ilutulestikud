@@ -86,8 +86,7 @@ type mockGameState struct {
 	ReturnForNumberOfReadyHints                   int
 	ReturnForNumberOfMistakesMade                 int
 	ReturnForDeckSize                             int
-	MockNamesAndHands                             []game.PlayerNameWithHand
-	MockDeck                                      []card.Readonly
+	ReturnForPlayedForColor                       map[string][]card.Readonly
 	TestErrorForRecordChatMessage                 error
 	ArgumentsFromRecordChatMessage                []stringTriple
 	TestErrorForEnactTurnByDiscardingAndReplacing error
@@ -111,8 +110,7 @@ func NewMockGameState(
 		ReturnForNumberOfReadyHints:                   -1,
 		ReturnForNumberOfMistakesMade:                 -1,
 		ReturnForDeckSize:                             -1,
-		MockNamesAndHands:                             nil,
-		MockDeck:                                      nil,
+		ReturnForPlayedForColor:                       make(map[string][]card.Readonly, 0),
 		TestErrorForRecordChatMessage:                 testError,
 		ArgumentsFromRecordChatMessage:                make([]stringTriple, 0),
 		TestErrorForEnactTurnByDiscardingAndReplacing: testError,
@@ -178,7 +176,7 @@ func (mockGame *mockGameState) DeckSize() int {
 // PlayedForColor gets mocked.
 func (mockGame *mockGameState) PlayedForColor(
 	colorSuit string) []card.Readonly {
-	return []card.Readonly{}
+	return mockGame.ReturnForPlayedForColor[colorSuit]
 }
 
 // NumberOfDiscardedCards gets mocked.

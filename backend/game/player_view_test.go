@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/benoleary/ilutulestikud/backend/game/card"
+
 	"github.com/benoleary/ilutulestikud/backend/game/message"
 )
 
@@ -181,6 +183,230 @@ func TestWrapperFunctions(unitTest *testing.T) {
 				expectedTurnIndex)
 		}
 	}
+}
 
-	unitTest.Fatalf("test not yet ready")
+func TestPlayedSequencesWhenSomeAreEmpty(unitTest *testing.T) {
+	gameName := "Test game"
+	testPlayersInOriginalOrder :=
+		[]string{
+			playerNamesAvailableInTest[0],
+			playerNamesAvailableInTest[1],
+			playerNamesAvailableInTest[2],
+			playerNamesAvailableInTest[3],
+		}
+	playerName := testPlayersInOriginalOrder[0]
+	gameCollection, mockPersister, _ :=
+		prepareCollection(unitTest, testPlayersInOriginalOrder)
+
+	mockReadAndWriteState :=
+		NewMockGameState(unitTest, fmt.Errorf("No write function should be called"))
+	mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
+	mockReadAndWriteState.ReturnForRuleset = testRuleset
+
+	expectedPlayedCards := make(map[string][]card.Readonly, 0)
+	colorSuits := testRuleset.ColorSuits()
+	numberOfSuits := len(colorSuits)
+	colorWithSeveralCards := colorSuits[0]
+	severalCardsForColor :=
+		[]card.Readonly{
+			card.NewReadonly(colorWithSeveralCards, 1),
+			card.NewReadonly(colorWithSeveralCards, 2),
+			card.NewReadonly(colorWithSeveralCards, 4),
+		}
+	numberWhichIsSeveral := len(severalCardsForColor)
+	expectedPlayedCards[colorWithSeveralCards] = severalCardsForColor
+
+	colorWithSingleCard := colorSuits[2]
+	singleCardForColor := card.NewReadonly(colorWithSingleCard, 1)
+	expectedPlayedCards[colorWithSingleCard] =
+		[]card.Readonly{
+			singleCardForColor,
+		}
+
+	mockReadAndWriteState.ReturnForPlayedForColor = expectedPlayedCards
+
+	mockPersister.TestErrorForReadAndWriteGame = nil
+	mockPersister.ReturnForReadAndWriteGame = mockReadAndWriteState
+
+	viewForPlayer, errorFromViewState :=
+		gameCollection.ViewState(
+			gameName,
+			playerName)
+
+	if errorFromViewState != nil {
+		unitTest.Fatalf(
+			"ViewState(%v, %v) produced error %v",
+			gameName,
+			playerName,
+			errorFromViewState)
+	}
+
+	actualPlayedCards := viewForPlayer.PlayedCards()
+
+	if len(actualPlayedCards) != numberOfSuits {
+		unitTest.Fatalf(
+			"player view %+v did not have expected %v sequences of played cards",
+			viewForPlayer,
+			numberOfSuits)
+	}
+
+	foundColorWithSeveralCards := false
+	foundColorWithSingleCard := false
+
+	for suitIndex := 0; suitIndex < numberOfSuits; suitIndex++ {
+		actualPile := actualPlayedCards[suitIndex]
+
+		if len(actualPile) > 0 {
+			pileColor := actualPile[0].ColorSuit()
+
+			if pileColor == colorWithSeveralCards {
+				foundColorWithSeveralCards = true
+
+				if len(actualPile) != numberWhichIsSeveral {
+					unitTest.Fatalf(
+						"player view %+v did not have expected sequence %+v for color %v",
+						viewForPlayer,
+						severalCardsForColor,
+						colorWithSeveralCards)
+				}
+
+				for indexInPile := 0; indexInPile < numberWhichIsSeveral; indexInPile++ {
+					if actualPile[indexInPile] != severalCardsForColor[indexInPile] {
+						unitTest.Fatalf(
+							"player view %+v did not have expected sequence %+v for color %v",
+							viewForPlayer,
+							severalCardsForColor,
+							colorWithSeveralCards)
+					}
+				}
+			} else if pileColor == colorWithSingleCard {
+				foundColorWithSingleCard = true
+
+				if len(actualPile) != 1 {
+					unitTest.Fatalf(
+						"player view %+v did not have expected sequence %+v for color %v",
+						viewForPlayer,
+						singleCardForColor,
+						colorWithSingleCard)
+				}
+
+				if actualPile[0] != singleCardForColor {
+					unitTest.Fatalf(
+						"player view %+v did not have expected sequence %+v for color %v",
+						viewForPlayer,
+						singleCardForColor,
+						colorWithSingleCard)
+				}
+			}
+		}
+	}
+
+	if !foundColorWithSeveralCards {
+		unitTest.Fatalf(
+			"player view %+v did not have expected sequence %+v for color %v",
+			viewForPlayer,
+			severalCardsForColor,
+			colorWithSeveralCards)
+	}
+
+	if !foundColorWithSingleCard {
+		unitTest.Fatalf(
+			"player view %+v did not have expected sequence %+v for color %v",
+			viewForPlayer,
+			singleCardForColor,
+			colorWithSingleCard)
+	}
+}
+
+func TestPlayedSequencesWhenAllAreNonempty(unitTest *testing.T) {
+	gameName := "Test game"
+	testPlayersInOriginalOrder :=
+		[]string{
+			playerNamesAvailableInTest[0],
+			playerNamesAvailableInTest[1],
+			playerNamesAvailableInTest[2],
+			playerNamesAvailableInTest[3],
+		}
+	playerName := testPlayersInOriginalOrder[0]
+	gameCollection, mockPersister, _ :=
+		prepareCollection(unitTest, testPlayersInOriginalOrder)
+
+	mockReadAndWriteState :=
+		NewMockGameState(unitTest, fmt.Errorf("No write function should be called"))
+	mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
+	mockReadAndWriteState.ReturnForRuleset = testRuleset
+
+	expectedPlayedCards := make(map[string][]card.Readonly, 0)
+	colorSuits := testRuleset.ColorSuits()
+	numberOfSuits := len(colorSuits)
+
+	for colorCount := 0; colorCount < numberOfSuits; colorCount++ {
+		colorSuit := colorSuits[colorCount]
+		sequenceForColor := make([]card.Readonly, colorCount+1)
+		for cardCount := 0; cardCount <= colorCount; cardCount++ {
+			sequenceForColor[cardCount] = card.NewReadonly(colorSuit, cardCount+1)
+		}
+
+		expectedPlayedCards[colorSuit] = sequenceForColor
+	}
+
+	mockReadAndWriteState.ReturnForPlayedForColor = expectedPlayedCards
+
+	mockPersister.TestErrorForReadAndWriteGame = nil
+	mockPersister.ReturnForReadAndWriteGame = mockReadAndWriteState
+
+	viewForPlayer, errorFromViewState :=
+		gameCollection.ViewState(
+			gameName,
+			playerName)
+
+	if errorFromViewState != nil {
+		unitTest.Fatalf(
+			"ViewState(%v, %v) produced error %v",
+			gameName,
+			playerName,
+			errorFromViewState)
+	}
+
+	actualPlayedCards := viewForPlayer.PlayedCards()
+
+	if len(actualPlayedCards) != numberOfSuits {
+		unitTest.Fatalf(
+			"player view %+v did not have expected %v sequences of played cards",
+			viewForPlayer,
+			numberOfSuits)
+	}
+
+	for suitIndex := 0; suitIndex < numberOfSuits; suitIndex++ {
+		actualPile := actualPlayedCards[suitIndex]
+
+		if len(actualPile) <= 0 {
+			unitTest.Fatalf(
+				"player view %+v did not have expected sequences %+v (at least one empty pile)",
+				viewForPlayer,
+				expectedPlayedCards)
+		}
+
+		pileColor := actualPile[0].ColorSuit()
+
+		expectedPile := expectedPlayedCards[pileColor]
+		expectedPileSize := len(expectedPile)
+		if len(actualPile) != expectedPileSize {
+			unitTest.Fatalf(
+				"player view %+v did not have expected sequence %+v for color %v",
+				viewForPlayer,
+				expectedPile,
+				pileColor)
+		}
+
+		for indexInPile := 0; indexInPile < expectedPileSize; indexInPile++ {
+			if actualPile[indexInPile] != expectedPile[indexInPile] {
+				unitTest.Fatalf(
+					"player view %+v did not have expected sequence %+v for color %v",
+					viewForPlayer,
+					expectedPile,
+					pileColor)
+			}
+		}
+	}
 }
