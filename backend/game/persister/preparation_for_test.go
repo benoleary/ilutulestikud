@@ -315,40 +315,26 @@ func prepareExpected(
 		}
 	}
 
-	handSize := pristineRuleset.NumberOfCardsInPlayerHand(len(pristineState.PlayerNames()))
 	visibleHands := make(map[string][]card.Readonly, 0)
 	inferredHands := make(map[string][]card.Inferred, 0)
 
 	for _, playerName := range pristineState.PlayerNames() {
-		visibleHand := make([]card.Readonly, 0)
-		inferredHand := make([]card.Inferred, 0)
+		visibleHand, errorFromVisible :=
+			pristineState.VisibleHand(playerName)
+		if errorFromVisible != nil {
+			unitTest.Fatalf(
+				"VisibleHand(%v) produced error %v",
+				playerName,
+				errorFromVisible)
+		}
 
-		for handIndex := 0; handIndex < handSize; handIndex++ {
-			visibleCard, errorFromVisible :=
-				pristineState.VisibleCardInHand(playerName, handIndex)
-
-			if errorFromVisible != nil {
-				unitTest.Fatalf(
-					"VisibleCardInHand(%+v, %+v) produced error %v",
-					playerName,
-					handIndex,
-					errorFromVisible)
-			}
-
-			visibleHand = append(visibleHand, visibleCard)
-
-			inferredCard, errorFromInferred :=
-				pristineState.InferredCardInHand(playerName, handIndex)
-
-			if errorFromInferred != nil {
-				unitTest.Fatalf(
-					"InferredCardInHand(%+v, %+v) produced error %v",
-					playerName,
-					handIndex,
-					errorFromInferred)
-			}
-
-			inferredHand = append(inferredHand, inferredCard)
+		inferredHand, errorFromInferred :=
+			pristineState.InferredHand(playerName)
+		if errorFromInferred != nil {
+			unitTest.Fatalf(
+				"InferredHand(%v) produced error %v",
+				playerName,
+				errorFromInferred)
 		}
 
 		visibleHands[playerName] = visibleHand

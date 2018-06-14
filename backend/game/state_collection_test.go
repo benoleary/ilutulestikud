@@ -40,8 +40,7 @@ func TestViewErrorWhenPlayerNotParticipant(unitTest *testing.T) {
 
 	mockPersister.TestErrorForReadAndWriteGame = nil
 
-	mockReadAndWriteState :=
-		NewMockGameState(unitTest, fmt.Errorf("No write function should be called"))
+	mockReadAndWriteState := NewMockGameState(unitTest)
 	mockReadAndWriteState.ReturnForName = "test game"
 	mockReadAndWriteState.ReturnForPlayerNames = []string{
 		"A. Different Player",
@@ -70,8 +69,7 @@ func TestViewCorrectWhenPersisterGivesValidGame(unitTest *testing.T) {
 	gameCollection, mockPersister, _ :=
 		prepareCollection(unitTest, playerNamesAvailableInTest)
 
-	mockReadAndWriteState :=
-		NewMockGameState(unitTest, fmt.Errorf("No write function should be called"))
+	mockReadAndWriteState := NewMockGameState(unitTest)
 	mockReadAndWriteState.ReturnForName = gameName
 	mockReadAndWriteState.ReturnForRuleset = testRuleset
 	mockReadAndWriteState.ReturnForPlayerNames = playerNamesAvailableInTest
@@ -104,21 +102,19 @@ func TestViewCorrectWhenPersisterGivesValidGame(unitTest *testing.T) {
 }
 
 func TestErrorWhenViewErrorOnStateFromAll(unitTest *testing.T) {
-	gameName := "Test game"
+	gameName := "Mock with specified player"
 	playerName := "Test Player"
 	gameCollection, mockPersister, _ :=
 		prepareCollection(unitTest, playerNamesAvailableInTest)
 
-	mockGameWithPlayer :=
-		NewMockGameState(unitTest, fmt.Errorf("mock game with player"))
+	mockGameWithPlayer := NewMockGameState(unitTest)
 	mockGameWithPlayer.ReturnForName = gameName
 	mockGameWithPlayer.ReturnForCreationTime = time.Now().Add(-2 * time.Second)
 	mockGameWithPlayer.ReturnForRuleset = testRuleset
 	mockGameWithPlayer.ReturnForPlayerNames = playerNamesAvailableInTest
 
-	mockGameWithoutPlayer :=
-		NewMockGameState(unitTest, fmt.Errorf("mock game without player"))
-	mockGameWithoutPlayer.ReturnForName = "test game"
+	mockGameWithoutPlayer := NewMockGameState(unitTest)
+	mockGameWithoutPlayer.ReturnForName = "Mock without specified player"
 	mockGameWithoutPlayer.ReturnForCreationTime = time.Now().Add(-1 * time.Second)
 	mockGameWithoutPlayer.ReturnForPlayerNames = []string{
 		playerNamesAvailableInTest[1],
@@ -149,15 +145,13 @@ func TestViewsCorrectFromAllForPlayer(unitTest *testing.T) {
 
 	testStartTime := time.Now()
 
-	mockFirstGame :=
-		NewMockGameState(unitTest, fmt.Errorf("first mock game"))
+	mockFirstGame := NewMockGameState(unitTest)
 	mockFirstGame.ReturnForName = "first test game"
 	mockFirstGame.ReturnForCreationTime = testStartTime.Add(-2 * time.Second)
 	mockFirstGame.ReturnForRuleset = testRuleset
 	mockFirstGame.ReturnForPlayerNames = playerNamesAvailableInTest
 
-	mockSecondGame :=
-		NewMockGameState(unitTest, fmt.Errorf("second mock game"))
+	mockSecondGame := NewMockGameState(unitTest)
 	mockSecondGame.ReturnForName = "second test game"
 	mockSecondGame.ReturnForCreationTime = testStartTime.Add(-1 * time.Second)
 	mockSecondGame.ReturnForRuleset = testRuleset
@@ -166,8 +160,7 @@ func TestViewsCorrectFromAllForPlayer(unitTest *testing.T) {
 		playerName,
 	}
 
-	mockThirdGame :=
-		NewMockGameState(unitTest, fmt.Errorf("third mock game"))
+	mockThirdGame := NewMockGameState(unitTest)
 	mockThirdGame.ReturnForName = "third test game"
 	mockThirdGame.ReturnForCreationTime = testStartTime
 	mockThirdGame.ReturnForRuleset = testRuleset
@@ -644,8 +637,7 @@ func TestExecutorErrorWhenPlayerNotRegistered(unitTest *testing.T) {
 
 	mockPersister.TestErrorForReadAndWriteGame = nil
 
-	mockReadAndWriteState :=
-		NewMockGameState(unitTest, fmt.Errorf("No function should be called"))
+	mockReadAndWriteState := NewMockGameState(unitTest)
 	mockReadAndWriteState.ReturnForName = gameName
 	mockReadAndWriteState.ReturnForPlayerNames = []string{
 		playerNamesAvailableInTest[0],
@@ -677,8 +669,7 @@ func TestExecutorErrorWhenPlayerNotParticipant(unitTest *testing.T) {
 
 	mockPersister.TestErrorForReadAndWriteGame = nil
 
-	mockReadAndWriteState :=
-		NewMockGameState(unitTest, fmt.Errorf("No function should be called"))
+	mockReadAndWriteState := NewMockGameState(unitTest)
 	mockReadAndWriteState.ReturnForName = gameName
 	mockReadAndWriteState.ReturnForPlayerNames = []string{
 		playerNamesAvailableInTest[1],
@@ -707,8 +698,7 @@ func TestExecutorCorrectWhenPersisterGivesValidGame(unitTest *testing.T) {
 	gameCollection, gamePersister, _ :=
 		prepareCollection(unitTest, playerNamesAvailableInTest)
 
-	mockReadAndWriteState :=
-		NewMockGameState(unitTest, fmt.Errorf("No function should be called"))
+	mockReadAndWriteState := NewMockGameState(unitTest)
 	mockReadAndWriteState.ReturnForName = gameName
 	mockReadAndWriteState.ReturnForRuleset = testRuleset
 	mockReadAndWriteState.ReturnForPlayerNames = playerNamesAvailableInTest

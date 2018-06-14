@@ -22,11 +22,8 @@ func TestWrapperFunctions(unitTest *testing.T) {
 	gameCollection, mockPersister, _ :=
 		prepareCollection(unitTest, testPlayersInOriginalOrder)
 
-	mockReadAndWriteState :=
-		NewMockGameState(unitTest, fmt.Errorf("No write function should be called"))
-
+	mockReadAndWriteState := NewMockGameState(unitTest)
 	mockReadAndWriteState.ReturnForName = gameName
-
 	mockReadAndWriteState.ReturnForRuleset = testRuleset
 
 	testTurn := 3
@@ -198,8 +195,7 @@ func TestPlayedSequencesWhenSomeAreEmpty(unitTest *testing.T) {
 	gameCollection, mockPersister, _ :=
 		prepareCollection(unitTest, testPlayersInOriginalOrder)
 
-	mockReadAndWriteState :=
-		NewMockGameState(unitTest, fmt.Errorf("No write function should be called"))
+	mockReadAndWriteState := NewMockGameState(unitTest)
 	mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
 	mockReadAndWriteState.ReturnForRuleset = testRuleset
 
@@ -342,8 +338,7 @@ func TestPlayedSequencesWhenAllAreNonempty(unitTest *testing.T) {
 	gameCollection, mockPersister, _ :=
 		prepareCollection(unitTest, testPlayersInOriginalOrder)
 
-	mockReadAndWriteState :=
-		NewMockGameState(unitTest, fmt.Errorf("No write function should be called"))
+	mockReadAndWriteState := NewMockGameState(unitTest)
 	mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
 	mockReadAndWriteState.ReturnForRuleset = testRuleset
 
@@ -433,6 +428,7 @@ func TestPlayedSequencesWhenAllAreNonempty(unitTest *testing.T) {
 		}
 	}
 }
+
 func TestDiscardedCards(unitTest *testing.T) {
 	gameName := "Test game"
 	testPlayersInOriginalOrder :=
@@ -446,8 +442,7 @@ func TestDiscardedCards(unitTest *testing.T) {
 	gameCollection, mockPersister, _ :=
 		prepareCollection(unitTest, testPlayersInOriginalOrder)
 
-	mockReadAndWriteState :=
-		NewMockGameState(unitTest, fmt.Errorf("No write function should be called"))
+	mockReadAndWriteState := NewMockGameState(unitTest)
 	mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
 	mockReadAndWriteState.ReturnForRuleset = testRuleset
 
@@ -506,5 +501,229 @@ func TestDiscardedCards(unitTest *testing.T) {
 				actualDiscardedCards,
 				expectedDiscardedCards)
 		}
+	}
+}
+
+func TestPlayerIsForbiddenFromSeeingOwnHand(unitTest *testing.T) {
+	gameName := "Test game"
+	testPlayersInOriginalOrder :=
+		[]string{
+			playerNamesAvailableInTest[0],
+			playerNamesAvailableInTest[1],
+			playerNamesAvailableInTest[2],
+			playerNamesAvailableInTest[3],
+		}
+	playerName := testPlayersInOriginalOrder[0]
+	gameCollection, mockPersister, _ :=
+		prepareCollection(unitTest, testPlayersInOriginalOrder)
+
+	mockReadAndWriteState := NewMockGameState(unitTest)
+	mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
+	mockReadAndWriteState.ReturnForRuleset = testRuleset
+
+	mockPersister.TestErrorForReadAndWriteGame = nil
+	mockPersister.ReturnForReadAndWriteGame = mockReadAndWriteState
+
+	viewForPlayer, errorFromViewState :=
+		gameCollection.ViewState(
+			gameName,
+			playerName)
+
+	if errorFromViewState != nil {
+		unitTest.Fatalf(
+			"ViewState(%v, %v) produced error %v",
+			gameName,
+			playerName,
+			errorFromViewState)
+	}
+
+	visibleHand, errorFromVisibleHand := viewForPlayer.VisibleHand(playerName)
+
+	if errorFromVisibleHand == nil {
+		unitTest.Fatalf(
+			"player view %+v produced nil error when trying to view own hand, saw %v",
+			viewForPlayer,
+			visibleHand)
+	}
+}
+
+func TestPlayerSeesOtherHandCorrectly(unitTest *testing.T) {
+	gameName := "Test game"
+	testPlayersInOriginalOrder :=
+		[]string{
+			playerNamesAvailableInTest[0],
+			playerNamesAvailableInTest[1],
+			playerNamesAvailableInTest[2],
+		}
+	viewingPlayer := testPlayersInOriginalOrder[1]
+	playerWithVisibleHand := testPlayersInOriginalOrder[0]
+	gameCollection, mockPersister, _ :=
+		prepareCollection(unitTest, testPlayersInOriginalOrder)
+
+	mockReadAndWriteState := NewMockGameState(unitTest)
+	mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
+	mockReadAndWriteState.ReturnForRuleset = testRuleset
+
+	colorSuits := testRuleset.ColorSuits()
+	numberOfSuits := len(colorSuits)
+	if numberOfSuits < 2 {
+		unitTest.Fatalf(
+			"testRuleset.ColorSuits() %v has not enough colors (test needs at least 2)",
+			testRuleset.ColorSuits())
+	}
+	sequenceIndices := testRuleset.DistinctPossibleIndices()
+	if len(sequenceIndices) < 2 {
+		unitTest.Fatalf(
+			"testRuleset.DistinctPossibleIndices() %v has not enough indices (test needs at least 2)",
+			testRuleset.DistinctPossibleIndices())
+	}
+
+	firstPlayerHand :=
+		[]card.Readonly{
+			card.NewReadonly(colorSuits[0], sequenceIndices[0]),
+			card.NewReadonly(colorSuits[0], sequenceIndices[0]),
+			card.NewReadonly(colorSuits[1], sequenceIndices[0]),
+			card.NewReadonly(colorSuits[0], sequenceIndices[1]),
+			card.NewReadonly(colorSuits[1], sequenceIndices[1]),
+		}
+
+	lastPlayerHand :=
+		[]card.Readonly{
+			card.NewReadonly(colorSuits[1], sequenceIndices[0]),
+			card.NewReadonly(colorSuits[1], sequenceIndices[0]),
+			card.NewReadonly(colorSuits[0], sequenceIndices[0]),
+			card.NewReadonly(colorSuits[0], sequenceIndices[1]),
+			card.NewReadonly(colorSuits[1], sequenceIndices[1]),
+		}
+
+	expectedVisibleHands := make(map[string][]card.Readonly, 0)
+	expectedVisibleHands[playerWithVisibleHand] = firstPlayerHand
+	expectedVisibleHands[playerNamesAvailableInTest[2]] = lastPlayerHand
+
+	mockReadAndWriteState.ReturnForVisibleHand = expectedVisibleHands
+
+	mockPersister.TestErrorForReadAndWriteGame = nil
+	mockPersister.ReturnForReadAndWriteGame = mockReadAndWriteState
+
+	viewForPlayer, errorFromViewState :=
+		gameCollection.ViewState(
+			gameName,
+			viewingPlayer)
+
+	if errorFromViewState != nil {
+		unitTest.Fatalf(
+			"ViewState(%v, %v) produced error %v",
+			gameName,
+			viewingPlayer,
+			errorFromViewState)
+	}
+
+	actualVisibleHand, errorFromVisibleHand :=
+		viewForPlayer.VisibleHand(playerWithVisibleHand)
+
+	if errorFromVisibleHand != nil {
+		unitTest.Fatalf(
+			"VisibleHand(%v) from player view %+v produced error %v",
+			playerWithVisibleHand,
+			viewForPlayer,
+			errorFromVisibleHand)
+	}
+
+	assertReadonlyCardSlicesMatch(
+		"view visible hand",
+		unitTest,
+		actualVisibleHand,
+		firstPlayerHand)
+}
+
+func TestPlayerSeesOwnInferredHandCorrectly(unitTest *testing.T) {
+	gameName := "Test game"
+	testPlayersInOriginalOrder :=
+		[]string{
+			playerNamesAvailableInTest[0],
+			playerNamesAvailableInTest[1],
+		}
+	viewingPlayer := testPlayersInOriginalOrder[0]
+	gameCollection, mockPersister, _ :=
+		prepareCollection(unitTest, testPlayersInOriginalOrder)
+
+	mockReadAndWriteState := NewMockGameState(unitTest)
+	mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
+	mockReadAndWriteState.ReturnForRuleset = testRuleset
+
+	colorSuits := testRuleset.ColorSuits()
+	numberOfSuits := len(colorSuits)
+	if numberOfSuits < 2 {
+		unitTest.Fatalf(
+			"testRuleset.ColorSuits() %v has not enough colors (test needs at least 2)",
+			testRuleset.ColorSuits())
+	}
+	sequenceIndices := testRuleset.DistinctPossibleIndices()
+	if len(sequenceIndices) < 2 {
+		unitTest.Fatalf(
+			"testRuleset.DistinctPossibleIndices() %v has not enough indices (test needs at least 2)",
+			testRuleset.DistinctPossibleIndices())
+	}
+
+	viewingPlayerHand :=
+		[]card.Inferred{
+			card.NewInferred(colorSuits, sequenceIndices),
+			card.NewInferred([]string{colorSuits[0]}, sequenceIndices),
+			card.NewInferred(colorSuits, []int{sequenceIndices[0]}),
+			card.NewInferred([]string{colorSuits[0]}, []int{sequenceIndices[0]}),
+			card.NewInferred(
+				[]string{colorSuits[0], colorSuits[1]},
+				[]int{sequenceIndices[0], sequenceIndices[1]}),
+		}
+
+	otherPlayerHand := []card.Inferred{}
+
+	expectedInferredHands := make(map[string][]card.Inferred, 0)
+	expectedInferredHands[viewingPlayer] = viewingPlayerHand
+	expectedInferredHands[playerNamesAvailableInTest[1]] = otherPlayerHand
+
+	mockReadAndWriteState.ReturnForInferredHand = expectedInferredHands
+
+	mockPersister.TestErrorForReadAndWriteGame = nil
+	mockPersister.ReturnForReadAndWriteGame = mockReadAndWriteState
+
+	viewForPlayer, errorFromViewState :=
+		gameCollection.ViewState(
+			gameName,
+			viewingPlayer)
+
+	if errorFromViewState != nil {
+		unitTest.Fatalf(
+			"ViewState(%v, %v) produced error %v",
+			gameName,
+			viewingPlayer,
+			errorFromViewState)
+	}
+
+	actualInferredHand, errorFromInferredHand := viewForPlayer.KnowledgeOfOwnHand()
+
+	if errorFromInferredHand != nil {
+		unitTest.Fatalf(
+			"KnowledgeOfOwnHand() from player view %+v produced error %v",
+			viewForPlayer,
+			errorFromInferredHand)
+	}
+
+	expectedHandSize := len(viewingPlayerHand)
+
+	if len(actualInferredHand) != expectedHandSize {
+		unitTest.Fatalf(
+			"inferred hand %+v did not match expected %+v in length",
+			actualInferredHand,
+			errorFromViewState)
+	}
+
+	for indexInHand := 0; indexInHand < expectedHandSize; indexInHand++ {
+		assertInferredCardPossibilitiesCorrect(
+			fmt.Sprintf("own inferred hand at index %v", indexInHand),
+			unitTest,
+			actualInferredHand[indexInHand],
+			viewingPlayerHand[indexInHand].PossibleColors(),
+			viewingPlayerHand[indexInHand].PossibleIndices())
 	}
 }

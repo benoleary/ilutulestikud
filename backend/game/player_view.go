@@ -19,7 +19,6 @@ type PlayerView struct {
 	colorSuits              []string
 	numberOfSuits           int
 	distinctPossibleIndices []int
-	handSize                int
 }
 
 // ViewOnStateForPlayer creates a PlayerView around the given game
@@ -47,7 +46,6 @@ func ViewOnStateForPlayer(
 					colorSuits:              gameColorSuits,
 					numberOfSuits:           len(gameColorSuits),
 					distinctPossibleIndices: distinctPossibleIndices,
-					handSize:                rulesetOfGame.NumberOfCardsInPlayerHand(numberOfPlayers),
 				}
 
 			return playerView, nil
@@ -194,37 +192,11 @@ func (playerView *PlayerView) VisibleHand(playerName string) ([]card.Readonly, e
 		return nil, fmt.Errorf("Player is not allowed to view own hand")
 	}
 
-	playerHand := make([]card.Readonly, playerView.handSize)
-
-	for indexInHand := 0; indexInHand < playerView.handSize; indexInHand++ {
-		visibleCard, errorFromView :=
-			playerView.gameState.VisibleCardInHand(playerName, indexInHand)
-
-		if errorFromView != nil {
-			return nil, errorFromView
-		}
-
-		playerHand[indexInHand] = visibleCard
-	}
-
-	return playerHand, nil
+	return playerView.gameState.VisibleHand(playerName)
 }
 
 // KnowledgeOfOwnHand returns the knowledge about the player's own cards which
 // was inferred directly from the hints officially given so far.
 func (playerView *PlayerView) KnowledgeOfOwnHand() ([]card.Inferred, error) {
-	playerHand := make([]card.Inferred, playerView.handSize)
-
-	for indexInHand := 0; indexInHand < playerView.handSize; indexInHand++ {
-		inferredCard, errorFromInferral :=
-			playerView.gameState.InferredCardInHand(playerView.playerName, indexInHand)
-
-		if errorFromInferral != nil {
-			return nil, errorFromInferral
-		}
-
-		playerHand[indexInHand] = inferredCard
-	}
-
-	return playerHand, nil
+	return playerView.gameState.InferredHand(playerView.playerName)
 }

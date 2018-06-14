@@ -88,15 +88,16 @@ type mockGameState struct {
 	ReturnForDeckSize                             int
 	ReturnForPlayedForColor                       map[string][]card.Readonly
 	ReturnForNumberOfDiscardedCards               map[card.Readonly]int
+	ReturnForVisibleHand                          map[string][]card.Readonly
+	ReturnForInferredHand                         map[string][]card.Inferred
 	TestErrorForRecordChatMessage                 error
 	ArgumentsFromRecordChatMessage                []stringTriple
 	TestErrorForEnactTurnByDiscardingAndReplacing error
 	TestErrorForEnactTurnByPlayingAndReplacing    error
 }
 
-func NewMockGameState(
-	testReference *testing.T,
-	testError error) *mockGameState {
+func NewMockGameState(testReference *testing.T) *mockGameState {
+	testError := fmt.Errorf("No write function should be called")
 	return &mockGameState{
 		testReference:                                 testReference,
 		ReturnForNontestError:                         nil,
@@ -113,6 +114,8 @@ func NewMockGameState(
 		ReturnForDeckSize:                             -1,
 		ReturnForPlayedForColor:                       make(map[string][]card.Readonly, 0),
 		ReturnForNumberOfDiscardedCards:               make(map[card.Readonly]int, 0),
+		ReturnForVisibleHand:                          make(map[string][]card.Readonly, 0),
+		ReturnForInferredHand:                         make(map[string][]card.Inferred, 0),
 		TestErrorForRecordChatMessage:                 testError,
 		ArgumentsFromRecordChatMessage:                make([]stringTriple, 0),
 		TestErrorForEnactTurnByDiscardingAndReplacing: testError,
@@ -189,18 +192,18 @@ func (mockGame *mockGameState) NumberOfDiscardedCards(
 	return mockGame.ReturnForNumberOfDiscardedCards[cardAsKey]
 }
 
-// VisibleCardInHand gets mocked.
-func (mockGame *mockGameState) VisibleCardInHand(
-	holdingPlayerName string,
-	indexInHand int) (card.Readonly, error) {
-	return card.ErrorReadonly(), nil
+// VisibleHand gets mocked.
+func (mockGame *mockGameState) VisibleHand(holdingPlayerName string) ([]card.Readonly, error) {
+	visibleCard :=
+		mockGame.ReturnForVisibleHand[holdingPlayerName]
+	return visibleCard, mockGame.ReturnForNontestError
 }
 
-// InferredCardInHand gets mocked.
-func (mockGame *mockGameState) InferredCardInHand(
-	holdingPlayerName string,
-	indexInHand int) (card.Inferred, error) {
-	return card.ErrorInferred(), nil
+// InferredHand gets mocked.
+func (mockGame *mockGameState) InferredHand(holdingPlayerName string) ([]card.Inferred, error) {
+	inferredCard :=
+		mockGame.ReturnForInferredHand[holdingPlayerName]
+	return inferredCard, mockGame.ReturnForNontestError
 }
 
 // Read actually does what it is supposed to.

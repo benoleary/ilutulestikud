@@ -28,16 +28,14 @@ func TestErrorFromInvalidPlayerVisibleHand(unitTest *testing.T) {
 			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
 
 			invalidPlayer := "Invalid Player"
-			soughtIndex := 0
-			visibleCard, errorFromGet :=
-				gameAndDescription.GameState.Read().VisibleCardInHand(invalidPlayer, soughtIndex)
+			visibleHand, errorFromGet :=
+				gameAndDescription.GameState.Read().VisibleHand(invalidPlayer)
 
 			if errorFromGet == nil {
 				unitTest.Fatalf(
-					"VisibleCardInHand(%v, %v) %v did not produce expected error",
+					"VisibleHand(%v) %v did not produce expected error",
 					invalidPlayer,
-					soughtIndex,
-					visibleCard)
+					visibleHand)
 			}
 
 			// There should have been no visible side-effects at all.
@@ -69,16 +67,14 @@ func TestErrorFromInvalidPlayerInferredHand(unitTest *testing.T) {
 			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
 
 			invalidPlayer := "Invalid Player"
-			soughtIndex := 0
-			inferredCard, errorFromGet :=
-				gameAndDescription.GameState.Read().InferredCardInHand(invalidPlayer, soughtIndex)
+			inferredHand, errorFromGet :=
+				gameAndDescription.GameState.Read().InferredHand(invalidPlayer)
 
 			if errorFromGet == nil {
 				unitTest.Fatalf(
-					"InferredCardInHand(%v, %v) %v did not produce expected error",
+					"InferredHand(%v) %v did not produce expected error",
 					invalidPlayer,
-					soughtIndex,
-					inferredCard)
+					inferredHand)
 			}
 
 			// There should have been no visible side-effects at all.

@@ -168,37 +168,35 @@ func assertGameStateAsExpected(
 		// It could be that the hand size is less than the ruleset decrees, if we're on the last turn.
 		handSize := len(expectedVisibleHand)
 
-		for handIndex := 0; handIndex < handSize; handIndex++ {
-			visibleCard, errorFromVisible :=
-				actualGame.VisibleCardInHand(playerName, handIndex)
+		visibleHand, errorFromVisible :=
+			actualGame.VisibleHand(playerName)
+		if errorFromVisible != nil {
+			unitTest.Fatalf(
+				"VisibleHand(%v) produced error %v",
+				playerName,
+				errorFromVisible)
+		}
 
-			if errorFromVisible != nil {
-				unitTest.Fatalf(
-					testIdentifier+"/VisibleCardInHand(%+v, %+v) produced error %v",
-					playerName,
-					handIndex,
-					errorFromVisible)
-			}
+		inferredHand, errorFromInferred :=
+			actualGame.InferredHand(playerName)
+		if errorFromInferred != nil {
+			unitTest.Fatalf(
+				"InferredHand(%v) produced error %v",
+				playerName,
+				errorFromInferred)
+		}
 
-			if visibleCard != expectedVisibleHand[handIndex] {
+		for indexInHand := 0; indexInHand < handSize; indexInHand++ {
+			if visibleHand[indexInHand] != expectedVisibleHand[indexInHand] {
 				unitTest.Fatalf(
 					testIdentifier+"/actual %+v did not match expected %+v in visible hands",
 					actualGame,
 					expectedGame)
 			}
 
-			inferredCard, errorFromInferred :=
-				actualGame.InferredCardInHand(playerName, handIndex)
+			inferredCard := inferredHand[indexInHand]
 
-			if errorFromInferred != nil {
-				unitTest.Fatalf(
-					testIdentifier+"/InferredCardInHand(%+v, %+v) produced error %v",
-					playerName,
-					handIndex,
-					errorFromInferred)
-			}
-
-			expectedInferred := expectedInferredHand[handIndex]
+			expectedInferred := expectedInferredHand[indexInHand]
 			expectedColors := expectedInferred.PossibleColors()
 			expectedIndices := expectedInferred.PossibleIndices()
 

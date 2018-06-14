@@ -263,30 +263,42 @@ func (gameState *inMemoryState) NumberOfDiscardedCards(
 }
 
 // VisibleCardInHand returns the card held by the given player in the given position.
-func (gameState *inMemoryState) VisibleCardInHand(
-	holdingPlayerName string,
-	indexInHand int) (card.Readonly, error) {
+func (gameState *inMemoryState) VisibleHand(holdingPlayerName string) ([]card.Readonly, error) {
 	playerHand, hasHand := gameState.playerHands[holdingPlayerName]
 
 	if !hasHand {
-		return card.ErrorReadonly(), fmt.Errorf("Player has no hand")
+		return nil, fmt.Errorf("Player has no hand")
 	}
 
-	return playerHand[indexInHand].Readonly, nil
+	handSize := len(playerHand)
+
+	visibleHand := make([]card.Readonly, handSize)
+
+	for indexInHand := 0; indexInHand < handSize; indexInHand++ {
+		visibleHand[indexInHand] = playerHand[indexInHand].Readonly
+	}
+
+	return visibleHand, nil
 }
 
 // InferredCardInHand returns the inferred information about the card held by the given
 // player in the given position.
-func (gameState *inMemoryState) InferredCardInHand(
-	holdingPlayerName string,
-	indexInHand int) (card.Inferred, error) {
+func (gameState *inMemoryState) InferredHand(holdingPlayerName string) ([]card.Inferred, error) {
 	playerHand, hasHand := gameState.playerHands[holdingPlayerName]
 
 	if !hasHand {
-		return card.ErrorInferred(), fmt.Errorf("Player has no hand")
+		return nil, fmt.Errorf("Player has no hand")
 	}
 
-	return playerHand[indexInHand].Inferred, nil
+	handSize := len(playerHand)
+
+	inferredHand := make([]card.Inferred, handSize)
+
+	for indexInHand := 0; indexInHand < handSize; indexInHand++ {
+		inferredHand[indexInHand] = playerHand[indexInHand].Inferred
+	}
+
+	return inferredHand, nil
 }
 
 // Read returns the gameState itself as a read-only object for the purposes of reading

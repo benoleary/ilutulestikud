@@ -172,13 +172,12 @@ type ReadonlyState interface {
 	// and index which were discarded or played incorrectly.
 	NumberOfDiscardedCards(colorSuit string, sequenceIndex int) int
 
-	// VisibleCardInHand should return the card held by the given player in the given
-	// position.
-	VisibleCardInHand(holdingPlayerName string, indexInHand int) (card.Readonly, error)
+	// VisibleHand should return the card helds by the given player.
+	VisibleHand(holdingPlayerName string) ([]card.Readonly, error)
 
-	// InferredCardInHand should return the inferred information about the card held by
-	// the given player in the given position in their hand.
-	InferredCardInHand(holdingPlayerName string, indexInHand int) (card.Inferred, error)
+	// InferredHand should return the inferred information about the cards held by
+	// the given player.
+	InferredHand(holdingPlayerName string) ([]card.Inferred, error)
 }
 
 // ReadAndWriteState defines the interface for structs which should encapsulate the

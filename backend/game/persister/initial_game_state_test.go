@@ -155,56 +155,53 @@ func TestSetUpInitialMetadataCorrectly(unitTest *testing.T) {
 
 				playerName := playerWithHand.PlayerName
 
+				actualVisibleHand, errorFromVisible :=
+					readonlyState.VisibleHand(playerName)
+
+				if errorFromVisible != nil {
+					unitTest.Fatalf(
+						"VisibleHand(%v) %v produced error %v",
+						playerName,
+						actualVisibleHand,
+						errorFromVisible)
+				}
+
+				actualInferredHand, errorFromInferred :=
+					readonlyState.InferredHand(playerName)
+
+				if errorFromInferred != nil {
+					unitTest.Fatalf(
+						"InferredHand(%v) %v produced error %v",
+						playerName,
+						actualInferredHand,
+						errorFromInferred)
+				}
+
 				for indexInHand := 0; indexInHand < numberOfCardsInHand; indexInHand++ {
 					expectedInHand :=
 						expectedNameWithHand.InitialHand[indexInHand]
 					expectedVisible := expectedInHand.Readonly
 					expectedInferred := expectedInHand.Inferred
-
-					actualVisible, errorFromVisible :=
-						readonlyState.VisibleCardInHand(playerName, indexInHand)
-
-					if errorFromVisible != nil {
-						unitTest.Fatalf(
-							"VisibleCardInHand(%v, %v) %v produced error %v",
-							playerName,
-							indexInHand,
-							actualVisible,
-							errorFromVisible)
-					}
-
-					if actualVisible != expectedVisible {
+					if actualVisibleHand[indexInHand] != expectedVisible {
 						unitTest.Errorf(
-							"VisibleCardInHand(%v, %v) %v was not expected %v",
+							"VisibleHand(%v) %v at index %v did not match expected %v",
 							playerName,
+							actualVisibleHand[indexInHand],
 							indexInHand,
-							actualVisible,
 							expectedVisible)
-					}
-
-					actualInferred, errorFromInferred :=
-						readonlyState.InferredCardInHand(playerName, indexInHand)
-
-					if errorFromInferred != nil {
-						unitTest.Fatalf(
-							"InferredCardInHand(%v, %v) %v produced error %v",
-							playerName,
-							indexInHand,
-							actualInferred,
-							errorFromInferred)
 					}
 
 					assertStringSlicesMatch(
 						testIdentifier+"/inferred possible colors",
 						unitTest,
 						expectedInferred.PossibleColors(),
-						actualInferred.PossibleColors())
+						actualInferredHand[indexInHand].PossibleColors())
 
 					assertIntSlicesMatch(
 						testIdentifier+"/inferred possible indices",
 						unitTest,
 						expectedInferred.PossibleIndices(),
-						actualInferred.PossibleIndices())
+						actualInferredHand[indexInHand].PossibleIndices())
 				}
 			}
 		})
