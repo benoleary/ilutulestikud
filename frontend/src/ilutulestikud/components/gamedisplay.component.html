@@ -15,3 +15,13 @@
         </button>
     </mat-form-field>
 </div>
+<div>
+    Action log:<br>
+    <mat-list dense role="list">
+        <mat-list-item
+            *ngFor="let actionMessage of actionLog"
+            [ngStyle]="{'color': actionMessage.Color, 'background-color': 'black'}">
+            {{ actionMessage.Text }}
+        </mat-list-item>
+    </mat-list>
+</div>

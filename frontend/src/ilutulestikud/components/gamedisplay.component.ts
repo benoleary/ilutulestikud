@@ -1,14 +1,10 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { OnInit, OnDestroy } from '@angular/core/src/metadata/lifecycle_hooks';
-import { nullSafeIsEquivalent } from '@angular/compiler/src/output/output_ast';
 import { Observable } from 'rxjs/Rx';
 import { Subscription } from 'rxjs/Subscription';
-import { MatListModule } from '@angular/material/list';
-import { MatInputModule } from '@angular/material';
 import { IlutulestikudService } from '../ilutulestikud.service';
 import { LogMessage } from '../models/logmessage.model'
 import { BackendIdentification } from '../models/backendidentification.model';
-
 
 
 @Component({
@@ -25,6 +21,7 @@ import { BackendIdentification } from '../models/backendidentification.model';
     isAwaitingGameData: boolean;
     chatLog: LogMessage[];
     chatInput: string;
+    actionLog: LogMessage[];
 
     constructor(public ilutulestikudService: IlutulestikudService)
     {
@@ -32,6 +29,7 @@ import { BackendIdentification } from '../models/backendidentification.model';
         this.playerIdentification = null;
         this.chatLog = [];
         this.chatInput = null;
+        this.actionLog = [];
     }
 
     ngOnInit(): void
@@ -80,8 +78,11 @@ import { BackendIdentification } from '../models/backendidentification.model';
         this.isAwaitingGameData = false;
     
         // The object fetchedGameData["ChatLog"] is only an "array-like object",
-        // not an array, so does not have foreach or length.
+        // as is fetchedGameData["ChatLog"], and an "array-like object" is not an
+        // array, so we must build an array around such an object before passing
+        // it into the function to refresh a log message array.
         LogMessage.refreshListFromSource(this.chatLog, Array.from(fetchedGameData["ChatLog"]))
+        LogMessage.refreshListFromSource(this.actionLog, Array.from(fetchedGameData["ActionLog"]))
     }
 
     sendChat(): void
