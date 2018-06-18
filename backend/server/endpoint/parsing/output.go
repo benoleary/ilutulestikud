@@ -90,17 +90,17 @@ type CardFromBehind struct {
 // The lists for before and after may be empty, if this player is the first
 // or last in order at the moment, respectively.
 type GameView struct {
-	ChatLog                      []LogMessage
-	ActionLog                    []LogMessage
-	ScoreSoFar                   int
-	NumberOfReadyHints           int
-	NumberOfSpentHints           int
-	NumberOfMistakesStillAllowed int
-	NumberOfMistakesMade         int
-	NumberOfCardsLeftInDeck      int
-	PlayedCards                  [][]VisibleCard
-	DiscardedCards               []VisibleCard
-	HandsBeforeThisPlayer        []VisibleHand
-	HandOfThisPlayer             []CardFromBehind
-	HandsAfterThisPlayer         []VisibleHand
+	ChatLog                            []LogMessage
+	ActionLog                          []LogMessage
+	ScoreSoFar                         int
+	NumberOfReadyHints                 int
+	MaximumNumberOfHints               int
+	NumberOfMistakesMade               int
+	NumberOfMistakesIndicatingGameOver int
+	NumberOfCardsLeftInDeck            int
+	PlayedCards                        [][]VisibleCard
+	DiscardedCards                     []VisibleCard
+	HandsBeforeThisPlayer              []VisibleHand
+	HandOfThisPlayer                   []CardFromBehind
+	HandsAfterThisPlayer               []VisibleHand
 }

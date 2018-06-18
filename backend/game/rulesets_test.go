@@ -55,10 +55,10 @@ func TestStandardHintsAndMistakesAreValid(unitTest *testing.T) {
 			standardRuleset.MaximumNumberOfHints())
 	}
 
-	if standardRuleset.MaximumNumberOfMistakesAllowed() <= 0 {
+	if standardRuleset.NumberOfMistakesIndicatingGameOver() <= 0 {
 		unitTest.Fatalf(
 			"standard ruleset allows %v mistakes as maximum",
-			standardRuleset.MaximumNumberOfHints())
+			standardRuleset.NumberOfMistakesIndicatingGameOver()-1)
 	}
 }
 

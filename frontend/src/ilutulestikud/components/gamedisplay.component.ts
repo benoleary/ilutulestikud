@@ -22,6 +22,7 @@ import { BackendIdentification } from '../models/backendidentification.model';
     chatLog: LogMessage[];
     chatInput: string;
     actionLog: LogMessage[];
+    noncardInformationText: string;
 
     constructor(public ilutulestikudService: IlutulestikudService)
     {
@@ -30,6 +31,7 @@ import { BackendIdentification } from '../models/backendidentification.model';
         this.chatLog = [];
         this.chatInput = null;
         this.actionLog = [];
+        this.noncardInformationText = null;
     }
 
     ngOnInit(): void
@@ -83,6 +85,11 @@ import { BackendIdentification } from '../models/backendidentification.model';
         // it into the function to refresh a log message array.
         LogMessage.refreshListFromSource(this.chatLog, Array.from(fetchedGameData["ChatLog"]))
         LogMessage.refreshListFromSource(this.actionLog, Array.from(fetchedGameData["ActionLog"]))
+
+        this.noncardInformationText = "Score: " + fetchedGameData["ScoreSoFar"]
+         + " - Hints: " + fetchedGameData["NumberOfReadyHints"] + " / " + fetchedGameData["MaximumNumberOfHints"]
+         + " - Mistakes: " + fetchedGameData["NumberOfMistakesMade"] + " / " + fetchedGameData["NumberOfMistakesIndicatingGameOver"]
+         + " - Cards left in deck: " + fetchedGameData["NumberOfCardsLeftInDeck"]
     }
 
     sendChat(): void

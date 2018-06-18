@@ -214,18 +214,18 @@ func (handler *Handler) writeGameForPlayer(
 
 	endpointObject :=
 		parsing.GameView{
-			ChatLog:                      handler.logForFrontend(gameView.ChatLog()),
-			ActionLog:                    handler.logForFrontend(gameView.ActionLog()),
-			ScoreSoFar:                   gameView.Score(),
-			NumberOfReadyHints:           gameView.NumberOfReadyHints(),
-			NumberOfSpentHints:           gameView.NumberOfSpentHints(),
-			NumberOfMistakesStillAllowed: gameView.NumberOfMistakesStillAllowed(),
-			NumberOfMistakesMade:         gameView.NumberOfMistakesMade(),
-			PlayedCards:                  playedCards(gameView.PlayedCards()),
-			DiscardedCards:               cardsForFrontend(gameView.DiscardedCards()),
-			HandsBeforeThisPlayer:        handsBeforeThisPlayer,
-			HandOfThisPlayer:             handOfThisPlayer,
-			HandsAfterThisPlayer:         handsAfterThisPlayer,
+			ChatLog:                            handler.logForFrontend(gameView.ChatLog()),
+			ActionLog:                          handler.logForFrontend(gameView.ActionLog()),
+			ScoreSoFar:                         gameView.Score(),
+			NumberOfReadyHints:                 gameView.NumberOfReadyHints(),
+			MaximumNumberOfHints:               gameView.MaximumNumberOfHints(),
+			NumberOfMistakesMade:               gameView.NumberOfMistakesMade(),
+			NumberOfMistakesIndicatingGameOver: gameView.NumberOfMistakesIndicatingGameOver(),
+			PlayedCards:                        playedCards(gameView.PlayedCards()),
+			DiscardedCards:                     cardsForFrontend(gameView.DiscardedCards()),
+			HandsBeforeThisPlayer:              handsBeforeThisPlayer,
+			HandOfThisPlayer:                   handOfThisPlayer,
+			HandsAfterThisPlayer:               handsAfterThisPlayer,
 		}
 
 	return endpointObject, http.StatusOK

@@ -44,11 +44,11 @@ func TestWrapperFunctions(unitTest *testing.T) {
 	mockReadAndWriteState.ReturnForScore = testScore
 
 	testReadyHints := 5
-	testSpentHints := (testRuleset.MaximumNumberOfHints() - testReadyHints)
+	testMaximumHints := testRuleset.MaximumNumberOfHints()
 	mockReadAndWriteState.ReturnForNumberOfReadyHints = testReadyHints
 
 	testMistakesMade := 5
-	testMistakesAllowed := (testRuleset.MaximumNumberOfMistakesAllowed() - testMistakesMade)
+	testMistakesForGameOver := testRuleset.NumberOfMistakesIndicatingGameOver()
 	mockReadAndWriteState.ReturnForNumberOfMistakesMade = testMistakesMade
 
 	testDeckSize := 11
@@ -92,9 +92,9 @@ func TestWrapperFunctions(unitTest *testing.T) {
 		(viewForPlayer.Turn() != testTurn) ||
 		(viewForPlayer.Score() != testScore) ||
 		(viewForPlayer.NumberOfReadyHints() != testReadyHints) ||
-		(viewForPlayer.NumberOfSpentHints() != testSpentHints) ||
-		(viewForPlayer.NumberOfMistakesStillAllowed() != testMistakesAllowed) ||
+		(viewForPlayer.MaximumNumberOfHints() != testMaximumHints) ||
 		(viewForPlayer.NumberOfMistakesMade() != testMistakesMade) ||
+		(viewForPlayer.NumberOfMistakesIndicatingGameOver() != testMistakesForGameOver) ||
 		(viewForPlayer.DeckSize() != testDeckSize) {
 		unitTest.Fatalf(
 			"player view %+v not as expected"+
@@ -103,9 +103,9 @@ func TestWrapperFunctions(unitTest *testing.T) {
 				" turn %v,"+
 				" score %v,"+
 				" ready hints %v,"+
-				" spent hints %v,"+
-				" mistakes allowed %v,"+
+				" maximum hints %v,"+
 				" mistakes made %v,"+
+				" mistakes for game over %v,"+
 				" deck size %v)",
 			viewForPlayer,
 			gameName,
@@ -113,9 +113,9 @@ func TestWrapperFunctions(unitTest *testing.T) {
 			testTurn,
 			testScore,
 			testReadyHints,
-			testSpentHints,
-			testMistakesAllowed,
+			testMaximumHints,
 			testMistakesMade,
+			testMistakesForGameOver,
 			testDeckSize)
 	}
 

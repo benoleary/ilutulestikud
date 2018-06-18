@@ -159,11 +159,10 @@ func (standardRuleset *standardWithoutRainbowRuleset) MaximumNumberOfHints() int
 	return 8
 }
 
-// MaximumNumberOfMistakesAllowed should return the maximum number of mistakes which
-// can be made without the game ending (i.e. the game ends on the next mistake after
-// that).
-func (standardRuleset *standardWithoutRainbowRuleset) MaximumNumberOfMistakesAllowed() int {
-	return 2
+// NumberOfMistakesIndicatingGameOver returns the number of mistakes which indicates
+// that the game is over with the players having zero score.
+func (standardRuleset *standardWithoutRainbowRuleset) NumberOfMistakesIndicatingGameOver() int {
+	return 3
 }
 
 // PointsPerCard returns the points value of the given card.

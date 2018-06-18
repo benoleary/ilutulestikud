@@ -44,9 +44,9 @@ type Ruleset interface {
 	// at any instant.
 	MaximumNumberOfHints() int
 
-	// MaximumNumberOfMistakesAllowed should return the maximum number of mistakes which can
-	// be made without the game ending (i.e. the game ends on the next mistake after that).
-	MaximumNumberOfMistakesAllowed() int
+	// NumberOfMistakesIndicatingGameOver should return the number of mistakes which indicates
+	// that the game is over with the players having zero score.
+	NumberOfMistakesIndicatingGameOver() int
 
 	// PointsPerCard should return the points value of the given card.
 	PointsForCard(cardToEvaluate card.Readonly) int
@@ -82,17 +82,17 @@ type ViewForPlayer interface {
 	// NumberOfReadyHints function.
 	NumberOfReadyHints() int
 
-	// NumberOfSpentHints should just subtract the read-only game state's
-	// NumberOfReadyHints function's return value from the game's ruleset's maximum.
-	NumberOfSpentHints() int
-
-	// NumberOfMistakesStillAllowed should just subtract the read-only game state's
-	// NumberOfMistakesMade function's return value from the game's ruleset's maximum.
-	NumberOfMistakesStillAllowed() int
+	// MaximumNumberOfHints should just wrap around the game's ruleset's maximum
+	// number of hints.
+	MaximumNumberOfHints() int
 
 	// NumberOfMistakesMade should just wrap around the read-only game state's
 	// NumberOfMistakesMade function.
 	NumberOfMistakesMade() int
+
+	// NumberOfMistakesIndicatingGameOver should just wrap around the game's
+	// ruleset's NumberOfMistakesIndicatingGameOver.
+	NumberOfMistakesIndicatingGameOver() int
 
 	// DeckSize should just wrap around the read-only game state's DeckSize function.
 	DeckSize() int

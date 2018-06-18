@@ -86,8 +86,8 @@ func (mockView *mockViewForPlayer) NumberOfReadyHints() int {
 	return -1
 }
 
-// NumberOfSpentHints gets mocked.
-func (mockView *mockViewForPlayer) NumberOfSpentHints() int {
+// MaximumNumberOfHints gets mocked.
+func (mockView *mockViewForPlayer) MaximumNumberOfHints() int {
 	return -1
 }
 
@@ -96,8 +96,8 @@ func (mockView *mockViewForPlayer) NumberOfMistakesMade() int {
 	return -1
 }
 
-// NumberOfMistakesStillAllowed gets mocked.
-func (mockView *mockViewForPlayer) NumberOfMistakesStillAllowed() int {
+// NumberOfMistakesIndicatingGameOver gets mocked.
+func (mockView *mockViewForPlayer) NumberOfMistakesIndicatingGameOver() int {
 	return -1
 }
 

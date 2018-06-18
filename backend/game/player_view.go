@@ -125,24 +125,22 @@ func (playerView *PlayerView) NumberOfReadyHints() int {
 	return playerView.gameState.NumberOfReadyHints()
 }
 
-// NumberOfSpentHints just subtracts the read-only game state's
-// NumberOfReadyHints function's return value from the constant maximum.
-func (playerView *PlayerView) NumberOfSpentHints() int {
-	maximumNumber := playerView.gameState.Ruleset().MaximumNumberOfHints()
-	return maximumNumber - playerView.NumberOfReadyHints()
-}
-
-// NumberOfMistakesStillAllowed just subtracts the read-only game state's
-// NumberOfMistakesMade function's return value from the constant maximum.
-func (playerView *PlayerView) NumberOfMistakesStillAllowed() int {
-	maximumNumber := playerView.gameState.Ruleset().MaximumNumberOfMistakesAllowed()
-	return maximumNumber - playerView.NumberOfMistakesMade()
+// MaximumNumberOfHints just wraps around the game's ruleset's maximum
+// number of hints.
+func (playerView *PlayerView) MaximumNumberOfHints() int {
+	return playerView.gameState.Ruleset().MaximumNumberOfHints()
 }
 
 // NumberOfMistakesMade just wraps around the read-only game state's
 // NumberOfMistakesMade function.
 func (playerView *PlayerView) NumberOfMistakesMade() int {
 	return playerView.gameState.NumberOfMistakesMade()
+}
+
+// NumberOfMistakesIndicatingGameOver just wraps around the game's
+// ruleset's NumberOfMistakesIndicatingGameOver.
+func (playerView *PlayerView) NumberOfMistakesIndicatingGameOver() int {
+	return playerView.gameState.Ruleset().NumberOfMistakesIndicatingGameOver()
 }
 
 // DeckSize just wraps around the read-only game state's DeckSize function.
