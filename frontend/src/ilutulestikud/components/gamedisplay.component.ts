@@ -6,7 +6,7 @@ import { Subscription } from 'rxjs/Subscription';
 import { MatListModule } from '@angular/material/list';
 import { MatInputModule } from '@angular/material';
 import { IlutulestikudService } from '../ilutulestikud.service';
-import { ChatMessage } from '../models/chatmessage.model'
+import { ChatMessage } from '../models/logmessage.model'
 import { BackendIdentification } from '../models/backendidentification.model';
 
 
