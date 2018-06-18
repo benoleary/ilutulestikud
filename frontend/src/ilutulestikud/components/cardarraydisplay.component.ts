@@ -14,4 +14,9 @@ import { VisibleCard } from '../models/visiblecard.model';
     {
         this.cardArray = null;
     }
+
+    hasCardsToDisplay(): boolean
+    {
+      return this.cardArray && (this.cardArray.length > 0);
+    }
   }

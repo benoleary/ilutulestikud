@@ -18,13 +18,15 @@ import { IlutulestikudService } from './ilutulestikud.service';
 import { AddPlayerDialogComponent } from './components/addplayerdialog.component'
 import { CreateGameDialogComponent } from './components/creategamedialog.component'
 import { GameDisplayComponent } from './components/gamedisplay.component'
+import { CardArrayDisplayComponent } from './components/cardarraydisplay.component'
 
 @NgModule({
   declarations: [
     IlutulestikudComponent,
     AddPlayerDialogComponent,
     CreateGameDialogComponent,
-    GameDisplayComponent
+    GameDisplayComponent,
+    CardArrayDisplayComponent
   ],
   entryComponents: [
     AddPlayerDialogComponent,
@@ -62,7 +64,8 @@ import { GameDisplayComponent } from './components/gamedisplay.component'
     MatTabsModule,
     MatListModule,
     IlutulestikudComponent,
-    GameDisplayComponent
+    GameDisplayComponent,
+    CardArrayDisplayComponent
   ],
   providers: [IlutulestikudService]
 })

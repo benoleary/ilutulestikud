@@ -20,14 +20,14 @@ export class LogMessage
         else
         {
             this.Text = (new Date(timestampInSeconds * 1000)).toTimeString()
-             + " - " + messageObject["PlayerName"]
-              + ": " + messageObject["MessageText"];
+                + " - " + messageObject["PlayerName"]
+                + ": " + messageObject["MessageText"];
         }
     }
 
     static refreshListFromSource(listToRefresh: LogMessage[], messageObjectList: Object[])
     {
-        // First of all we reduce the number of log lines if there were more than request gave us.
+        // First of all we reduce the number of log lines if there were more than the request gave us.
         if (listToRefresh.length > messageObjectList.length)
         {
             listToRefresh.length = messageObjectList.length;
@@ -42,7 +42,7 @@ export class LogMessage
             // when necessary.
             if (messageIndex < listToRefresh.length)
             {
-                listToRefresh[messageIndex].refreshFromSource(fetchedMessage)
+                listToRefresh[messageIndex].refreshFromSource(fetchedMessage);
             }
             else
             {

@@ -5,6 +5,8 @@ import { Subscription } from 'rxjs/Subscription';
 import { IlutulestikudService } from '../ilutulestikud.service';
 import { LogMessage } from '../models/logmessage.model';
 import { BackendIdentification } from '../models/backendidentification.model';
+import { VisibleCard } from '../models/visiblecard.model';
+import { VisibleHand } from '../models/visiblehand.model';
 
 
 @Component({
@@ -23,6 +25,10 @@ import { BackendIdentification } from '../models/backendidentification.model';
     chatInput: string;
     actionLog: LogMessage[];
     noncardInformationText: string;
+    playedSequences: VisibleCard[][];
+    discardPile: VisibleCard[];
+    handsBeforeViewingPlayer: VisibleHand[];
+    handsAfterViewingPlayer: VisibleHand[];
 
     constructor(public ilutulestikudService: IlutulestikudService)
     {
@@ -32,6 +38,10 @@ import { BackendIdentification } from '../models/backendidentification.model';
         this.chatInput = null;
         this.actionLog = [];
         this.noncardInformationText = null;
+        this.playedSequences = [];
+        this.discardPile = [];
+        this.handsBeforeViewingPlayer = [];
+        this.handsAfterViewingPlayer = [];
     }
 
     ngOnInit(): void
@@ -76,6 +86,7 @@ import { BackendIdentification } from '../models/backendidentification.model';
 
     parseGameData(fetchedGameData: Object): void
     {
+      debugger;
         // If we have received game data to display, we are no longer waiting for the HTTP request to complete.
         this.isAwaitingGameData = false;
     
@@ -83,13 +94,29 @@ import { BackendIdentification } from '../models/backendidentification.model';
         // as is fetchedGameData["ChatLog"], and an "array-like object" is not an
         // array, so we must build an array around such an object before passing
         // it into the function to refresh a log message array.
-        LogMessage.refreshListFromSource(this.chatLog, Array.from(fetchedGameData["ChatLog"]))
-        LogMessage.refreshListFromSource(this.actionLog, Array.from(fetchedGameData["ActionLog"]))
+        LogMessage.refreshListFromSource(this.chatLog, Array.from(fetchedGameData["ChatLog"]));
+        LogMessage.refreshListFromSource(this.actionLog, Array.from(fetchedGameData["ActionLog"]));
 
         this.noncardInformationText = "Score: " + fetchedGameData["ScoreSoFar"]
          + " - Hints: " + fetchedGameData["NumberOfReadyHints"] + " / " + fetchedGameData["MaximumNumberOfHints"]
          + " - Mistakes: " + fetchedGameData["NumberOfMistakesMade"] + " / " + fetchedGameData["NumberOfMistakesIndicatingGameOver"]
-         + " - Cards left in deck: " + fetchedGameData["NumberOfCardsLeftInDeck"]
+         + " - Cards left in deck: " + fetchedGameData["NumberOfCardsLeftInDeck"];
+
+         VisibleCard.refreshListOfListsFromSource(this.playedSequences, fetchedGameData["PlayedCards"]);
+         VisibleCard.refreshListFromSource(this.discardPile, fetchedGameData["DiscardedCards"]);
+
+         VisibleHand.refreshListFromSource(this.handsBeforeViewingPlayer, fetchedGameData["HandsBeforeThisPlayer"]);
+         VisibleHand.refreshListFromSource(this.handsAfterViewingPlayer, fetchedGameData["HandsAfterThisPlayer"]);
+    }
+
+    hasPlayersBeforeViewingPlayer(): boolean
+    {
+      return this.handsBeforeViewingPlayer && (this.handsBeforeViewingPlayer.length > 0);
+    }
+
+    hasPlayersAfterViewingPlayer(): boolean
+    {
+      return this.handsAfterViewingPlayer && (this.handsAfterViewingPlayer.length > 0);
     }
 
     sendChat(): void
