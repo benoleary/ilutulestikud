@@ -10,7 +10,7 @@ export class ChatMessage
 
     refreshFromSource(messageObject: Object)
     {
-        this.Color = messageObject["ChatColor"];
+        this.Color = messageObject["TextColor"];
         const timestampInSeconds = messageObject["TimestampInSeconds"];
         const playerName = messageObject["PlayerName"];
         if (!playerName)
