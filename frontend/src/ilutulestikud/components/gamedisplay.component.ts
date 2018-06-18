@@ -6,7 +6,7 @@ import { Subscription } from 'rxjs/Subscription';
 import { MatListModule } from '@angular/material/list';
 import { MatInputModule } from '@angular/material';
 import { IlutulestikudService } from '../ilutulestikud.service';
-import { ChatMessage } from '../models/logmessage.model'
+import { LogMessage } from '../models/logmessage.model'
 import { BackendIdentification } from '../models/backendidentification.model';
 
 
@@ -23,7 +23,7 @@ import { BackendIdentification } from '../models/backendidentification.model';
     informationText: string;
     gameDataSubscription: Subscription;
     isAwaitingGameData: boolean;
-    chatLog: ChatMessage[];
+    chatLog: LogMessage[];
     chatInput: string;
 
     constructor(public ilutulestikudService: IlutulestikudService)
@@ -81,30 +81,7 @@ import { BackendIdentification } from '../models/backendidentification.model';
     
         // The object fetchedGameData["ChatLog"] is only an "array-like object",
         // not an array, so does not have foreach or length.
-        const fetchedChatLog: Object[] = Array.from(fetchedGameData["ChatLog"]);
-
-        // First of all we reduce the number of chat log lines if there were more than request gave us.
-        if (this.chatLog.length > fetchedChatLog.length)
-        {
-            this.chatLog.length = fetchedChatLog.length;
-        }
-        
-        for (var messageIndex: number = 0; messageIndex < fetchedChatLog.length; ++messageIndex)
-        {
-            const fetchedMessage: Object = fetchedChatLog[messageIndex];
-
-            // We could replace each message with each refresh, but to avoid possible issues (such
-            // as happens with the turn summaries), we update existing messages and only add new ones
-            // when necessary.
-            if (messageIndex < this.chatLog.length)
-            {
-                this.chatLog[messageIndex].refreshFromSource(fetchedMessage)
-            }
-            else
-            {
-                this.chatLog.push(new ChatMessage(fetchedMessage));
-            }
-        }
+        LogMessage.refreshListFromSource(this.chatLog, Array.from(fetchedGameData["ChatLog"]))
     }
 
     sendChat(): void
