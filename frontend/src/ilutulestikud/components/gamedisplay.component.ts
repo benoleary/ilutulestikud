@@ -3,7 +3,7 @@ import { OnInit, OnDestroy } from '@angular/core/src/metadata/lifecycle_hooks';
 import { Observable } from 'rxjs/Rx';
 import { Subscription } from 'rxjs/Subscription';
 import { IlutulestikudService } from '../ilutulestikud.service';
-import { LogMessage } from '../models/logmessage.model'
+import { LogMessage } from '../models/logmessage.model';
 import { BackendIdentification } from '../models/backendidentification.model';
 
 
