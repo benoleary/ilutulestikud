@@ -537,13 +537,62 @@ func TestPlayerIsForbiddenFromSeeingOwnHand(unitTest *testing.T) {
 			errorFromViewState)
 	}
 
-	visibleHand, errorFromVisibleHand := viewForPlayer.VisibleHand(playerName)
+	visibleHand, playerChatColor, errorFromVisibleHand := viewForPlayer.VisibleHand(playerName)
 
 	if errorFromVisibleHand == nil {
 		unitTest.Fatalf(
-			"player view %+v produced nil error when trying to view own hand, saw %v",
+			"player view %+v produced nil error when trying to view own hand, saw %v with color %v",
 			viewForPlayer,
-			visibleHand)
+			visibleHand,
+			playerChatColor)
+	}
+}
+
+func TestErrorFromPlayerProviderAffectsVisibleHandCorrectly(unitTest *testing.T) {
+	gameName := "Test game"
+	testPlayersInOriginalOrder :=
+		[]string{
+			playerNamesAvailableInTest[0],
+			playerNamesAvailableInTest[1],
+			playerNamesAvailableInTest[2],
+		}
+	viewingPlayer := testPlayersInOriginalOrder[1]
+	playerWithVisibleHand := testPlayersInOriginalOrder[0]
+	gameCollection, mockPersister, mockPlayerProvider :=
+		prepareCollection(unitTest, testPlayersInOriginalOrder)
+
+	mockPlayerProvider.MockPlayers = make(map[string]*mockPlayerState, 0)
+
+	mockReadAndWriteState := NewMockGameState(unitTest)
+	mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
+	mockReadAndWriteState.ReturnForRuleset = testRuleset
+
+	mockPersister.TestErrorForReadAndWriteGame = nil
+	mockPersister.ReturnForReadAndWriteGame = mockReadAndWriteState
+
+	viewForPlayer, errorFromViewState :=
+		gameCollection.ViewState(
+			gameName,
+			viewingPlayer)
+
+	if errorFromViewState != nil {
+		unitTest.Fatalf(
+			"ViewState(%v, %v) produced error %v",
+			gameName,
+			viewingPlayer,
+			errorFromViewState)
+	}
+
+	actualVisibleHand, actualPlayerColor, errorFromVisibleHand :=
+		viewForPlayer.VisibleHand(playerWithVisibleHand)
+
+	if errorFromVisibleHand == nil {
+		unitTest.Fatalf(
+			"VisibleHand(%v) from player view %+v did not produced expected error, instead produced %+v with color %v",
+			playerWithVisibleHand,
+			viewForPlayer,
+			actualVisibleHand,
+			actualPlayerColor)
 	}
 }
 
@@ -618,7 +667,7 @@ func TestPlayerSeesOtherHandCorrectly(unitTest *testing.T) {
 			errorFromViewState)
 	}
 
-	actualVisibleHand, errorFromVisibleHand :=
+	actualVisibleHand, _, errorFromVisibleHand :=
 		viewForPlayer.VisibleHand(playerWithVisibleHand)
 
 	if errorFromVisibleHand != nil {

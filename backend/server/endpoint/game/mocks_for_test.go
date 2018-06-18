@@ -118,8 +118,8 @@ func (mockView *mockViewForPlayer) DiscardedCards() []card.Readonly {
 
 // VisibleHand gets mocked.
 func (mockView *mockViewForPlayer) VisibleHand(
-	playerName string) ([]card.Readonly, error) {
-	return mockView.ReturnForVisibleHand, mockView.ErrorForVisibleHand
+	playerName string) ([]card.Readonly, string, error) {
+	return mockView.ReturnForVisibleHand, "not tested", mockView.ErrorForVisibleHand
 }
 
 // KnowledgeOfOwnHand gets mocked.

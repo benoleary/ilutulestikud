@@ -12,6 +12,7 @@ import (
 // that state.
 type PlayerView struct {
 	gameState               ReadonlyState
+	playerProvider          ReadonlyPlayerProvider
 	gameParticipants        []string
 	numberOfParticipants    int
 	playerName              string
@@ -27,6 +28,7 @@ type PlayerView struct {
 // along with an error.
 func ViewOnStateForPlayer(
 	stateOfGame ReadonlyState,
+	playerProvider ReadonlyPlayerProvider,
 	nameOfPlayer string) (ViewForPlayer, error) {
 	participantsInGame := stateOfGame.PlayerNames()
 	for _, gameParticipant := range participantsInGame {
@@ -39,6 +41,7 @@ func ViewOnStateForPlayer(
 			playerView :=
 				&PlayerView{
 					gameState:               stateOfGame,
+					playerProvider:          playerProvider,
 					gameParticipants:        participantsInGame,
 					numberOfParticipants:    numberOfPlayers,
 					playerName:              nameOfPlayer,
@@ -183,14 +186,22 @@ func (playerView *PlayerView) DiscardedCards() []card.Readonly {
 	return discardedCards
 }
 
-// VisibleHand returns the cards held by the given player, or nil and an error if
-// the player cannot see the cards.
-func (playerView *PlayerView) VisibleHand(playerName string) ([]card.Readonly, error) {
+// VisibleHand returns the cards held by the given player along with the chat color for
+// that player,  or nil and a string which will be ignored and an error if the player
+// cannot see the cards.
+func (playerView *PlayerView) VisibleHand(playerName string) ([]card.Readonly, string, error) {
 	if playerName == playerView.playerName {
-		return nil, fmt.Errorf("Player is not allowed to view own hand")
+		return nil, "no color because of error", fmt.Errorf("Player is not allowed to view own hand")
 	}
 
-	return playerView.gameState.VisibleHand(playerName)
+	playerState, errorFromPlayerProvider := playerView.playerProvider.Get(playerName)
+	if errorFromPlayerProvider != nil {
+		return nil, "no color because of error", errorFromPlayerProvider
+	}
+
+	visibleCards, errorFromGameState := playerView.gameState.VisibleHand(playerName)
+
+	return visibleCards, playerState.Color(), errorFromGameState
 }
 
 // KnowledgeOfOwnHand returns the knowledge about the player's own cards which

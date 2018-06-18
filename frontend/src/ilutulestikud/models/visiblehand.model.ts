@@ -3,6 +3,7 @@ import { VisibleCard } from './visiblecard.model';
 export class VisibleHand
 {
     playerName: string;
+    playerColor: string;
     visibleCards: VisibleCard[]
 
     constructor(handObject: Object)
@@ -12,17 +13,13 @@ export class VisibleHand
 
     refreshFromSource(handObject: Object)
     {
-        console.log("refreshFromSource(handObject: " + JSON.stringify(handObject) + ")")
-
         this.playerName = handObject["PlayerName"];
+        this.playerColor = handObject["PlayerColor"];
         this.visibleCards = Array.from(handObject["HandCards"]);
     }
 
     static refreshListFromSource(listToRefresh: VisibleHand[], handObjectList: Object[])
     {
-        console.log("refreshListFromSource(listToRefresh: " + JSON.stringify(listToRefresh) 
-        + ", handObjectList: " + JSON.stringify(handObjectList) + ")")
-
         // First of all we reduce the number of hands if there were more than the request gave us.
         if (listToRefresh.length > handObjectList.length)
         {

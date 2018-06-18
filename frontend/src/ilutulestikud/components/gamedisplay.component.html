@@ -53,7 +53,9 @@
     <div *ngIf="hasPlayersBeforeViewingPlayer()">
         Players before you:<br>
         <mat-list dense role="list">
-            <mat-list-item *ngFor="let playerHand of handsBeforeViewingPlayer">
+            <mat-list-item *ngFor="let playerHand of handsBeforeViewingPlayer"
+                [ngStyle]="{'color': playerHand.playerColor, 'background-color': 'black'}">
+                {{ playerHand.playerName }}:
                 <card-array-display [cardArray]="playerHand.visibleCards"></card-array-display>
             </mat-list-item>
         </mat-list>
@@ -68,12 +70,14 @@
 
 <div>
     <div *ngIf="!hasPlayersAfterViewingPlayer()">
-        No players after you.
+        No more players after you.
     </div>
     <div *ngIf="hasPlayersAfterViewingPlayer()">
         Players after you:<br>
         <mat-list dense role="list">
-            <mat-list-item *ngFor="let playerHand of handsAfterViewingPlayer">
+            <mat-list-item *ngFor="let playerHand of handsAfterViewingPlayer"
+                [ngStyle]="{'color': playerHand.playerColor, 'background-color': 'black'}">
+                {{ playerHand.playerName }}:
                 <card-array-display [cardArray]="playerHand.visibleCards"></card-array-display>
             </mat-list-item>
         </mat-list>

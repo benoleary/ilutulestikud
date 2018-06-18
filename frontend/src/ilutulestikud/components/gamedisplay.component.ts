@@ -86,7 +86,6 @@ import { VisibleHand } from '../models/visiblehand.model';
 
     parseGameData(fetchedGameData: Object): void
     {
-      debugger;
         // If we have received game data to display, we are no longer waiting for the HTTP request to complete.
         this.isAwaitingGameData = false;
     

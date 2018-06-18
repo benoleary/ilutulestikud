@@ -221,6 +221,7 @@ func (handler *Handler) writeGameForPlayer(
 			MaximumNumberOfHints:               gameView.MaximumNumberOfHints(),
 			NumberOfMistakesMade:               gameView.NumberOfMistakesMade(),
 			NumberOfMistakesIndicatingGameOver: gameView.NumberOfMistakesIndicatingGameOver(),
+			NumberOfCardsLeftInDeck:            gameView.DeckSize(),
 			PlayedCards:                        playedCards(gameView.PlayedCards()),
 			DiscardedCards:                     cardsForFrontend(gameView.DiscardedCards()),
 			HandsBeforeThisPlayer:              handsBeforeThisPlayer,
@@ -310,7 +311,7 @@ func (handler *Handler) visibleHandsBeforeAndAfter(
 	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
 		if playerIndex != playerIndexInTurnOrder {
 			playerWithVisibleHand := playersInTurnOrder[playerIndex]
-			visibleHandFromView, errorFromVisibleHand :=
+			visibleHandFromView, playerChatColor, errorFromVisibleHand :=
 				gameView.VisibleHand(playerWithVisibleHand)
 			if errorFromVisibleHand != nil {
 				return nil, nil, errorFromVisibleHand
@@ -327,8 +328,9 @@ func (handler *Handler) visibleHandsBeforeAndAfter(
 			}
 
 			visibleHandForFrontend := parsing.VisibleHand{
-				PlayerName: playerWithVisibleHand,
-				HandCards:  handCards,
+				PlayerName:  playerWithVisibleHand,
+				PlayerColor: playerChatColor,
+				HandCards:   handCards,
 			}
 
 			if playerIndex < playerIndexInTurnOrder {

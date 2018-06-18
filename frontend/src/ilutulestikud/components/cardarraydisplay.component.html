@@ -2,8 +2,8 @@
     [no cards]
 </div>
 <div *ngIf="hasCardsToDisplay()">
-    <div *ngFor="let visibleCard of visibleCards"
+    <b *ngFor="let visibleCard of cardArray"
         [ngStyle]="{'color': visibleCard.ColorSuit, 'background-color': 'black'}">
         {{ visibleCard.SequenceIndex }}
-    </div>
+    </b>
 </div>

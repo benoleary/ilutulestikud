@@ -48,7 +48,10 @@ func (gameCollection *StateCollection) ViewState(
 		return nil, gameDoesNotExistError
 	}
 
-	return ViewOnStateForPlayer(gameState.Read(), playerName)
+	return ViewOnStateForPlayer(
+		gameState.Read(),
+		gameCollection.playerProvider,
+		playerName)
 }
 
 // ViewAllWithPlayer wraps every read-only state given by the persister for the given player
@@ -65,7 +68,10 @@ func (gameCollection *StateCollection) ViewAllWithPlayer(
 
 	for gameIndex := 0; gameIndex < numberOfGames; gameIndex++ {
 		playerView, participantError :=
-			ViewOnStateForPlayer(gameStates[gameIndex], playerName)
+			ViewOnStateForPlayer(
+				gameStates[gameIndex],
+				gameCollection.playerProvider,
+				playerName)
 
 		if participantError != nil {
 			overallError :=

@@ -103,9 +103,10 @@ type ViewForPlayer interface {
 	// DiscardedCards should list the discarded cards, ordered by suit first then by index.
 	DiscardedCards() []card.Readonly
 
-	// VisibleHand should return the cards held by the given player, or nil and an error if
-	// the player cannot see the cards.
-	VisibleHand(playerName string) ([]card.Readonly, error)
+	// VisibleHand should return the cards held by the given player along with the chat
+	// color for that player, or nil and a string which will be ignored and an error if the
+	// player cannot see the cards.
+	VisibleHand(playerName string) ([]card.Readonly, string, error)
 
 	// KnowledgeOfOwnHand should return the knowledge about the player's own cards which
 	// was inferred directly from the hints officially given so far.
