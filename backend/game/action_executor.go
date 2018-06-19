@@ -87,17 +87,25 @@ func (actionExecutor *ActionExecutor) TakeTurnByDiscarding(indexInHandToDiscard 
 	discardedCard := playerHand[indexInHandToDiscard]
 
 	actionMessage :=
-		fmt.Sprintf("discards card %v %v", discardedCard.ColorSuit(), discardedCard.SequenceIndex())
+		fmt.Sprintf(
+			"discards card %v %v",
+			discardedCard.ColorSuit(),
+			discardedCard.SequenceIndex())
 
 	replacementCard :=
 		card.NewInferred(gameRuleset.ColorSuits(), gameRuleset.DistinctPossibleIndices())
+
+	numberOfHintsToAdd := 0
+	if actionExecutor.gameState.Read().NumberOfReadyHints() < gameRuleset.MaximumNumberOfHints() {
+		numberOfHintsToAdd = 1
+	}
 
 	return actionExecutor.gameState.EnactTurnByDiscardingAndReplacing(
 		actionMessage,
 		actionExecutor.actingPlayer,
 		indexInHandToDiscard,
 		replacementCard,
-		1,
+		numberOfHintsToAdd,
 		0)
 }
 
