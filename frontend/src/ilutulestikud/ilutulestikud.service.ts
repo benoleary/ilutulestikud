@@ -15,15 +15,15 @@ export class IlutulestikudService {
     this.uriRoot = environment.restRoot;
   }
 
-  registeredPlayers(): Observable<any> {
+  RegisteredPlayers(): Observable<any> {
     return this.httpClient.get(this.uriRoot + "player/registered-players")
   }
 
-  availableColors(): Observable<any> {
+  AvailableColors(): Observable<any> {
     return this.httpClient.get(this.uriRoot + "player/available-colors")
   }
 
-  newPlayer(newPlayerName: string): Observable<any> {
+  NewPlayer(newPlayerName: string): Observable<any> {
     return this.httpClient.post(
       this.uriRoot + "player/new-player",
       {
@@ -31,7 +31,7 @@ export class IlutulestikudService {
       })
   }
 
-  updatePlayer(playerOverride: Player): Observable<any> {
+  UpdatePlayer(playerOverride: Player): Observable<any> {
     return this.httpClient.post(
       this.uriRoot + "player/update-player",
       {
@@ -40,18 +40,18 @@ export class IlutulestikudService {
       })
   }
 
-  availableRulesets(): Observable<any> {
+  AvailableRulesets(): Observable<any> {
     return this.httpClient.get(this.uriRoot + "game/available-rulesets")
   }
 
-  gamesWithPlayer(playerIdentification: BackendIdentification): Observable<any> {
+  GamesWithPlayer(playerIdentification: BackendIdentification): Observable<any> {
     return this.httpClient.get(
       this.uriRoot
         + "game/all-games-with-player/"
         + encodeURIComponent(playerIdentification.IdentifierForGet))
   }
 
-  newGame(
+  NewGame(
     newGameName: string,
     rulesetIdentifier: number,
     playerIdentifications: BackendIdentification[]): Observable<any> {
@@ -65,7 +65,7 @@ export class IlutulestikudService {
       })
   }
 
-  gameAsSeenByPlayer(
+  GameAsSeenByPlayer(
     gameIdentification: BackendIdentification,
     playerIdentification: BackendIdentification): Observable<any> {
     return this.httpClient.get(
@@ -75,7 +75,7 @@ export class IlutulestikudService {
         + "/" + encodeURIComponent(playerIdentification.IdentifierForGet))
   }
 
-  sendChatMessage(
+  SendChatMessage(
     gameIdentification: BackendIdentification,
     playerIdentification: BackendIdentification,
      chatMessage: string): Observable<any> {

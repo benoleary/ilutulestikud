@@ -8,17 +8,21 @@ export class VisibleHand
 
     constructor(handObject: Object)
     {
-        this.refreshFromSource(handObject);
+        this.RefreshFromSource(handObject);
     }
 
-    refreshFromSource(handObject: Object)
+    RefreshFromSource(handObject: Object)
     {
         this.playerName = handObject["PlayerName"];
         this.playerColor = handObject["PlayerColor"];
-        this.visibleCards = Array.from(handObject["HandCards"]);
+
+        // Simply making an array out of the parsed array-like object does not call any constructors.
+        this.visibleCards = [];
+        Array.from(handObject["HandCards"])
+             .forEach(cardAsObject => this.visibleCards.push(new VisibleCard(cardAsObject)));
     }
 
-    static refreshListFromSource(listToRefresh: VisibleHand[], handObjectList: Object[])
+    static RefreshListFromSource(listToRefresh: VisibleHand[], handObjectList: Object[])
     {
         // First of all we reduce the number of hands if there were more than the request gave us.
         if (listToRefresh.length > handObjectList.length)
@@ -35,7 +39,7 @@ export class VisibleHand
             // ones when necessary.
             if (handIndex < listToRefresh.length)
             {
-                listToRefresh[handIndex].refreshFromSource(fetchedHand);
+                listToRefresh[handIndex].RefreshFromSource(fetchedHand);
             }
             else
             {

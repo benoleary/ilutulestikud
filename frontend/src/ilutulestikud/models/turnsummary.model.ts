@@ -7,10 +7,10 @@ export class TurnSummary
 
     constructor(turnSummaryObject: Object)
     {
-        this.refreshFromSource(turnSummaryObject);
+        this.RefreshFromSource(turnSummaryObject);
     }
 
-    refreshFromSource(turnSummaryObject: Object)
+    RefreshFromSource(turnSummaryObject: Object)
     {
         this.GameForBackend
           = new BackendIdentification(

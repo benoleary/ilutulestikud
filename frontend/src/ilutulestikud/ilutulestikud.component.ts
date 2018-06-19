@@ -48,7 +48,7 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
   ngOnInit(): void
   {
     this.fetchRegisteredPlayers();
-    this.ilutulestikudService.availableColors().subscribe(
+    this.ilutulestikudService.AvailableColors().subscribe(
       fetchedColorsObject => this.parseColors(fetchedColorsObject),
       thrownError => this.handleError(thrownError),
       () => {});
@@ -71,7 +71,7 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
 
   fetchRegisteredPlayers(): void
   {
-    this.ilutulestikudService.registeredPlayers().subscribe(
+    this.ilutulestikudService.RegisteredPlayers().subscribe(
       fetchedPlayersObject => this.parsePlayers(fetchedPlayersObject),
       thrownError => this.handleError(thrownError),
       () => {});
@@ -111,7 +111,7 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
   {
     this.selectedPlayer.Color = newChatColor;
     this.informationText = null;
-    this.ilutulestikudService.updatePlayer(this.selectedPlayer).subscribe(
+    this.ilutulestikudService.UpdatePlayer(this.selectedPlayer).subscribe(
       returnedPlayersObject => this.parsePlayers(returnedPlayersObject),
       thrownError => this.handleError(thrownError),
       () => {});
@@ -128,7 +128,7 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
       if (resultFromClose)
       {
         this.informationText = null;
-        this.ilutulestikudService.newPlayer(resultFromClose).subscribe(
+        this.ilutulestikudService.NewPlayer(resultFromClose).subscribe(
           returnedPlayersObject => this.parsePlayers(returnedPlayersObject),
           thrownError => this.handleError(thrownError),
           () => {});
@@ -142,7 +142,7 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
     // so that the dialog has enough information to create a valid game.
     this.fetchRegisteredPlayers();
 
-    this.ilutulestikudService.availableRulesets().subscribe(
+    this.ilutulestikudService.AvailableRulesets().subscribe(
       fetchedRulesetListObject => this.parseRulesets(fetchedRulesetListObject),
       thrownError => this.handleError(thrownError),
       () => {});
@@ -163,7 +163,7 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
       {
         this.informationText = null;
         this.ilutulestikudService
-          .newGame(resultFromClose["GameName"], resultFromClose["RulesetIdentifier"], resultFromClose["PlayerNames"])
+          .NewGame(resultFromClose["GameName"], resultFromClose["RulesetIdentifier"], resultFromClose["PlayerNames"])
           .subscribe(
             () => {},
             thrownError => this.handleError(thrownError),
@@ -205,7 +205,7 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
       // we get the response to the request).
       this.isAwaitingGameTurnSummaries = true;
       this.ilutulestikudService
-        .gamesWithPlayer(this.selectedPlayer.ForBackend)
+        .GamesWithPlayer(this.selectedPlayer.ForBackend)
         .subscribe(
           fetchedGameTurnSummaries => this.parseGameTurnSummaries(fetchedGameTurnSummaries),
           thrownError => this.handleError(thrownError),
@@ -236,7 +236,7 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
       // Therefore we update existing TurnSummary objects and only add new ones when necessary.
       if (gameIndex < this.turnSummariesOfGamesWithPlayer.length)
       {
-        this.turnSummariesOfGamesWithPlayer[gameIndex].refreshFromSource(fetchedSummary)
+        this.turnSummariesOfGamesWithPlayer[gameIndex].RefreshFromSource(fetchedSummary)
       }
       else
       {

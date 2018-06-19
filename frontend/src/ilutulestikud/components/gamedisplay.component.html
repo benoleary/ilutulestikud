@@ -63,9 +63,14 @@
 </div>
 <br>
 
-<!-- component to display knowledge of hand of viewing player -->
 <div>
-    placeholder<br>
+    What you know about your cards:<br>
+    <mat-list dense role="list">
+        <mat-list-item *ngFor="let playerCard of handOfViewingPlayer">
+            Possible colors: {{ playerCard.PossibleColorSuits }}<br>
+            Possible values: {{ playerCard.PossibleSequenceIndices }}
+        </mat-list-item>
+    </mat-list>
 </div>
 
 <div>

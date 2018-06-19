@@ -1,5 +1,3 @@
-import { preserveWhitespacesDefault } from "@angular/compiler";
-
 export class VisibleCard
 {
     ColorSuit: string;
@@ -7,16 +5,23 @@ export class VisibleCard
 
     constructor(cardObject: Object)
     {
-        this.refreshFromSource(cardObject);
+        this.RefreshFromSource(cardObject);
     }
 
-    refreshFromSource(cardObject: Object)
+    RefreshFromSource(cardObject: Object)
     {
         this.ColorSuit = cardObject["ColorSuit"];
         this.SequenceIndex = cardObject["SequenceIndex"];
+
+        // This is a temporary solution until we display images rather than colored text,
+        // as there is no "rainbow" color.
+        if (this.ColorSuit == "rainbow")
+        {
+            this.ColorSuit = "pink";
+        }
     }
 
-    static refreshListFromSource(listToRefresh: VisibleCard[], cardObjectList: Object[])
+    static RefreshListFromSource(listToRefresh: VisibleCard[], cardObjectList: Object[])
     {
         // First of all we reduce the number of cards if there were more than the request gave us.
         if (listToRefresh.length > cardObjectList.length)
@@ -33,7 +38,7 @@ export class VisibleCard
             // ones when necessary.
             if (cardIndex < listToRefresh.length)
             {
-                listToRefresh[cardIndex].refreshFromSource(fetchedCard)
+                listToRefresh[cardIndex].RefreshFromSource(fetchedCard)
             }
             else
             {
@@ -42,7 +47,7 @@ export class VisibleCard
         }
     }
 
-    static refreshListOfListsFromSource(listOfListsToRefresh: VisibleCard[][], cardObjectListOfLists: Object[][])
+    static RefreshListOfListsFromSource(listOfListsToRefresh: VisibleCard[][], cardObjectListOfLists: Object[][])
     {
         // First of all we reduce the number of cards if there were more than request gave us.
         if (listOfListsToRefresh.length > cardObjectListOfLists.length)
@@ -58,7 +63,7 @@ export class VisibleCard
 
         for (var listIndex: number = 0; listIndex < cardObjectListOfLists.length; ++listIndex)
         {
-            VisibleCard.refreshListFromSource(listOfListsToRefresh[listIndex], Array.from(cardObjectListOfLists[listIndex]))
+            VisibleCard.RefreshListFromSource(listOfListsToRefresh[listIndex], Array.from(cardObjectListOfLists[listIndex]))
         }
     }
 }

@@ -7,6 +7,7 @@ import { LogMessage } from '../models/logmessage.model';
 import { BackendIdentification } from '../models/backendidentification.model';
 import { VisibleCard } from '../models/visiblecard.model';
 import { VisibleHand } from '../models/visiblehand.model';
+import { InferredCard } from '../models/inferredcard.model';
 
 
 @Component({
@@ -28,6 +29,7 @@ import { VisibleHand } from '../models/visiblehand.model';
     playedSequences: VisibleCard[][];
     discardPile: VisibleCard[];
     handsBeforeViewingPlayer: VisibleHand[];
+    handOfViewingPlayer: InferredCard[];
     handsAfterViewingPlayer: VisibleHand[];
 
     constructor(public ilutulestikudService: IlutulestikudService)
@@ -41,6 +43,7 @@ import { VisibleHand } from '../models/visiblehand.model';
         this.playedSequences = [];
         this.discardPile = [];
         this.handsBeforeViewingPlayer = [];
+        this.handOfViewingPlayer = [];
         this.handsAfterViewingPlayer = [];
     }
 
@@ -76,7 +79,7 @@ import { VisibleHand } from '../models/visiblehand.model';
         // response to the request).
         this.isAwaitingGameData = true;
         this.ilutulestikudService
-          .gameAsSeenByPlayer(this.gameIdentification, this.playerIdentification)
+          .GameAsSeenByPlayer(this.gameIdentification, this.playerIdentification)
           .subscribe(
             fetchedGameData => this.parseGameData(fetchedGameData),
             thrownError => this.onError.emit(thrownError),
@@ -93,19 +96,22 @@ import { VisibleHand } from '../models/visiblehand.model';
         // as is fetchedGameData["ChatLog"], and an "array-like object" is not an
         // array, so we must build an array around such an object before passing
         // it into the function to refresh a log message array.
-        LogMessage.refreshListFromSource(this.chatLog, Array.from(fetchedGameData["ChatLog"]));
-        LogMessage.refreshListFromSource(this.actionLog, Array.from(fetchedGameData["ActionLog"]));
+        LogMessage.RefreshListFromSource(this.chatLog, Array.from(fetchedGameData["ChatLog"]));
+        LogMessage.RefreshListFromSource(this.actionLog, Array.from(fetchedGameData["ActionLog"]));
 
         this.noncardInformationText = "Score: " + fetchedGameData["ScoreSoFar"]
          + " - Hints: " + fetchedGameData["NumberOfReadyHints"] + " / " + fetchedGameData["MaximumNumberOfHints"]
          + " - Mistakes: " + fetchedGameData["NumberOfMistakesMade"] + " / " + fetchedGameData["NumberOfMistakesIndicatingGameOver"]
          + " - Cards left in deck: " + fetchedGameData["NumberOfCardsLeftInDeck"];
 
-         VisibleCard.refreshListOfListsFromSource(this.playedSequences, fetchedGameData["PlayedCards"]);
-         VisibleCard.refreshListFromSource(this.discardPile, fetchedGameData["DiscardedCards"]);
+         VisibleCard.RefreshListOfListsFromSource(this.playedSequences, fetchedGameData["PlayedCards"]);
+         VisibleCard.RefreshListFromSource(this.discardPile, fetchedGameData["DiscardedCards"]);
 
-         VisibleHand.refreshListFromSource(this.handsBeforeViewingPlayer, fetchedGameData["HandsBeforeThisPlayer"]);
-         VisibleHand.refreshListFromSource(this.handsAfterViewingPlayer, fetchedGameData["HandsAfterThisPlayer"]);
+         VisibleHand.RefreshListFromSource(this.handsBeforeViewingPlayer, fetchedGameData["HandsBeforeThisPlayer"]);
+
+         InferredCard.RefreshListFromSource(this.handOfViewingPlayer, fetchedGameData["HandOfThisPlayer"]);
+
+         VisibleHand.RefreshListFromSource(this.handsAfterViewingPlayer, fetchedGameData["HandsAfterThisPlayer"]);
     }
 
     hasPlayersBeforeViewingPlayer(): boolean
@@ -123,7 +129,7 @@ import { VisibleHand } from '../models/visiblehand.model';
         if (this.chatInput)
         {
             this.ilutulestikudService
-            .sendChatMessage(this.gameIdentification, this.playerIdentification, this.chatInput)
+            .SendChatMessage(this.gameIdentification, this.playerIdentification, this.chatInput)
             .subscribe(
                 () => {},
                 thrownError => this.onError.emit(thrownError),

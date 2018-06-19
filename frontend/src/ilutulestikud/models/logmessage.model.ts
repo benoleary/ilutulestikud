@@ -5,10 +5,10 @@ export class LogMessage
 
     constructor(messageObject: Object)
     {
-        this.refreshFromSource(messageObject);
+        this.RefreshFromSource(messageObject);
     }
 
-    refreshFromSource(messageObject: Object)
+    RefreshFromSource(messageObject: Object)
     {
         this.Color = messageObject["TextColor"];
         const timestampInSeconds = messageObject["TimestampInSeconds"];
@@ -25,7 +25,7 @@ export class LogMessage
         }
     }
 
-    static refreshListFromSource(listToRefresh: LogMessage[], messageObjectList: Object[])
+    static RefreshListFromSource(listToRefresh: LogMessage[], messageObjectList: Object[])
     {
         // First of all we reduce the number of log lines if there were more than the request gave us.
         if (listToRefresh.length > messageObjectList.length)
@@ -42,7 +42,7 @@ export class LogMessage
             // when necessary.
             if (messageIndex < listToRefresh.length)
             {
-                listToRefresh[messageIndex].refreshFromSource(fetchedMessage);
+                listToRefresh[messageIndex].RefreshFromSource(fetchedMessage);
             }
             else
             {
