@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/benoleary/ilutulestikud/backend/game/card"
-
 	"github.com/benoleary/ilutulestikud/backend/game/message"
 )
 

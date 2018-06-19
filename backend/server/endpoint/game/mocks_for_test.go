@@ -148,6 +148,11 @@ func (mockExecutor *mockActionExecutor) RecordChatMessage(chatMessage string) er
 	return mockExecutor.ErrorToReturn
 }
 
+// TakeTurnByDiscarding gets mocked.
+func (mockExecutor *mockActionExecutor) TakeTurnByDiscarding(indexInHandToDiscard int) error {
+	return mockExecutor.ErrorToReturn
+}
+
 type mockGameCollection struct {
 	FunctionsAndArgumentsReceived []functionNameAndArgument
 	ErrorToReturn                 error

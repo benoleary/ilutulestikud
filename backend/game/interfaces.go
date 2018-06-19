@@ -119,6 +119,10 @@ type ExecutorForPlayer interface {
 	// RecordChatMessage should record the given chat message from the acting player, or
 	// return an error if it was not possible.
 	RecordChatMessage(chatMessage string) error
+
+	// TakeTurnByDiscarding should enact a turn by discarding the indicated card from the
+	// hand of the acting player, or return an error if it was not possible.
+	TakeTurnByDiscarding(indexInHandToDiscard int) error
 }
 
 // ReadonlyState defines the interface for structs which should provide read-only

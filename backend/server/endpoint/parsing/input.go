@@ -15,3 +15,11 @@ type PlayerChatMessage struct {
 	PlayerName  string
 	ChatMessage string
 }
+
+// PlayerCardIndication is a struct to hold a single indication of a card in the hand of
+// a player, from that player to a game.
+type PlayerCardIndication struct {
+	GameName   string
+	PlayerName string
+	CardIndex  int
+}

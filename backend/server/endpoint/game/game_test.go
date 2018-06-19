@@ -196,7 +196,8 @@ func TestAvailableRulesetsCorrectlyDelivered(unitTest *testing.T) {
 
 	expectedRulesetIdentifiers := game_state.ValidRulesetIdentifiers()
 
-	returnedInterface, responseCode := testHandler.HandleGet([]string{"available-rulesets"})
+	returnedInterface, responseCode :=
+		testHandler.HandleGet([]string{"available-rulesets"})
 
 	if responseCode != http.StatusOK {
 		unitTest.Fatalf(
@@ -210,7 +211,8 @@ func TestAvailableRulesetsCorrectlyDelivered(unitTest *testing.T) {
 		mockCollection.FunctionsAndArgumentsReceived,
 		testIdentifier)
 
-	responseRulesetList, isInterfaceCorrect := returnedInterface.(parsing.RulesetList)
+	responseRulesetList, isInterfaceCorrect :=
+		returnedInterface.(parsing.RulesetList)
 
 	if !isInterfaceCorrect {
 		unitTest.Fatalf(
@@ -314,7 +316,8 @@ func TestGetAllGamesWithPlayerRejectedIfCollectionRejectsIt(unitTest *testing.T)
 	mockPlayerName := "Mock MacMock"
 	mockPlayerIdentifier := segmentTranslatorForTest().ToSegment(mockPlayerName)
 
-	_, responseCode := testHandler.HandleGet([]string{"all-games-with-player", mockPlayerIdentifier})
+	_, responseCode :=
+		testHandler.HandleGet([]string{"all-games-with-player", mockPlayerIdentifier})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -356,7 +359,8 @@ func TestGetAllGamesWithPlayerWhenEmptyList(unitTest *testing.T) {
 			responseCode)
 	}
 
-	responseTurnSummaryList, isInterfaceCorrect := returnedInterface.(parsing.TurnSummaryList)
+	responseTurnSummaryList, isInterfaceCorrect :=
+		returnedInterface.(parsing.TurnSummaryList)
 
 	if !isInterfaceCorrect {
 		unitTest.Fatalf(
@@ -394,24 +398,27 @@ func TestGetAllGamesWithPlayerWhenThreeGames(unitTest *testing.T) {
 	firstTestView.MockPlayerTurnIndex = 0
 
 	secondTestView := NewMockView()
-	secondTestView.MockPlayers = []string{
-		testPlayers[1],
-		testPlayers[0],
-	}
+	secondTestView.MockPlayers =
+		[]string{
+			testPlayers[1],
+			testPlayers[0],
+		}
 	secondTestView.MockPlayerTurnIndex = 1
 
 	thirdTestView := NewMockView()
-	thirdTestView.MockPlayers = []string{
-		testPlayers[0],
-		testPlayers[1],
-	}
+	thirdTestView.MockPlayers =
+		[]string{
+			testPlayers[0],
+			testPlayers[1],
+		}
 	thirdTestView.MockPlayerTurnIndex = 2
 
-	expectedViews := []game_state.ViewForPlayer{
-		firstTestView,
-		secondTestView,
-		thirdTestView,
-	}
+	expectedViews :=
+		[]game_state.ViewForPlayer{
+			firstTestView,
+			secondTestView,
+			thirdTestView,
+		}
 
 	mockCollection.ReturnForViewAllWithPlayer = expectedViews
 
@@ -442,7 +449,8 @@ func TestGetAllGamesWithPlayerWhenThreeGames(unitTest *testing.T) {
 		},
 		testIdentifier)
 
-	responseTurnSummaryList, isInterfaceCorrect := returnedInterface.(parsing.TurnSummaryList)
+	responseTurnSummaryList, isInterfaceCorrect :=
+		returnedInterface.(parsing.TurnSummaryList)
 
 	if !isInterfaceCorrect {
 		unitTest.Fatalf(
@@ -452,7 +460,8 @@ func TestGetAllGamesWithPlayerWhenThreeGames(unitTest *testing.T) {
 
 	if len(responseTurnSummaryList.TurnSummaries) != len(expectedViews) {
 		unitTest.Fatalf(
-			testIdentifier+"/game view list %v did not produce turn summary list %v with same number of elements",
+			testIdentifier+
+				"/game view list %v did not produce turn summary list %v with same number of elements",
 			expectedViews,
 			responseTurnSummaryList)
 	}
@@ -462,7 +471,8 @@ func TestGetAllGamesWithPlayerWhenThreeGames(unitTest *testing.T) {
 	for _, expectedView := range expectedViews {
 		foundGame := false
 		for _, actualTurnSummary := range responseTurnSummaryList.TurnSummaries {
-			expectedIdentifier := segmentTranslatorForTest().ToSegment(expectedView.GameName())
+			expectedIdentifier :=
+				segmentTranslatorForTest().ToSegment(expectedView.GameName())
 			_, expectedPlayerTurnIndex := expectedView.CurrentTurnOrder()
 			if (actualTurnSummary.GameIdentifier == expectedIdentifier) &&
 				(actualTurnSummary.GameName == expectedView.GameName()) &&
@@ -536,8 +546,9 @@ func TestGetGameForPlayerInvalidGameIdentifierBadRequest(unitTest *testing.T) {
 	// The character '+' is not a valid base-32 character.
 	mockGameIdentifier := "+++"
 
-	_, responseCode :=
-		testHandler.HandleGet([]string{"game-as-seen-by-player", mockGameIdentifier, mockPlayerIdentifier})
+	segmentSlice :=
+		[]string{"game-as-seen-by-player", mockGameIdentifier, mockPlayerIdentifier}
+	_, responseCode := testHandler.HandleGet(segmentSlice)
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -562,8 +573,9 @@ func TestGetGameForPlayerInvalidPlayerIdentifierBadRequest(unitTest *testing.T) 
 	mockGameName := "Mock game"
 	mockGameIdentifier := segmentTranslatorForTest().ToSegment(mockGameName)
 
-	_, responseCode :=
-		testHandler.HandleGet([]string{"game-as-seen-by-player", mockGameIdentifier, mockPlayerIdentifier})
+	segmentSlice :=
+		[]string{"game-as-seen-by-player", mockGameIdentifier, mockPlayerIdentifier}
+	_, responseCode := testHandler.HandleGet(segmentSlice)
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -589,8 +601,9 @@ func TestGetGameForPlayerRejectedIfCollectionRejectsIt(unitTest *testing.T) {
 	mockGameName := "Mock game"
 	mockGameIdentifier := segmentTranslatorForTest().ToSegment(mockGameName)
 
-	_, responseCode :=
-		testHandler.HandleGet([]string{"game-as-seen-by-player", mockGameIdentifier, mockPlayerIdentifier})
+	segmentSlice :=
+		[]string{"game-as-seen-by-player", mockGameIdentifier, mockPlayerIdentifier}
+	_, responseCode := testHandler.HandleGet(segmentSlice)
 
 	if responseCode != http.StatusInternalServerError {
 		unitTest.Fatalf(
@@ -615,27 +628,29 @@ func TestGetGameForPlayerRejectedIfCollectionRejectsIt(unitTest *testing.T) {
 }
 
 func TestGetGameForPlayerRejectedIfViewStateYieldsError(unitTest *testing.T) {
-	testCases := []struct {
-		testName                   string
-		errorForVisibleHand        error
-		errorForKnowledgeOfOwnHand error
-	}{
-		{
-			testName:                   "error from VisibleHand",
-			errorForVisibleHand:        fmt.Errorf("mock error"),
-			errorForKnowledgeOfOwnHand: nil,
-		},
-		{
-			testName:                   "error from KnowledgeOfOwnHand",
-			errorForVisibleHand:        nil,
-			errorForKnowledgeOfOwnHand: fmt.Errorf("mock error"),
-		},
-	}
+	testCases :=
+		[]struct {
+			testName                   string
+			errorForVisibleHand        error
+			errorForKnowledgeOfOwnHand error
+		}{
+			{
+				testName:                   "error from VisibleHand",
+				errorForVisibleHand:        fmt.Errorf("mock error"),
+				errorForKnowledgeOfOwnHand: nil,
+			},
+			{
+				testName:                   "error from KnowledgeOfOwnHand",
+				errorForVisibleHand:        nil,
+				errorForKnowledgeOfOwnHand: fmt.Errorf("mock error"),
+			},
+		}
 
 	for _, testCase := range testCases {
 		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
 			testIdentifier :=
-				"GET game-as-seen-by-player getting error from ViewState/" + testCase.testName
+				"GET game-as-seen-by-player getting error from ViewState/" +
+					testCase.testName
 			mockCollection, testHandler := newGameCollectionAndHandler()
 			mockPlayerName := "Mock Player"
 			mockPlayerIdentifier := segmentTranslatorForTest().ToSegment(mockPlayerName)
@@ -650,8 +665,9 @@ func TestGetGameForPlayerRejectedIfViewStateYieldsError(unitTest *testing.T) {
 
 			mockCollection.ReturnForViewState = mockView
 
-			_, responseCode :=
-				testHandler.HandleGet([]string{"game-as-seen-by-player", mockGameIdentifier, mockPlayerIdentifier})
+			segmentSlice :=
+				[]string{"game-as-seen-by-player", mockGameIdentifier, mockPlayerIdentifier}
+			_, responseCode := testHandler.HandleGet(segmentSlice)
 
 			if responseCode != http.StatusInternalServerError {
 				unitTest.Fatalf(
@@ -684,43 +700,48 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 	playerName := testPlayers[0]
 	chatColor := "some valid color"
 
-	expectedChatLog := []message.Readonly{
-		message.NewReadonly(playerName, chatColor, "first message"),
-		message.NewReadonly(playerName, chatColor, "second message"),
-	}
+	expectedChatLog :=
+		[]message.Readonly{
+			message.NewReadonly(playerName, chatColor, "first message"),
+			message.NewReadonly(playerName, chatColor, "second message"),
+		}
 
 	testView := NewMockView()
 	testView.MockPlayerTurnIndex = 0
-	testView.MockPlayers = []string{
-		testPlayers[2],
-		playerName,
-		testPlayers[3],
-		testPlayers[1],
-	}
+	testView.MockPlayers =
+		[]string{
+			testPlayers[2],
+			playerName,
+			testPlayers[3],
+			testPlayers[1],
+		}
 	testView.MockChatLog = expectedChatLog
 	testView.MockPlayerTurnIndex = 1
-	testView.ReturnForVisibleHand = []card.Readonly{
-		card.NewReadonly("some color", 1),
-		card.NewReadonly("some color", 2),
-		card.NewReadonly("another color", 1),
-	}
-	testView.ReturnForKnowledgeOfOwnHand = []card.Inferred{
-		card.NewInferred([]string{"some color", "another color"}, []int{1, 2, 3}),
-		card.NewInferred([]string{"some color", "yet another color"}, []int{1, 2}),
-		card.NewInferred([]string{"some color"}, []int{3}),
-	}
-	testView.ReturnForPlayedCards = [][]card.Readonly{
-		[]card.Readonly{
-			card.NewReadonly("another color", 1),
-			card.NewReadonly("another color", 2),
-			card.NewReadonly("another color", 3),
-		},
-		[]card.Readonly{},
+	testView.ReturnForVisibleHand =
 		[]card.Readonly{
 			card.NewReadonly("some color", 1),
 			card.NewReadonly("some color", 2),
-		},
-	}
+			card.NewReadonly("another color", 1),
+		}
+	testView.ReturnForKnowledgeOfOwnHand =
+		[]card.Inferred{
+			card.NewInferred([]string{"some color", "another color"}, []int{1, 2, 3}),
+			card.NewInferred([]string{"some color", "yet another color"}, []int{1, 2}),
+			card.NewInferred([]string{"some color"}, []int{3}),
+		}
+	testView.ReturnForPlayedCards =
+		[][]card.Readonly{
+			[]card.Readonly{
+				card.NewReadonly("another color", 1),
+				card.NewReadonly("another color", 2),
+				card.NewReadonly("another color", 3),
+			},
+			[]card.Readonly{},
+			[]card.Readonly{
+				card.NewReadonly("some color", 1),
+				card.NewReadonly("some color", 2),
+			},
+		}
 
 	mockCollection.ReturnForViewState = testView
 
@@ -728,8 +749,9 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 	mockGameName := "Mock game"
 	mockGameIdentifier := segmentTranslatorForTest().ToSegment(mockGameName)
 
-	returnedInterface, responseCode :=
-		testHandler.HandleGet([]string{"game-as-seen-by-player", mockGameIdentifier, mockPlayerIdentifier})
+	segmentSlice :=
+		[]string{"game-as-seen-by-player", mockGameIdentifier, mockPlayerIdentifier}
+	returnedInterface, responseCode := testHandler.HandleGet(segmentSlice)
 
 	if responseCode != http.StatusOK {
 		unitTest.Fatalf(
@@ -764,7 +786,8 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 
 	if len(responseGameView.ChatLog) != numberOfExpectedMessages {
 		unitTest.Fatalf(
-			testIdentifier+"/game view chat log %+v did not have same length %v as expected chat log %+v",
+			testIdentifier+
+				"/game view chat log %+v did not have same length %v as expected chat log %+v",
 			responseGameView.ChatLog,
 			numberOfExpectedMessages,
 			expectedChatLog)
@@ -782,7 +805,8 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 
 	if len(responseGameView.HandsBeforeThisPlayer) != 1 {
 		unitTest.Fatalf(
-			testIdentifier+"/game view %+v had wrong number of hands before viewing player, expected %v",
+			testIdentifier+
+				"/game view %+v had wrong number of hands before viewing player, expected %v",
 			responseGameView,
 			1)
 	}
@@ -802,7 +826,8 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 
 	if len(responseGameView.HandsAfterThisPlayer) != 2 {
 		unitTest.Fatalf(
-			testIdentifier+"/game view %+v had wrong number of hands after viewing player",
+			testIdentifier+
+				"/game view %+v had wrong number of hands after viewing player",
 			responseGameView,
 			2)
 	}
@@ -824,7 +849,8 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 	numberOfExpectedPiles := len(testView.ReturnForPlayedCards)
 	if len(responseGameView.PlayedCards) != numberOfExpectedPiles {
 		unitTest.Fatalf(
-			testIdentifier+"/game view %+v did not have expected piles of played cards %v",
+			testIdentifier+
+				"/game view %+v did not have expected piles of played cards %v",
 			responseGameView,
 			testView.ReturnForPlayedCards)
 	}
@@ -836,112 +862,6 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 			responseGameView.PlayedCards[pileIndex],
 			testView.ReturnForPlayedCards[pileIndex])
 	}
-}
-
-func TestRejectInvalidChatWithMalformedRequest(unitTest *testing.T) {
-	testIdentifier := "Reject invalid POST record-chat-message with malformed JSON body"
-	mockCollection, testHandler := newGameCollectionAndHandler()
-	mockCollection.ErrorToReturn = errors.New("error")
-
-	// There is no point testing with valid JSON objects which do not correspond
-	// to the expected JSON object, as the JSON will just be parsed with empty
-	// strings for the missing attributes and extra attributes will just be
-	// ignored. The tests of the game state collection can cover the cases of
-	// empty attributes.
-	bodyString := "{\"PlayerName\" :\"Something\", \"GameName\":}"
-
-	bodyDecoder := json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
-
-	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"record-chat-message"})
-
-	if responseCode != http.StatusBadRequest {
-		unitTest.Fatalf(
-			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
-			http.StatusBadRequest,
-			responseCode)
-	}
-
-	assertNoFunctionWasCalled(
-		unitTest,
-		mockCollection.FunctionsAndArgumentsReceived,
-		testIdentifier)
-}
-
-func TestRejectChatIfCollectionRejectsIt(unitTest *testing.T) {
-	testIdentifier := "Reject POST record-chat-message if collection rejects it"
-	mockCollection, testHandler := newGameCollectionAndHandler()
-	mockCollection.ErrorToReturn = errors.New("error")
-
-	bodyObject := parsing.PlayerChatMessage{
-		GameName:    "Test game",
-		PlayerName:  "A. Player Name",
-		ChatMessage: "Blah blah blah",
-	}
-
-	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
-
-	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"record-chat-message"})
-
-	if responseCode != http.StatusBadRequest {
-		unitTest.Fatalf(
-			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
-			http.StatusBadRequest,
-			responseCode)
-	}
-
-	functionRecord :=
-		mockCollection.getFirstAndEnsureOnly(
-			unitTest,
-			testIdentifier)
-
-	assertFunctionRecordIsCorrect(
-		unitTest,
-		functionRecord,
-		functionNameAndArgument{
-			FunctionName:     "ExecuteAction",
-			FunctionArgument: stringPair{first: bodyObject.GameName, second: bodyObject.PlayerName},
-		},
-		testIdentifier)
-}
-
-func TestAcceptValidChat(unitTest *testing.T) {
-	testIdentifier := "POST record-chat-message"
-	mockCollection, testHandler := newGameCollectionAndHandler()
-	mockCollection.ReturnForExecuteAction = &mockActionExecutor{}
-
-	bodyObject := parsing.PlayerChatMessage{
-		GameName:    "Test game",
-		PlayerName:  "A. Player Name",
-		ChatMessage: "Blah blah blah",
-	}
-
-	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
-
-	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"record-chat-message"})
-
-	if responseCode != http.StatusOK {
-		unitTest.Fatalf(
-			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
-			http.StatusOK,
-			responseCode)
-	}
-
-	functionRecord :=
-		mockCollection.getFirstAndEnsureOnly(
-			unitTest,
-			testIdentifier)
-
-	assertFunctionRecordIsCorrect(
-		unitTest,
-		functionRecord,
-		functionNameAndArgument{
-			FunctionName:     "ExecuteAction",
-			FunctionArgument: stringPair{first: bodyObject.GameName, second: bodyObject.PlayerName},
-		},
-		testIdentifier)
 }
 
 func TestRejectInvalidNewGameWithMalformedRequest(unitTest *testing.T) {
@@ -978,11 +898,12 @@ func TestRejectNewGameWithInvalidRulesetIdentifier(unitTest *testing.T) {
 	mockCollection, testHandler := newGameCollectionAndHandler()
 
 	// All the valid ruleset identifiers should be > 0.
-	bodyObject := parsing.GameDefinition{
-		GameName:          "test game",
-		RulesetIdentifier: -1,
-		PlayerNames:       []string{"Player One", "Player Two"},
-	}
+	bodyObject :=
+		parsing.GameDefinition{
+			GameName:          "test game",
+			RulesetIdentifier: -1,
+			PlayerNames:       []string{"Player One", "Player Two"},
+		}
 
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
@@ -1007,11 +928,12 @@ func TestRejectNewGameIfCollectionRejectsIt(unitTest *testing.T) {
 	mockCollection, testHandler := newGameCollectionAndHandler()
 	mockCollection.ErrorToReturn = errors.New("error")
 
-	bodyObject := parsing.GameDefinition{
-		GameName:          "test game",
-		RulesetIdentifier: game_state.ValidRulesetIdentifiers()[0],
-		PlayerNames:       []string{"Player One", "Player Two"},
-	}
+	bodyObject :=
+		parsing.GameDefinition{
+			GameName:          "test game",
+			RulesetIdentifier: game_state.ValidRulesetIdentifiers()[0],
+			PlayerNames:       []string{"Player One", "Player Two"},
+		}
 
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
@@ -1058,15 +980,17 @@ func TestRejectNewGameIfCollectionRejectsIt(unitTest *testing.T) {
 }
 
 func TestRejectNewGameIfIdentifierIncludesSegmentDelimiter(unitTest *testing.T) {
-	testIdentifier := "Reject POST create-new-game if identifier includes segment delimiter"
+	testIdentifier :=
+		"Reject POST create-new-game if identifier includes segment delimiter"
 	mockCollection, testHandler :=
 		newGameCollectionAndHandlerForTranslator(&parsing.NoOperationTranslator{})
 
-	bodyObject := parsing.GameDefinition{
-		GameName:          "name/which/cannot/work/as/identifier",
-		RulesetIdentifier: game_state.ValidRulesetIdentifiers()[0],
-		PlayerNames:       []string{"Player One", "Player Two"},
-	}
+	bodyObject :=
+		parsing.GameDefinition{
+			GameName:          "name/which/cannot/work/as/identifier",
+			RulesetIdentifier: game_state.ValidRulesetIdentifiers()[0],
+			PlayerNames:       []string{"Player One", "Player Two"},
+		}
 
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
@@ -1116,11 +1040,12 @@ func TestAcceptValidNewGame(unitTest *testing.T) {
 	testIdentifier := "POST record-chat-message"
 	mockCollection, testHandler := newGameCollectionAndHandler()
 
-	bodyObject := parsing.GameDefinition{
-		GameName:          "test game",
-		RulesetIdentifier: game_state.ValidRulesetIdentifiers()[0],
-		PlayerNames:       []string{"Player One", "Player Two"},
-	}
+	bodyObject :=
+		parsing.GameDefinition{
+			GameName:          "test game",
+			RulesetIdentifier: game_state.ValidRulesetIdentifiers()[0],
+			PlayerNames:       []string{"Player One", "Player Two"},
+		}
 
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
@@ -1129,7 +1054,8 @@ func TestAcceptValidNewGame(unitTest *testing.T) {
 
 	if responseCode != http.StatusOK {
 		unitTest.Fatalf(
-			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			testIdentifier+
+				"/did not return expected HTTP code %v, instead was %v.",
 			http.StatusOK,
 			responseCode)
 	}
@@ -1162,6 +1088,312 @@ func TestAcceptValidNewGame(unitTest *testing.T) {
 		functionNameAndArgument{
 			FunctionName:     "AddNew",
 			FunctionArgument: expectedFunctionArgument,
+		},
+		testIdentifier)
+}
+
+func TestRejectInvalidChatWithMalformedRequest(unitTest *testing.T) {
+	testIdentifier := "Reject invalid POST record-chat-message with malformed JSON body"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockCollection.ErrorToReturn = errors.New("error")
+
+	// There is no point testing with valid JSON objects which do not correspond
+	// to the expected JSON object, as the JSON will just be parsed with empty
+	// strings for the missing attributes and extra attributes will just be
+	// ignored. The tests of the game state collection can cover the cases of
+	// empty attributes.
+	bodyString := "{\"PlayerName\" :\"Something\", \"GameName\":}"
+
+	bodyDecoder :=
+		json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"record-chat-message"})
+
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+
+				"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
+
+	assertNoFunctionWasCalled(
+		unitTest,
+		mockCollection.FunctionsAndArgumentsReceived,
+		testIdentifier)
+}
+
+func TestRejectChatIfCollectionRejectsIt(unitTest *testing.T) {
+	testIdentifier := "Reject POST record-chat-message if collection rejects it"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockCollection.ErrorToReturn = errors.New("error")
+
+	bodyObject :=
+		parsing.PlayerChatMessage{
+			GameName:    "Test game",
+			PlayerName:  "A. Player Name",
+			ChatMessage: "Blah blah blah",
+		}
+
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"record-chat-message"})
+
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+
+				"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "ExecuteAction",
+			FunctionArgument: stringPair{first: bodyObject.GameName, second: bodyObject.PlayerName},
+		},
+		testIdentifier)
+}
+
+func TestPropagateErrorFromChat(unitTest *testing.T) {
+	testIdentifier := "Reject POST record-chat-message if collection rejects it"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockExecutor := &mockActionExecutor{}
+	mockExecutor.ErrorToReturn = fmt.Errorf("expected error")
+	mockCollection.ReturnForExecuteAction = mockExecutor
+
+	bodyObject :=
+		parsing.PlayerChatMessage{
+			GameName:    "Test game",
+			PlayerName:  "A. Player Name",
+			ChatMessage: "Blah blah blah",
+		}
+
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"record-chat-message"})
+
+	if responseCode != http.StatusInternalServerError {
+		unitTest.Fatalf(
+			testIdentifier+
+				"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusInternalServerError,
+			responseCode)
+	}
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "ExecuteAction",
+			FunctionArgument: stringPair{first: bodyObject.GameName, second: bodyObject.PlayerName},
+		},
+		testIdentifier)
+}
+
+func TestAcceptValidChat(unitTest *testing.T) {
+	testIdentifier := "POST record-chat-message"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockCollection.ReturnForExecuteAction = &mockActionExecutor{}
+
+	bodyObject :=
+		parsing.PlayerChatMessage{
+			GameName:    "Test game",
+			PlayerName:  "A. Player Name",
+			ChatMessage: "Blah blah blah",
+		}
+
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"record-chat-message"})
+
+	if responseCode != http.StatusOK {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusOK,
+			responseCode)
+	}
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "ExecuteAction",
+			FunctionArgument: stringPair{first: bodyObject.GameName, second: bodyObject.PlayerName},
+		},
+		testIdentifier)
+}
+
+func TestRejectInvalidDiscardWithMalformedRequest(unitTest *testing.T) {
+	testIdentifier :=
+		"Reject invalid POST take-turn-by-discarding with malformed JSON body"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockCollection.ErrorToReturn = errors.New("error")
+
+	// There is no point testing with valid JSON objects which do not correspond
+	// to the expected JSON object, as the JSON will just be parsed with empty
+	// strings for the missing attributes and extra attributes will just be
+	// ignored. The tests of the game state collection can cover the cases of
+	// empty attributes.
+	bodyString := "{\"PlayerName\" :\"Something\", \"GameName\":}"
+
+	bodyDecoder :=
+		json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-discarding"})
+
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
+
+	assertNoFunctionWasCalled(
+		unitTest,
+		mockCollection.FunctionsAndArgumentsReceived,
+		testIdentifier)
+}
+
+func TestRejectDiscardIfCollectionRejectsIt(unitTest *testing.T) {
+	testIdentifier :=
+		"Reject POST take-turn-by-discarding if collection rejects it"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockCollection.ErrorToReturn = errors.New("error")
+
+	bodyObject :=
+		parsing.PlayerCardIndication{
+			GameName:   "Test game",
+			PlayerName: "A. Player Name",
+			CardIndex:  1,
+		}
+
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-discarding"})
+
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+
+				"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "ExecuteAction",
+			FunctionArgument: stringPair{first: bodyObject.GameName, second: bodyObject.PlayerName},
+		},
+		testIdentifier)
+}
+
+func TestPropagateErrorFromDiscard(unitTest *testing.T) {
+	testIdentifier := "Reject POST take-turn-by-discarding if collection rejects it"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockExecutor := &mockActionExecutor{}
+	mockExecutor.ErrorToReturn = fmt.Errorf("expected error")
+	mockCollection.ReturnForExecuteAction = mockExecutor
+
+	bodyObject :=
+		parsing.PlayerCardIndication{
+			GameName:   "Test game",
+			PlayerName: "A. Player Name",
+			CardIndex:  1,
+		}
+
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-discarding"})
+
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "ExecuteAction",
+			FunctionArgument: stringPair{first: bodyObject.GameName, second: bodyObject.PlayerName},
+		},
+		testIdentifier)
+}
+
+func TestAcceptValidDiscard(unitTest *testing.T) {
+	testIdentifier := "POST take-turn-by-discarding"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockCollection.ReturnForExecuteAction = &mockActionExecutor{}
+
+	bodyObject :=
+		parsing.PlayerCardIndication{
+			GameName:   "Test game",
+			PlayerName: "A. Player Name",
+			CardIndex:  1,
+		}
+
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-discarding"})
+
+	if responseCode != http.StatusOK {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusOK,
+			responseCode)
+	}
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "ExecuteAction",
+			FunctionArgument: stringPair{first: bodyObject.GameName, second: bodyObject.PlayerName},
 		},
 		testIdentifier)
 }
