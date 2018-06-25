@@ -747,11 +747,12 @@ func TestExecutorCorrectWhenPersisterGivesValidGame(unitTest *testing.T) {
 			actualArguments)
 	}
 
-	expectedArguments := stringTriple{
-		FirstString:  playerName,
-		SecondString: mockChatColor,
-		ThirdString:  testMessage,
-	}
+	expectedArguments :=
+		argumentsForRecordChatMessage{
+			NameString:    playerName,
+			ColorString:   mockChatColor,
+			MessageString: testMessage,
+		}
 
 	if actualArguments[0] != expectedArguments {
 		unitTest.Fatalf(

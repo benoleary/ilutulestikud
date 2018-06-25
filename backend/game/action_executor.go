@@ -75,14 +75,9 @@ func (actionExecutor *ActionExecutor) TakeTurnByDiscarding(indexInHandToDiscard 
 			handSize)
 	}
 
-	numberOfParticipants := len(actionExecutor.gameParticipants)
-	gameRuleset := actionExecutor.gameState.Read().Ruleset()
+	gameReadState := actionExecutor.gameState.Read()
 
-	if handSize < gameRuleset.NumberOfCardsInPlayerHand(numberOfParticipants) {
-		return fmt.Errorf(
-			"Player %v could not discard card because their last turn was already taken",
-			actionExecutor.actingPlayer.Name())
-	}
+	gameRuleset := gameReadState.Ruleset()
 
 	discardedCard := playerHand[indexInHandToDiscard]
 
@@ -93,10 +88,12 @@ func (actionExecutor *ActionExecutor) TakeTurnByDiscarding(indexInHandToDiscard 
 			discardedCard.SequenceIndex())
 
 	replacementCard :=
-		card.NewInferred(gameRuleset.ColorSuits(), gameRuleset.DistinctPossibleIndices())
+		card.NewInferred(
+			gameRuleset.ColorSuits(),
+			gameRuleset.DistinctPossibleIndices())
 
 	numberOfHintsToAdd := 0
-	if actionExecutor.gameState.Read().NumberOfReadyHints() < gameRuleset.MaximumNumberOfHints() {
+	if gameReadState.NumberOfReadyHints() < gameRuleset.MaximumNumberOfHints() {
 		numberOfHintsToAdd = 1
 	}
 
@@ -111,14 +108,18 @@ func (actionExecutor *ActionExecutor) TakeTurnByDiscarding(indexInHandToDiscard 
 
 func (actionExecutor *ActionExecutor) handIfTurnElseError() ([]card.Readonly, int, error) {
 	turnNumber := actionExecutor.gameState.Read().Turn()
-	indexOfPlayerForCurrentTurn := turnNumber % len(actionExecutor.gameParticipants)
+
+	// The turn number starts from 1.
+	indexOfPlayerForCurrentTurn := (turnNumber - 1) % len(actionExecutor.gameParticipants)
 	playerForCurrentTurn := actionExecutor.gameParticipants[indexOfPlayerForCurrentTurn]
 
 	if playerForCurrentTurn != actionExecutor.actingPlayer.Name() {
 		errorToReturn :=
 			fmt.Errorf(
-				"Player %v is not the current player so cannot take a turn",
-				actionExecutor.actingPlayer.Name())
+				"Player %v is not the current player (%v) so cannot take a turn",
+				actionExecutor.actingPlayer.Name(),
+				playerForCurrentTurn)
+
 		return nil, -1, errorToReturn
 	}
 
@@ -141,7 +142,7 @@ func (actionExecutor *ActionExecutor) handIfTurnElseError() ([]card.Readonly, in
 	if handSize < gameRuleset.NumberOfCardsInPlayerHand(numberOfParticipants) {
 		errorToReturn :=
 			fmt.Errorf(
-				"Player %v could not take a turn because their last turn was already taken",
+				"Player %v could not take a turn because their last turn has already been taken",
 				actionExecutor.actingPlayer.Name())
 		return nil, handSize, errorToReturn
 	}

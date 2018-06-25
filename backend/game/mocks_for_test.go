@@ -63,63 +63,74 @@ func (mockProvider *mockPlayerProvider) Get(
 	return mockPlayer, nil
 }
 
-type stringTriple struct {
-	FirstString  string
-	SecondString string
-	ThirdString  string
+type argumentsForRecordChatMessage struct {
+	NameString    string
+	ColorString   string
+	MessageString string
+}
+
+type argumentsForEnactTurnByDiscardingAndReplacing struct {
+	MessageString string
+	PlayerState   player.ReadonlyState
+	IndexInt      int
+	DrawnInferred card.Inferred
+	HintsInt      int
+	MistakesInt   int
 }
 
 // mockGameState mocks the game.ReadAndWriteState, causing test failures if
 // writing functions have not been explicitly allowed, but not imposing such
 // a restriction on read-only functions.
 type mockGameState struct {
-	testReference                                 *testing.T
-	ReturnForNontestError                         error
-	ReturnForName                                 string
-	ReturnForRuleset                              game.Ruleset
-	ReturnForPlayerNames                          []string
-	ReturnForCreationTime                         time.Time
-	ReturnForChatLog                              []message.Readonly
-	ReturnForActionLog                            []message.Readonly
-	ReturnForTurn                                 int
-	ReturnForScore                                int
-	ReturnForNumberOfReadyHints                   int
-	ReturnForNumberOfMistakesMade                 int
-	ReturnForDeckSize                             int
-	ReturnForPlayedForColor                       map[string][]card.Readonly
-	ReturnForNumberOfDiscardedCards               map[card.Readonly]int
-	ReturnForVisibleHand                          map[string][]card.Readonly
-	ReturnForInferredHand                         map[string][]card.Inferred
-	TestErrorForRecordChatMessage                 error
-	ArgumentsFromRecordChatMessage                []stringTriple
-	TestErrorForEnactTurnByDiscardingAndReplacing error
-	TestErrorForEnactTurnByPlayingAndReplacing    error
+	testReference                                  *testing.T
+	ReturnForNontestError                          error
+	ReturnForName                                  string
+	ReturnForRuleset                               game.Ruleset
+	ReturnForPlayerNames                           []string
+	ReturnForCreationTime                          time.Time
+	ReturnForChatLog                               []message.Readonly
+	ReturnForActionLog                             []message.Readonly
+	ReturnForTurn                                  int
+	ReturnForScore                                 int
+	ReturnForNumberOfReadyHints                    int
+	ReturnForNumberOfMistakesMade                  int
+	ReturnForDeckSize                              int
+	ReturnForPlayedForColor                        map[string][]card.Readonly
+	ReturnForNumberOfDiscardedCards                map[card.Readonly]int
+	ReturnForVisibleHand                           map[string][]card.Readonly
+	ReturnForInferredHand                          map[string][]card.Inferred
+	TestErrorForRecordChatMessage                  error
+	ArgumentsFromRecordChatMessage                 []argumentsForRecordChatMessage
+	TestErrorForEnactTurnByDiscardingAndReplacing  error
+	ArgumentsFromEnactTurnByDiscardingAndReplacing []argumentsForEnactTurnByDiscardingAndReplacing
+	TestErrorForEnactTurnByPlayingAndReplacing     error
 }
 
 func NewMockGameState(testReference *testing.T) *mockGameState {
 	testError := fmt.Errorf("No write function should be called")
 	return &mockGameState{
-		testReference:                                 testReference,
-		ReturnForNontestError:                         nil,
-		ReturnForName:                                 "",
-		ReturnForRuleset:                              nil,
-		ReturnForPlayerNames:                          nil,
-		ReturnForCreationTime:                         time.Now(),
-		ReturnForChatLog:                              nil,
-		ReturnForActionLog:                            nil,
-		ReturnForTurn:                                 -1,
-		ReturnForScore:                                -1,
-		ReturnForNumberOfReadyHints:                   -1,
-		ReturnForNumberOfMistakesMade:                 -1,
-		ReturnForDeckSize:                             -1,
-		ReturnForPlayedForColor:                       make(map[string][]card.Readonly, 0),
-		ReturnForNumberOfDiscardedCards:               make(map[card.Readonly]int, 0),
-		ReturnForVisibleHand:                          make(map[string][]card.Readonly, 0),
-		ReturnForInferredHand:                         make(map[string][]card.Inferred, 0),
-		TestErrorForRecordChatMessage:                 testError,
-		ArgumentsFromRecordChatMessage:                make([]stringTriple, 0),
-		TestErrorForEnactTurnByDiscardingAndReplacing: testError,
-		TestErrorForEnactTurnByPlayingAndReplacing:    testError,
+		testReference:                                  testReference,
+		ReturnForNontestError:                          nil,
+		ReturnForName:                                  "",
+		ReturnForRuleset:                               nil,
+		ReturnForPlayerNames:                           nil,
+		ReturnForCreationTime:                          time.Now(),
+		ReturnForChatLog:                               nil,
+		ReturnForActionLog:                             nil,
+		ReturnForTurn:                                  -1,
+		ReturnForScore:                                 -1,
+		ReturnForNumberOfReadyHints:                    -1,
+		ReturnForNumberOfMistakesMade:                  -1,
+		ReturnForDeckSize:                              -1,
+		ReturnForPlayedForColor:                        make(map[string][]card.Readonly, 0),
+		ReturnForNumberOfDiscardedCards:                make(map[card.Readonly]int, 0),
+		ReturnForVisibleHand:                           make(map[string][]card.Readonly, 0),
+		ReturnForInferredHand:                          make(map[string][]card.Inferred, 0),
+		TestErrorForRecordChatMessage:                  testError,
+		ArgumentsFromRecordChatMessage:                 make([]argumentsForRecordChatMessage, 0),
+		TestErrorForEnactTurnByDiscardingAndReplacing:  testError,
+		ArgumentsFromEnactTurnByDiscardingAndReplacing: make([]argumentsForEnactTurnByDiscardingAndReplacing, 0),
+		TestErrorForEnactTurnByPlayingAndReplacing:     testError,
 	}
 }
 
@@ -222,13 +233,14 @@ func (mockGame *mockGameState) RecordChatMessage(
 			mockGame.TestErrorForRecordChatMessage)
 	}
 
-	mockGame.ArgumentsFromRecordChatMessage = append(
-		mockGame.ArgumentsFromRecordChatMessage,
-		stringTriple{
-			FirstString:  actingPlayer.Name(),
-			SecondString: actingPlayer.Color(),
-			ThirdString:  chatMessage,
-		})
+	mockGame.ArgumentsFromRecordChatMessage =
+		append(
+			mockGame.ArgumentsFromRecordChatMessage,
+			argumentsForRecordChatMessage{
+				NameString:    actingPlayer.Name(),
+				ColorString:   actingPlayer.Color(),
+				MessageString: chatMessage,
+			})
 
 	return mockGame.ReturnForNontestError
 }
@@ -252,6 +264,18 @@ func (mockGame *mockGameState) EnactTurnByDiscardingAndReplacing(
 			numberOfMistakesMadeToAdd,
 			mockGame.TestErrorForEnactTurnByDiscardingAndReplacing)
 	}
+
+	mockGame.ArgumentsFromEnactTurnByDiscardingAndReplacing =
+		append(
+			mockGame.ArgumentsFromEnactTurnByDiscardingAndReplacing,
+			argumentsForEnactTurnByDiscardingAndReplacing{
+				MessageString: actionMessage,
+				PlayerState:   actingPlayer,
+				IndexInt:      indexInHand,
+				DrawnInferred: knowledgeOfDrawnCard,
+				HintsInt:      numberOfReadyHintsToAdd,
+				MistakesInt:   numberOfMistakesMadeToAdd,
+			})
 
 	return mockGame.ReturnForNontestError
 }
