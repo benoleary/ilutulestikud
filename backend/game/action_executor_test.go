@@ -418,26 +418,23 @@ func TestTakeTurnByDiscardingWhenAlreadyMaximumHints(unitTest *testing.T) {
 			errorFromGetPlayer)
 	}
 
-	expectedArguments :=
-		argumentsForEnactTurnByDiscardingAndReplacing{
-			MessageString: fmt.Sprintf(
-				"discards card %v %v",
-				expectedDiscardedCard.ColorSuit(),
-				expectedDiscardedCard.SequenceIndex()),
-			PlayerState: expectedPlayerState,
-			IndexInt:    0,
-			DrawnInferred: card.NewInferred(
-				testRuleset.ColorSuits(),
-				testRuleset.DistinctPossibleIndices()),
-			HintsInt:    0,
-			MistakesInt: 0,
-		}
-
-	if actualArguments[0] != expectedArguments {
+	actualArgument := actualArguments[0]
+	expectedActionMessage :=
+		fmt.Sprintf(
+			"discards card %v %v",
+			expectedDiscardedCard.ColorSuit(),
+			expectedDiscardedCard.SequenceIndex())
+	if (actualArgument.MessageString != expectedActionMessage) ||
+		(actualArgument.PlayerState != expectedPlayerState) ||
+		(actualArgument.IndexInt != 0) ||
+		(actualArgument.HintsInt != 0) ||
+		(actualArgument.MistakesInt != 0) {
 		unitTest.Fatalf(
 			"ExecuteAction(%v, %v) resulted in wrong call to EnactTurnByDiscardingAndReplacing(...): %v",
 			gameName,
 			playerName,
 			actualArguments[0])
 	}
+
+	unitTest.Fatalf("test does not yet check that the replacement inferred card is correct.")
 }
