@@ -202,7 +202,7 @@ func (handler *Handler) writeGameForPlayer(
 		return errorFromView, http.StatusInternalServerError
 	}
 
-	handsBeforeThisPlayer, handsAfterThisPlayer, errorFromVisibleHands :=
+	handsBeforeThisPlayer, handsAfterThisPlayer, isViewingPlayerTurn, errorFromVisibleHands :=
 		handler.visibleHandsBeforeAndAfter(gameView)
 	if errorFromVisibleHands != nil {
 		return errorFromVisibleHands, http.StatusInternalServerError
@@ -229,6 +229,7 @@ func (handler *Handler) writeGameForPlayer(
 			HandsBeforeThisPlayer:              handsBeforeThisPlayer,
 			HandOfThisPlayer:                   handOfThisPlayer,
 			HandsAfterThisPlayer:               handsAfterThisPlayer,
+			ThisPlayerCanTakeTurn:              isViewingPlayerTurn,
 		}
 
 	return endpointObject, http.StatusOK
@@ -340,7 +341,7 @@ func (handler *Handler) logForFrontend(
 }
 
 func (handler *Handler) visibleHandsBeforeAndAfter(
-	gameView game.ViewForPlayer) ([]parsing.VisibleHand, []parsing.VisibleHand, error) {
+	gameView game.ViewForPlayer) ([]parsing.VisibleHand, []parsing.VisibleHand, bool, error) {
 	playersInTurnOrder, playerIndexInTurnOrder := gameView.CurrentTurnOrder()
 	numberOfPlayers := len(playersInTurnOrder)
 
@@ -352,7 +353,7 @@ func (handler *Handler) visibleHandsBeforeAndAfter(
 			visibleHandFromView, playerChatColor, errorFromVisibleHand :=
 				gameView.VisibleHand(playerWithVisibleHand)
 			if errorFromVisibleHand != nil {
-				return nil, nil, errorFromVisibleHand
+				return nil, nil, false, errorFromVisibleHand
 			}
 
 			numberOfCardsInHand := len(visibleHandFromView)
@@ -382,7 +383,7 @@ func (handler *Handler) visibleHandsBeforeAndAfter(
 	handsBeforeViewingPlayer := allVisibleHands[:playerIndexInTurnOrder]
 	handsAfterViewingPlayer := allVisibleHands[playerIndexInTurnOrder:]
 
-	return handsBeforeViewingPlayer, handsAfterViewingPlayer, nil
+	return handsBeforeViewingPlayer, handsAfterViewingPlayer, playerIndexInTurnOrder == 0, nil
 }
 
 func (handler *Handler) handOfViewingPlayer(

@@ -31,6 +31,7 @@ import { InferredCard } from '../models/inferredcard.model';
     handsBeforeViewingPlayer: VisibleHand[];
     handOfViewingPlayer: InferredCard[];
     handsAfterViewingPlayer: VisibleHand[];
+    turnButtonsDisabled: boolean;
 
     constructor(public ilutulestikudService: IlutulestikudService)
     {
@@ -45,6 +46,7 @@ import { InferredCard } from '../models/inferredcard.model';
         this.handsBeforeViewingPlayer = [];
         this.handOfViewingPlayer = [];
         this.handsAfterViewingPlayer = [];
+        this.turnButtonsDisabled = true;
     }
 
     ngOnInit(): void
@@ -104,14 +106,17 @@ import { InferredCard } from '../models/inferredcard.model';
          + " - Mistakes: " + fetchedGameData["NumberOfMistakesMade"] + " / " + fetchedGameData["NumberOfMistakesIndicatingGameOver"]
          + " - Cards left in deck: " + fetchedGameData["NumberOfCardsLeftInDeck"];
 
-         VisibleCard.RefreshListOfListsFromSource(this.playedSequences, fetchedGameData["PlayedCards"]);
-         VisibleCard.RefreshListFromSource(this.discardPile, fetchedGameData["DiscardedCards"]);
+        VisibleCard.RefreshListOfListsFromSource(this.playedSequences, fetchedGameData["PlayedCards"]);
+        
+        VisibleCard.RefreshListFromSource(this.discardPile, fetchedGameData["DiscardedCards"]);
 
-         VisibleHand.RefreshListFromSource(this.handsBeforeViewingPlayer, fetchedGameData["HandsBeforeThisPlayer"]);
+        VisibleHand.RefreshListFromSource(this.handsBeforeViewingPlayer, fetchedGameData["HandsBeforeThisPlayer"]);
 
-         InferredCard.RefreshListFromSource(this.handOfViewingPlayer, fetchedGameData["HandOfThisPlayer"]);
+        InferredCard.RefreshListFromSource(this.handOfViewingPlayer, fetchedGameData["HandOfThisPlayer"]);
 
-         VisibleHand.RefreshListFromSource(this.handsAfterViewingPlayer, fetchedGameData["HandsAfterThisPlayer"]);
+        VisibleHand.RefreshListFromSource(this.handsAfterViewingPlayer, fetchedGameData["HandsAfterThisPlayer"]);
+
+        this.turnButtonsDisabled = !fetchedGameData["ThisPlayerCanTakeTurn"];
     }
 
     hasPlayersBeforeViewingPlayer(): boolean
@@ -136,5 +141,23 @@ import { InferredCard } from '../models/inferredcard.model';
                 () => {});
             this.chatInput = null;
         }
+    }
+
+    discardCard(indexInHand: number): void
+    {
+      // We turn off the buttons to prevent messy errors
+      // if the user clicks too many times too quickly.
+      this.turnButtonsDisabled = true;
+      this.ilutulestikudService
+      .SendTakeTurnByDiscarding(this.gameIdentification, this.playerIdentification, indexInHand)
+      .subscribe(
+          () => {},
+          thrownError => this.onError.emit(thrownError),
+          () => {});
+    }
+
+    playCard(indexInHand: number): void
+    {
+      console.log("playCard(indexInHand: " + indexInHand + ")");
     }
   }

@@ -104,4 +104,5 @@ type GameView struct {
 	HandsBeforeThisPlayer              []VisibleHand
 	HandOfThisPlayer                   []CardFromBehind
 	HandsAfterThisPlayer               []VisibleHand
+	ThisPlayerCanTakeTurn              bool
 }

@@ -1,4 +1,4 @@
-<div>
+<div [ngStyle]="{'background-color': 'black'}">
     Chat log:<br>
     <mat-list dense role="list">
         <mat-list-item
@@ -16,7 +16,7 @@
     </mat-form-field>
 </div>
 
-<div>
+<div [ngStyle]="{'background-color': 'black'}">
     Action log:<br>
     <mat-list dense role="list">
         <mat-list-item
@@ -27,12 +27,12 @@
     </mat-list>
 </div>
 
-<div>
+<div [ngStyle]="{'background-color': 'black'}">
     {{ noncardInformationText }}
 </div>
 
 <!-- We are using CardArrayDisplayComponent to display played cards for the moment. -->
-<div>
+<div [ngStyle]="{'background-color': 'black'}">
     Played cards:<br>
     <mat-list dense role="list">
         <mat-list-item *ngFor="let playedSequence of playedSequences">
@@ -41,12 +41,12 @@
     </mat-list>
 </div>
 
-<div>
+<div [ngStyle]="{'background-color': 'black'}">
     Discarded cards:<br>
     <card-array-display [cardArray]="discardPile"></card-array-display>
 </div>
 
-<div>
+<div [ngStyle]="{'background-color': 'black'}">
     <div *ngIf="!hasPlayersBeforeViewingPlayer()">
         Your turn!
     </div>
@@ -61,19 +61,42 @@
         </mat-list>
     </div>
 </div>
-<br>
 
-<div>
+<div [ngStyle]="{'background-color': 'black'}">
     What you know about your cards:<br>
     <mat-list dense role="list">
-        <mat-list-item *ngFor="let playerCard of handOfViewingPlayer">
-            Possible colors: {{ playerCard.PossibleColorSuits }}<br>
-            Possible values: {{ playerCard.PossibleSequenceIndices }}
+        <mat-list-item *ngFor="let playerCard of handOfViewingPlayer; let indexInHand = index">
+            <span>
+                Possible colors: {{ playerCard.PossibleColorSuits }}<br>
+                Possible values: {{ playerCard.PossibleSequenceIndices }}
+            </span>
+            <span>
+                &nbsp;
+            </span>
+            <span>
+                <button
+                    mat-raised-button
+                    (click)="discardCard(indexInHand)"
+                    [disabled]="turnButtonsDisabled">
+                    Discard card (for hint)
+                </button>
+            </span>
+            <span>
+                &nbsp;
+            </span>
+            <span>
+                <button
+                    mat-raised-button
+                    (click)="playCard(indexInHand)"
+                    [disabled]="true">
+                    Play card
+                </button>
+            </span>
         </mat-list-item>
     </mat-list>
 </div>
 
-<div>
+<div [ngStyle]="{'background-color': 'black'}">
     <div *ngIf="!hasPlayersAfterViewingPlayer()">
         No more players after you.
     </div>

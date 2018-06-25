@@ -99,6 +99,52 @@ func TestRecordChatMessageReturnsNoErrorIfStateProducesNoError(unitTest *testing
 	}
 }
 
+func TestRejectTakeTurnByDiscardingIfTooManyMistakesMade(unitTest *testing.T) {
+	gameName := "Test game"
+	testPlayersInOriginalOrder :=
+		[]string{
+			playerNamesAvailableInTest[0],
+			playerNamesAvailableInTest[1],
+			playerNamesAvailableInTest[2],
+			playerNamesAvailableInTest[3],
+		}
+	playerName := testPlayersInOriginalOrder[2]
+	gameCollection, mockPersister, _ :=
+		prepareCollection(unitTest, testPlayersInOriginalOrder)
+
+	mockReadAndWriteState := NewMockGameState(unitTest)
+	mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
+	mockReadAndWriteState.ReturnForRuleset = testRuleset
+	mockReadAndWriteState.ReturnForNumberOfMistakesMade =
+		testRuleset.NumberOfMistakesIndicatingGameOver()
+
+	mockPersister.TestErrorForReadAndWriteGame = nil
+	mockPersister.ReturnForReadAndWriteGame = mockReadAndWriteState
+
+	executorForPlayer, errorFromExecuteAction :=
+		gameCollection.ExecuteAction(
+			gameName,
+			playerName)
+
+	if errorFromExecuteAction != nil {
+		unitTest.Fatalf(
+			"ExecuteAction(%v, %v) produced error %v",
+			gameName,
+			playerName,
+			errorFromExecuteAction)
+	}
+
+	indexInHandToDiscard := 1
+	errorFromTakeTurnByDiscarding :=
+		executorForPlayer.TakeTurnByDiscarding(indexInHandToDiscard)
+
+	if errorFromTakeTurnByDiscarding == nil {
+		unitTest.Fatalf(
+			"TakeTurnByDiscarding(%v) produced nil error when not player's turn",
+			indexInHandToDiscard)
+	}
+}
+
 func TestRejectTakeTurnByDiscardingIfNotPlayerTurn(unitTest *testing.T) {
 	gameName := "Test game"
 	testPlayersInOriginalOrder :=
@@ -361,6 +407,8 @@ func TestTakeTurnByDiscardingWhenAlreadyMaximumHints(unitTest *testing.T) {
 	mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
 	mockReadAndWriteState.ReturnForRuleset = testRuleset
 	mockReadAndWriteState.ReturnForTurn = 3
+	mockReadAndWriteState.ReturnForNumberOfReadyHints =
+		testRuleset.MaximumNumberOfHints()
 
 	// This test does not need the cards to be initialized correctly,
 	// just that the hand slice is the correct length.
@@ -436,5 +484,112 @@ func TestTakeTurnByDiscardingWhenAlreadyMaximumHints(unitTest *testing.T) {
 			actualArguments[0])
 	}
 
-	unitTest.Fatalf("test does not yet check that the replacement inferred card is correct.")
+	assertInferredCardPossibilitiesCorrect(
+		"knowledge of drawn card when discarding at maximum hints",
+		unitTest,
+		actualArgument.DrawnInferred,
+		testRuleset.ColorSuits(),
+		testRuleset.DistinctPossibleIndices())
+}
+
+func TestTakeTurnByDiscardingWhenLessThanMaximumHints(unitTest *testing.T) {
+	gameName := "Test game"
+	testPlayersInOriginalOrder :=
+		[]string{
+			playerNamesAvailableInTest[0],
+			playerNamesAvailableInTest[1],
+			playerNamesAvailableInTest[2],
+			playerNamesAvailableInTest[3],
+		}
+	playerName := testPlayersInOriginalOrder[2]
+	gameCollection, mockPersister, playerProvider :=
+		prepareCollection(unitTest, testPlayersInOriginalOrder)
+
+	mockReadAndWriteState := NewMockGameState(unitTest)
+	mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
+	mockReadAndWriteState.ReturnForRuleset = testRuleset
+	mockReadAndWriteState.ReturnForTurn = 3
+	mockReadAndWriteState.ReturnForNumberOfReadyHints =
+		testRuleset.MaximumNumberOfHints() - 2
+
+	// This test does not need the cards to be initialized correctly,
+	// just that the hand slice is the correct length.
+	correctHandSize :=
+		testRuleset.NumberOfCardsInPlayerHand(len(testPlayersInOriginalOrder))
+	correctSizeHands := make(map[string][]card.Readonly, 1)
+	correctSizeHands[playerName] = make([]card.Readonly, correctHandSize)
+	expectedDiscardedCard := card.NewReadonly("some_color", 123)
+	correctSizeHands[playerName][0] = expectedDiscardedCard
+	mockReadAndWriteState.ReturnForVisibleHand = correctSizeHands
+
+	mockReadAndWriteState.TestErrorForEnactTurnByDiscardingAndReplacing = nil
+
+	mockPersister.TestErrorForReadAndWriteGame = nil
+	mockPersister.ReturnForReadAndWriteGame = mockReadAndWriteState
+
+	executorForPlayer, errorFromExecuteAction :=
+		gameCollection.ExecuteAction(
+			gameName,
+			playerName)
+
+	if errorFromExecuteAction != nil {
+		unitTest.Fatalf(
+			"ExecuteAction(%v, %v) produced error %v",
+			gameName,
+			playerName,
+			errorFromExecuteAction)
+	}
+
+	indexInHandToDiscard := 0
+	errorFromTakeTurnByDiscarding :=
+		executorForPlayer.TakeTurnByDiscarding(indexInHandToDiscard)
+
+	if errorFromTakeTurnByDiscarding != nil {
+		unitTest.Fatalf(
+			"TakeTurnByDiscarding(%v) produced unexpected error %v",
+			indexInHandToDiscard,
+			errorFromTakeTurnByDiscarding)
+	}
+
+	actualArguments :=
+		mockReadAndWriteState.ArgumentsFromEnactTurnByDiscardingAndReplacing
+
+	if len(actualArguments) != 1 {
+		unitTest.Fatalf(
+			"list of argument sets %v did not have exactly 1 element",
+			actualArguments)
+	}
+
+	expectedPlayerState, errorFromGetPlayer := playerProvider.Get(playerName)
+	if errorFromGetPlayer != nil {
+		unitTest.Fatalf(
+			"mock player provider's Get(%v) produced unexpected error %v",
+			playerName,
+			errorFromGetPlayer)
+	}
+
+	actualArgument := actualArguments[0]
+	expectedActionMessage :=
+		fmt.Sprintf(
+			"discards card %v %v",
+			expectedDiscardedCard.ColorSuit(),
+			expectedDiscardedCard.SequenceIndex())
+	if (actualArgument.MessageString != expectedActionMessage) ||
+		(actualArgument.PlayerState != expectedPlayerState) ||
+		(actualArgument.IndexInt != 0) ||
+		(actualArgument.HintsInt != 1) ||
+		(actualArgument.MistakesInt != 0) {
+		unitTest.Fatalf(
+			"ExecuteAction(%v, %v) resulted in wrong call to EnactTurnByDiscardingAndReplacing(...): %v",
+			gameName,
+			playerName,
+			actualArguments[0])
+	}
+
+	assertInferredCardPossibilitiesCorrect(
+		"knowledge of drawn card when discarding with less than maximum hints",
+		unitTest,
+		actualArgument.DrawnInferred,
+		testRuleset.ColorSuits(),
+		testRuleset.DistinctPossibleIndices())
 }

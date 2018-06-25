@@ -107,10 +107,21 @@ func (actionExecutor *ActionExecutor) TakeTurnByDiscarding(indexInHandToDiscard 
 }
 
 func (actionExecutor *ActionExecutor) handIfTurnElseError() ([]card.Readonly, int, error) {
-	turnNumber := actionExecutor.gameState.Read().Turn()
+	gameReadState := actionExecutor.gameState.Read()
+	gameRuleset := gameReadState.Ruleset()
+	if gameReadState.NumberOfMistakesMade() >= gameRuleset.NumberOfMistakesIndicatingGameOver() {
+		errorToReturn :=
+			fmt.Errorf(
+				"Too many mistakes made %v (game over at %v)",
+				gameReadState.NumberOfMistakesMade(),
+				gameRuleset.NumberOfMistakesIndicatingGameOver())
+
+		return nil, -1, errorToReturn
+	}
 
 	// The turn number starts from 1.
-	indexOfPlayerForCurrentTurn := (turnNumber - 1) % len(actionExecutor.gameParticipants)
+	indexOfPlayerForCurrentTurn :=
+		(gameReadState.Turn() - 1) % len(actionExecutor.gameParticipants)
 	playerForCurrentTurn := actionExecutor.gameParticipants[indexOfPlayerForCurrentTurn]
 
 	if playerForCurrentTurn != actionExecutor.actingPlayer.Name() {
@@ -124,7 +135,7 @@ func (actionExecutor *ActionExecutor) handIfTurnElseError() ([]card.Readonly, in
 	}
 
 	playerHand, errorFromVisibleHand :=
-		actionExecutor.gameState.Read().VisibleHand(actionExecutor.actingPlayer.Name())
+		gameReadState.VisibleHand(actionExecutor.actingPlayer.Name())
 
 	if errorFromVisibleHand != nil {
 		errorToReturn :=
@@ -137,7 +148,6 @@ func (actionExecutor *ActionExecutor) handIfTurnElseError() ([]card.Readonly, in
 
 	handSize := len(playerHand)
 	numberOfParticipants := len(actionExecutor.gameParticipants)
-	gameRuleset := actionExecutor.gameState.Read().Ruleset()
 
 	if handSize < gameRuleset.NumberOfCardsInPlayerHand(numberOfParticipants) {
 		errorToReturn :=

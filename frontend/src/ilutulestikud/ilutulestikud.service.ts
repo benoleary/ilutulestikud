@@ -78,13 +78,26 @@ export class IlutulestikudService {
   SendChatMessage(
     gameIdentification: BackendIdentification,
     playerIdentification: BackendIdentification,
-     chatMessage: string): Observable<any> {
+    chatMessage: string): Observable<any> {
     return this.httpClient.post(
       this.uriRoot + "game/record-chat-message",
       {
         "GameName": gameIdentification.NameForPost,
         "PlayerName": playerIdentification.NameForPost,
         "ChatMessage": chatMessage
+      })
+  }
+
+  SendTakeTurnByDiscarding(
+    gameIdentification: BackendIdentification,
+    playerIdentification: BackendIdentification,
+    indexInHand: number): Observable<any> {
+    return this.httpClient.post(
+      this.uriRoot + "game/take-turn-by-discarding",
+      {
+        "GameName": gameIdentification.NameForPost,
+        "PlayerName": playerIdentification.NameForPost,
+        "CardIndex": indexInHand
       })
   }
 }
