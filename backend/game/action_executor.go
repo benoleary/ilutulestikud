@@ -58,28 +58,19 @@ func (actionExecutor *ActionExecutor) RecordChatMessage(chatMessage string) erro
 }
 
 // TakeTurnByDiscarding enacts a turn by discarding the indicated card from the hand
-// of the acting player, or return an error if it was not possible.
-func (actionExecutor *ActionExecutor) TakeTurnByDiscarding(indexInHandToDiscard int) error {
+// of the acting player, or returns an error if it was not possible.
+func (actionExecutor *ActionExecutor) TakeTurnByDiscarding(indexInHand int) error {
 	// First we must determine if the player is allowed to take an action.
-	playerHand, handSize, errorFromHand := actionExecutor.handIfTurnElseError()
+	discardedCard, errorFromHand :=
+		actionExecutor.cardFromHandIfTurnElseError(indexInHand)
 
 	if errorFromHand != nil {
 		return errorFromHand
 	}
 
-	if (indexInHandToDiscard < 0) || (indexInHandToDiscard >= handSize) {
-		return fmt.Errorf(
-			"Index %v is out of the acceptable range %v to %v of the player's hand",
-			indexInHandToDiscard,
-			0,
-			handSize)
-	}
-
 	gameReadState := actionExecutor.gameState.Read()
 
 	gameRuleset := gameReadState.Ruleset()
-
-	discardedCard := playerHand[indexInHandToDiscard]
 
 	actionMessage :=
 		fmt.Sprintf(
@@ -100,13 +91,71 @@ func (actionExecutor *ActionExecutor) TakeTurnByDiscarding(indexInHandToDiscard 
 	return actionExecutor.gameState.EnactTurnByDiscardingAndReplacing(
 		actionMessage,
 		actionExecutor.actingPlayer,
-		indexInHandToDiscard,
+		indexInHand,
 		replacementCard,
 		numberOfHintsToAdd,
 		0)
 }
 
-func (actionExecutor *ActionExecutor) handIfTurnElseError() ([]card.Readonly, int, error) {
+// TakeTurnByPlaying enacts a turn by attempting to play the indicated card from the hand
+// of the acting player, resulting in the card going into the played area or into the
+// discard pile while causing a mistake, or returns an error if it was not possible.
+func (actionExecutor *ActionExecutor) TakeTurnByPlaying(indexInHand int) error {
+	// First we must determine if the player is allowed to take an action.
+	selectedCard, errorFromHand :=
+		actionExecutor.cardFromHandIfTurnElseError(indexInHand)
+
+	if errorFromHand != nil {
+		return errorFromHand
+	}
+
+	gameReadState := actionExecutor.gameState.Read()
+
+	gameRuleset := gameReadState.Ruleset()
+
+	replacementCard :=
+		card.NewInferred(
+			gameRuleset.ColorSuits(),
+			gameRuleset.DistinctPossibleIndices())
+
+	playedCards := gameReadState.PlayedForColor(selectedCard.ColorSuit())
+
+	if !gameRuleset.IsCardPlayable(selectedCard, playedCards) {
+		actionMessage :=
+			fmt.Sprintf(
+				"mistakenly tries to play card %v %v",
+				selectedCard.ColorSuit(),
+				selectedCard.SequenceIndex())
+
+		return actionExecutor.gameState.EnactTurnByDiscardingAndReplacing(
+			actionMessage,
+			actionExecutor.actingPlayer,
+			indexInHand,
+			replacementCard,
+			0,
+			1)
+	}
+
+	actionMessage :=
+		fmt.Sprintf(
+			"successfully plays card %v %v",
+			selectedCard.ColorSuit(),
+			selectedCard.SequenceIndex())
+
+	numberOfHintsToAdd := 0
+	if gameReadState.NumberOfReadyHints() < gameRuleset.MaximumNumberOfHints() {
+		numberOfHintsToAdd = gameRuleset.HintsForPlayingCard(selectedCard)
+	}
+
+	return actionExecutor.gameState.EnactTurnByPlayingAndReplacing(
+		actionMessage,
+		actionExecutor.actingPlayer,
+		indexInHand,
+		replacementCard,
+		numberOfHintsToAdd)
+}
+
+func (actionExecutor *ActionExecutor) cardFromHandIfTurnElseError(indexInHand int) (card.Readonly, error) {
 	gameReadState := actionExecutor.gameState.Read()
 	gameRuleset := gameReadState.Ruleset()
 	if gameReadState.NumberOfMistakesMade() >= gameRuleset.NumberOfMistakesIndicatingGameOver() {
@@ -116,7 +165,7 @@ func (actionExecutor *ActionExecutor) handIfTurnElseError() ([]card.Readonly, in
 				gameReadState.NumberOfMistakesMade(),
 				gameRuleset.NumberOfMistakesIndicatingGameOver())
 
-		return nil, -1, errorToReturn
+		return card.ErrorReadonly(), errorToReturn
 	}
 
 	// The turn number starts from 1.
@@ -131,7 +180,7 @@ func (actionExecutor *ActionExecutor) handIfTurnElseError() ([]card.Readonly, in
 				actionExecutor.actingPlayer.Name(),
 				playerForCurrentTurn)
 
-		return nil, -1, errorToReturn
+		return card.ErrorReadonly(), errorToReturn
 	}
 
 	playerHand, errorFromVisibleHand :=
@@ -143,7 +192,8 @@ func (actionExecutor *ActionExecutor) handIfTurnElseError() ([]card.Readonly, in
 				"Unable to retrieve hand or player %v because of error %v",
 				actionExecutor.actingPlayer.Name(),
 				errorFromVisibleHand)
-		return nil, -1, errorToReturn
+
+		return card.ErrorReadonly(), errorToReturn
 	}
 
 	handSize := len(playerHand)
@@ -154,8 +204,19 @@ func (actionExecutor *ActionExecutor) handIfTurnElseError() ([]card.Readonly, in
 			fmt.Errorf(
 				"Player %v could not take a turn because their last turn has already been taken",
 				actionExecutor.actingPlayer.Name())
-		return nil, handSize, errorToReturn
+
+		return card.ErrorReadonly(), errorToReturn
 	}
 
-	return playerHand, handSize, nil
+	if (indexInHand < 0) || (indexInHand >= handSize) {
+		errorToReturn := fmt.Errorf(
+			"Index %v is out of the acceptable range %v to %v of the player's hand",
+			indexInHand,
+			0,
+			handSize)
+
+		return card.ErrorReadonly(), errorToReturn
+	}
+
+	return playerHand[indexInHand], nil
 }

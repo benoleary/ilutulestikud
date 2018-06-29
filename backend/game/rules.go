@@ -165,6 +165,33 @@ func (standardRuleset *standardWithoutRainbowRuleset) NumberOfMistakesIndicating
 	return 3
 }
 
+// IsCardPlayable returns true if the given card has a value exactly one greater than
+// the last card in the given sequence of cards already played in the cards's suit if
+// the slice is not empty, or true if the sequence is empty and the card's value is
+// one, or false otherwise.
+func (standardRuleset *standardWithoutRainbowRuleset) IsCardPlayable(
+	cardToPlay card.Readonly,
+	cardsAlreadyPlayedInSuit []card.Readonly) bool {
+	numberOfCardsPlayedInSuit := len(cardsAlreadyPlayedInSuit)
+	if numberOfCardsPlayedInSuit <= 0 {
+		return cardToPlay.SequenceIndex() == 1
+	}
+
+	topmostPlayedCard := cardsAlreadyPlayedInSuit[numberOfCardsPlayedInSuit-1]
+	return cardToPlay.SequenceIndex() == (topmostPlayedCard.SequenceIndex() + 1)
+}
+
+// HintsForPlayingCard returns the number of hints to refresh upon successfully
+// playing the given card.
+func (standardRuleset *standardWithoutRainbowRuleset) HintsForPlayingCard(
+	cardToEvaluate card.Readonly) int {
+	if cardToEvaluate.SequenceIndex() >= 5 {
+		return 1
+	}
+
+	return 0
+}
+
 // PointsPerCard returns the points value of the given card.
 func (standardRuleset *standardWithoutRainbowRuleset) PointsForCard(
 	cardToEvaluate card.Readonly) int {

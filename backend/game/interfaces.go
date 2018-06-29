@@ -48,6 +48,14 @@ type Ruleset interface {
 	// that the game is over with the players having zero score.
 	NumberOfMistakesIndicatingGameOver() int
 
+	// IsCardPlayable should return true if the given card can be played onto the given
+	// sequence of cards already played in the cards's suit.
+	IsCardPlayable(cardToPlay card.Readonly, cardsAlreadyPlayedInSuit []card.Readonly) bool
+
+	// HintsForPlayingCard should return the number of hints to refresh upon successfully
+	// playing the given card.
+	HintsForPlayingCard(cardToEvaluate card.Readonly) int
+
 	// PointsPerCard should return the points value of the given card.
 	PointsForCard(cardToEvaluate card.Readonly) int
 }
