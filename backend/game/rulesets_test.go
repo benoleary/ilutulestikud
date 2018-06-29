@@ -3,6 +3,8 @@ package game_test
 import (
 	"testing"
 
+	"github.com/benoleary/ilutulestikud/backend/game/card"
+
 	"github.com/benoleary/ilutulestikud/backend/game"
 )
 
@@ -84,13 +86,21 @@ func TestAllCardsPresentInCompoundRainbow(unitTest *testing.T) {
 		colorSuitMap[cardInDeck.ColorSuit()] = countOfSuitUntilNow + 1
 
 		cardValue := rainbowRuleset.PointsForCard(cardInDeck)
-
 		if ((cardInDeck.SequenceIndex() < 5) && (cardValue != cardInDeck.SequenceIndex())) ||
 			((cardInDeck.SequenceIndex() >= 5) && (cardValue != (2 * cardInDeck.SequenceIndex()))) {
 			unitTest.Fatalf(
-				"card %+v had points value %v",
+				"card %+v has points value %v",
 				cardInDeck,
 				cardValue)
+		}
+
+		hintsForPlayingCard := rainbowRuleset.HintsForPlayingCard(cardInDeck)
+		if ((cardInDeck.SequenceIndex() < 5) && (hintsForPlayingCard != 0)) ||
+			((cardInDeck.SequenceIndex() >= 5) && (hintsForPlayingCard != 1)) {
+			unitTest.Fatalf(
+				"card %+v gives %v hints when successfully played",
+				cardInDeck,
+				hintsForPlayingCard)
 		}
 	}
 
@@ -99,6 +109,44 @@ func TestAllCardsPresentInCompoundRainbow(unitTest *testing.T) {
 			unitTest.Fatalf(
 				"found no card for color %v",
 				colorSuit)
+		}
+	}
+}
+
+func TestStandardRejectsWrongInitialCardInSequence(unitTest *testing.T) {
+	standardRuleset := game.NewStandardWithoutRainbow()
+	testColor := standardRuleset.ColorSuits()[0]
+	playedCards := []card.Readonly{}
+
+	for _, possibleIndex := range standardRuleset.DistinctPossibleIndices() {
+		candidateCard := card.NewReadonly(testColor, possibleIndex)
+		isPlayable := standardRuleset.IsCardPlayable(candidateCard, playedCards)
+		if isPlayable && (possibleIndex != 1) {
+			unitTest.Fatalf(
+				"standard ruleset allows %v to be played as initial card of sequence",
+				candidateCard)
+		}
+	}
+}
+
+func TestStandardRejectsWrongCardInNonemptySequence(unitTest *testing.T) {
+	standardRuleset := game.NewStandardWithoutRainbow()
+	testColor := standardRuleset.ColorSuits()[0]
+	possibleIndices := standardRuleset.DistinctPossibleIndices()
+	topmostCard := card.NewReadonly(testColor, possibleIndices[1])
+	playedCards := []card.Readonly{
+		card.NewReadonly(testColor, possibleIndices[0]),
+		topmostCard,
+	}
+
+	for _, possibleIndex := range standardRuleset.DistinctPossibleIndices() {
+		candidateCard := card.NewReadonly(testColor, possibleIndex)
+		isPlayable := standardRuleset.IsCardPlayable(candidateCard, playedCards)
+		if isPlayable && (possibleIndex != (topmostCard.SequenceIndex() + 1)) {
+			unitTest.Fatalf(
+				"standard ruleset allows %v to be played onto %v",
+				candidateCard,
+				playedCards)
 		}
 	}
 }

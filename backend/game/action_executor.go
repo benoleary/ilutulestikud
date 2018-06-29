@@ -69,8 +69,11 @@ func (actionExecutor *ActionExecutor) TakeTurnByDiscarding(indexInHand int) erro
 	}
 
 	gameReadState := actionExecutor.gameState.Read()
-
 	gameRuleset := gameReadState.Ruleset()
+	replacementCard :=
+		card.NewInferred(
+			gameRuleset.ColorSuits(),
+			gameRuleset.DistinctPossibleIndices())
 
 	actionMessage :=
 		fmt.Sprintf(
@@ -78,11 +81,8 @@ func (actionExecutor *ActionExecutor) TakeTurnByDiscarding(indexInHand int) erro
 			discardedCard.ColorSuit(),
 			discardedCard.SequenceIndex())
 
-	replacementCard :=
-		card.NewInferred(
-			gameRuleset.ColorSuits(),
-			gameRuleset.DistinctPossibleIndices())
-
+	// The logic for determining how many hints to provide per discarded card could be
+	// given over to the ruleset, but it's not much of an issue.
 	numberOfHintsToAdd := 0
 	if gameReadState.NumberOfReadyHints() < gameRuleset.MaximumNumberOfHints() {
 		numberOfHintsToAdd = 1
@@ -110,9 +110,7 @@ func (actionExecutor *ActionExecutor) TakeTurnByPlaying(indexInHand int) error {
 	}
 
 	gameReadState := actionExecutor.gameState.Read()
-
 	gameRuleset := gameReadState.Ruleset()
-
 	replacementCard :=
 		card.NewInferred(
 			gameRuleset.ColorSuits(),
@@ -142,9 +140,11 @@ func (actionExecutor *ActionExecutor) TakeTurnByPlaying(indexInHand int) error {
 			selectedCard.ColorSuit(),
 			selectedCard.SequenceIndex())
 
-	numberOfHintsToAdd := 0
-	if gameReadState.NumberOfReadyHints() < gameRuleset.MaximumNumberOfHints() {
-		numberOfHintsToAdd = gameRuleset.HintsForPlayingCard(selectedCard)
+	numberOfHintsToAdd := gameRuleset.HintsForPlayingCard(selectedCard)
+	maximumNumberOfHintsWhichCouldBeAdded :=
+		gameRuleset.MaximumNumberOfHints() - gameReadState.NumberOfReadyHints()
+	if numberOfHintsToAdd > maximumNumberOfHintsWhichCouldBeAdded {
+		numberOfHintsToAdd = maximumNumberOfHintsWhichCouldBeAdded
 	}
 
 	return actionExecutor.gameState.EnactTurnByPlayingAndReplacing(
