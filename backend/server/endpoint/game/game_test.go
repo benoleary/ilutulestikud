@@ -633,16 +633,25 @@ func TestGetGameForPlayerRejectedIfViewStateYieldsError(unitTest *testing.T) {
 			testName                   string
 			errorForVisibleHand        error
 			errorForKnowledgeOfOwnHand error
+			errorForGameIsFinished     error
 		}{
 			{
 				testName:                   "error from VisibleHand",
 				errorForVisibleHand:        fmt.Errorf("mock error"),
 				errorForKnowledgeOfOwnHand: nil,
+				errorForGameIsFinished:     nil,
 			},
 			{
 				testName:                   "error from KnowledgeOfOwnHand",
 				errorForVisibleHand:        nil,
 				errorForKnowledgeOfOwnHand: fmt.Errorf("mock error"),
+				errorForGameIsFinished:     nil,
+			},
+			{
+				testName:                   "error from GameIsFinished",
+				errorForVisibleHand:        nil,
+				errorForKnowledgeOfOwnHand: nil,
+				errorForGameIsFinished:     fmt.Errorf("mock error"),
 			},
 		}
 
@@ -662,6 +671,7 @@ func TestGetGameForPlayerRejectedIfViewStateYieldsError(unitTest *testing.T) {
 			mockView.MockPlayerTurnIndex = 1
 			mockView.ErrorForVisibleHand = testCase.errorForVisibleHand
 			mockView.ErrorForKnowledgeOfOwnHand = testCase.errorForKnowledgeOfOwnHand
+			mockView.ErrorForGameIsFinished = testCase.errorForGameIsFinished
 
 			mockCollection.ReturnForViewState = mockView
 

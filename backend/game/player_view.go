@@ -86,26 +86,47 @@ func (playerView *PlayerView) ActionLog() []message.Readonly {
 	return playerView.gameState.ActionLog()
 }
 
+// GameIsFinished returns true if the game is finished because either too many
+// mistakes have been made, or if there are no more cards to draw and the turn
+// is for a player with a hand which is smaller than the full hand size for the
+// ruleset (which indicates that all players have played a card after the deck
+// was exhausted).
+func (playerView *PlayerView) GameIsFinished() (bool, error) {
+	if playerView.NumberOfMistakesMade() >= playerView.NumberOfMistakesIndicatingGameOver() {
+		return true, nil
+	}
+
+	if playerView.DeckSize() > 0 {
+		return false, nil
+	}
+
+	fullHandSize :=
+		playerView.gameRuleset.NumberOfCardsInPlayerHand(playerView.numberOfParticipants)
+
+	currentPlayer := playerView.gameParticipants[playerView.playerIndexForTurn(0)]
+	inferredHand, errorFromState := playerView.gameState.InferredHand(currentPlayer)
+
+	if errorFromState != nil {
+		return true, errorFromState
+	}
+
+	return (len(inferredHand) < fullHandSize), nil
+}
+
 // CurrentTurnOrder returns the names of the participants of the game in the
 // order which their next turns are in, along with the index of the viewing
 // player in that list.
 func (playerView *PlayerView) CurrentTurnOrder() ([]string, int) {
 	playerNamesInTurnOrder := make([]string, playerView.numberOfParticipants)
-
-	gameTurn := playerView.gameState.Turn()
 	playerIndexInTurnOrder := -1
 
-	for currentTurnIndex := 0; currentTurnIndex < playerView.numberOfParticipants; currentTurnIndex++ {
-		// Game turns begin with 1 rather than 0, so this sets the player names in order,
-		// wrapping index back to 0 when at the end of the list.
-		// E.g. turn 3, 5 players: playerNamesInTurnOrder will start with
-		// gameParticipants[2], then [3], then [4], then [0], then [1].
-		indexInOriginalOrder := (currentTurnIndex + gameTurn - 1) % playerView.numberOfParticipants
+	for turnsAfterCurrent := 0; turnsAfterCurrent < playerView.numberOfParticipants; turnsAfterCurrent++ {
+		indexInOriginalOrder := playerView.playerIndexForTurn(turnsAfterCurrent)
 		playerInTurnOrder := playerView.gameParticipants[indexInOriginalOrder]
-		playerNamesInTurnOrder[currentTurnIndex] = playerInTurnOrder
+		playerNamesInTurnOrder[turnsAfterCurrent] = playerInTurnOrder
 
 		if playerView.playerName == playerInTurnOrder {
-			playerIndexInTurnOrder = currentTurnIndex
+			playerIndexInTurnOrder = turnsAfterCurrent
 		}
 	}
 
@@ -187,7 +208,7 @@ func (playerView *PlayerView) DiscardedCards() []card.Readonly {
 }
 
 // VisibleHand returns the cards held by the given player along with the chat color for
-// that player,  or nil and a string which will be ignored and an error if the player
+// that player, or nil and a string which will be ignored and an error if the player
 // cannot see the cards.
 func (playerView *PlayerView) VisibleHand(playerName string) ([]card.Readonly, string, error) {
 	if playerName == playerView.playerName {
@@ -208,4 +229,14 @@ func (playerView *PlayerView) VisibleHand(playerName string) ([]card.Readonly, s
 // was inferred directly from the hints officially given so far.
 func (playerView *PlayerView) KnowledgeOfOwnHand() ([]card.Inferred, error) {
 	return playerView.gameState.InferredHand(playerView.playerName)
+}
+
+func (playerView *PlayerView) playerIndexForTurn(turnsAfterCurrent int) int {
+	// Game turn indices begin with 1 rather than 0, so this returns the
+	// index of the player for the turn with the given offset from the current turn,
+	// wrapping back to 0 when the turn index is greater than the number of players.
+	// E.g. turn 3 for a game with 5 players: called with 0, 1, 2, 3, 4, the return
+	// values will be 2, then 3, then 4, then 0, then 1.
+	turnIndexFromZero := (turnsAfterCurrent + playerView.gameState.Turn() - 1)
+	return turnIndexFromZero % playerView.numberOfParticipants
 }

@@ -75,6 +75,9 @@ type ViewForPlayer interface {
 	// ActionLog should return the action log of the read-only game state.
 	ActionLog() []message.Readonly
 
+	// GameIsFinished should return true if the game is finished.
+	GameIsFinished() (bool, error)
+
 	// CurrentTurnOrder should return the names of the participants of the game in the
 	// order which their next turns are in, along with the index of the viewing
 	// player in that list.

@@ -90,6 +90,7 @@ type mockGameState struct {
 	ReturnForCreationTime                          time.Time
 	ReturnForChatLog                               []message.Readonly
 	ReturnForActionLog                             []message.Readonly
+	ReturnForGameIsFinished                        bool
 	ReturnForTurn                                  int
 	ReturnForScore                                 int
 	ReturnForNumberOfReadyHints                    int
@@ -118,7 +119,8 @@ func NewMockGameState(testReference *testing.T) *mockGameState {
 		ReturnForCreationTime:                          time.Now(),
 		ReturnForChatLog:                               nil,
 		ReturnForActionLog:                             nil,
-		ReturnForTurn:                                  -1,
+		ReturnForGameIsFinished:                        false,
+		ReturnForTurn:                                  1,
 		ReturnForScore:                                 -1,
 		ReturnForNumberOfReadyHints:                    -1,
 		ReturnForNumberOfMistakesMade:                  -1,
@@ -164,6 +166,11 @@ func (mockGame *mockGameState) ActionLog() []message.Readonly {
 // ChatLog gets mocked.
 func (mockGame *mockGameState) ChatLog() []message.Readonly {
 	return mockGame.ReturnForChatLog
+}
+
+// GameIsFinished gets mocked.
+func (mockGame *mockGameState) GameIsFinished() (bool, error) {
+	return mockGame.ReturnForGameIsFinished, mockGame.ReturnForNontestError
 }
 
 // Turn gets mocked.

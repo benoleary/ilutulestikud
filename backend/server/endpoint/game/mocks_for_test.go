@@ -22,6 +22,7 @@ type mockViewForPlayer struct {
 	MockGameName                string
 	MockPlayers                 []string
 	MockChatLog                 []message.Readonly
+	ErrorForGameIsFinished      error
 	MockPlayerTurnIndex         int
 	MockScore                   int
 	ErrorForVisibleHand         error
@@ -36,6 +37,7 @@ func NewMockView() *mockViewForPlayer {
 		MockGameName:                "",
 		MockPlayers:                 nil,
 		MockChatLog:                 nil,
+		ErrorForGameIsFinished:      nil,
 		MockPlayerTurnIndex:         -1,
 		MockScore:                   -1,
 		ErrorForVisibleHand:         nil,
@@ -64,6 +66,11 @@ func (mockView *mockViewForPlayer) ChatLog() []message.Readonly {
 // ActionLog gets mocked.
 func (mockView *mockViewForPlayer) ActionLog() []message.Readonly {
 	return make([]message.Readonly, logLengthForTest)
+}
+
+// GameIsFinished gets mocked.
+func (mockView *mockViewForPlayer) GameIsFinished() (bool, error) {
+	return false, mockView.ErrorForGameIsFinished
 }
 
 // CurrentTurnOrder gets mocked.

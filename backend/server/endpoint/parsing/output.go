@@ -93,6 +93,7 @@ type CardFromBehind struct {
 type GameView struct {
 	ChatLog                            []LogMessage
 	ActionLog                          []LogMessage
+	GameIsFinished                     bool
 	ScoreSoFar                         int
 	NumberOfReadyHints                 int
 	MaximumNumberOfHints               int

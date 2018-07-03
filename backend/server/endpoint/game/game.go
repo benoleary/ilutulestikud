@@ -216,10 +216,16 @@ func (handler *Handler) writeGameForPlayer(
 		return errorFromInferredHand, http.StatusInternalServerError
 	}
 
+	gameIsFinished, errorFromGameIsFinished := gameView.GameIsFinished()
+	if errorFromGameIsFinished != nil {
+		return errorFromGameIsFinished, http.StatusInternalServerError
+	}
+
 	endpointObject :=
 		parsing.GameView{
 			ChatLog:                            handler.logForFrontend(gameView.ChatLog()),
 			ActionLog:                          handler.logForFrontend(gameView.ActionLog()),
+			GameIsFinished:                     gameIsFinished,
 			ScoreSoFar:                         gameView.Score(),
 			NumberOfReadyHints:                 gameView.NumberOfReadyHints(),
 			MaximumNumberOfHints:               gameView.MaximumNumberOfHints(),
