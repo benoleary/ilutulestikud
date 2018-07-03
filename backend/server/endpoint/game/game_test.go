@@ -1398,6 +1398,158 @@ func TestAcceptValidDiscard(unitTest *testing.T) {
 		testIdentifier)
 }
 
+func TestRejectInvalidPlayWithMalformedRequest(unitTest *testing.T) {
+	testIdentifier :=
+		"Reject invalid POST take-turn-by-attempting-to-play with malformed JSON body"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockCollection.ErrorToReturn = errors.New("error")
+
+	// There is no point testing with valid JSON objects which do not correspond
+	// to the expected JSON object, as the JSON will just be parsed with empty
+	// strings for the missing attributes and extra attributes will just be
+	// ignored. The tests of the game state collection can cover the cases of
+	// empty attributes.
+	bodyString := "{\"PlayerName\" :\"Something\", \"GameName\":}"
+
+	bodyDecoder :=
+		json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-attempting-to-play"})
+
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
+
+	assertNoFunctionWasCalled(
+		unitTest,
+		mockCollection.FunctionsAndArgumentsReceived,
+		testIdentifier)
+}
+
+func TestRejectPlayIfCollectionRejectsIt(unitTest *testing.T) {
+	testIdentifier :=
+		"Reject POST take-turn-by-attempting-to-play if collection rejects it"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockCollection.ErrorToReturn = errors.New("error")
+
+	bodyObject :=
+		parsing.PlayerCardIndication{
+			GameName:   "Test game",
+			PlayerName: "A. Player Name",
+			CardIndex:  1,
+		}
+
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-attempting-to-play"})
+
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+
+				"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "ExecuteAction",
+			FunctionArgument: stringPair{first: bodyObject.GameName, second: bodyObject.PlayerName},
+		},
+		testIdentifier)
+}
+func TestPropagateErrorFromPlay(unitTest *testing.T) {
+	testIdentifier := "Reject POST take-turn-by-attempting-to-play if collection rejects it"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockExecutor := &mockActionExecutor{}
+	mockExecutor.ErrorToReturn = fmt.Errorf("expected error")
+	mockCollection.ReturnForExecuteAction = mockExecutor
+
+	bodyObject :=
+		parsing.PlayerCardIndication{
+			GameName:   "Test game",
+			PlayerName: "A. Player Name",
+			CardIndex:  1,
+		}
+
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-attempting-to-play"})
+
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "ExecuteAction",
+			FunctionArgument: stringPair{first: bodyObject.GameName, second: bodyObject.PlayerName},
+		},
+		testIdentifier)
+}
+
+func TestAcceptValidPlay(unitTest *testing.T) {
+	testIdentifier := "POST take-turn-by-attempting-to-play"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockCollection.ReturnForExecuteAction = &mockActionExecutor{}
+
+	bodyObject :=
+		parsing.PlayerCardIndication{
+			GameName:   "Test game",
+			PlayerName: "A. Player Name",
+			CardIndex:  1,
+		}
+
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-attempting-to-play"})
+
+	if responseCode != http.StatusOK {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusOK,
+			responseCode)
+	}
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "ExecuteAction",
+			FunctionArgument: stringPair{first: bodyObject.GameName, second: bodyObject.PlayerName},
+		},
+		testIdentifier)
+}
+
 func assertVisibleHandCorrect(
 	testIdentifier string,
 	unitTest *testing.T,

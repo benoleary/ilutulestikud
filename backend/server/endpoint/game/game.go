@@ -70,6 +70,8 @@ func (handler *Handler) HandlePost(
 		return handler.handleRecordChatMessage(httpBodyDecoder, relevantSegments)
 	case "take-turn-by-discarding":
 		return handler.handleTakeTurnByDiscarding(httpBodyDecoder, relevantSegments)
+	case "take-turn-by-attempting-to-play":
+		return handler.handleTakeTurnByAttemptingToPlay(httpBodyDecoder, relevantSegments)
 	default:
 		return "URI segment " + relevantSegments[0] + " not valid", http.StatusNotFound
 	}
@@ -291,6 +293,37 @@ func (handler *Handler) handleTakeTurnByDiscarding(
 
 	if errorFromTakeTurnByDiscarding != nil {
 		return errorFromTakeTurnByDiscarding, http.StatusBadRequest
+	}
+
+	return "OK", http.StatusOK
+}
+
+// handleTakeTurnByAttemptingToPlay passes on the given parameters of taking a turn
+// by attempting to play a card to the relevant game.
+func (handler *Handler) handleTakeTurnByAttemptingToPlay(
+	httpBodyDecoder *json.Decoder,
+	relevantSegments []string) (interface{}, int) {
+	var playerCardIndication parsing.PlayerCardIndication
+
+	errorFromParse := httpBodyDecoder.Decode(&playerCardIndication)
+	if errorFromParse != nil {
+		return "Error parsing JSON: " + errorFromParse.Error(), http.StatusBadRequest
+	}
+
+	actionExecutor, errorFromExecutor :=
+		handler.stateCollection.ExecuteAction(
+			playerCardIndication.GameName,
+			playerCardIndication.PlayerName)
+
+	if errorFromExecutor != nil {
+		return errorFromExecutor, http.StatusBadRequest
+	}
+
+	errorFromTakeTurnByPlaying :=
+		actionExecutor.TakeTurnByPlaying(playerCardIndication.CardIndex)
+
+	if errorFromTakeTurnByPlaying != nil {
+		return errorFromTakeTurnByPlaying, http.StatusBadRequest
 	}
 
 	return "OK", http.StatusOK
