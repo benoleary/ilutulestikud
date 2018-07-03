@@ -130,7 +130,13 @@ type ExecutorForPlayer interface {
 
 	// TakeTurnByDiscarding should enact a turn by discarding the indicated card from the
 	// hand of the acting player, or return an error if it was not possible.
-	TakeTurnByDiscarding(indexInHandToDiscard int) error
+	TakeTurnByDiscarding(indexInHand int) error
+
+	// TakeTurnByPlaying should enact a turn by attempting to play the indicated card from
+	// the hand of the acting player, resulting in the card going into the played area or
+	// into the discard pile while causing a mistake, or return an error if it was not
+	// possible.
+	TakeTurnByPlaying(indexInHand int) error
 }
 
 // ReadonlyState defines the interface for structs which should provide read-only

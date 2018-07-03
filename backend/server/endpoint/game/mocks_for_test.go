@@ -153,6 +153,11 @@ func (mockExecutor *mockActionExecutor) TakeTurnByDiscarding(indexInHandToDiscar
 	return mockExecutor.ErrorToReturn
 }
 
+// TakeTurnByPlaying gets mocked.
+func (mockExecutor *mockActionExecutor) TakeTurnByPlaying(indexInHandToDiscard int) error {
+	return mockExecutor.ErrorToReturn
+}
+
 type mockGameCollection struct {
 	FunctionsAndArgumentsReceived []functionNameAndArgument
 	ErrorToReturn                 error
