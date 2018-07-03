@@ -158,6 +158,14 @@ import { InferredCard } from '../models/inferredcard.model';
 
     playCard(indexInHand: number): void
     {
-      console.log("playCard(indexInHand: " + indexInHand + ")");
+      // We turn off the buttons to prevent messy errors
+      // if the user clicks too many times too quickly.
+      this.turnButtonsDisabled = true;
+      this.ilutulestikudService
+      .SendTakeTurnByAttemptingToPlay(this.gameIdentification, this.playerIdentification, indexInHand)
+      .subscribe(
+          () => {},
+          thrownError => this.onError.emit(thrownError),
+          () => {});
     }
   }

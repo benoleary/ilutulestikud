@@ -100,4 +100,17 @@ export class IlutulestikudService {
         "CardIndex": indexInHand
       })
   }
+
+  SendTakeTurnByAttemptingToPlay(
+    gameIdentification: BackendIdentification,
+    playerIdentification: BackendIdentification,
+    indexInHand: number): Observable<any> {
+    return this.httpClient.post(
+      this.uriRoot + "game/take-turn-by-attempting-to-play",
+      {
+        "GameName": gameIdentification.NameForPost,
+        "PlayerName": playerIdentification.NameForPost,
+        "CardIndex": indexInHand
+      })
+  }
 }
