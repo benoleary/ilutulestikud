@@ -116,6 +116,48 @@ func (gamePersister *inMemoryPersister) AddGame(
 	return nil
 }
 
+// RemoveGameFromListForPlayer removes the given player from the given game
+// in the sense that the game will no longer show up in the result of
+// ReadAllWithPlayer(playerName). It returns an error if the player is not a
+// participant.
+func (gamePersister *inMemoryPersister) RemoveGameFromListForPlayer(
+	playerName string,
+	gameName string) error {
+	// We only remove the player from the look-up map used for
+	// ReadAllWithPlayer(...) rather than changing the internal state of
+	// the game.
+	gameStates, playerHasGames := gamePersister.gamesWithPlayers[playerName]
+
+	if playerHasGames {
+		for gameIndex, gameState := range gameStates {
+			if gameName != gameState.Name() {
+				continue
+			}
+
+			for _, participantName := range gameState.PlayerNames() {
+				if participantName != playerName {
+					continue
+				}
+
+				// We make a new array and copy in the elements of the original
+				// list except for the given game.
+				originalListOfGames := gamePersister.gamesWithPlayers[playerName]
+				reducedListOfGames := make([]game.ReadonlyState, gameIndex)
+				copy(reducedListOfGames, originalListOfGames[:gameIndex])
+				gamePersister.gamesWithPlayers[playerName] =
+					append(reducedListOfGames, gameStates[gameIndex+1:]...)
+
+				return nil
+			}
+		}
+	}
+
+	return fmt.Errorf(
+		"Player %v is not a participant of game %v",
+		playerName,
+		gameName)
+}
+
 // inMemoryState is a struct meant to encapsulate all the state required for a
 // single game to function.
 type inMemoryState struct {

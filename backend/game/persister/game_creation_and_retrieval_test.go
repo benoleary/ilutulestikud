@@ -241,6 +241,317 @@ func TestRejectAddGameWithExistingName(unitTest *testing.T) {
 	}
 }
 
+func TestAddGamesThenLeaveGames(unitTest *testing.T) {
+	statePersisters := preparePersisters()
+	leavingPlayer := defaultTestPlayers[0]
+	stayingPlayer := defaultTestPlayers[2]
+
+	twoPlayersWithNilHands :=
+		[]game.PlayerNameWithHand{
+			game.PlayerNameWithHand{
+				PlayerName:  leavingPlayer,
+				InitialHand: nil,
+			},
+			game.PlayerNameWithHand{
+				PlayerName:  stayingPlayer,
+				InitialHand: nil,
+			},
+		}
+
+	threePlayersWithNilHands :=
+		[]game.PlayerNameWithHand{
+			game.PlayerNameWithHand{
+				PlayerName:  stayingPlayer,
+				InitialHand: nil,
+			},
+			game.PlayerNameWithHand{
+				PlayerName:  defaultTestPlayers[1],
+				InitialHand: nil,
+			},
+			game.PlayerNameWithHand{
+				PlayerName:  leavingPlayer,
+				InitialHand: nil,
+			},
+		}
+
+	for _, statePersister := range statePersisters {
+		testIdentifier :=
+			"Add games then leave games/" + statePersister.PersisterDescription
+
+		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			firstGameName := "A game"
+			errorFromFirstAdd :=
+				statePersister.GamePersister.AddGame(
+					firstGameName,
+					logLengthForTest,
+					nil,
+					defaultTestRuleset,
+					twoPlayersWithNilHands,
+					nil)
+
+			if errorFromFirstAdd != nil {
+				unitTest.Fatalf(
+					"AddGame(%v, %v, nil, %v, %v, nil) produced an error: %v",
+					firstGameName,
+					logLengthForTest,
+					defaultTestRuleset,
+					twoPlayersWithNilHands,
+					errorFromFirstAdd)
+			}
+
+			// We just check that no error happens when fetching the game.
+			getStateAndAssertNoError(
+				testIdentifier+"/ReadAndWriteGame(first game before leaving)",
+				unitTest,
+				firstGameName,
+				statePersister.GamePersister)
+
+			justFirstGameName := make(map[string]bool, 1)
+			justFirstGameName[firstGameName] = true
+			assertReadAllWithPlayerGameNamesCorrect(
+				testIdentifier+"/all for leaver after adding first game",
+				unitTest,
+				leavingPlayer,
+				justFirstGameName,
+				statePersister.GamePersister)
+			assertReadAllWithPlayerGameNamesCorrect(
+				testIdentifier+"/all for stayer after adding first game",
+				unitTest,
+				stayingPlayer,
+				justFirstGameName,
+				statePersister.GamePersister)
+
+			secondGameName := "Another game"
+			errorFromSecondAdd :=
+				statePersister.GamePersister.AddGame(
+					secondGameName,
+					logLengthForTest,
+					nil,
+					defaultTestRuleset,
+					threePlayersWithNilHands,
+					nil)
+
+			if errorFromSecondAdd != nil {
+				unitTest.Fatalf(
+					"AddGame(%v, %v, nil, %v, %v, nil) produced an error: %v",
+					secondGameName,
+					logLengthForTest,
+					defaultTestRuleset,
+					threePlayersWithNilHands,
+					errorFromSecondAdd)
+			}
+
+			// We just check that no error happens when fetching the game.
+			getStateAndAssertNoError(
+				testIdentifier+"/ReadAndWriteGame(second game before leaving)",
+				unitTest,
+				secondGameName,
+				statePersister.GamePersister)
+
+			firstTwoGameNames := make(map[string]bool, 2)
+			firstTwoGameNames[firstGameName] = true
+			firstTwoGameNames[secondGameName] = true
+			assertReadAllWithPlayerGameNamesCorrect(
+				testIdentifier+"/all for leaver after adding second game",
+				unitTest,
+				leavingPlayer,
+				firstTwoGameNames,
+				statePersister.GamePersister)
+			assertReadAllWithPlayerGameNamesCorrect(
+				testIdentifier+"/all for stayer after adding second game",
+				unitTest,
+				stayingPlayer,
+				firstTwoGameNames,
+				statePersister.GamePersister)
+
+			thirdGameName := "Yet another game"
+			errorFromThirdAdd :=
+				statePersister.GamePersister.AddGame(
+					thirdGameName,
+					logLengthForTest,
+					nil,
+					defaultTestRuleset,
+					threePlayersWithNilHands,
+					nil)
+
+			if errorFromThirdAdd != nil {
+				unitTest.Fatalf(
+					"AddGame(%v, %v, nil, %v, %v, nil) produced an error: %v",
+					thirdGameName,
+					logLengthForTest,
+					defaultTestRuleset,
+					threePlayersWithNilHands,
+					errorFromThirdAdd)
+			}
+
+			// We just check that no error happens when fetching the game.
+			getStateAndAssertNoError(
+				testIdentifier+"/ReadAndWriteGame(third game before leaving)",
+				unitTest,
+				thirdGameName,
+				statePersister.GamePersister)
+
+			allThreeGameNames := make(map[string]bool, 3)
+			allThreeGameNames[firstGameName] = true
+			allThreeGameNames[secondGameName] = true
+			allThreeGameNames[thirdGameName] = true
+			assertReadAllWithPlayerGameNamesCorrect(
+				testIdentifier+"/all for leaver after adding third game",
+				unitTest,
+				leavingPlayer,
+				allThreeGameNames,
+				statePersister.GamePersister)
+			assertReadAllWithPlayerGameNamesCorrect(
+				testIdentifier+"/all for stayer after adding third game",
+				unitTest,
+				stayingPlayer,
+				allThreeGameNames,
+				statePersister.GamePersister)
+
+			errorFromLeavingFirstGame :=
+				statePersister.GamePersister.RemoveGameFromListForPlayer(
+					leavingPlayer,
+					firstGameName)
+
+			if errorFromLeavingFirstGame != nil {
+				unitTest.Fatalf(
+					"RemoveGameFromListForPlayer(%v, %v) produced an error: %v",
+					leavingPlayer,
+					firstGameName,
+					errorFromLeavingFirstGame)
+			}
+
+			// We check that the game state had no change in its name or participant list.
+			firstStateAfterLeaving :=
+				getStateAndAssertNoError(
+					testIdentifier+"/ReadAndWriteGame(first game after leaving)",
+					unitTest,
+					firstGameName,
+					statePersister.GamePersister)
+
+			assertGameNameAndParticipantsAreCorrect(
+				testIdentifier+"/ReadAndWriteGame(first game after leaving)",
+				unitTest,
+				firstGameName,
+				playerNameSet(twoPlayersWithNilHands),
+				firstStateAfterLeaving)
+
+			lastTwoGameNames := make(map[string]bool, 1)
+			lastTwoGameNames[secondGameName] = true
+			lastTwoGameNames[thirdGameName] = true
+			assertReadAllWithPlayerGameNamesCorrect(
+				testIdentifier+"/all for leaver after leaving first game",
+				unitTest,
+				leavingPlayer,
+				lastTwoGameNames,
+				statePersister.GamePersister)
+			assertReadAllWithPlayerGameNamesCorrect(
+				testIdentifier+"/all for stayer after leaver leaving first game",
+				unitTest,
+				stayingPlayer,
+				allThreeGameNames,
+				statePersister.GamePersister)
+
+			errorFromLeavingThirdGame :=
+				statePersister.GamePersister.RemoveGameFromListForPlayer(
+					leavingPlayer,
+					thirdGameName)
+
+			if errorFromLeavingThirdGame != nil {
+				unitTest.Fatalf(
+					"RemoveGameFromListForPlayer(%v, %v) produced an error: %v",
+					leavingPlayer,
+					thirdGameName,
+					errorFromLeavingThirdGame)
+			}
+
+			// We check that the game state had no change in its name or participant list.
+			thirdStateAfterLeaving :=
+				getStateAndAssertNoError(
+					testIdentifier+"/ReadAndWriteGame(third game after leaving)",
+					unitTest,
+					thirdGameName,
+					statePersister.GamePersister)
+
+			assertGameNameAndParticipantsAreCorrect(
+				testIdentifier+"/ReadAndWriteGame(third game after leaving)",
+				unitTest,
+				thirdGameName,
+				playerNameSet(threePlayersWithNilHands),
+				thirdStateAfterLeaving)
+
+			justSecondGameName := make(map[string]bool, 1)
+			justSecondGameName[secondGameName] = true
+			assertReadAllWithPlayerGameNamesCorrect(
+				testIdentifier+"/all for leaver after leaving third game",
+				unitTest,
+				leavingPlayer,
+				justSecondGameName,
+				statePersister.GamePersister)
+			assertReadAllWithPlayerGameNamesCorrect(
+				testIdentifier+"/all for stayer after leaver leaving third game",
+				unitTest,
+				stayingPlayer,
+				allThreeGameNames,
+				statePersister.GamePersister)
+
+			errorFromLeavingSecondGame :=
+				statePersister.GamePersister.RemoveGameFromListForPlayer(
+					leavingPlayer,
+					secondGameName)
+
+			if errorFromLeavingSecondGame != nil {
+				unitTest.Fatalf(
+					"RemoveGameFromListForPlayer(%v, %v) produced an error: %v",
+					leavingPlayer,
+					secondGameName,
+					errorFromLeavingSecondGame)
+			}
+
+			// We check that the game state had no change in its name or participant list.
+			secondStateAfterLeaving :=
+				getStateAndAssertNoError(
+					testIdentifier+"/ReadAndWriteGame(second game after leaving)",
+					unitTest,
+					secondGameName,
+					statePersister.GamePersister)
+
+			assertGameNameAndParticipantsAreCorrect(
+				testIdentifier+"/ReadAndWriteGame(second game after leaving)",
+				unitTest,
+				secondGameName,
+				playerNameSet(threePlayersWithNilHands),
+				secondStateAfterLeaving)
+
+			noGameNames := make(map[string]bool, 0)
+			assertReadAllWithPlayerGameNamesCorrect(
+				testIdentifier+"/all for leaver after leaving second game",
+				unitTest,
+				leavingPlayer,
+				noGameNames,
+				statePersister.GamePersister)
+			assertReadAllWithPlayerGameNamesCorrect(
+				testIdentifier+"/all for stayer after leaver leaving second game",
+				unitTest,
+				stayingPlayer,
+				allThreeGameNames,
+				statePersister.GamePersister)
+
+			errorFromLeavingSecondGameAgain :=
+				statePersister.GamePersister.RemoveGameFromListForPlayer(
+					leavingPlayer,
+					secondGameName)
+
+			if errorFromLeavingSecondGameAgain == nil {
+				unitTest.Fatalf(
+					"RemoveGameFromListForPlayer(%v, %v) a second time produced nil error",
+					leavingPlayer,
+					secondGameName)
+			}
+		})
+	}
+}
+
 func assertReturnedGamesAreConsistent(
 	testIdentifier string,
 	unitTest *testing.T,
@@ -292,24 +603,38 @@ func assertReturnedGamesAreConsistent(
 	}
 
 	for expectedPlayerName, expectedGameNames := range gamesForPlayer {
-		statesFromAllWithPlayer := gamePersister.ReadAllWithPlayer(expectedPlayerName)
+		assertReadAllWithPlayerGameNamesCorrect(
+			testIdentifier,
+			unitTest,
+			expectedPlayerName,
+			expectedGameNames,
+			gamePersister)
+	}
+}
 
-		if len(statesFromAllWithPlayer) != len(expectedGameNames) {
+func assertReadAllWithPlayerGameNamesCorrect(
+	testIdentifier string,
+	unitTest *testing.T,
+	playerName string,
+	expectedGameNames map[string]bool,
+	gamePersister game.StatePersister) {
+	statesFromAllWithPlayer := gamePersister.ReadAllWithPlayer(playerName)
+
+	if len(statesFromAllWithPlayer) != len(expectedGameNames) {
+		unitTest.Fatalf(
+			testIdentifier+
+				"/ReadAllWithPlayer(%v) produced %v which did not have the expected game names %v",
+			statesFromAllWithPlayer,
+			expectedGameNames)
+	}
+
+	for _, gameState := range statesFromAllWithPlayer {
+		if !expectedGameNames[gameState.Name()] {
 			unitTest.Fatalf(
 				testIdentifier+
 					"/ReadAllWithPlayer(%v) produced %v which did not have the expected game names %v",
 				statesFromAllWithPlayer,
 				expectedGameNames)
-		}
-
-		for _, gameState := range statesFromAllWithPlayer {
-			if !expectedGameNames[gameState.Name()] {
-				unitTest.Fatalf(
-					testIdentifier+
-						"/ReadAllWithPlayer(%v) produced %v which did not have the expected game names %v",
-					statesFromAllWithPlayer,
-					expectedGameNames)
-			}
 		}
 	}
 }

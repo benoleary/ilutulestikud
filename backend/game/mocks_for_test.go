@@ -323,33 +323,42 @@ type mockGameDefinition struct {
 	initialDeck                        []card.Readonly
 }
 
+type gameAndPlayerNamePair struct {
+	gameName   string
+	playerName string
+}
+
 type mockGamePersister struct {
-	TestReference                 *testing.T
-	ReturnForRandomSeed           int64
-	ReturnForReadAndWriteGame     game.ReadAndWriteState
-	ReturnForReadAllWithPlayer    []game.ReadonlyState
-	ReturnForNontestError         error
-	TestErrorForRandomSeed        error
-	TestErrorForReadAndWriteGame  error
-	TestErrorForReadAllWithPlayer error
-	TestErrorForAddGame           error
-	ArgumentsForAddGame           []mockGameDefinition
+	TestReference                           *testing.T
+	ReturnForRandomSeed                     int64
+	ReturnForReadAndWriteGame               game.ReadAndWriteState
+	ReturnForReadAllWithPlayer              []game.ReadonlyState
+	ReturnForNontestError                   error
+	TestErrorForRandomSeed                  error
+	TestErrorForReadAndWriteGame            error
+	TestErrorForReadAllWithPlayer           error
+	TestErrorForAddGame                     error
+	ArgumentsForAddGame                     []mockGameDefinition
+	TestErrorForRemoveGameFromListForPlayer error
+	ArgumentsForRemoveGameFromListForPlayer []gameAndPlayerNamePair
 }
 
 func NewMockGamePersister(
 	testReference *testing.T,
 	testError error) *mockGamePersister {
 	return &mockGamePersister{
-		TestReference:                 testReference,
-		ReturnForRandomSeed:           -1,
-		ReturnForReadAndWriteGame:     nil,
-		ReturnForReadAllWithPlayer:    nil,
-		ReturnForNontestError:         nil,
-		TestErrorForRandomSeed:        testError,
-		TestErrorForReadAndWriteGame:  testError,
-		TestErrorForReadAllWithPlayer: testError,
-		TestErrorForAddGame:           testError,
-		ArgumentsForAddGame:           make([]mockGameDefinition, 0),
+		TestReference:                           testReference,
+		ReturnForRandomSeed:                     -1,
+		ReturnForReadAndWriteGame:               nil,
+		ReturnForReadAllWithPlayer:              nil,
+		ReturnForNontestError:                   nil,
+		TestErrorForRandomSeed:                  testError,
+		TestErrorForReadAndWriteGame:            testError,
+		TestErrorForReadAllWithPlayer:           testError,
+		TestErrorForAddGame:                     testError,
+		ArgumentsForAddGame:                     make([]mockGameDefinition, 0),
+		TestErrorForRemoveGameFromListForPlayer: testError,
+		ArgumentsForRemoveGameFromListForPlayer: make([]gameAndPlayerNamePair, 0),
 	}
 }
 
@@ -419,6 +428,28 @@ func (mockImplementation *mockGamePersister) AddGame(
 
 	mockImplementation.ArgumentsForAddGame =
 		append(mockImplementation.ArgumentsForAddGame, addedGame)
+
+	return mockImplementation.ReturnForNontestError
+}
+
+func (mockImplementation *mockGamePersister) RemoveGameFromListForPlayer(
+	playerName string,
+	gameName string) error {
+	if mockImplementation.TestErrorForRemoveGameFromListForPlayer != nil {
+		mockImplementation.TestReference.Fatalf(
+			"RemoveGameFromListForPlayer(%v, %v): %v",
+			playerName,
+			gameName,
+			mockImplementation.TestErrorForRemoveGameFromListForPlayer)
+	}
+
+	mockImplementation.ArgumentsForRemoveGameFromListForPlayer =
+		append(
+			mockImplementation.ArgumentsForRemoveGameFromListForPlayer,
+			gameAndPlayerNamePair{
+				gameName:   gameName,
+				playerName: playerName,
+			})
 
 	return mockImplementation.ReturnForNontestError
 }
