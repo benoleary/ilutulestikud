@@ -85,13 +85,13 @@ func TestAllCardsPresentInCompoundRainbow(unitTest *testing.T) {
 
 		colorSuitMap[cardInDeck.ColorSuit()] = countOfSuitUntilNow + 1
 
-		cardValue := rainbowRuleset.PointsForCard(cardInDeck)
-		if ((cardInDeck.SequenceIndex() < 5) && (cardValue != cardInDeck.SequenceIndex())) ||
-			((cardInDeck.SequenceIndex() >= 5) && (cardValue != (2 * cardInDeck.SequenceIndex()))) {
+		// All the official rulesets give one point per card successfully played,
+		// no matter which card.
+		if rainbowRuleset.PointsForCard(cardInDeck) != 1 {
 			unitTest.Fatalf(
 				"card %+v has points value %v",
 				cardInDeck,
-				cardValue)
+				rainbowRuleset.PointsForCard(cardInDeck))
 		}
 
 		hintsForPlayingCard := rainbowRuleset.HintsForPlayingCard(cardInDeck)

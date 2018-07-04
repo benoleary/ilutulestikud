@@ -16,6 +16,14 @@
     </mat-form-field>
 </div>
 
+<div *ngIf="gameIsFinished"
+    [ngStyle]="{'background-color': 'black'}">
+    <br>
+    Game is finished!<br>
+    Final score: {{ scoreFromCardsPlayed }}<br>
+    <button mat-raised-button (click)="leaveGame()">Leave</button><br>
+</div>
+
 <div [ngStyle]="{'background-color': 'black'}">
     Action log:<br>
     <mat-list dense role="list">

@@ -349,7 +349,6 @@ func prepareExpected(
 		ChatLog:                copyLog(unitTest, pristineState.ChatLog()),
 		ActionLog:              copyLog(unitTest, pristineState.ActionLog()),
 		Turn:                   pristineState.Turn(),
-		Score:                  pristineState.Score(),
 		NumberOfReadyHints:     pristineState.NumberOfReadyHints(),
 		NumberOfMistakesMade:   pristineState.NumberOfMistakesMade(),
 		DeckSize:               pristineState.DeckSize(),

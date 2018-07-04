@@ -25,6 +25,8 @@ import { InferredCard } from '../models/inferredcard.model';
     chatLog: LogMessage[];
     chatInput: string;
     actionLog: LogMessage[];
+    gameIsFinished: boolean;
+    scoreFromCardsPlayed: number;
     noncardInformationText: string;
     playedSequences: VisibleCard[][];
     discardPile: VisibleCard[];
@@ -40,6 +42,8 @@ import { InferredCard } from '../models/inferredcard.model';
         this.chatLog = [];
         this.chatInput = null;
         this.actionLog = [];
+        this.gameIsFinished = false;
+        this.scoreFromCardsPlayed = 0;
         this.noncardInformationText = null;
         this.playedSequences = [];
         this.discardPile = [];
@@ -101,7 +105,10 @@ import { InferredCard } from '../models/inferredcard.model';
         LogMessage.RefreshListFromSource(this.chatLog, Array.from(fetchedGameData["ChatLog"]));
         LogMessage.RefreshListFromSource(this.actionLog, Array.from(fetchedGameData["ActionLog"]));
 
-        this.noncardInformationText = "Score: " + fetchedGameData["ScoreSoFar"]
+        this.gameIsFinished = fetchedGameData["GameIsFinished"];
+        this.scoreFromCardsPlayed = fetchedGameData["ScoreSoFar"];
+
+        this.noncardInformationText = "Score: " + this.scoreFromCardsPlayed
          + " - Hints: " + fetchedGameData["NumberOfReadyHints"] + " / " + fetchedGameData["MaximumNumberOfHints"]
          + " - Mistakes: " + fetchedGameData["NumberOfMistakesMade"] + " / " + fetchedGameData["NumberOfMistakesIndicatingGameOver"]
          + " - Cards left in deck: " + fetchedGameData["NumberOfCardsLeftInDeck"];
@@ -167,5 +174,10 @@ import { InferredCard } from '../models/inferredcard.model';
           () => {},
           thrownError => this.onError.emit(thrownError),
           () => {});
+    }
+
+    leaveGame(): void
+    {
+      console.log("The player wants to leave the finished game...")
     }
   }

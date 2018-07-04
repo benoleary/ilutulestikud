@@ -86,7 +86,7 @@ type ViewForPlayer interface {
 	// Turn should just wrap around the read-only game state's Turn function.
 	Turn() int
 
-	// Score should just wrap around the read-only game state's Score function.
+	// Score should derive the score from the cards in the played area.
 	Score() int
 
 	// NumberOfReadyHints should just wrap around the read-only game state's
@@ -170,10 +170,6 @@ type ReadonlyState interface {
 	// not 1 turn being when all players have acted and play returns to the first
 	// player).
 	Turn() int
-
-	// Score should return the total score of the cards which have been correctly
-	// played in the game so far.
-	Score() int
 
 	// NumberOfReadyHints should return the total number of hints which are available
 	// to be played.

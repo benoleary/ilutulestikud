@@ -90,13 +90,6 @@ func TestSetUpInitialMetadataCorrectly(unitTest *testing.T) {
 					1)
 			}
 
-			if readonlyState.Score() != 0 {
-				unitTest.Fatalf(
-					"Score() %v was not expected %v",
-					readonlyState.Score(),
-					0)
-			}
-
 			if readonlyState.NumberOfReadyHints() != defaultTestRuleset.MaximumNumberOfHints() {
 				unitTest.Fatalf(
 					"NumberOfReadyHints() %v was not expected %v",

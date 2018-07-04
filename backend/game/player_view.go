@@ -9,7 +9,8 @@ import (
 
 // PlayerView encapsulates the functions on a game's read-only state
 // which provide the information available to a particular player for
-// that state.
+// that state. It has a few quantities which should be derived on
+// construction.
 type PlayerView struct {
 	gameState               ReadonlyState
 	playerProvider          ReadonlyPlayerProvider
@@ -18,8 +19,8 @@ type PlayerView struct {
 	playerName              string
 	gameRuleset             Ruleset
 	colorSuits              []string
-	numberOfSuits           int
 	distinctPossibleIndices []int
+	playedCards             [][]card.Readonly
 }
 
 // ViewOnStateForPlayer creates a PlayerView around the given game
@@ -38,6 +39,16 @@ func ViewOnStateForPlayer(
 			gameColorSuits := rulesetOfGame.ColorSuits()
 			distinctPossibleIndices := rulesetOfGame.DistinctPossibleIndices()
 
+			numberOfSuits := len(gameColorSuits)
+			playedCards := make([][]card.Readonly, numberOfSuits)
+			for suitIndex := 0; suitIndex < numberOfSuits; suitIndex++ {
+				suitColor := gameColorSuits[suitIndex]
+
+				cardsPlayedForSuit := stateOfGame.PlayedForColor(suitColor)
+
+				playedCards[suitIndex] = cardsPlayedForSuit
+			}
+
 			playerView :=
 				&PlayerView{
 					gameState:               stateOfGame,
@@ -47,8 +58,8 @@ func ViewOnStateForPlayer(
 					playerName:              nameOfPlayer,
 					gameRuleset:             rulesetOfGame,
 					colorSuits:              gameColorSuits,
-					numberOfSuits:           len(gameColorSuits),
 					distinctPossibleIndices: distinctPossibleIndices,
+					playedCards:             playedCards,
 				}
 
 			return playerView, nil
@@ -92,7 +103,7 @@ func (playerView *PlayerView) ActionLog() []message.Readonly {
 // ruleset (which indicates that all players have played a card after the deck
 // was exhausted).
 func (playerView *PlayerView) GameIsFinished() (bool, error) {
-	if playerView.NumberOfMistakesMade() >= playerView.NumberOfMistakesIndicatingGameOver() {
+	if playerView.gameOverBecauseOfMistakes() {
 		return true, nil
 	}
 
@@ -138,9 +149,20 @@ func (playerView *PlayerView) Turn() int {
 	return playerView.gameState.Turn()
 }
 
-// Score just wraps around the read-only game state's Score function.
+// Score derives the score from the cards in the played area.
 func (playerView *PlayerView) Score() int {
-	return playerView.gameState.Score()
+	if playerView.gameOverBecauseOfMistakes() {
+		return 0
+	}
+
+	scoreSoFar := 0
+	for _, playedPile := range playerView.playedCards {
+		for _, playedCard := range playedPile {
+			scoreSoFar += playerView.gameRuleset.PointsForCard(playedCard)
+		}
+	}
+
+	return scoreSoFar
 }
 
 // NumberOfReadyHints just wraps around the read-only game state's
@@ -174,18 +196,7 @@ func (playerView *PlayerView) DeckSize() int {
 
 // PlayedCards lists the cards in play, in slices per suit.
 func (playerView *PlayerView) PlayedCards() [][]card.Readonly {
-	playedCards := make([][]card.Readonly, playerView.numberOfSuits)
-
-	for suitIndex := 0; suitIndex < playerView.numberOfSuits; suitIndex++ {
-		suitColor := playerView.colorSuits[suitIndex]
-
-		cardsPlayedForSuit :=
-			playerView.gameState.PlayedForColor(suitColor)
-
-		playedCards[suitIndex] = cardsPlayedForSuit
-	}
-
-	return playedCards
+	return playerView.playedCards
 }
 
 // DiscardedCards lists the discarded cards, ordered by suit first then by index.
@@ -239,4 +250,9 @@ func (playerView *PlayerView) playerIndexForTurn(turnsAfterCurrent int) int {
 	// values will be 2, then 3, then 4, then 0, then 1.
 	turnIndexFromZero := (turnsAfterCurrent + playerView.gameState.Turn() - 1)
 	return turnIndexFromZero % playerView.numberOfParticipants
+}
+
+func (playerView *PlayerView) gameOverBecauseOfMistakes() bool {
+	return playerView.NumberOfMistakesMade() >=
+		playerView.NumberOfMistakesIndicatingGameOver()
 }

@@ -88,7 +88,6 @@ func assertGameStateAsExpected(
 		(actualGame.Ruleset() != expectedGame.Ruleset) ||
 		(actualGame.CreationTime() != expectedGame.CreationTime) ||
 		(actualGame.Turn() != expectedGame.Turn) ||
-		(actualGame.Score() != expectedGame.Score) ||
 		(actualGame.NumberOfReadyHints() != expectedGame.NumberOfReadyHints) ||
 		(actualGame.NumberOfMistakesMade() != expectedGame.NumberOfMistakesMade) ||
 		(actualGame.DeckSize() != expectedGame.DeckSize) ||

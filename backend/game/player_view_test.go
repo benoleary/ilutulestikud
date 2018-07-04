@@ -39,9 +39,6 @@ func TestWrapperFunctions(unitTest *testing.T) {
 	// list of next players.
 	expectedTurnIndex := 2
 
-	testScore := 7
-	mockReadAndWriteState.ReturnForScore = testScore
-
 	testReadyHints := 5
 	testMaximumHints := testRuleset.MaximumNumberOfHints()
 	mockReadAndWriteState.ReturnForNumberOfReadyHints = testReadyHints
@@ -89,7 +86,6 @@ func TestWrapperFunctions(unitTest *testing.T) {
 	if (viewForPlayer.GameName() != gameName) ||
 		(viewForPlayer.RulesetDescription() != testRuleset.FrontendDescription()) ||
 		(viewForPlayer.Turn() != testTurn) ||
-		(viewForPlayer.Score() != testScore) ||
 		(viewForPlayer.NumberOfReadyHints() != testReadyHints) ||
 		(viewForPlayer.MaximumNumberOfHints() != testMaximumHints) ||
 		(viewForPlayer.NumberOfMistakesMade() != testMistakesMade) ||
@@ -100,7 +96,6 @@ func TestWrapperFunctions(unitTest *testing.T) {
 				" (name %v,"+
 				" ruleset description %v,"+
 				" turn %v,"+
-				" score %v,"+
 				" ready hints %v,"+
 				" maximum hints %v,"+
 				" mistakes made %v,"+
@@ -110,7 +105,6 @@ func TestWrapperFunctions(unitTest *testing.T) {
 			gameName,
 			testRuleset.FrontendDescription(),
 			testTurn,
-			testScore,
 			testReadyHints,
 			testMaximumHints,
 			testMistakesMade,
@@ -242,6 +236,19 @@ func TestGameIsFinishedWhenEnoughMistakes(unitTest *testing.T) {
 	mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
 	mockReadAndWriteState.ReturnForRuleset = testRuleset
 
+	// We also mock that some cards were played to test that the score from
+	// played cards is ignored if the game ends because of mistakes.
+	expectedPlayedCards := make(map[string][]card.Readonly, 0)
+	playedColor := testRuleset.ColorSuits()[0]
+	possibleIndices := testRuleset.DistinctPossibleIndices()
+	expectedPlayedCards[playedColor] =
+		[]card.Readonly{
+			card.NewReadonly(playedColor, possibleIndices[0]),
+			card.NewReadonly(playedColor, possibleIndices[1]),
+		}
+
+	mockReadAndWriteState.ReturnForPlayedForColor = expectedPlayedCards
+
 	mockReadAndWriteState.ReturnForNumberOfMistakesMade =
 		testRuleset.NumberOfMistakesIndicatingGameOver()
 
@@ -274,6 +281,16 @@ func TestGameIsFinishedWhenEnoughMistakes(unitTest *testing.T) {
 		unitTest.Fatalf(
 			"GameIsFinished() produced %v when the number of mistakes was too high",
 			actualGameIsFinished)
+	}
+
+	actualScore := viewForPlayer.Score()
+	expectedScore := 0
+	if actualScore != expectedScore {
+		unitTest.Fatalf(
+			"player view %+v returned %v for Score() rather than expected %v because game ended due to mistakes",
+			viewForPlayer,
+			actualScore,
+			expectedScore)
 	}
 }
 
@@ -407,12 +424,14 @@ func TestPlayedSequencesWhenSomeAreEmpty(unitTest *testing.T) {
 			"testRuleset.ColorSuits() %v has not enough colors (test needs at least 3)",
 			testRuleset.ColorSuits())
 	}
+
 	sequenceIndices := testRuleset.DistinctPossibleIndices()
 	if len(sequenceIndices) < 4 {
 		unitTest.Fatalf(
 			"testRuleset.DistinctPossibleIndices() %v has not enough indices (test needs at least 4)",
 			testRuleset.DistinctPossibleIndices())
 	}
+
 	colorWithSeveralCards := colorSuits[0]
 	severalCardsForColor :=
 		[]card.Readonly{
@@ -420,6 +439,7 @@ func TestPlayedSequencesWhenSomeAreEmpty(unitTest *testing.T) {
 			card.NewReadonly(colorWithSeveralCards, sequenceIndices[1]),
 			card.NewReadonly(colorWithSeveralCards, sequenceIndices[3]),
 		}
+
 	numberWhichIsSeveral := len(severalCardsForColor)
 	expectedPlayedCards[colorWithSeveralCards] = severalCardsForColor
 
@@ -429,6 +449,9 @@ func TestPlayedSequencesWhenSomeAreEmpty(unitTest *testing.T) {
 		[]card.Readonly{
 			singleCardForColor,
 		}
+
+	// The score should be equal to the number of cards played.
+	expectedScore := numberWhichIsSeveral + 1
 
 	mockReadAndWriteState.ReturnForPlayedForColor = expectedPlayedCards
 
@@ -446,6 +469,15 @@ func TestPlayedSequencesWhenSomeAreEmpty(unitTest *testing.T) {
 			gameName,
 			playerName,
 			errorFromViewState)
+	}
+
+	actualScore := viewForPlayer.Score()
+	if actualScore != expectedScore {
+		unitTest.Fatalf(
+			"player view %+v returned %v for Score() rather than expected %v",
+			viewForPlayer,
+			actualScore,
+			expectedScore)
 	}
 
 	actualPlayedCards := viewForPlayer.PlayedCards()
@@ -550,6 +582,7 @@ func TestPlayedSequencesWhenAllAreNonempty(unitTest *testing.T) {
 			"testRuleset.ColorSuits() %v has not enough colors (test needs at least 2)",
 			testRuleset.ColorSuits())
 	}
+
 	sequenceIndices := testRuleset.DistinctPossibleIndices()
 	if len(sequenceIndices) < numberOfSuits {
 		unitTest.Fatalf(
@@ -558,11 +591,14 @@ func TestPlayedSequencesWhenAllAreNonempty(unitTest *testing.T) {
 			numberOfSuits)
 	}
 
+	// The score should be equal to the number of cards played.
+	expectedScore := 0
 	for colorCount := 0; colorCount < numberOfSuits; colorCount++ {
 		colorSuit := colorSuits[colorCount]
 		sequenceForColor := make([]card.Readonly, colorCount+1)
 		for cardCount := 0; cardCount <= colorCount; cardCount++ {
 			sequenceForColor[cardCount] = card.NewReadonly(colorSuit, sequenceIndices[cardCount])
+			expectedScore++
 		}
 
 		expectedPlayedCards[colorSuit] = sequenceForColor
@@ -584,6 +620,15 @@ func TestPlayedSequencesWhenAllAreNonempty(unitTest *testing.T) {
 			gameName,
 			playerName,
 			errorFromViewState)
+	}
+
+	actualScore := viewForPlayer.Score()
+	if actualScore != expectedScore {
+		unitTest.Fatalf(
+			"player view %+v returned %v for Score() rather than expected %v",
+			viewForPlayer,
+			actualScore,
+			expectedScore)
 	}
 
 	actualPlayedCards := viewForPlayer.PlayedCards()

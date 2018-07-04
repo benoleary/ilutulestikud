@@ -237,7 +237,7 @@ func (handler *Handler) writeGameForPlayer(
 			HandsBeforeThisPlayer:              handsBeforeThisPlayer,
 			HandOfThisPlayer:                   handOfThisPlayer,
 			HandsAfterThisPlayer:               handsAfterThisPlayer,
-			ThisPlayerCanTakeTurn:              isViewingPlayerTurn,
+			ThisPlayerCanTakeTurn:              !gameIsFinished && isViewingPlayerTurn,
 		}
 
 	return endpointObject, http.StatusOK

@@ -127,7 +127,6 @@ type inMemoryState struct {
 	chatLog                     *rollingMessageAppender
 	actionLog                   *rollingMessageAppender
 	turnNumber                  int
-	currentScore                int
 	numberOfReadyHints          int
 	numberOfMistakesMade        int
 	undrawnDeck                 []card.Readonly
@@ -209,12 +208,6 @@ func (gameState *inMemoryState) ActionLog() []message.Readonly {
 // Turn returns the value of the private turnNumber int.
 func (gameState *inMemoryState) Turn() int {
 	return gameState.turnNumber
-}
-
-// Score returns the total score of the cards which have been correctly played in the
-// game so far.
-func (gameState *inMemoryState) Score() int {
-	return gameState.currentScore
 }
 
 // NumberOfReadyHints returns the total number of hints which are available to be

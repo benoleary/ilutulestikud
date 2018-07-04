@@ -195,14 +195,8 @@ func (standardRuleset *standardWithoutRainbowRuleset) HintsForPlayingCard(
 // PointsPerCard returns the points value of the given card.
 func (standardRuleset *standardWithoutRainbowRuleset) PointsForCard(
 	cardToEvaluate card.Readonly) int {
-	// Every suit is worth the same in the standard rules.
-	cardSequenceIndex := cardToEvaluate.SequenceIndex()
-
-	if cardSequenceIndex >= 5 {
-		return 2 * cardSequenceIndex
-	}
-
-	return cardSequenceIndex
+	// Every card is worth the same in the standard rules.
+	return 1
 }
 
 // RainbowSuit gives the name of the special suit for the variation rulesets. It is
