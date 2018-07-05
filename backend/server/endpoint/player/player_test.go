@@ -116,6 +116,14 @@ func (mockCollection *mockPlayerCollection) Get(playerIdentifier string) (player
 	return nil, mockCollection.ErrorToReturn
 }
 
+// Delete gets mocked.
+func (mockCollection *mockPlayerCollection) Delete(playerName string) error {
+	mockCollection.recordFunctionAndArgument(
+		"Delete",
+		playerName)
+	return mockCollection.ErrorToReturn
+}
+
 // Reset gets mocked.
 func (mockCollection *mockPlayerCollection) Reset() {
 	mockCollection.recordFunctionAndArgument(

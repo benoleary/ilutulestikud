@@ -27,8 +27,8 @@ type StateCollection interface {
 	ExecuteAction(gameName string, playerName string) (game.ExecutorForPlayer, error)
 
 	// AddNew should add a new game to the collection based on the given arguments.
-	AddNew(
-		gameName string,
-		gameRuleset game.Ruleset,
-		playerNames []string) error
+	AddNew(gameName string, gameRuleset game.Ruleset, playerNames []string) error
+
+	// Delete should delete the given game from the collection.
+	Delete(gameName string) error
 }

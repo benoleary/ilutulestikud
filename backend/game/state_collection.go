@@ -166,6 +166,11 @@ func (gameCollection *StateCollection) ExecuteAction(
 	return ExecutorOfActionsForPlayer(gameState, actingPlayer)
 }
 
+// Delete calls the Delete of the internal persistence store.
+func (gameCollection *StateCollection) Delete(gameName string) error {
+	return gameCollection.statePersister.Delete(gameName)
+}
+
 // createPlayerHands deals out each player's hand (a full hand per player rather
 // than one card each time to each player) and then returns a list of player names
 // paired with their initial hands, the remaining deck, the initial action log, and

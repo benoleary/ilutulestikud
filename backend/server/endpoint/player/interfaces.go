@@ -14,8 +14,8 @@ type StateCollection interface {
 	// course an implementation may order the slice consistently.
 	All() []player.ReadonlyState
 
-	// Get should return a read-only state for the identified player.
-	Get(playerIdentifier string) (player.ReadonlyState, error)
+	// Get should return a read-only state for the given player.
+	Get(playerName string) (player.ReadonlyState, error)
 
 	// AvailableChatColors should return the chat colors available to the collection.
 	AvailableChatColors() []string
@@ -25,6 +25,9 @@ type StateCollection interface {
 
 	// UpdateColor should update the given player with the given chat color.
 	UpdateColor(playerName string, chatColor string) error
+
+	// Delete should delete the given player from the collection.
+	Delete(playerName string) error
 
 	// Reset should reset the players to the initial set.
 	Reset()

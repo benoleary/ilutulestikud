@@ -410,14 +410,14 @@ func TestAddGamesThenLeaveGames(unitTest *testing.T) {
 
 			errorFromLeavingFirstGame :=
 				statePersister.GamePersister.RemoveGameFromListForPlayer(
-					leavingPlayer,
-					firstGameName)
+					firstGameName,
+					leavingPlayer)
 
 			if errorFromLeavingFirstGame != nil {
 				unitTest.Fatalf(
 					"RemoveGameFromListForPlayer(%v, %v) produced an error: %v",
-					leavingPlayer,
 					firstGameName,
+					leavingPlayer,
 					errorFromLeavingFirstGame)
 			}
 
@@ -454,14 +454,14 @@ func TestAddGamesThenLeaveGames(unitTest *testing.T) {
 
 			errorFromLeavingThirdGame :=
 				statePersister.GamePersister.RemoveGameFromListForPlayer(
-					leavingPlayer,
-					thirdGameName)
+					thirdGameName,
+					leavingPlayer)
 
 			if errorFromLeavingThirdGame != nil {
 				unitTest.Fatalf(
 					"RemoveGameFromListForPlayer(%v, %v) produced an error: %v",
-					leavingPlayer,
 					thirdGameName,
+					leavingPlayer,
 					errorFromLeavingThirdGame)
 			}
 
@@ -497,14 +497,14 @@ func TestAddGamesThenLeaveGames(unitTest *testing.T) {
 
 			errorFromLeavingSecondGame :=
 				statePersister.GamePersister.RemoveGameFromListForPlayer(
-					leavingPlayer,
-					secondGameName)
+					secondGameName,
+					leavingPlayer)
 
 			if errorFromLeavingSecondGame != nil {
 				unitTest.Fatalf(
 					"RemoveGameFromListForPlayer(%v, %v) produced an error: %v",
-					leavingPlayer,
 					secondGameName,
+					leavingPlayer,
 					errorFromLeavingSecondGame)
 			}
 
@@ -539,14 +539,14 @@ func TestAddGamesThenLeaveGames(unitTest *testing.T) {
 
 			errorFromLeavingSecondGameAgain :=
 				statePersister.GamePersister.RemoveGameFromListForPlayer(
-					leavingPlayer,
-					secondGameName)
+					secondGameName,
+					leavingPlayer)
 
 			if errorFromLeavingSecondGameAgain == nil {
 				unitTest.Fatalf(
 					"RemoveGameFromListForPlayer(%v, %v) a second time produced nil error",
-					leavingPlayer,
-					secondGameName)
+					secondGameName,
+					leavingPlayer)
 			}
 		})
 	}

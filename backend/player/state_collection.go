@@ -56,17 +56,18 @@ func NewCollection(
 	return newCollection, nil
 }
 
-// All just wraps around the All function of the internal collection.
+// All just wraps around the All function of the internal persistence store.
 func (stateCollection *StateCollection) All() []ReadonlyState {
 	return stateCollection.statePersister.All()
 }
 
-// Get just wraps around the Get function of the internal collection.
+// Get just wraps around the Get function of the internal persistence store.
 func (stateCollection *StateCollection) Get(playerName string) (ReadonlyState, error) {
 	return stateCollection.statePersister.Get(playerName)
 }
 
-// AvailableChatColors returns a deep copy of state collection's chat color slice.
+// AvailableChatColors returns a deep copy of state persistence store's chat
+// color slice.
 func (stateCollection *StateCollection) AvailableChatColors() []string {
 	numberOfColors := len(stateCollection.chatColorSlice)
 	deepCopy := make([]string, numberOfColors)
@@ -76,7 +77,7 @@ func (stateCollection *StateCollection) AvailableChatColors() []string {
 }
 
 // Add ensures that the player definition has a chat color before calling
-// the Add function of the internal collection.
+// the Add function of the internal persistence store.
 func (stateCollection *StateCollection) Add(
 	playerName string,
 	chatColor string) error {
@@ -99,7 +100,7 @@ func (stateCollection *StateCollection) Add(
 }
 
 // UpdateColor checks the validity of the color then calls the UpdateColor
-// function of the internal collection.
+// function of the internal persistence store.
 func (stateCollection *StateCollection) UpdateColor(
 	playerName string,
 	chatColor string) error {
@@ -113,7 +114,13 @@ func (stateCollection *StateCollection) UpdateColor(
 	return stateCollection.statePersister.UpdateColor(playerName, chatColor)
 }
 
-// Reset calls the Reset of the internal collection then adds the initial players again.
+// Delete calls the Delete of the internal persistence store.
+func (stateCollection *StateCollection) Delete(playerName string) error {
+	return stateCollection.statePersister.Delete(playerName)
+}
+
+// Reset calls the Reset of the internal persistence store then adds the
+// initial players again.
 func (stateCollection *StateCollection) Reset() {
 	stateCollection.statePersister.Reset()
 	stateCollection.addInitialPlayers()

@@ -121,8 +121,8 @@ func (gamePersister *inMemoryPersister) AddGame(
 // ReadAllWithPlayer(playerName). It returns an error if the player is not a
 // participant.
 func (gamePersister *inMemoryPersister) RemoveGameFromListForPlayer(
-	playerName string,
-	gameName string) error {
+	gameName string,
+	playerName string) error {
 	// We only remove the player from the look-up map used for
 	// ReadAllWithPlayer(...) rather than changing the internal state of
 	// the game.
@@ -140,7 +140,8 @@ func (gamePersister *inMemoryPersister) RemoveGameFromListForPlayer(
 				}
 
 				// We make a new array and copy in the elements of the original
-				// list except for the given game.
+				// list except for the given game, just to let the whole old array
+				// qualify for garbage collection.
 				originalListOfGames := gamePersister.gamesWithPlayers[playerName]
 				reducedListOfGames := make([]game.ReadonlyState, gameIndex)
 				copy(reducedListOfGames, originalListOfGames[:gameIndex])
@@ -156,6 +157,35 @@ func (gamePersister *inMemoryPersister) RemoveGameFromListForPlayer(
 		"Player %v is not a participant of game %v",
 		playerName,
 		gameName)
+}
+
+// Delete deletes the given game from the collection. It returns an error
+// if the game does not exist before the deletion attempt, or if there is
+// an error while trying to remove the game from the list for any player.
+func (gamePersister *inMemoryPersister) Delete(gameName string) error {
+	gameToDelete, gameExists := gamePersister.gameStates[gameName]
+
+	if !gameExists {
+		return fmt.Errorf("No game %v exists to delete", gameName)
+	}
+
+	for _, participantName := range gameToDelete.Read().PlayerNames() {
+		errorFromRemovalFromListForPlayer :=
+			gamePersister.RemoveGameFromListForPlayer(gameName, participantName)
+		if errorFromRemovalFromListForPlayer != nil {
+			errorAroundRemovalError :=
+				fmt.Errorf(
+					"error %v while removing game %v from player lists, game not deleted",
+					errorFromRemovalFromListForPlayer,
+					gameName)
+
+			return errorAroundRemovalError
+		}
+	}
+
+	delete(gamePersister.gameStates, gameName)
+
+	return nil
 }
 
 // inMemoryState is a struct meant to encapsulate all the state required for a

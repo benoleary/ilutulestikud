@@ -43,6 +43,7 @@ type mockPersister struct {
 	TestErrorForAdd         error
 	TestErrorForUpdateColor error
 	TestErrorForReset       error
+	TestErrorForDelete      error
 	ArgumentsForAdd         []mockPlayerState
 }
 
@@ -57,6 +58,7 @@ func NewMockPersister(testReference *testing.T, testError error) *mockPersister 
 		TestErrorForAdd:         testError,
 		TestErrorForUpdateColor: testError,
 		TestErrorForReset:       testError,
+		TestErrorForDelete:      testError,
 		ArgumentsForAdd:         make([]mockPlayerState, 0),
 	}
 }
@@ -107,6 +109,17 @@ func (mockImplementation *mockPersister) UpdateColor(playerName string, chatColo
 			playerName,
 			chatColor,
 			mockImplementation.TestErrorForUpdateColor)
+	}
+
+	return mockImplementation.ReturnForNontestError
+}
+
+func (mockImplementation *mockPersister) Delete(playerName string) error {
+	if mockImplementation.TestErrorForDelete != nil {
+		mockImplementation.testReference.Errorf(
+			"Delete(%v): %v",
+			playerName,
+			mockImplementation.TestErrorForDelete)
 	}
 
 	return mockImplementation.ReturnForNontestError

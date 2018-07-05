@@ -146,5 +146,8 @@ type StatePersister interface {
 	// the sense that the game will no longer show up in the result of
 	// ReadAllWithPlayer(playerName). It should return an error if the player is not a
 	// participant of the game, as well as in general I/O errors and so on.
-	RemoveGameFromListForPlayer(playerName string, gameName string) error
+	RemoveGameFromListForPlayer(gameName string, playerName string) error
+
+	// Delete should delete the given game from the persistence store.
+	Delete(gameName string) error
 }

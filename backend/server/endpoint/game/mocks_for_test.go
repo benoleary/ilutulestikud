@@ -263,3 +263,11 @@ func (mockCollection *mockGameCollection) AddNew(
 		functionArgument)
 	return mockCollection.ErrorToReturn
 }
+
+// Delete gets mocked.
+func (mockCollection *mockGameCollection) Delete(gameName string) error {
+	mockCollection.recordFunctionAndArgument(
+		"Delete",
+		gameName)
+	return mockCollection.ErrorToReturn
+}

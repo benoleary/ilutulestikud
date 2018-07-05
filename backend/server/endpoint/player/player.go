@@ -61,6 +61,8 @@ func (handler *Handler) HandlePost(
 		return handler.handleNewPlayer(httpBodyDecoder)
 	case "update-player":
 		return handler.handleUpdatePlayer(httpBodyDecoder)
+	case "delete-player":
+		return handler.handleDeletePlayer(httpBodyDecoder)
 	case "reset-players":
 		return handler.handleResetPlayers()
 	default:
@@ -145,6 +147,25 @@ func (handler *Handler) handleUpdatePlayer(
 
 	if updateError != nil {
 		return updateError, http.StatusBadRequest
+	}
+
+	return handler.writeRegisteredPlayers()
+}
+
+// handleUpdatePlayer updates the player defined by the JSON of the request's body, taking
+// the "Name" attribute as the key, and returns the updated list as writeRegisteredPlayers
+// would. Attributes which are present are updated, those which are missing remain unchanged.
+func (handler *Handler) handleDeletePlayer(
+	httpBodyDecoder *json.Decoder) (interface{}, int) {
+	var playerToDelete parsing.PlayerState
+	errorFromParse := httpBodyDecoder.Decode(&playerToDelete)
+	if errorFromParse != nil {
+		return "Error parsing JSON: " + errorFromParse.Error(), http.StatusBadRequest
+	}
+
+	deleteError := handler.stateCollection.Delete(playerToDelete.Name)
+	if deleteError != nil {
+		return deleteError, http.StatusInternalServerError
 	}
 
 	return handler.writeRegisteredPlayers()

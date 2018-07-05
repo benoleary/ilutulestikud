@@ -99,6 +99,20 @@ func (playerPersister *inMemoryPersister) All() []player.ReadonlyState {
 	return playerList
 }
 
+// Delete deletes the given player from the collection. It returns an error
+// if the player does not exist before the deletion attempt.
+func (playerPersister *inMemoryPersister) Delete(playerName string) error {
+	_, playerExists := playerPersister.playerStates[playerName]
+
+	if !playerExists {
+		return fmt.Errorf("No player %v exists to delete", playerName)
+	}
+
+	delete(playerPersister.playerStates, playerName)
+
+	return nil
+}
+
 // Reset removes all players.
 func (playerPersister *inMemoryPersister) Reset() {
 	for playerName := range playerPersister.playerStates {

@@ -72,6 +72,8 @@ func (handler *Handler) HandlePost(
 		return handler.handleTakeTurnByDiscarding(httpBodyDecoder, relevantSegments)
 	case "take-turn-by-attempting-to-play":
 		return handler.handleTakeTurnByAttemptingToPlay(httpBodyDecoder, relevantSegments)
+	case "delete-game":
+		return handler.handleDeleteGame(httpBodyDecoder)
 	default:
 		return "URI segment " + relevantSegments[0] + " not valid", http.StatusNotFound
 	}
@@ -330,6 +332,24 @@ func (handler *Handler) handleTakeTurnByAttemptingToPlay(
 
 	if errorFromTakeTurnByPlaying != nil {
 		return errorFromTakeTurnByPlaying, http.StatusBadRequest
+	}
+
+	return "OK", http.StatusOK
+}
+
+// handleDeleteGame passes on the given game name to the collection so that the game can
+// be deleted.
+func (handler *Handler) handleDeleteGame(httpBodyDecoder *json.Decoder) (interface{}, int) {
+	var gameToDelete parsing.GameDefinition
+
+	errorFromParse := httpBodyDecoder.Decode(&gameToDelete)
+	if errorFromParse != nil {
+		return "Error parsing JSON: " + errorFromParse.Error(), http.StatusBadRequest
+	}
+
+	deleteError := handler.stateCollection.Delete(gameToDelete.GameName)
+	if deleteError != nil {
+		return deleteError, http.StatusInternalServerError
 	}
 
 	return "OK", http.StatusOK

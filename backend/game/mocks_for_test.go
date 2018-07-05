@@ -341,6 +341,8 @@ type mockGamePersister struct {
 	ArgumentsForAddGame                     []mockGameDefinition
 	TestErrorForRemoveGameFromListForPlayer error
 	ArgumentsForRemoveGameFromListForPlayer []gameAndPlayerNamePair
+	TestErrorForDelete                      error
+	ArgumentsForDelete                      []string
 }
 
 func NewMockGamePersister(
@@ -359,6 +361,8 @@ func NewMockGamePersister(
 		ArgumentsForAddGame:                     make([]mockGameDefinition, 0),
 		TestErrorForRemoveGameFromListForPlayer: testError,
 		ArgumentsForRemoveGameFromListForPlayer: make([]gameAndPlayerNamePair, 0),
+		TestErrorForDelete:                      testError,
+		ArgumentsForDelete:                      make([]string, 0),
 	}
 }
 
@@ -450,6 +454,20 @@ func (mockImplementation *mockGamePersister) RemoveGameFromListForPlayer(
 				gameName:   gameName,
 				playerName: playerName,
 			})
+
+	return mockImplementation.ReturnForNontestError
+}
+
+func (mockImplementation *mockGamePersister) Delete(gameName string) error {
+	if mockImplementation.TestErrorForDelete != nil {
+		mockImplementation.TestReference.Fatalf(
+			"RemoveDelete(%v): %v",
+			gameName,
+			mockImplementation.TestErrorForDelete)
+	}
+
+	mockImplementation.ArgumentsForDelete =
+		append(mockImplementation.ArgumentsForDelete, gameName)
 
 	return mockImplementation.ReturnForNontestError
 }
