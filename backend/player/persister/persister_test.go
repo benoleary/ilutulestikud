@@ -38,7 +38,7 @@ func preparePersisters() []persisterAndDescription {
 	}
 }
 
-func TestReturnErrorWhenPlayerNotFound(unitTest *testing.T) {
+func TestReturnErrorWhenPlayerNotFoundWithGet(unitTest *testing.T) {
 	statePersisters := preparePersisters()
 
 	for _, statePersister := range statePersisters {
@@ -53,6 +53,25 @@ func TestReturnErrorWhenPlayerNotFound(unitTest *testing.T) {
 					"Get(unknown player name %v) did not return an error, did return player state %v",
 					invalidName,
 					playerState)
+			}
+		})
+	}
+}
+
+func TestReturnErrorWhenPlayerNotFoundForDelete(unitTest *testing.T) {
+	statePersisters := preparePersisters()
+
+	for _, statePersister := range statePersisters {
+		testIdentifier := "Delete(unknown player)/" + statePersister.PersisterDescription
+
+		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			invalidName := "Not A. Participant"
+			errorFromDelete := statePersister.PlayerPersister.Delete(invalidName)
+
+			if errorFromDelete == nil {
+				unitTest.Fatalf(
+					"Delete(unknown player name %v) did not return an error",
+					invalidName)
 			}
 		})
 	}
@@ -197,6 +216,61 @@ func TestAddPlayerWithValidColorAndTestGet(unitTest *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestAddNewPlayerThenDeleteThatPlayer(unitTest *testing.T) {
+	statePersisters := preparePersisters()
+
+	chatColor := colorsAvailableInTest[1]
+	newPlayer := "New Player"
+
+	for _, statePersister := range statePersisters {
+		testIdentifier :=
+			statePersister.PersisterDescription +
+				"/Add(" + newPlayer + ") then Delete(" + newPlayer + ")"
+
+		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			errorFromAdd := statePersister.PlayerPersister.Add(newPlayer, chatColor)
+
+			if errorFromAdd != nil {
+				unitTest.Fatalf(
+					"Add(%v, %v) produced an error %v",
+					newPlayer,
+					chatColor,
+					errorFromAdd)
+			}
+
+			statesFromAllBeforeDelete := statePersister.PlayerPersister.All()
+			if len(statesFromAllBeforeDelete) != 1 {
+				unitTest.Fatalf(
+					"Adding one player to fresh persister resulted in states %v",
+					statesFromAllBeforeDelete)
+			}
+
+			// We check that the persister still produces valid states.
+			assertPlayerNamesAreCorrectAndGetIsConsistentWithAll(
+				testIdentifier,
+				unitTest,
+				defaultTestPlayerNames,
+				statePersister.PlayerPersister)
+
+			errorFromDelete := statePersister.PlayerPersister.Delete(newPlayer)
+
+			if errorFromDelete != nil {
+				unitTest.Fatalf(
+					"Delete(%v) produced an error %v",
+					newPlayer,
+					errorFromDelete)
+			}
+
+			statesFromAllAfterDelete := statePersister.PlayerPersister.All()
+			if len(statesFromAllAfterDelete) != 0 {
+				unitTest.Fatalf(
+					"Deleting the one player added to fresh persister resulted in states %v",
+					statesFromAllAfterDelete)
+			}
+		})
 	}
 }
 
@@ -348,7 +422,6 @@ func TestReset(unitTest *testing.T) {
 				testCase.testName + "/" + statePersister.PersisterDescription
 
 			unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-
 				// First we have to add all the required players
 				for _, playerName := range defaultTestPlayerNames {
 					errorFromAdd := statePersister.PlayerPersister.Add(playerName, chatColorForAdd)
