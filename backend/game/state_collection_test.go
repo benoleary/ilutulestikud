@@ -762,3 +762,42 @@ func TestExecutorCorrectWhenPersisterGivesValidGame(unitTest *testing.T) {
 			actualArguments[0])
 	}
 }
+
+func TestReturnErrorFromPersisterDelete(unitTest *testing.T) {
+	gameCollection, gamePersister, _ :=
+		prepareCollection(unitTest, playerNamesAvailableInTest)
+	gamePersister.TestErrorForDelete = nil
+
+	testCases := []struct {
+		testName      string
+		expectedError error
+	}{
+		{
+			testName:      "String error",
+			expectedError: fmt.Errorf("Expected error from Delete(...)"),
+		},
+		{
+			testName:      "Nil error",
+			expectedError: nil,
+		},
+	}
+
+	for _, testCase := range testCases {
+		gamePersister.ReturnForNontestError = testCase.expectedError
+
+		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
+
+			gameName := "Mock Player"
+
+			actualError := gameCollection.Delete(gameName)
+
+			if actualError != testCase.expectedError {
+				unitTest.Errorf(
+					"Delete(game name %v) returned error %v - expected %v",
+					gameName,
+					actualError,
+					testCase.expectedError)
+			}
+		})
+	}
+}
