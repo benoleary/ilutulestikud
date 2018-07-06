@@ -219,33 +219,36 @@ func TestAddPlayerWithValidColorAndTestGet(unitTest *testing.T) {
 	}
 }
 
-func TestAddNewPlayerThenDeleteThatPlayer(unitTest *testing.T) {
+func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 	statePersisters := preparePersisters()
-
-	chatColor := colorsAvailableInTest[1]
-	newPlayer := "New Player"
+	firstPlayer := "First Player"
+	firstColor := colorsAvailableInTest[0]
+	secondPlayer := "Second Player"
+	secondColor := colorsAvailableInTest[1]
 
 	for _, statePersister := range statePersisters {
 		testIdentifier :=
 			statePersister.PersisterDescription +
-				"/Add(" + newPlayer + ") then Delete(" + newPlayer + ")"
+				"/Add(" + firstPlayer + ") then Add(" + secondPlayer +
+				") then Delete(" + firstPlayer + ") then Delete(" + secondPlayer + ")"
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			errorFromAdd := statePersister.PlayerPersister.Add(newPlayer, chatColor)
+			errorFromFirstAdd :=
+				statePersister.PlayerPersister.Add(firstPlayer, firstColor)
 
-			if errorFromAdd != nil {
+			if errorFromFirstAdd != nil {
 				unitTest.Fatalf(
 					"Add(%v, %v) produced an error %v",
-					newPlayer,
-					chatColor,
-					errorFromAdd)
+					firstPlayer,
+					colorsAvailableInTest[0],
+					errorFromFirstAdd)
 			}
 
-			statesFromAllBeforeDelete := statePersister.PlayerPersister.All()
-			if len(statesFromAllBeforeDelete) != 1 {
+			statesFromAllAfterFirstAdd := statePersister.PlayerPersister.All()
+			if len(statesFromAllAfterFirstAdd) != 1 {
 				unitTest.Fatalf(
-					"Adding one player to fresh persister resulted in states %v",
-					statesFromAllBeforeDelete)
+					"Adding first player to a new persister resulted in states %v",
+					statesFromAllAfterFirstAdd)
 			}
 
 			// We check that the persister still produces valid states.
@@ -255,20 +258,126 @@ func TestAddNewPlayerThenDeleteThatPlayer(unitTest *testing.T) {
 				defaultTestPlayerNames,
 				statePersister.PlayerPersister)
 
-			errorFromDelete := statePersister.PlayerPersister.Delete(newPlayer)
+			// We check that the first player can be retrieved.
+			firstStateBeforeSecondAdd :=
+				getStateAndAssertNoError(
+					testIdentifier+"/Retrieve with Get(...)",
+					unitTest,
+					firstPlayer,
+					statePersister.PlayerPersister)
 
-			if errorFromDelete != nil {
+			if firstStateBeforeSecondAdd.Color() != firstColor {
 				unitTest.Fatalf(
-					"Delete(%v) produced an error %v",
-					newPlayer,
-					errorFromDelete)
+					"Add(%v, %v) then Get(%v) produced a state %v which does not have the correct color",
+					firstPlayer,
+					firstColor,
+					firstPlayer,
+					firstStateBeforeSecondAdd)
 			}
 
-			statesFromAllAfterDelete := statePersister.PlayerPersister.All()
-			if len(statesFromAllAfterDelete) != 0 {
+			errorFromSecondAdd :=
+				statePersister.PlayerPersister.Add(secondPlayer, secondColor)
+
+			if errorFromSecondAdd != nil {
 				unitTest.Fatalf(
-					"Deleting the one player added to fresh persister resulted in states %v",
-					statesFromAllAfterDelete)
+					"Add(%v, %v) produced an error %v",
+					secondPlayer,
+					secondColor,
+					errorFromSecondAdd)
+			}
+
+			statesFromAllAfterSecondAdd := statePersister.PlayerPersister.All()
+			if len(statesFromAllAfterSecondAdd) != 2 {
+				unitTest.Fatalf(
+					"Adding second player after adding first player to a new persister resulted in states %v",
+					statesFromAllAfterSecondAdd)
+			}
+
+			// We check that the persister still produces valid states.
+			assertPlayerNamesAreCorrectAndGetIsConsistentWithAll(
+				testIdentifier,
+				unitTest,
+				defaultTestPlayerNames,
+				statePersister.PlayerPersister)
+
+			// We check that the first player can still be retrieved.
+			firstStateAfterSecondAdd :=
+				getStateAndAssertNoError(
+					testIdentifier+"/Retrieve with Get(...)",
+					unitTest,
+					firstPlayer,
+					statePersister.PlayerPersister)
+
+			if firstStateAfterSecondAdd.Color() != firstColor {
+				unitTest.Fatalf(
+					"First state %v changed color from expected %v",
+					firstStateAfterSecondAdd,
+					firstColor)
+			}
+
+			// We check that the second player can be retrieved.
+			secondStateBeforeFirstDelete :=
+				getStateAndAssertNoError(
+					testIdentifier+"/Retrieve with Get(...)",
+					unitTest,
+					secondPlayer,
+					statePersister.PlayerPersister)
+
+			if secondStateBeforeFirstDelete.Color() != secondColor {
+				unitTest.Fatalf(
+					"Add(%v, %v) then Get(%v) produced a state %v which does not have the correct color",
+					secondPlayer,
+					secondColor,
+					secondPlayer,
+					secondStateBeforeFirstDelete)
+			}
+
+			errorFromFirstDelete := statePersister.PlayerPersister.Delete(firstPlayer)
+
+			if errorFromFirstDelete != nil {
+				unitTest.Fatalf(
+					"Delete(%v) produced an error %v",
+					firstPlayer,
+					errorFromFirstDelete)
+			}
+
+			statesFromAllAfterFirstDelete := statePersister.PlayerPersister.All()
+			if len(statesFromAllAfterFirstDelete) != 1 {
+				unitTest.Fatalf(
+					"Deleting the first player after adding two players to a new persister resulted in states %v",
+					statesFromAllAfterFirstDelete)
+			}
+
+			// We check that the second player can still be retrieved.
+			secondStateAfterFirstDelete :=
+				getStateAndAssertNoError(
+					testIdentifier+"/Retrieve with Get(...)",
+					unitTest,
+					secondPlayer,
+					statePersister.PlayerPersister)
+
+			if secondStateAfterFirstDelete.Color() != secondColor {
+				unitTest.Fatalf(
+					"Second state %v changed color from expected %v",
+					secondStateAfterFirstDelete,
+					secondColor)
+			}
+
+			errorFromSecondDelete := statePersister.PlayerPersister.Delete(secondPlayer)
+
+			if errorFromSecondDelete != nil {
+				unitTest.Fatalf(
+					"Delete(%v) produced an error %v",
+					secondPlayer,
+					errorFromSecondDelete)
+			}
+
+			statesFromAllAfterSecondDelete := statePersister.PlayerPersister.All()
+			if len(statesFromAllAfterSecondDelete) != 0 {
+				unitTest.Fatalf(
+					"Deleting the second player after deleting first player after"+
+						" adding two players to a new persister resulted in states %v",
+					statesFromAllAfterSecondDelete)
 			}
 		})
 	}

@@ -145,8 +145,13 @@ func (gamePersister *inMemoryPersister) RemoveGameFromListForPlayer(
 				originalListOfGames := gamePersister.gamesWithPlayers[playerName]
 				reducedListOfGames := make([]game.ReadonlyState, gameIndex)
 				copy(reducedListOfGames, originalListOfGames[:gameIndex])
+
+				// We don't have to worry about gameIndex+1 being out of bounds as
+				// a slice can start at index == length, and in this case just
+				// produces an empty slice. (For gameIndex < length - 1, there is
+				// obviously no problem.)
 				gamePersister.gamesWithPlayers[playerName] =
-					append(reducedListOfGames, gameStates[gameIndex+1:]...)
+					append(reducedListOfGames, originalListOfGames[gameIndex+1:]...)
 
 				return nil
 			}
@@ -169,21 +174,28 @@ func (gamePersister *inMemoryPersister) Delete(gameName string) error {
 		return fmt.Errorf("No game %v exists to delete", gameName)
 	}
 
+	errorsFromLeaving := []error{}
+
 	for _, participantName := range gameToDelete.Read().PlayerNames() {
 		errorFromRemovalFromListForPlayer :=
 			gamePersister.RemoveGameFromListForPlayer(gameName, participantName)
 		if errorFromRemovalFromListForPlayer != nil {
-			errorAroundRemovalError :=
-				fmt.Errorf(
-					"error %v while removing game %v from player lists, game not deleted",
-					errorFromRemovalFromListForPlayer,
-					gameName)
-
-			return errorAroundRemovalError
+			errorsFromLeaving =
+				append(errorsFromLeaving, errorFromRemovalFromListForPlayer)
 		}
 	}
 
 	delete(gamePersister.gameStates, gameName)
+
+	if len(errorsFromLeaving) > 0 {
+		errorAroundRemovalErrors :=
+			fmt.Errorf(
+				"errors %v while removing game %v from player lists, game still deleted",
+				errorsFromLeaving,
+				gameName)
+
+		return errorAroundRemovalErrors
+	}
 
 	return nil
 }

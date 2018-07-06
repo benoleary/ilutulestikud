@@ -1,6 +1,7 @@
 package persister_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/benoleary/ilutulestikud/backend/game"
@@ -241,7 +242,7 @@ func TestRejectAddGameWithExistingName(unitTest *testing.T) {
 	}
 }
 
-func TestAddGamesThenLeaveGames(unitTest *testing.T) {
+func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 	statePersisters := preparePersisters()
 	leavingPlayer := defaultTestPlayers[0]
 	stayingPlayer := defaultTestPlayers[2]
@@ -436,7 +437,7 @@ func TestAddGamesThenLeaveGames(unitTest *testing.T) {
 				playerNameSet(twoPlayersWithNilHands),
 				firstStateAfterLeaving)
 
-			lastTwoGameNames := make(map[string]bool, 1)
+			lastTwoGameNames := make(map[string]bool, 2)
 			lastTwoGameNames[secondGameName] = true
 			lastTwoGameNames[thirdGameName] = true
 			assertReadAllWithPlayerGameNamesCorrect(
@@ -548,6 +549,247 @@ func TestAddGamesThenLeaveGames(unitTest *testing.T) {
 					secondGameName,
 					leavingPlayer)
 			}
+
+			errorFromDeletingSecondGame :=
+				statePersister.GamePersister.Delete(secondGameName)
+			errorExpectedFromDeletingSecondGame :=
+				fmt.Errorf(
+					"errors %v while removing game %v from player lists, game still deleted",
+					[]error{
+						fmt.Errorf(
+							"Player %v is not a participant of game %v",
+							leavingPlayer,
+							secondGameName),
+					},
+					secondGameName)
+
+			// We have to compare the error strings because of the way that error interface
+			// comparison works. (There are better ways, such as custom error types, or an
+			// implementation which also implements an interface with a function which can
+			// be queried for behavior rather than type, as recommended by
+			// https://dave.cheney.net/2016/04/27/dont-just-check-errors-handle-them-gracefully
+			// but that's more effort than it's worth because the error analysis is only in this
+			// test.)
+			if errorFromDeletingSecondGame.Error() != errorExpectedFromDeletingSecondGame.Error() {
+				unitTest.Fatalf(
+					"Delete(%v) produced unexpected error %v instead of expected %v",
+					secondGameName,
+					errorFromDeletingSecondGame,
+					errorExpectedFromDeletingSecondGame)
+			}
+
+			firstAndThirdGameNames := make(map[string]bool, 2)
+			firstAndThirdGameNames[firstGameName] = true
+			firstAndThirdGameNames[thirdGameName] = true
+
+			assertReadAllWithPlayerGameNamesCorrect(
+				testIdentifier+"/all for stayer after deleting second game",
+				unitTest,
+				stayingPlayer,
+				firstAndThirdGameNames,
+				statePersister.GamePersister)
+
+			secondGame, errorFromGetDeletedSecond :=
+				statePersister.GamePersister.ReadAndWriteGame(secondGameName)
+			if errorFromGetDeletedSecond == nil {
+				unitTest.Fatalf(
+					"ReadAndWriteGame(deleted game %v) produced state %v and nil error",
+					secondGameName,
+					secondGame)
+			}
+
+			errorFromDeletingThirdGame :=
+				statePersister.GamePersister.Delete(thirdGameName)
+			errorExpectedFromDeletingThirdGame :=
+				fmt.Errorf(
+					"errors %v while removing game %v from player lists, game still deleted",
+					[]error{
+						fmt.Errorf(
+							"Player %v is not a participant of game %v",
+							leavingPlayer,
+							thirdGameName),
+					},
+					thirdGameName)
+
+			// We have to compare the error strings because of the way that error interface
+			// comparison works. (There are better ways, such as custom error types, or an
+			// implementation which also implements an interface with a function which can
+			// be queried for behavior rather than type, as recommended by
+			// https://dave.cheney.net/2016/04/27/dont-just-check-errors-handle-them-gracefully
+			// but that's more effort than it's worth because the error analysis is only in this
+			// test.)
+			if errorFromDeletingThirdGame.Error() != errorExpectedFromDeletingThirdGame.Error() {
+				unitTest.Fatalf(
+					"Delete(%v) produced unexpected error %v instead of expected %v",
+					thirdGameName,
+					errorFromDeletingThirdGame,
+					errorExpectedFromDeletingThirdGame)
+			}
+
+			assertReadAllWithPlayerGameNamesCorrect(
+				testIdentifier+"/all for stayer after deleting second and third games",
+				unitTest,
+				stayingPlayer,
+				justFirstGameName,
+				statePersister.GamePersister)
+
+			thirdGame, errorFromGetDeletedThird :=
+				statePersister.GamePersister.ReadAndWriteGame(thirdGameName)
+			if errorFromGetDeletedThird == nil {
+				unitTest.Fatalf(
+					"ReadAndWriteGame(deleted game %v) produced state %v and nil error",
+					thirdGameName,
+					thirdGame)
+			}
+
+			errorFromDeletingThirdGameAgain :=
+				statePersister.GamePersister.Delete(thirdGameName)
+
+			// We have to compare the error strings because of the way that error interface
+			// comparison works. (There are better ways, such as custom error types, or an
+			// implementation which also implements an interface with a function which can
+			// be queried for behavior rather than type, as recommended by
+			// https://dave.cheney.net/2016/04/27/dont-just-check-errors-handle-them-gracefully
+			// but that's more effort than it's worth because the error analysis is only in this
+			// test.)
+			if (errorFromDeletingThirdGameAgain == nil) ||
+				(errorFromDeletingThirdGame.Error() != errorExpectedFromDeletingThirdGame.Error()) {
+				unitTest.Fatalf(
+					"Delete(%v) a second time produced error %v",
+					thirdGameName,
+					errorFromDeletingThirdGameAgain)
+			}
+
+			assertReadAllWithPlayerGameNamesCorrect(
+				testIdentifier+"/all for stayer after deleting second game once and third game twice",
+				unitTest,
+				stayingPlayer,
+				justFirstGameName,
+				statePersister.GamePersister)
+
+			errorFromDeletingFirstGame :=
+				statePersister.GamePersister.Delete(firstGameName)
+			errorExpectedFromDeletingFirstGame :=
+				fmt.Errorf(
+					"errors %v while removing game %v from player lists, game still deleted",
+					[]error{
+						fmt.Errorf(
+							"Player %v is not a participant of game %v",
+							leavingPlayer,
+							firstGameName),
+					},
+					firstGameName)
+
+			// We have to compare the error strings because of the way that error interface
+			// comparison works. (There are better ways, such as custom error types, or an
+			// implementation which also implements an interface with a function which can
+			// be queried for behavior rather than type, as recommended by
+			// https://dave.cheney.net/2016/04/27/dont-just-check-errors-handle-them-gracefully
+			// but that's more effort than it's worth because the error analysis is only in this
+			// test.)
+			if errorFromDeletingFirstGame.Error() != errorExpectedFromDeletingFirstGame.Error() {
+				unitTest.Fatalf(
+					"Delete(%v) produced unexpected error %v instead of expected %v",
+					firstGameName,
+					errorFromDeletingFirstGame,
+					errorExpectedFromDeletingFirstGame)
+			}
+
+			assertReadAllWithPlayerGameNamesCorrect(
+				testIdentifier+"/all for stayer after deleting all games",
+				unitTest,
+				stayingPlayer,
+				noGameNames,
+				statePersister.GamePersister)
+
+			firstGame, errorFromGetDeletedFirst :=
+				statePersister.GamePersister.ReadAndWriteGame(firstGameName)
+			if errorFromGetDeletedFirst == nil {
+				unitTest.Fatalf(
+					"ReadAndWriteGame(deleted game %v) produced state %v and nil error",
+					firstGameName,
+					firstGame)
+			}
+
+			assertReadAllWithPlayerGameNamesCorrect(
+				testIdentifier+"/all for stayer after deleting all games",
+				unitTest,
+				stayingPlayer,
+				noGameNames,
+				statePersister.GamePersister)
+
+			errorFromFirstAddAgain :=
+				statePersister.GamePersister.AddGame(
+					firstGameName,
+					logLengthForTest,
+					nil,
+					defaultTestRuleset,
+					twoPlayersWithNilHands,
+					nil)
+
+			if errorFromFirstAddAgain != nil {
+				unitTest.Fatalf(
+					"AddGame(%v, %v, nil, %v, %v, nil) produced an error: %v",
+					firstGameName,
+					logLengthForTest,
+					defaultTestRuleset,
+					twoPlayersWithNilHands,
+					errorFromFirstAddAgain)
+			}
+
+			// We just check that no error happens when fetching the game.
+			getStateAndAssertNoError(
+				testIdentifier+"/ReadAndWriteGame(first game again after deleting all games)",
+				unitTest,
+				firstGameName,
+				statePersister.GamePersister)
+
+			assertReadAllWithPlayerGameNamesCorrect(
+				testIdentifier+"/all for leaver after adding first game again after deleting all games",
+				unitTest,
+				leavingPlayer,
+				justFirstGameName,
+				statePersister.GamePersister)
+			assertReadAllWithPlayerGameNamesCorrect(
+				testIdentifier+"/all for stayer after adding first game again after deleting all games",
+				unitTest,
+				stayingPlayer,
+				justFirstGameName,
+				statePersister.GamePersister)
+
+			errorFromDeletingFirstGameAgain :=
+				statePersister.GamePersister.Delete(firstGameName)
+
+			// This time we expect no error.
+			if errorFromDeletingFirstGameAgain != nil {
+				unitTest.Fatalf(
+					"Delete(%v) produced unexpected error %v instead of expected nil",
+					firstGameName,
+					errorFromDeletingFirstGameAgain)
+			}
+
+			assertReadAllWithPlayerGameNamesCorrect(
+				testIdentifier+"/all for stayer after deleting all games again",
+				unitTest,
+				stayingPlayer,
+				noGameNames,
+				statePersister.GamePersister)
+
+			firstGameAgain, errorFromGetDeletedFirstAgain :=
+				statePersister.GamePersister.ReadAndWriteGame(firstGameName)
+			if errorFromGetDeletedFirstAgain == nil {
+				unitTest.Fatalf(
+					"ReadAndWriteGame(twice-deleted game %v) produced state %v and nil error",
+					firstGameName,
+					firstGameAgain)
+			}
+
+			assertReadAllWithPlayerGameNamesCorrect(
+				testIdentifier+"/all for stayer after deleting all games again",
+				unitTest,
+				stayingPlayer,
+				noGameNames,
+				statePersister.GamePersister)
 		})
 	}
 }
@@ -624,6 +866,7 @@ func assertReadAllWithPlayerGameNamesCorrect(
 		unitTest.Fatalf(
 			testIdentifier+
 				"/ReadAllWithPlayer(%v) produced %v which did not have the expected game names %v",
+			playerName,
 			statesFromAllWithPlayer,
 			expectedGameNames)
 	}
@@ -633,6 +876,7 @@ func assertReadAllWithPlayerGameNamesCorrect(
 			unitTest.Fatalf(
 				testIdentifier+
 					"/ReadAllWithPlayer(%v) produced %v which did not have the expected game names %v",
+				playerName,
 				statesFromAllWithPlayer,
 				expectedGameNames)
 		}
