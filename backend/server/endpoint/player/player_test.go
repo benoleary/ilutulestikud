@@ -455,7 +455,7 @@ func TestAvailableColorsCorrectlyDelivered(unitTest *testing.T) {
 func TestRejectInvalidNewPlayerWithMalformedRequest(unitTest *testing.T) {
 	testIdentifier := "Reject invalid POST new-player with malformed JSON body"
 	mockCollection, testHandler := newPlayerCollectionAndHandler()
-	mockCollection.ErrorToReturn = errors.New("error")
+	mockCollection.ErrorToReturn = errors.New("expected error")
 
 	// There is no point testing with valid JSON objects which do not correspond
 	// to the expected JSON object, as the JSON will just be parsed with empty
@@ -486,7 +486,7 @@ func TestRejectNewPlayerIfCollectionRejectsIt(unitTest *testing.T) {
 	testIdentifier := "Reject POST new-player if collection rejects it"
 	mockCollection, testHandler := newPlayerCollectionAndHandler()
 
-	mockCollection.ErrorToReturn = errors.New("error")
+	mockCollection.ErrorToReturn = errors.New("expected error")
 	mockCollection.ReturnForAll = testPlayerStates
 
 	bodyObject := parsing.PlayerState{
@@ -613,7 +613,7 @@ func TestAcceptValidNewPlayer(unitTest *testing.T) {
 func TestRejectInvalidUpdatePlayerWithMalformedRequest(unitTest *testing.T) {
 	testIdentifier := "Reject invalid POST update-player with malformed JSON body"
 	mockCollection, testHandler := newPlayerCollectionAndHandler()
-	mockCollection.ErrorToReturn = errors.New("error")
+	mockCollection.ErrorToReturn = errors.New("expected error")
 
 	// There is no point testing with valid JSON objects which do not correspond
 	// to the expected JSON object, as the JSON will just be parsed with empty
@@ -704,6 +704,112 @@ func TestAcceptValidUpdatePlayer(unitTest *testing.T) {
 		functionNameAndArgument{
 			FunctionName:     "UpdateColor",
 			FunctionArgument: stringPair{first: bodyObject.Name, second: bodyObject.Color},
+		},
+		functionNameAndArgument{
+			FunctionName:     "All",
+			FunctionArgument: nil,
+		},
+	}
+
+	assertFunctionRecordsAreCorrect(
+		unitTest,
+		mockCollection.FunctionsAndArgumentsReceived,
+		expectedRecords,
+		testIdentifier)
+}
+func TestRejectInvalidDeletePlayerWithMalformedRequest(unitTest *testing.T) {
+	testIdentifier := "Reject invalid POST delete-player with malformed JSON body"
+	mockCollection, testHandler := newPlayerCollectionAndHandler()
+	mockCollection.ErrorToReturn = errors.New("error")
+
+	// There is no point testing with valid JSON objects which do not correspond
+	// to the expected JSON object, as the JSON will just be parsed with empty
+	// strings for the missing attributes and extra attributes will just be
+	// ignored. The tests of the player state collection can cover the cases of
+	// empty player names and colors.
+	bodyString := "{\"Identifier\" :\"Something\", \"Name\":}"
+
+	bodyDecoder := json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
+
+	_, responseCode := testHandler.HandlePost(bodyDecoder, []string{"delete-player"})
+
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
+
+	assertNoFunctionWasCalled(
+		unitTest,
+		mockCollection.FunctionsAndArgumentsReceived,
+		testIdentifier)
+}
+
+func TestRejectDeletePlayerIfCollectionRejectsIt(unitTest *testing.T) {
+	testIdentifier := "Reject POST delete-player if collection rejects it"
+	mockCollection, testHandler := newPlayerCollectionAndHandler()
+	mockCollection.ErrorToReturn = errors.New("expected error")
+	mockCollection.ReturnForAll = testPlayerStates
+
+	bodyObject := parsing.PlayerState{
+		Name:  "A. Player Name",
+		Color: "The color",
+	}
+
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"delete-player"})
+
+	if responseCode != http.StatusInternalServerError {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusInternalServerError,
+			responseCode)
+	}
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "Delete",
+			FunctionArgument: bodyObject.Name,
+		},
+		testIdentifier)
+}
+
+func TestAcceptValidDeletePlayer(unitTest *testing.T) {
+	testIdentifier := "POST delete-player"
+	mockCollection, testHandler := newPlayerCollectionAndHandler()
+	mockCollection.ErrorToReturn = nil
+
+	bodyObject := parsing.PlayerState{
+		Name:  "A. Player Name",
+		Color: "The color",
+	}
+
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"delete-player"})
+
+	if responseCode != http.StatusOK {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusOK,
+			responseCode)
+	}
+
+	expectedRecords := []functionNameAndArgument{
+		functionNameAndArgument{
+			FunctionName:     "Delete",
+			FunctionArgument: bodyObject.Name,
 		},
 		functionNameAndArgument{
 			FunctionName:     "All",

@@ -664,6 +664,50 @@ func TestReturnErrorFromPersisterUpdateColor(unitTest *testing.T) {
 	}
 }
 
+func TestReturnErrorFromPersisterDelete(unitTest *testing.T) {
+	testCases := []struct {
+		testName      string
+		expectedError error
+	}{
+		{
+			testName:      "String error",
+			expectedError: fmt.Errorf("Expected error from Delete(...)"),
+		},
+		{
+			testName:      "Nil error",
+			expectedError: nil,
+		},
+	}
+
+	for _, testCase := range testCases {
+		mockImplementation :=
+			NewMockPersister(unitTest, fmt.Errorf("Only Delete(...) should be called"))
+		mockImplementation.TestErrorForDelete = nil
+		mockImplementation.ReturnForNontestError = testCase.expectedError
+
+		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
+			stateCollection, _ :=
+				prepareCollection(
+					unitTest,
+					nil,
+					colorsAvailableInTest,
+					mockImplementation)
+
+			playerName := "Mock Player"
+
+			actualError := stateCollection.Delete(playerName)
+
+			if actualError != testCase.expectedError {
+				unitTest.Errorf(
+					"Delete(player name %v) returned error %v - expected %v",
+					playerName,
+					actualError,
+					testCase.expectedError)
+			}
+		})
+	}
+}
+
 func assertPersisterAddCalledCorrectly(
 	testIdentifier string,
 	unitTest *testing.T,

@@ -311,7 +311,7 @@ func TestGetAllGamesWithPlayerInvalidPlayerIdentifierBadRequest(unitTest *testin
 func TestGetAllGamesWithPlayerRejectedIfCollectionRejectsIt(unitTest *testing.T) {
 	testIdentifier := "GET all-games-with-player rejected by collection"
 	mockCollection, testHandler := newGameCollectionAndHandler()
-	mockCollection.ErrorToReturn = errors.New("error")
+	mockCollection.ErrorToReturn = errors.New("expected error")
 
 	mockPlayerName := "Mock MacMock"
 	mockPlayerIdentifier := segmentTranslatorForTest().ToSegment(mockPlayerName)
@@ -594,7 +594,7 @@ func TestGetGameForPlayerRejectedIfCollectionRejectsIt(unitTest *testing.T) {
 	testIdentifier := "GET game-as-seen-by-player rejected by collection"
 	mockCollection, testHandler := newGameCollectionAndHandler()
 
-	mockCollection.ErrorToReturn = errors.New("error")
+	mockCollection.ErrorToReturn = errors.New("expected error")
 
 	mockPlayerName := "Mock Player"
 	mockPlayerIdentifier := segmentTranslatorForTest().ToSegment(mockPlayerName)
@@ -877,7 +877,7 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 func TestRejectInvalidNewGameWithMalformedRequest(unitTest *testing.T) {
 	testIdentifier := "Reject invalid POST create-new-game with malformed JSON body"
 	mockCollection, testHandler := newGameCollectionAndHandler()
-	mockCollection.ErrorToReturn = errors.New("error")
+	mockCollection.ErrorToReturn = errors.New("expected error")
 
 	// There is no point testing with valid JSON objects which do not correspond
 	// to the expected JSON object, as the JSON will just be parsed with empty
@@ -936,7 +936,7 @@ func TestRejectNewGameWithInvalidRulesetIdentifier(unitTest *testing.T) {
 func TestRejectNewGameIfCollectionRejectsIt(unitTest *testing.T) {
 	testIdentifier := "Reject POST create-new-game if collection rejects it"
 	mockCollection, testHandler := newGameCollectionAndHandler()
-	mockCollection.ErrorToReturn = errors.New("error")
+	mockCollection.ErrorToReturn = errors.New("expected error")
 
 	bodyObject :=
 		parsing.GameDefinition{
@@ -1047,7 +1047,7 @@ func TestRejectNewGameIfIdentifierIncludesSegmentDelimiter(unitTest *testing.T) 
 }
 
 func TestAcceptValidNewGame(unitTest *testing.T) {
-	testIdentifier := "POST record-chat-message"
+	testIdentifier := "POST create-new-game"
 	mockCollection, testHandler := newGameCollectionAndHandler()
 
 	bodyObject :=
@@ -1102,10 +1102,117 @@ func TestAcceptValidNewGame(unitTest *testing.T) {
 		testIdentifier)
 }
 
+func TestRejectInvalidDeleteGameWithMalformedRequest(unitTest *testing.T) {
+	testIdentifier := "Reject invalid POST delete-game with malformed JSON body"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockCollection.ErrorToReturn = errors.New("expected error")
+
+	// There is no point testing with valid JSON objects which do not correspond
+	// to the expected JSON object, as the JSON will just be parsed with empty
+	// strings for the missing attributes and extra attributes will just be
+	// ignored. The tests of the game state collection can cover the cases of
+	// empty attributes.
+	bodyString := "{\"GameName\" :\"Something\", \"PlayerIdentifiers\":}"
+
+	bodyDecoder := json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
+
+	_, responseCode := testHandler.HandlePost(bodyDecoder, []string{"delete-game"})
+
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
+
+	assertNoFunctionWasCalled(
+		unitTest,
+		mockCollection.FunctionsAndArgumentsReceived,
+		testIdentifier)
+}
+
+func TestRejectDeleteGameIfCollectionRejectsIt(unitTest *testing.T) {
+	testIdentifier := "Reject POST delete-game if collection rejects it"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockCollection.ErrorToReturn = errors.New("expected error")
+
+	bodyObject :=
+		parsing.GameDefinition{
+			GameName: "test game",
+		}
+
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"delete-game"})
+
+	if responseCode != http.StatusInternalServerError {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusInternalServerError,
+			responseCode)
+	}
+
+	expectedFunctionArgument := bodyObject.GameName
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "Delete",
+			FunctionArgument: expectedFunctionArgument,
+		},
+		testIdentifier)
+}
+
+func TestAcceptValidDeletGame(unitTest *testing.T) {
+	testIdentifier := "POST delete-game"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+
+	bodyObject :=
+		parsing.GameDefinition{
+			GameName: "test game",
+		}
+
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"delete-game"})
+
+	if responseCode != http.StatusOK {
+		unitTest.Fatalf(
+			testIdentifier+
+				"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusOK,
+			responseCode)
+	}
+
+	expectedFunctionArgument := bodyObject.GameName
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "Delete",
+			FunctionArgument: expectedFunctionArgument,
+		},
+		testIdentifier)
+}
+
 func TestRejectInvalidChatWithMalformedRequest(unitTest *testing.T) {
 	testIdentifier := "Reject invalid POST record-chat-message with malformed JSON body"
 	mockCollection, testHandler := newGameCollectionAndHandler()
-	mockCollection.ErrorToReturn = errors.New("error")
+	mockCollection.ErrorToReturn = errors.New("expected error")
 
 	// There is no point testing with valid JSON objects which do not correspond
 	// to the expected JSON object, as the JSON will just be parsed with empty
@@ -1137,7 +1244,7 @@ func TestRejectInvalidChatWithMalformedRequest(unitTest *testing.T) {
 func TestRejectChatIfCollectionRejectsIt(unitTest *testing.T) {
 	testIdentifier := "Reject POST record-chat-message if collection rejects it"
 	mockCollection, testHandler := newGameCollectionAndHandler()
-	mockCollection.ErrorToReturn = errors.New("error")
+	mockCollection.ErrorToReturn = errors.New("expected error")
 
 	bodyObject :=
 		parsing.PlayerChatMessage{
@@ -1259,7 +1366,7 @@ func TestRejectInvalidDiscardWithMalformedRequest(unitTest *testing.T) {
 	testIdentifier :=
 		"Reject invalid POST take-turn-by-discarding with malformed JSON body"
 	mockCollection, testHandler := newGameCollectionAndHandler()
-	mockCollection.ErrorToReturn = errors.New("error")
+	mockCollection.ErrorToReturn = errors.New("expected error")
 
 	// There is no point testing with valid JSON objects which do not correspond
 	// to the expected JSON object, as the JSON will just be parsed with empty
@@ -1291,7 +1398,7 @@ func TestRejectDiscardIfCollectionRejectsIt(unitTest *testing.T) {
 	testIdentifier :=
 		"Reject POST take-turn-by-discarding if collection rejects it"
 	mockCollection, testHandler := newGameCollectionAndHandler()
-	mockCollection.ErrorToReturn = errors.New("error")
+	mockCollection.ErrorToReturn = errors.New("expected error")
 
 	bodyObject :=
 		parsing.PlayerCardIndication{
@@ -1412,7 +1519,7 @@ func TestRejectInvalidPlayWithMalformedRequest(unitTest *testing.T) {
 	testIdentifier :=
 		"Reject invalid POST take-turn-by-attempting-to-play with malformed JSON body"
 	mockCollection, testHandler := newGameCollectionAndHandler()
-	mockCollection.ErrorToReturn = errors.New("error")
+	mockCollection.ErrorToReturn = errors.New("expected error")
 
 	// There is no point testing with valid JSON objects which do not correspond
 	// to the expected JSON object, as the JSON will just be parsed with empty
@@ -1444,7 +1551,7 @@ func TestRejectPlayIfCollectionRejectsIt(unitTest *testing.T) {
 	testIdentifier :=
 		"Reject POST take-turn-by-attempting-to-play if collection rejects it"
 	mockCollection, testHandler := newGameCollectionAndHandler()
-	mockCollection.ErrorToReturn = errors.New("error")
+	mockCollection.ErrorToReturn = errors.New("expected error")
 
 	bodyObject :=
 		parsing.PlayerCardIndication{
