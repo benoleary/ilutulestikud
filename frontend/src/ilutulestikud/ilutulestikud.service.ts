@@ -113,4 +113,15 @@ export class IlutulestikudService {
         "CardIndex": indexInHand
       })
   }
+
+  SendLeaveGame(
+    gameIdentification: BackendIdentification,
+    playerIdentification: BackendIdentification): Observable<any> {
+    return this.httpClient.post(
+      this.uriRoot + "game/leave-game",
+      {
+        "GameName": gameIdentification.NameForPost,
+        "PlayerName": playerIdentification.NameForPost
+      })
+  }
 }

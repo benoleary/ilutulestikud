@@ -166,6 +166,16 @@ func (gameCollection *StateCollection) ExecuteAction(
 	return ExecutorOfActionsForPlayer(gameState, actingPlayer)
 }
 
+// RemoveGameFromListForPlayer calls the RemoveGameFromListForPlayer of the
+// internal persistence store.
+func (gameCollection *StateCollection) RemoveGameFromListForPlayer(
+	gameName string,
+	playerName string) error {
+	return gameCollection.statePersister.RemoveGameFromListForPlayer(
+		gameName,
+		playerName)
+}
+
 // Delete calls the Delete of the internal persistence store.
 func (gameCollection *StateCollection) Delete(gameName string) error {
 	return gameCollection.statePersister.Delete(gameName)

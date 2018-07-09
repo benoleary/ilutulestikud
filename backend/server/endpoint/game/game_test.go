@@ -1102,6 +1102,123 @@ func TestAcceptValidNewGame(unitTest *testing.T) {
 		testIdentifier)
 }
 
+func TestRejectInvalidLeaveGameWithMalformedRequest(unitTest *testing.T) {
+	testIdentifier := "Reject invalid POST leave-game with malformed JSON body"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockCollection.ErrorToReturn = errors.New("expected error")
+
+	// There is no point testing with valid JSON objects which do not correspond
+	// to the expected JSON object, as the JSON will just be parsed with empty
+	// strings for the missing attributes and extra attributes will just be
+	// ignored. The tests of the game state collection can cover the cases of
+	// empty attributes.
+	bodyString := "{\"GameName\" :\"Something\", \"PlayerName\":}"
+
+	bodyDecoder := json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
+
+	_, responseCode := testHandler.HandlePost(bodyDecoder, []string{"leave-game"})
+
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
+
+	assertNoFunctionWasCalled(
+		unitTest,
+		mockCollection.FunctionsAndArgumentsReceived,
+		testIdentifier)
+}
+
+func TestRejectLeaveGameIfCollectionRejectsIt(unitTest *testing.T) {
+	testIdentifier := "Reject POST leave-game if collection rejects it"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockCollection.ErrorToReturn = errors.New("expected error")
+
+	bodyObject :=
+		parsing.PlayerInGameIndication{
+			GameName:   "test game",
+			PlayerName: "Test Player",
+		}
+
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"leave-game"})
+
+	if responseCode != http.StatusInternalServerError {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusInternalServerError,
+			responseCode)
+	}
+
+	expectedFunctionArgument :=
+		stringPair{
+			first:  bodyObject.GameName,
+			second: bodyObject.PlayerName,
+		}
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "RemoveGameFromListForPlayer",
+			FunctionArgument: expectedFunctionArgument,
+		},
+		testIdentifier)
+}
+
+func TestAcceptValidLeaveGame(unitTest *testing.T) {
+	testIdentifier := "POST leave-game"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+
+	bodyObject :=
+		parsing.PlayerInGameIndication{
+			GameName:   "test game",
+			PlayerName: "Test Player",
+		}
+
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"leave-game"})
+
+	if responseCode != http.StatusOK {
+		unitTest.Fatalf(
+			testIdentifier+
+				"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusOK,
+			responseCode)
+	}
+
+	expectedFunctionArgument :=
+		stringPair{
+			first:  bodyObject.GameName,
+			second: bodyObject.PlayerName,
+		}
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "RemoveGameFromListForPlayer",
+			FunctionArgument: expectedFunctionArgument,
+		},
+		testIdentifier)
+}
+
 func TestRejectInvalidDeleteGameWithMalformedRequest(unitTest *testing.T) {
 	testIdentifier := "Reject invalid POST delete-game with malformed JSON body"
 	mockCollection, testHandler := newGameCollectionAndHandler()
@@ -1170,7 +1287,7 @@ func TestRejectDeleteGameIfCollectionRejectsIt(unitTest *testing.T) {
 		testIdentifier)
 }
 
-func TestAcceptValidDeletGame(unitTest *testing.T) {
+func TestAcceptValidDeleteGame(unitTest *testing.T) {
 	testIdentifier := "POST delete-game"
 	mockCollection, testHandler := newGameCollectionAndHandler()
 
@@ -1248,8 +1365,10 @@ func TestRejectChatIfCollectionRejectsIt(unitTest *testing.T) {
 
 	bodyObject :=
 		parsing.PlayerChatMessage{
-			GameName:    "Test game",
-			PlayerName:  "A. Player Name",
+			PlayerInGameIndication: parsing.PlayerInGameIndication{
+				GameName:   "Test game",
+				PlayerName: "A. Player Name",
+			},
 			ChatMessage: "Blah blah blah",
 		}
 
@@ -1290,8 +1409,10 @@ func TestPropagateErrorFromChat(unitTest *testing.T) {
 
 	bodyObject :=
 		parsing.PlayerChatMessage{
-			GameName:    "Test game",
-			PlayerName:  "A. Player Name",
+			PlayerInGameIndication: parsing.PlayerInGameIndication{
+				GameName:   "Test game",
+				PlayerName: "A. Player Name",
+			},
 			ChatMessage: "Blah blah blah",
 		}
 
@@ -1330,8 +1451,10 @@ func TestAcceptValidChat(unitTest *testing.T) {
 
 	bodyObject :=
 		parsing.PlayerChatMessage{
-			GameName:    "Test game",
-			PlayerName:  "A. Player Name",
+			PlayerInGameIndication: parsing.PlayerInGameIndication{
+				GameName:   "Test game",
+				PlayerName: "A. Player Name",
+			},
 			ChatMessage: "Blah blah blah",
 		}
 
@@ -1402,9 +1525,11 @@ func TestRejectDiscardIfCollectionRejectsIt(unitTest *testing.T) {
 
 	bodyObject :=
 		parsing.PlayerCardIndication{
-			GameName:   "Test game",
-			PlayerName: "A. Player Name",
-			CardIndex:  1,
+			PlayerInGameIndication: parsing.PlayerInGameIndication{
+				GameName:   "Test game",
+				PlayerName: "A. Player Name",
+			},
+			CardIndex: 1,
 		}
 
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
@@ -1444,9 +1569,11 @@ func TestPropagateErrorFromDiscard(unitTest *testing.T) {
 
 	bodyObject :=
 		parsing.PlayerCardIndication{
-			GameName:   "Test game",
-			PlayerName: "A. Player Name",
-			CardIndex:  1,
+			PlayerInGameIndication: parsing.PlayerInGameIndication{
+				GameName:   "Test game",
+				PlayerName: "A. Player Name",
+			},
+			CardIndex: 1,
 		}
 
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
@@ -1483,9 +1610,11 @@ func TestAcceptValidDiscard(unitTest *testing.T) {
 
 	bodyObject :=
 		parsing.PlayerCardIndication{
-			GameName:   "Test game",
-			PlayerName: "A. Player Name",
-			CardIndex:  1,
+			PlayerInGameIndication: parsing.PlayerInGameIndication{
+				GameName:   "Test game",
+				PlayerName: "A. Player Name",
+			},
+			CardIndex: 1,
 		}
 
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
@@ -1555,9 +1684,11 @@ func TestRejectPlayIfCollectionRejectsIt(unitTest *testing.T) {
 
 	bodyObject :=
 		parsing.PlayerCardIndication{
-			GameName:   "Test game",
-			PlayerName: "A. Player Name",
-			CardIndex:  1,
+			PlayerInGameIndication: parsing.PlayerInGameIndication{
+				GameName:   "Test game",
+				PlayerName: "A. Player Name",
+			},
+			CardIndex: 1,
 		}
 
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
@@ -1596,9 +1727,11 @@ func TestPropagateErrorFromPlay(unitTest *testing.T) {
 
 	bodyObject :=
 		parsing.PlayerCardIndication{
-			GameName:   "Test game",
-			PlayerName: "A. Player Name",
-			CardIndex:  1,
+			PlayerInGameIndication: parsing.PlayerInGameIndication{
+				GameName:   "Test game",
+				PlayerName: "A. Player Name",
+			},
+			CardIndex: 1,
 		}
 
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
@@ -1635,9 +1768,11 @@ func TestAcceptValidPlay(unitTest *testing.T) {
 
 	bodyObject :=
 		parsing.PlayerCardIndication{
-			GameName:   "Test game",
-			PlayerName: "A. Player Name",
-			CardIndex:  1,
+			PlayerInGameIndication: parsing.PlayerInGameIndication{
+				GameName:   "Test game",
+				PlayerName: "A. Player Name",
+			},
+			CardIndex: 1,
 		}
 
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)

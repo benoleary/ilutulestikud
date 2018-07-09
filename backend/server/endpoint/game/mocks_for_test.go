@@ -274,6 +274,16 @@ func (mockCollection *mockGameCollection) AddNew(
 	return mockCollection.ErrorToReturn
 }
 
+// RemoveGameFromListForPlayer gets mocked.
+func (mockCollection *mockGameCollection) RemoveGameFromListForPlayer(
+	gameName string,
+	playerName string) error {
+	mockCollection.recordFunctionAndArgument(
+		"RemoveGameFromListForPlayer",
+		stringPair{first: gameName, second: playerName})
+	return mockCollection.ErrorToReturn
+}
+
 // Delete gets mocked.
 func (mockCollection *mockGameCollection) Delete(gameName string) error {
 	mockCollection.recordFunctionAndArgument(

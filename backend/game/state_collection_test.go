@@ -763,6 +763,47 @@ func TestExecutorCorrectWhenPersisterGivesValidGame(unitTest *testing.T) {
 	}
 }
 
+func TestReturnErrorFromPersisterRemoveFromGame(unitTest *testing.T) {
+	gameCollection, gamePersister, _ :=
+		prepareCollection(unitTest, playerNamesAvailableInTest)
+	gamePersister.TestErrorForRemoveGameFromListForPlayer = nil
+
+	testCases := []struct {
+		testName      string
+		expectedError error
+	}{
+		{
+			testName:      "String error",
+			expectedError: fmt.Errorf("Expected error from RemoveGameFromListForPlayer(...)"),
+		},
+		{
+			testName:      "Nil error",
+			expectedError: nil,
+		},
+	}
+
+	for _, testCase := range testCases {
+		gamePersister.ReturnForNontestError = testCase.expectedError
+
+		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
+			gameName := "mock game"
+			playerName := "Mock Player"
+
+			actualError :=
+				gameCollection.RemoveGameFromListForPlayer(gameName, playerName)
+
+			if actualError != testCase.expectedError {
+				unitTest.Errorf(
+					"RemoveGameFromListForPlayer(game name %v, player name %v) returned error %v - expected %v",
+					gameName,
+					playerName,
+					actualError,
+					testCase.expectedError)
+			}
+		})
+	}
+}
+
 func TestReturnErrorFromPersisterDelete(unitTest *testing.T) {
 	gameCollection, gamePersister, _ :=
 		prepareCollection(unitTest, playerNamesAvailableInTest)
@@ -786,8 +827,7 @@ func TestReturnErrorFromPersisterDelete(unitTest *testing.T) {
 		gamePersister.ReturnForNontestError = testCase.expectedError
 
 		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
-
-			gameName := "Mock Player"
+			gameName := "mock game"
 
 			actualError := gameCollection.Delete(gameName)
 

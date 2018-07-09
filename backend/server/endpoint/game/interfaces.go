@@ -29,6 +29,12 @@ type StateCollection interface {
 	// AddNew should add a new game to the collection based on the given arguments.
 	AddNew(gameName string, gameRuleset game.Ruleset, playerNames []string) error
 
+	// RemoveGameFromListForPlayer should remove the given player from the given game in
+	// the sense that the game will no longer show up in the result of
+	// ReadAllWithPlayer(playerName). It should return an error if the player is not a
+	// participant of the game, as well as in general I/O errors and so on.
+	RemoveGameFromListForPlayer(gameName string, playerName string) error
+
 	// Delete should delete the given game from the collection.
 	Delete(gameName string) error
 }

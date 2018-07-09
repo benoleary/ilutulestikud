@@ -178,6 +178,11 @@ import { InferredCard } from '../models/inferredcard.model';
 
     leaveGame(): void
     {
-      console.log("The player wants to leave the finished game...")
+      this.ilutulestikudService
+      .SendLeaveGame(this.gameIdentification, this.playerIdentification)
+      .subscribe(
+          () => {},
+          thrownError => this.onError.emit(thrownError),
+          () => {});
     }
   }

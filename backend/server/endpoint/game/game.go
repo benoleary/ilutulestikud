@@ -8,10 +8,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/game/card"
 	"github.com/benoleary/ilutulestikud/backend/game/message"
-
-	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
 
@@ -72,6 +71,8 @@ func (handler *Handler) HandlePost(
 		return handler.handleTakeTurnByDiscarding(httpBodyDecoder, relevantSegments)
 	case "take-turn-by-attempting-to-play":
 		return handler.handleTakeTurnByAttemptingToPlay(httpBodyDecoder, relevantSegments)
+	case "leave-game":
+		return handler.handleLeaveGame(httpBodyDecoder)
 	case "delete-game":
 		return handler.handleDeleteGame(httpBodyDecoder)
 	default:
@@ -339,6 +340,27 @@ func (handler *Handler) handleTakeTurnByAttemptingToPlay(
 	return "OK", http.StatusOK
 }
 
+// handleLeaveGame passes on the given game name and player name to the collection so that
+// the game can be removed from the list of games which is given for the player.
+func (handler *Handler) handleLeaveGame(httpBodyDecoder *json.Decoder) (interface{}, int) {
+	var leavingInformation parsing.PlayerInGameIndication
+
+	errorFromParse := httpBodyDecoder.Decode(&leavingInformation)
+	if errorFromParse != nil {
+		return "Error parsing JSON: " + errorFromParse.Error(), http.StatusBadRequest
+	}
+
+	errorFromLeaving :=
+		handler.stateCollection.RemoveGameFromListForPlayer(
+			leavingInformation.GameName,
+			leavingInformation.PlayerName)
+	if errorFromLeaving != nil {
+		return errorFromLeaving, http.StatusInternalServerError
+	}
+
+	return "OK", http.StatusOK
+}
+
 // handleDeleteGame passes on the given game name to the collection so that the game can
 // be deleted.
 func (handler *Handler) handleDeleteGame(httpBodyDecoder *json.Decoder) (interface{}, int) {
@@ -349,9 +371,9 @@ func (handler *Handler) handleDeleteGame(httpBodyDecoder *json.Decoder) (interfa
 		return "Error parsing JSON: " + errorFromParse.Error(), http.StatusBadRequest
 	}
 
-	deleteError := handler.stateCollection.Delete(gameToDelete.GameName)
-	if deleteError != nil {
-		return deleteError, http.StatusInternalServerError
+	errorFromDeletion := handler.stateCollection.Delete(gameToDelete.GameName)
+	if errorFromDeletion != nil {
+		return errorFromDeletion, http.StatusInternalServerError
 	}
 
 	return "OK", http.StatusOK
