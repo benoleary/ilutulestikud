@@ -61,7 +61,8 @@
     <div *ngIf="hasPlayersBeforeViewingPlayer()">
         Players before you:<br>
         <mat-list dense role="list">
-            <mat-list-item *ngFor="let playerHand of handsBeforeViewingPlayer"
+            <mat-list-item
+                *ngFor="let playerHand of handsBeforeViewingPlayer"
                 [ngStyle]="{'color': playerHand.playerColor, 'background-color': 'black'}">
                 {{ playerHand.playerName }}:
                 <card-array-display [cardArray]="playerHand.visibleCards"></card-array-display>
@@ -111,10 +112,35 @@
     <div *ngIf="hasPlayersAfterViewingPlayer()">
         Players after you:<br>
         <mat-list dense role="list">
-            <mat-list-item *ngFor="let playerHand of handsAfterViewingPlayer"
+            <mat-list-item
+                *ngFor="let playerHand of handsAfterViewingPlayer; let indexOfPlayer = index"
                 [ngStyle]="{'color': playerHand.playerColor, 'background-color': 'black'}">
-                {{ playerHand.playerName }}:
-                <card-array-display [cardArray]="playerHand.visibleCards"></card-array-display>
+                <span>
+                    {{ playerHand.playerName }}:
+                    <card-array-display [cardArray]="playerHand.visibleCards"></card-array-display>
+                </span>
+                <span>
+                    &nbsp;
+                </span>
+                <span>
+                    <button
+                        mat-raised-button
+                        (click)="hintColor(indexOfPlayer)"
+                        [disabled]="turnButtonsDisabled">
+                        Hint color
+                    </button>
+                </span>
+                <span>
+                    &nbsp;
+                </span>
+                <span>
+                    <button
+                        mat-raised-button
+                        (click)="hintIndex(indexOfPlayer)"
+                        [disabled]="turnButtonsDisabled">
+                        Hint number
+                    </button>
+                </span>
             </mat-list-item>
         </mat-list>
     </div>

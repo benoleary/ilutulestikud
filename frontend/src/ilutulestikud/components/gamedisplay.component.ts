@@ -34,6 +34,8 @@ import { InferredCard } from '../models/inferredcard.model';
     handOfViewingPlayer: InferredCard[];
     handsAfterViewingPlayer: VisibleHand[];
     turnButtonsDisabled: boolean;
+    colorsForHints: string[];
+    indicesForHints: number[];
 
     constructor(public ilutulestikudService: IlutulestikudService)
     {
@@ -51,6 +53,8 @@ import { InferredCard } from '../models/inferredcard.model';
         this.handOfViewingPlayer = [];
         this.handsAfterViewingPlayer = [];
         this.turnButtonsDisabled = true;
+        this.colorsForHints = [];
+        this.indicesForHints = [];
     }
 
     ngOnInit(): void
@@ -124,6 +128,9 @@ import { InferredCard } from '../models/inferredcard.model';
         VisibleHand.RefreshListFromSource(this.handsAfterViewingPlayer, fetchedGameData["HandsAfterThisPlayer"]);
 
         this.turnButtonsDisabled = !fetchedGameData["ThisPlayerCanTakeTurn"];
+
+        this.colorsForHints = fetchedGameData["HintColorSuits"];
+        this.indicesForHints = fetchedGameData["HintSequenceIndices"];
     }
 
     hasPlayersBeforeViewingPlayer(): boolean
@@ -174,6 +181,28 @@ import { InferredCard } from '../models/inferredcard.model';
           () => {},
           thrownError => this.onError.emit(thrownError),
           () => {});
+    }
+
+    // The button for this is only shown for players after the viewing player and
+    // is only enabled when there are no players before the viewing player, so we
+    // know that the index parameter is the index of the player in the list of those
+    // after the viewing player.
+    hintColor(indexOfPlayer): void
+    {
+      console.log(
+        "The player wants to give a hint about color to "
+        + this.handsAfterViewingPlayer[indexOfPlayer].playerName)
+    }
+
+    // The button for this is only shown for players after the viewing player and
+    // is only enabled when there are no players before the viewing player, so we
+    // know that the index parameter is the index of the player in the list of those
+    // after the viewing player.
+    hintIndex(indexOfPlayer): void
+    {
+      console.log(
+        "The player wants to give a hint about index to "
+        + this.handsAfterViewingPlayer[indexOfPlayer].playerName)
     }
 
     leaveGame(): void
