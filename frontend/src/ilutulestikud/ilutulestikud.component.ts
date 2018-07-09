@@ -64,6 +64,7 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
     this.selectedPlayer = null;
   }
 
+
   dismissErrorMessage(): void
   {
     this.informationText = null;
@@ -222,15 +223,21 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
     // not an array, so does not have foreach or length.
     const fetchedSummaries: string[] = Array.from(fetchedGameTurnSummaries["TurnSummaries"]);
 
+    // First of all we reduce the number of TurnSummary objects if there were more than the refresh returned.
+    if (this.turnSummariesOfGamesWithPlayer.length > fetchedSummaries.length)
+    {
+      this.turnSummariesOfGamesWithPlayer.length = fetchedSummaries.length;
+    }
+
+    // We also remove the game selection if there are now no more games for the player.
+    if (this.turnSummariesOfGamesWithPlayer.length <= 0)
+    {
+      this.selectedGameIdentification = null;
+    }
+
     for (var gameIndex: number = 0; gameIndex < fetchedSummaries.length; ++gameIndex)
     {
       const fetchedSummary: Object = fetchedSummaries[gameIndex];
-
-      // First of all we reduce the number of TurnSummary objects if there were more than the refresh returned.
-      if (this.turnSummariesOfGamesWithPlayer.length > fetchedSummaries.length)
-      {
-        this.turnSummariesOfGamesWithPlayer.length = fetchedSummaries.length;
-      }
 
       // We could replace each TurnSummary with each refresh, but that leads to an annoying animated screen refresh.
       // Therefore we update existing TurnSummary objects and only add new ones when necessary.
