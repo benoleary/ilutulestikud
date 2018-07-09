@@ -64,13 +64,17 @@ func (handler *Handler) HandlePost(
 
 	switch relevantSegments[0] {
 	case "create-new-game":
-		return handler.handleNewGame(httpBodyDecoder, relevantSegments)
+		return handler.handleNewGame(httpBodyDecoder)
 	case "record-chat-message":
-		return handler.handleRecordChatMessage(httpBodyDecoder, relevantSegments)
+		return handler.handleRecordChatMessage(httpBodyDecoder)
 	case "take-turn-by-discarding":
-		return handler.handleTakeTurnByDiscarding(httpBodyDecoder, relevantSegments)
+		return handler.handleTakeTurnByDiscarding(httpBodyDecoder)
 	case "take-turn-by-attempting-to-play":
-		return handler.handleTakeTurnByAttemptingToPlay(httpBodyDecoder, relevantSegments)
+		return handler.handleTakeTurnByAttemptingToPlay(httpBodyDecoder)
+	case "take-turn-by-hinting-color":
+		return handler.handleTakeTurnByHintingColor(httpBodyDecoder)
+	case "take-turn-by-hinting-number":
+		return handler.handleTakeTurnByHintingNumber(httpBodyDecoder)
 	case "leave-game":
 		return handler.handleLeaveGame(httpBodyDecoder)
 	case "delete-game":
@@ -156,8 +160,7 @@ func (handler *Handler) writeTurnSummariesForPlayer(
 
 // handleNewGame adds a new game to the map of game state objects.
 func (handler *Handler) handleNewGame(
-	httpBodyDecoder *json.Decoder,
-	relevantSegments []string) (interface{}, int) {
+	httpBodyDecoder *json.Decoder) (interface{}, int) {
 	var gameDefinition parsing.GameDefinition
 
 	errorFromParse := httpBodyDecoder.Decode(&gameDefinition)
@@ -250,8 +253,7 @@ func (handler *Handler) writeGameForPlayer(
 
 // handleRecordChatMessage passes on the given chat message to the relevant game.
 func (handler *Handler) handleRecordChatMessage(
-	httpBodyDecoder *json.Decoder,
-	relevantSegments []string) (interface{}, int) {
+	httpBodyDecoder *json.Decoder) (interface{}, int) {
 	var playerChatMessage parsing.PlayerChatMessage
 
 	errorFromParse := httpBodyDecoder.Decode(&playerChatMessage)
@@ -281,8 +283,7 @@ func (handler *Handler) handleRecordChatMessage(
 // handleTakeTurnByDiscarding passes on the given parameters of taking a turn by
 // discarding a card to the relevant game.
 func (handler *Handler) handleTakeTurnByDiscarding(
-	httpBodyDecoder *json.Decoder,
-	relevantSegments []string) (interface{}, int) {
+	httpBodyDecoder *json.Decoder) (interface{}, int) {
 	var playerCardIndication parsing.PlayerCardIndication
 
 	errorFromParse := httpBodyDecoder.Decode(&playerCardIndication)
@@ -312,8 +313,7 @@ func (handler *Handler) handleTakeTurnByDiscarding(
 // handleTakeTurnByAttemptingToPlay passes on the given parameters of taking a turn
 // by attempting to play a card to the relevant game.
 func (handler *Handler) handleTakeTurnByAttemptingToPlay(
-	httpBodyDecoder *json.Decoder,
-	relevantSegments []string) (interface{}, int) {
+	httpBodyDecoder *json.Decoder) (interface{}, int) {
 	var playerCardIndication parsing.PlayerCardIndication
 
 	errorFromParse := httpBodyDecoder.Decode(&playerCardIndication)
@@ -335,6 +335,70 @@ func (handler *Handler) handleTakeTurnByAttemptingToPlay(
 
 	if errorFromTakeTurnByPlaying != nil {
 		return errorFromTakeTurnByPlaying, http.StatusBadRequest
+	}
+
+	return "OK", http.StatusOK
+}
+
+// handleTakeTurnByHintingColor passes on the given parameters of taking a turn
+// by hinting about color to the relevant game.
+func (handler *Handler) handleTakeTurnByHintingColor(
+	httpBodyDecoder *json.Decoder) (interface{}, int) {
+	var playerColorHint parsing.PlayerColorHint
+
+	errorFromParse := httpBodyDecoder.Decode(&playerColorHint)
+	if errorFromParse != nil {
+		return "Error parsing JSON: " + errorFromParse.Error(), http.StatusBadRequest
+	}
+
+	actionExecutor, errorFromExecutor :=
+		handler.stateCollection.ExecuteAction(
+			playerColorHint.GameName,
+			playerColorHint.PlayerName)
+
+	if errorFromExecutor != nil {
+		return errorFromExecutor, http.StatusBadRequest
+	}
+
+	errorFromTakeTurnByHinting :=
+		actionExecutor.TakeTurnByHintingColor(
+			playerColorHint.ReceiverName,
+			playerColorHint.HintedColor)
+
+	if errorFromTakeTurnByHinting != nil {
+		return errorFromTakeTurnByHinting, http.StatusBadRequest
+	}
+
+	return "OK", http.StatusOK
+}
+
+// handleTakeTurnByHintingNumber passes on the given parameters of taking a turn
+// by hinting about index to the relevant game.
+func (handler *Handler) handleTakeTurnByHintingNumber(
+	httpBodyDecoder *json.Decoder) (interface{}, int) {
+	var playerIndexHint parsing.PlayerIndexHint
+
+	errorFromParse := httpBodyDecoder.Decode(&playerIndexHint)
+	if errorFromParse != nil {
+		return "Error parsing JSON: " + errorFromParse.Error(), http.StatusBadRequest
+	}
+
+	actionExecutor, errorFromExecutor :=
+		handler.stateCollection.ExecuteAction(
+			playerIndexHint.GameName,
+			playerIndexHint.PlayerName)
+
+	if errorFromExecutor != nil {
+		return errorFromExecutor, http.StatusBadRequest
+	}
+
+	errorFromTakeTurnByHinting :=
+		actionExecutor.TakeTurnByHintingIndex(
+			playerIndexHint.ReceiverName,
+			playerIndexHint.HintedIndex)
+
+	if errorFromTakeTurnByHinting != nil {
+		return errorFromTakeTurnByHinting, http.StatusBadRequest
 	}
 
 	return "OK", http.StatusOK

@@ -109,6 +109,16 @@ type ReadAndWriteState interface {
 		indexInHand int,
 		knowledgeOfDrawnCard card.Inferred,
 		numberOfReadyHintsToAdd int) error
+
+	// EnactTurnByUpdatingHandWithHint should increment the turn number and replace
+	// the given player's inferred hand with the given inferred hand, while also
+	// decrementing the number of available hints appropriately.
+	EnactTurnByUpdatingHandWithHint(
+		actionMessage string,
+		actingPlayer player.ReadonlyState,
+		receivingPlayerName string,
+		updatedReceiverKnowledgeOfOwnHand []card.Inferred,
+		numberOfReadyHintsToSubtract int) error
 }
 
 // StatePersister defines the interface for structs which should be able to create

@@ -149,6 +149,16 @@ type ExecutorForPlayer interface {
 	// into the discard pile while causing a mistake, or return an error if it was not
 	// possible.
 	TakeTurnByPlaying(indexInHand int) error
+
+	// TakeTurnByHintingColor should enact a turn by giving a hint to the receiving player
+	// about a color suit with respect to the receiver's hand, or return an error if it was
+	// not possible.
+	TakeTurnByHintingColor(receivingPlayer string, hintedColor string) error
+
+	// TakeTurnByHintingIndex should enact a turn by giving a hint to the receiving player
+	// about a sequence index with respect to the receiver's hand, or return an error if it
+	// was not possible.
+	TakeTurnByHintingIndex(receivingPlayer string, hintedIndex int) error
 }
 
 // PlayerNameWithHand is a struct to keep the initial hand of a player with the name,

@@ -155,7 +155,113 @@ func (actionExecutor *ActionExecutor) TakeTurnByPlaying(indexInHand int) error {
 		numberOfHintsToAdd)
 }
 
-func (actionExecutor *ActionExecutor) cardFromHandIfTurnElseError(indexInHand int) (card.Readonly, error) {
+// TakeTurnByHintingColor enacts a turn by giving a hint to the receiving player
+// about a color suit with respect to the receiver's hand, or return an error if
+// it was not possible.
+func (actionExecutor *ActionExecutor) TakeTurnByHintingColor(
+	receivingPlayer string,
+	hintedColor string) error {
+	visibleHandOfReceiver, inferredHandOfReceiver, handSize, errorFromhand :=
+		actionExecutor.handOfHintReceiver(receivingPlayer)
+
+	if errorFromhand != nil {
+		return errorFromhand
+	}
+
+	// We use receiverKnowledgeOfOwnHand which may or may not be a copy
+	// or a reference, but we will pass it in to the game state as an
+	// argument and let it sort out if it is copying back from a copy,
+	// or just over-writing a modified array with itself.
+	for indexInHand := 0; indexInHand < handSize; indexInHand++ {
+		colorOfCard := visibleHandOfReceiver[indexInHand].ColorSuit()
+
+		replacementColors := []string{}
+
+		if colorOfCard == hintedColor {
+			replacementColors = []string{colorOfCard}
+		} else {
+			originalColors :=
+				inferredHandOfReceiver[indexInHand].PossibleColors()
+
+			for _, possibleColor := range originalColors {
+				if possibleColor == hintedColor {
+					continue
+				}
+
+				replacementColors = append(replacementColors, possibleColor)
+			}
+		}
+
+		inferredHandOfReceiver[indexInHand] =
+			card.NewInferred(
+				replacementColors,
+				inferredHandOfReceiver[indexInHand].PossibleIndices())
+	}
+
+	actionMessage :=
+		fmt.Sprintf(
+			"gives hint to %v about color %v",
+			receivingPlayer,
+			hintedColor)
+
+	actionExecutor.gameState.EnactTurnByUpdatingHandWithHint(
+		actionMessage,
+		actionExecutor.actingPlayer,
+		receivingPlayer,
+		inferredHandOfReceiver,
+		1)
+
+	return nil
+}
+
+// TakeTurnByHintingIndex enacts a turn by giving a hint to the receiving player
+// about a sequence index with respect to the receiver's hand, or return an error
+// if it was not possible.
+func (actionExecutor *ActionExecutor) TakeTurnByHintingIndex(
+	receivingPlayer string,
+	hintedIndex int) error {
+	fmt.Printf("do something here!")
+	return nil
+}
+
+func (actionExecutor *ActionExecutor) handOfHintReceiver(
+	receivingPlayer string) ([]card.Readonly, []card.Inferred, int, error) {
+	if receivingPlayer == actionExecutor.actingPlayer.Name() {
+		return nil, nil, -1, fmt.Errorf("Player cannot give a hint to self")
+	}
+
+	readonlyGame := actionExecutor.gameState.Read()
+	if readonlyGame.NumberOfReadyHints() <= 0 {
+		return nil, nil, -1, fmt.Errorf("No hints available to use")
+	}
+
+	// First we must determine if the player is allowed to take an action,
+	// though we do not need to see the hand - it just has to be found to
+	// determine if the game is not yet over. The hand size is useful though.
+	_, handSize, errorFromHinterHand := actionExecutor.playerHandIfTurnElseError()
+
+	if errorFromHinterHand != nil {
+		return nil, nil, -1, errorFromHinterHand
+	}
+
+	receiverKnowledgeOfOwnHand, errorFromReceiverInferredHand :=
+		readonlyGame.InferredHand(receivingPlayer)
+
+	if errorFromReceiverInferredHand != nil {
+		return nil, nil, -1, errorFromReceiverInferredHand
+	}
+
+	visibleHandOfReceiver, errorFromReceiverVisibleHand :=
+		readonlyGame.VisibleHand(receivingPlayer)
+
+	if errorFromReceiverVisibleHand != nil {
+		return nil, nil, -1, errorFromReceiverVisibleHand
+	}
+
+	return visibleHandOfReceiver, receiverKnowledgeOfOwnHand, handSize, nil
+}
+
+func (actionExecutor *ActionExecutor) playerHandIfTurnElseError() ([]card.Readonly, int, error) {
 	gameReadState := actionExecutor.gameState.Read()
 	gameRuleset := gameReadState.Ruleset()
 	if gameReadState.NumberOfMistakesMade() >= gameRuleset.NumberOfMistakesIndicatingGameOver() {
@@ -165,7 +271,7 @@ func (actionExecutor *ActionExecutor) cardFromHandIfTurnElseError(indexInHand in
 				gameReadState.NumberOfMistakesMade(),
 				gameRuleset.NumberOfMistakesIndicatingGameOver())
 
-		return card.ErrorReadonly(), errorToReturn
+		return nil, -1, errorToReturn
 	}
 
 	// The turn number starts from 1.
@@ -180,7 +286,7 @@ func (actionExecutor *ActionExecutor) cardFromHandIfTurnElseError(indexInHand in
 				actionExecutor.actingPlayer.Name(),
 				playerForCurrentTurn)
 
-		return card.ErrorReadonly(), errorToReturn
+		return nil, -1, errorToReturn
 	}
 
 	playerHand, errorFromVisibleHand :=
@@ -193,7 +299,7 @@ func (actionExecutor *ActionExecutor) cardFromHandIfTurnElseError(indexInHand in
 				actionExecutor.actingPlayer.Name(),
 				errorFromVisibleHand)
 
-		return card.ErrorReadonly(), errorToReturn
+		return nil, -1, errorToReturn
 	}
 
 	handSize := len(playerHand)
@@ -205,7 +311,17 @@ func (actionExecutor *ActionExecutor) cardFromHandIfTurnElseError(indexInHand in
 				"Player %v could not take a turn because their last turn has already been taken",
 				actionExecutor.actingPlayer.Name())
 
-		return card.ErrorReadonly(), errorToReturn
+		return nil, -1, errorToReturn
+	}
+
+	return playerHand, handSize, nil
+}
+
+func (actionExecutor *ActionExecutor) cardFromHandIfTurnElseError(indexInHand int) (card.Readonly, error) {
+	playerHand, handSize, errorFromGettingHand := actionExecutor.playerHandIfTurnElseError()
+
+	if errorFromGettingHand != nil {
+		return card.ErrorReadonly(), errorFromGettingHand
 	}
 
 	if (indexInHand < 0) || (indexInHand >= handSize) {

@@ -27,3 +27,24 @@ type PlayerCardIndication struct {
 	PlayerInGameIndication
 	CardIndex int
 }
+
+// PlayerHintToReceiver is a struct to hold a single hint from a (hinting) player to a
+// receiving player.
+type PlayerHintToReceiver struct {
+	PlayerInGameIndication
+	ReceiverName string
+}
+
+// PlayerColorHint is a struct to hold a single hint, from a player in a game to another
+// player, about a color suit with respect to the receiver's hand.
+type PlayerColorHint struct {
+	PlayerHintToReceiver
+	HintedColor string
+}
+
+// PlayerIndexHint is a struct to hold a single hint, from a player in a game to another
+// player, about a sequence index with respect to the receiver's hand.
+type PlayerIndexHint struct {
+	PlayerHintToReceiver
+	HintedIndex int
+}

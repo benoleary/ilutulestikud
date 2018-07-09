@@ -479,6 +479,37 @@ func (gameState *inMemoryState) EnactTurnByPlayingAndReplacing(
 	return nil
 }
 
+// EnactTurnByUpdatingHandWithHint increments the turn number and replaces the
+// given player's inferred hand with the given inferred hand, while also
+// decrementing the number of available hints appropriately.
+func (gameState *inMemoryState) EnactTurnByUpdatingHandWithHint(
+	actionMessage string,
+	actingPlayer player.ReadonlyState,
+	receivingPlayerName string,
+	updatedReceiverKnowledgeOfOwnHand []card.Inferred,
+	numberOfReadyHintsToSubtract int) error {
+	receiverHand, hasHand := gameState.playerHands[receivingPlayerName]
+
+	if !hasHand {
+		return fmt.Errorf("Player %v has no hand", receivingPlayerName)
+	}
+
+	handSize := len(receiverHand)
+
+	if len(updatedReceiverKnowledgeOfOwnHand) != handSize {
+		return fmt.Errorf(
+			"Updated hand knowledge %+v does not match hand size %v",
+			updatedReceiverKnowledgeOfOwnHand,
+			handSize)
+	}
+
+	for indexInHand := 0; indexInHand < handSize; indexInHand++ {
+		receiverHand[indexInHand].Inferred = updatedReceiverKnowledgeOfOwnHand[indexInHand]
+	}
+
+	return nil
+}
+
 func (gameState *inMemoryState) recordActionMessage(
 	actingPlayer player.ReadonlyState,
 	actionMessage string) {
