@@ -150,3 +150,169 @@ func TestStandardRejectsWrongCardInNonemptySequence(unitTest *testing.T) {
 		}
 	}
 }
+
+func TestAllIndicesAreAvailableForHintsInRelevantRulesets(unitTest *testing.T) {
+	rulesetsWithAllIndicesForHints :=
+		[]game.Ruleset{
+			game.NewStandardWithoutRainbow(),
+			game.NewRainbowAsSeparateSuit(),
+			game.NewRainbowAsCompoundSuit(),
+		}
+
+	for _, rulesetWithAllIndicesForHints := range rulesetsWithAllIndicesForHints {
+		possibleIndices := rulesetWithAllIndicesForHints.DistinctPossibleIndices()
+		expectedNumberOfIndicesForHints := len(possibleIndices)
+
+		indicesForHints := rulesetWithAllIndicesForHints.IndicesAvailableAsHint()
+
+		if len(indicesForHints) != expectedNumberOfIndicesForHints {
+			unitTest.Fatalf(
+				"ruleset %v has indices %v for cards, but %v for hints",
+				rulesetWithAllIndicesForHints.FrontendDescription(),
+				possibleIndices,
+				indicesForHints)
+		}
+
+		remainingIndices := make(map[int]int, expectedNumberOfIndicesForHints)
+		for _, possibleIndex := range possibleIndices {
+			countForThisIndex := remainingIndices[possibleIndex]
+			if countForThisIndex > 0 {
+				unitTest.Fatalf(
+					"ruleset %v has repeated index %v in possible indices %v",
+					rulesetWithAllIndicesForHints.FrontendDescription(),
+					possibleIndex,
+					possibleIndices)
+			}
+
+			remainingIndices[possibleIndex] = countForThisIndex + 1
+		}
+
+		for _, indexForHints := range indicesForHints {
+			remainingIndices[indexForHints] = remainingIndices[indexForHints] - 1
+		}
+
+		// Since the possible indices are unique and the lengths match if we are at
+		// this point, it suffices to check that each possible index is found in the
+		// hint indices.
+		for _, countForRemainingIndex := range remainingIndices {
+			if countForRemainingIndex != 0 {
+				unitTest.Fatalf(
+					"ruleset %v remaining indices %v",
+					rulesetWithAllIndicesForHints.FrontendDescription(),
+					remainingIndices)
+			}
+		}
+	}
+}
+
+func TestAllColorsAreAvailableForHintsInStandardAndRainbowAsExtra(unitTest *testing.T) {
+	rulesetsWithAllColorsForHints :=
+		[]game.Ruleset{
+			game.NewStandardWithoutRainbow(),
+			game.NewRainbowAsSeparateSuit(),
+		}
+
+	for _, rulesetWithAllColorsForHints := range rulesetsWithAllColorsForHints {
+		colorsForCards := rulesetWithAllColorsForHints.ColorSuits()
+		expectedNumberOfColorsForHints := len(colorsForCards)
+
+		colorsForHints := rulesetWithAllColorsForHints.ColorsAvailableAsHint()
+
+		if len(colorsForHints) != expectedNumberOfColorsForHints {
+			unitTest.Fatalf(
+				"ruleset %v has colors %v for cards, but %v for hints",
+				rulesetWithAllColorsForHints.FrontendDescription(),
+				colorsForCards,
+				colorsForHints)
+		}
+
+		remainingColors := make(map[string]int, expectedNumberOfColorsForHints)
+		for _, colorForCards := range colorsForCards {
+			countForThisColor := remainingColors[colorForCards]
+			if countForThisColor > 0 {
+				unitTest.Fatalf(
+					"ruleset %v has repeated color %v in possible colors %v",
+					rulesetWithAllColorsForHints.FrontendDescription(),
+					colorForCards,
+					colorsForCards)
+			}
+
+			remainingColors[colorForCards] = countForThisColor + 1
+		}
+
+		for _, colorForHints := range colorsForHints {
+			remainingColors[colorForHints] = remainingColors[colorForHints] - 1
+		}
+
+		// Since the possible colors are unique and the lengths match if we are at
+		// this point, it suffices to check that each possible color is found in the
+		// hint colors.
+		for _, countForRemainingColor := range remainingColors {
+			if countForRemainingColor != 0 {
+				unitTest.Fatalf(
+					"ruleset %v remaining colors %v",
+					rulesetWithAllColorsForHints.FrontendDescription(),
+					remainingColors)
+			}
+		}
+	}
+}
+
+func TestRainbowAsCompoundSuitDoesNotHaveRainbowForHints(unitTest *testing.T) {
+	compoundRainbowRuleset := game.NewRainbowAsCompoundSuit()
+
+	colorsForCards := compoundRainbowRuleset.ColorSuits()
+
+	// We expect there to be one less color mentioned as available for hints.
+	expectedNumberOfColorsForHints := len(colorsForCards) - 1
+
+	colorsForHints := compoundRainbowRuleset.ColorsAvailableAsHint()
+
+	if len(colorsForHints) != expectedNumberOfColorsForHints {
+		unitTest.Fatalf(
+			"ruleset %v has colors %v for cards, but %v for hints",
+			compoundRainbowRuleset.FrontendDescription(),
+			colorsForCards,
+			colorsForHints)
+	}
+
+	remainingColors := make(map[string]int, expectedNumberOfColorsForHints)
+	for _, colorForCards := range colorsForCards {
+		countForThisColor := remainingColors[colorForCards]
+		if countForThisColor > 0 {
+			unitTest.Fatalf(
+				"ruleset %v has repeated color %v in possible colors %v",
+				compoundRainbowRuleset.FrontendDescription(),
+				colorForCards,
+				colorsForCards)
+		}
+
+		remainingColors[colorForCards] = countForThisColor + 1
+	}
+
+	for _, colorForHints := range colorsForHints {
+		remainingColors[colorForHints] = remainingColors[colorForHints] - 1
+	}
+
+	// Since the possible colors are unique and the lengths match if we are at
+	// this point, it suffices to check that each possible color is found in the
+	// hint colors - with the exception of the rainbow suit!
+	for remainingColor, countForRemainingColor := range remainingColors {
+		if remainingColor == game.RainbowSuit {
+			if countForRemainingColor != 1 {
+				unitTest.Fatalf(
+					"rainbow color not correct for ruleset %v: colors for cards %v, colors for hints %v",
+					compoundRainbowRuleset.FrontendDescription(),
+					colorsForCards,
+					colorsForHints)
+			}
+		} else {
+			if countForRemainingColor != 0 {
+				unitTest.Fatalf(
+					"ruleset %v remaining colors %v",
+					compoundRainbowRuleset.FrontendDescription(),
+					remainingColors)
+			}
+		}
+	}
+}

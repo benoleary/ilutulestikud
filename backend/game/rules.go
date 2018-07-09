@@ -159,6 +159,16 @@ func (standardRuleset *standardWithoutRainbowRuleset) MaximumNumberOfHints() int
 	return 8
 }
 
+// ColorsAvailableAsHint just returns all the suits under the standard rules.
+func (standardRuleset *standardWithoutRainbowRuleset) ColorsAvailableAsHint() []string {
+	return standardRuleset.ColorSuits()
+}
+
+// IndicesAvailableAsHint just returns all the indices under the standard rules.
+func (standardRuleset *standardWithoutRainbowRuleset) IndicesAvailableAsHint() []int {
+	return standardRuleset.DistinctPossibleIndices()
+}
+
 // NumberOfMistakesIndicatingGameOver returns the number of mistakes which indicates
 // that the game is over with the players having zero score.
 func (standardRuleset *standardWithoutRainbowRuleset) NumberOfMistakesIndicatingGameOver() int {
@@ -242,6 +252,11 @@ func (separateRainbow *RainbowAsSeparateSuitRuleset) ColorSuits() []string {
 	return append(separateRainbow.standardWithoutRainbowRuleset.ColorSuits(), RainbowSuit)
 }
 
+// ColorsAvailableAsHint just returns all the suits under the rainbow-as-extra-suit rules.
+func (separateRainbow *RainbowAsSeparateSuitRuleset) ColorsAvailableAsHint() []string {
+	return separateRainbow.ColorSuits()
+}
+
 // RainbowAsCompoundSuitRuleset represents the ruleset which includes the rainbow
 // color suit as another suit which, however, counts as all the other suits for
 // hints. Most of the functions are the same.
@@ -266,4 +281,10 @@ func NewRainbowAsCompoundSuit() *RainbowAsCompoundSuitRuleset {
 // also identify a rainbow card as a card of that standard color.
 func (compoundRainbow *RainbowAsCompoundSuitRuleset) FrontendDescription() string {
 	return "with rainbow, hints as every color"
+}
+
+// ColorsAvailableAsHint returns all the suits of the standard ruleset (i.e. without
+// rainbow) under the rainbow-as-compound-for-hints rules.
+func (compoundRainbow *RainbowAsCompoundSuitRuleset) ColorsAvailableAsHint() []string {
+	return compoundRainbow.standardWithoutRainbowRuleset.ColorSuits()
 }

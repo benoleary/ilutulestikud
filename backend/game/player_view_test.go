@@ -148,6 +148,44 @@ func TestWrapperFunctions(unitTest *testing.T) {
 		}
 	}
 
+	expectedColorsForHint := testRuleset.ColorsAvailableAsHint()
+	expectedNumberOfColorsForHint := len(expectedColorsForHint)
+	actualColorsForHint := viewForPlayer.ColorsAvailableAsHint()
+	if len(actualColorsForHint) != expectedNumberOfColorsForHint {
+		unitTest.Fatalf(
+			"player view %+v did not have expected colors for hint %+v",
+			viewForPlayer,
+			actualColorsForHint)
+	}
+
+	for colorIndex := 0; colorIndex < expectedNumberOfColorsForHint; colorIndex++ {
+		if actualColorsForHint[colorIndex] != expectedColorsForHint[colorIndex] {
+			unitTest.Fatalf(
+				"player view %+v did not have expected colors for hint %+v",
+				viewForPlayer,
+				actualColorsForHint)
+		}
+	}
+
+	expectedIndicesForHint := testRuleset.IndicesAvailableAsHint()
+	expectedNumberOfIndicesForHint := len(expectedIndicesForHint)
+	actualIndicesForHint := viewForPlayer.IndicesAvailableAsHint()
+	if len(actualIndicesForHint) != expectedNumberOfIndicesForHint {
+		unitTest.Fatalf(
+			"player view %+v did not have expected indices for hint %+v",
+			viewForPlayer,
+			actualIndicesForHint)
+	}
+
+	for indexIndex := 0; indexIndex < expectedNumberOfIndicesForHint; indexIndex++ {
+		if actualIndicesForHint[indexIndex] != expectedIndicesForHint[indexIndex] {
+			unitTest.Fatalf(
+				"player view %+v did not have expected indices for hint %+v",
+				viewForPlayer,
+				actualIndicesForHint)
+		}
+	}
+
 	expectedNumberOfPlayers := len(testPlayersInCurrentTurnOrder)
 	actualPlayersInCurrentTurnOrder, actualCurrentPlayerIndex :=
 		viewForPlayer.CurrentTurnOrder()

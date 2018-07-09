@@ -231,6 +231,8 @@ func (handler *Handler) writeGameForPlayer(
 			ScoreSoFar:                         gameView.Score(),
 			NumberOfReadyHints:                 gameView.NumberOfReadyHints(),
 			MaximumNumberOfHints:               gameView.MaximumNumberOfHints(),
+			HintColorSuits:                     gameView.ColorsAvailableAsHint(),
+			HintSequenceIndices:                gameView.IndicesAvailableAsHint(),
 			NumberOfMistakesMade:               gameView.NumberOfMistakesMade(),
 			NumberOfMistakesIndicatingGameOver: gameView.NumberOfMistakesIndicatingGameOver(),
 			NumberOfCardsLeftInDeck:            gameView.DeckSize(),

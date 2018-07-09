@@ -98,6 +98,16 @@ func (mockView *mockViewForPlayer) MaximumNumberOfHints() int {
 	return -1
 }
 
+// ColorsAvailableAsHint gets mocked.
+func (mockView *mockViewForPlayer) ColorsAvailableAsHint() []string {
+	return nil
+}
+
+// IndicesAvailableAsHint gets mocked.
+func (mockView *mockViewForPlayer) IndicesAvailableAsHint() []int {
+	return nil
+}
+
 // NumberOfMistakesMade gets mocked.
 func (mockView *mockViewForPlayer) NumberOfMistakesMade() int {
 	return -1

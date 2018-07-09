@@ -97,6 +97,8 @@ type GameView struct {
 	ScoreSoFar                         int
 	NumberOfReadyHints                 int
 	MaximumNumberOfHints               int
+	HintColorSuits                     []string
+	HintSequenceIndices                []int
 	NumberOfMistakesMade               int
 	NumberOfMistakesIndicatingGameOver int
 	NumberOfCardsLeftInDeck            int

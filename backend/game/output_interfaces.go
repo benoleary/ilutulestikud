@@ -35,6 +35,16 @@ type Ruleset interface {
 	// at any instant.
 	MaximumNumberOfHints() int
 
+	// ColorsAvailableAsHint should return the color suits available for hints from the game's
+	// ruleset (which is not necessarily the same as the set of color suits - e.g. rainbow in
+	// the variation where the rainbow cards are marked by every hint of a normal color, but
+	// rainbow itself cannot be given as a hint).
+	ColorsAvailableAsHint() []string
+
+	// IndicesAvailableAsHint should return the sequence indices available for hints from the
+	// game's ruleset.
+	IndicesAvailableAsHint() []int
+
 	// NumberOfMistakesIndicatingGameOver should return the number of mistakes which indicates
 	// that the game is over with the players having zero score.
 	NumberOfMistakesIndicatingGameOver() int
@@ -87,6 +97,14 @@ type ViewForPlayer interface {
 	// MaximumNumberOfHints should just wrap around the game's ruleset's maximum
 	// number of hints.
 	MaximumNumberOfHints() int
+
+	// ColorsAvailableAsHint should just wrap around the function returning the
+	// color suits available for hints from the game's ruleset.
+	ColorsAvailableAsHint() []string
+
+	// IndicesAvailableAsHint should just wrap around the function returning the
+	// sequence indices available for hints from the game's ruleset.
+	IndicesAvailableAsHint() []int
 
 	// NumberOfMistakesMade should just wrap around the read-only game state's
 	// NumberOfMistakesMade function.

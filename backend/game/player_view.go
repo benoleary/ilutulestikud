@@ -177,6 +177,18 @@ func (playerView *PlayerView) MaximumNumberOfHints() int {
 	return playerView.gameState.Ruleset().MaximumNumberOfHints()
 }
 
+// ColorsAvailableAsHint just wraps around the function returning the
+// color suits available for hints from the game's ruleset.
+func (playerView *PlayerView) ColorsAvailableAsHint() []string {
+	return playerView.gameState.Ruleset().ColorsAvailableAsHint()
+}
+
+// IndicesAvailableAsHint just wraps around the function returning the
+// sequence indices available for hints from the game's ruleset.
+func (playerView *PlayerView) IndicesAvailableAsHint() []int {
+	return playerView.gameState.Ruleset().IndicesAvailableAsHint()
+}
+
 // NumberOfMistakesMade just wraps around the read-only game state's
 // NumberOfMistakesMade function.
 func (playerView *PlayerView) NumberOfMistakesMade() int {
