@@ -63,6 +63,102 @@ func (mockProvider *mockPlayerProvider) Get(
 	return mockPlayer, nil
 }
 
+type mockRuleset struct {
+	ReturnForNumberOfMistakesIndicatingGameOver int
+	ReturnForInferredHandAfterHint              []card.Inferred
+}
+
+// FrontendDescription gets mocked.
+func (mockedRuleset *mockRuleset) FrontendDescription() string {
+	return "mock"
+}
+
+// CopyOfFullCardset gets mocked.
+func (mockedRuleset *mockRuleset) CopyOfFullCardset() []card.Readonly {
+	return nil
+}
+
+// NumberOfCardsInPlayerHand gets mocked.
+func (mockedRuleset *mockRuleset) NumberOfCardsInPlayerHand(
+	numberOfPlayers int) int {
+	return -1
+}
+
+// ColorSuits gets mocked.
+func (mockedRuleset *mockRuleset) ColorSuits() []string {
+	return nil
+}
+
+// DistinctPossibleIndices gets mocked.
+func (mockedRuleset *mockRuleset) DistinctPossibleIndices() []int {
+	return nil
+}
+
+// MinimumNumberOfPlayers gets mocked.
+func (mockedRuleset *mockRuleset) MinimumNumberOfPlayers() int {
+	return -1
+}
+
+// MaximumNumberOfPlayers gets mocked.
+func (mockedRuleset *mockRuleset) MaximumNumberOfPlayers() int {
+	return -1
+}
+
+// MaximumNumberOfHints gets mocked.
+func (mockedRuleset *mockRuleset) MaximumNumberOfHints() int {
+	return -1
+}
+
+// ColorsAvailableAsHint gets mocked.
+func (mockedRuleset *mockRuleset) ColorsAvailableAsHint() []string {
+	return nil
+}
+
+// IndicesAvailableAsHint gets mocked.
+func (mockedRuleset *mockRuleset) IndicesAvailableAsHint() []int {
+	return nil
+}
+
+// AfterColorHint gets mocked.
+func (mockedRuleset *mockRuleset) AfterColorHint(
+	knowledgeBeforeHint []card.Inferred,
+	cardsInHand []card.Readonly,
+	hintedColor string) []card.Inferred {
+	return mockedRuleset.ReturnForInferredHandAfterHint
+}
+
+// AfterIndexHint gets mocked.
+func (mockedRuleset *mockRuleset) AfterIndexHint(
+	knowledgeBeforeHint []card.Inferred,
+	cardsInHand []card.Readonly,
+	hintedIndex int) []card.Inferred {
+	return mockedRuleset.ReturnForInferredHandAfterHint
+}
+
+// NumberOfMistakesIndicatingGameOver gets mocked.
+func (mockedRuleset *mockRuleset) NumberOfMistakesIndicatingGameOver() int {
+	return mockedRuleset.ReturnForNumberOfMistakesIndicatingGameOver
+}
+
+// IsCardPlayable gets mocked.
+func (mockedRuleset *mockRuleset) IsCardPlayable(
+	cardToPlay card.Readonly,
+	cardsAlreadyPlayedInSuit []card.Readonly) bool {
+	return false
+}
+
+// HintsForPlayingCard gets mocked.
+func (mockedRuleset *mockRuleset) HintsForPlayingCard(
+	cardToEvaluate card.Readonly) int {
+	return -1
+}
+
+// PointsPerCard gets mocked.
+func (mockedRuleset *mockRuleset) PointsForCard(
+	cardToEvaluate card.Readonly) int {
+	return -1
+}
+
 type argumentsForRecordChatMessage struct {
 	NameString    string
 	ColorString   string

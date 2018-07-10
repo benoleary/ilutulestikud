@@ -1453,9 +1453,6 @@ func TestRejectTakeTurnByHintWithoutCallingPersisterWriteFunction(unitTest *test
 			errorFromColorHint :=
 				executorForPlayer.TakeTurnByHintingColor(testCase.receiverName, testColor)
 
-				// debug
-			fmt.Printf("\n\ntest %v: error from color %v\n\n", testIdentifier, errorFromColorHint)
-
 			if errorFromColorHint == nil {
 				unitTest.Fatalf(
 					"TakeTurnByHintingColor(%v, %v) produced nil error",
@@ -1466,14 +1463,193 @@ func TestRejectTakeTurnByHintWithoutCallingPersisterWriteFunction(unitTest *test
 			errorFromIndexHint :=
 				executorForPlayer.TakeTurnByHintingIndex(testCase.receiverName, testIndex)
 
-				// debug
-			fmt.Printf("\n\ntest %v: error from index %v\n\n", testIdentifier, errorFromIndexHint)
-
 			if errorFromIndexHint == nil {
 				unitTest.Fatalf(
 					"TakeTurnByHintingIndex(%v, %v) produced nil error",
 					testCase.receiverName,
 					testIndex)
+			}
+		})
+	}
+}
+
+func TestPropagateErrorFromTakeTurnByHintFromCallingPersisterWriteFunction(unitTest *testing.T) {
+	gameName := "Test game"
+	testPlayersInOriginalOrder :=
+		[]string{
+			playerNamesAvailableInTest[0],
+			playerNamesAvailableInTest[1],
+			playerNamesAvailableInTest[2],
+			playerNamesAvailableInTest[3],
+		}
+	hintingPlayer := testPlayersInOriginalOrder[2]
+	receivingPlayer := testPlayersInOriginalOrder[1]
+	gameCollection, mockPersister, _ :=
+		prepareCollection(unitTest, testPlayersInOriginalOrder)
+	mockPersister.TestErrorForReadAndWriteGame = nil
+	testColor := "test color"
+	testIndex := 1
+
+	expectedInferredHandAfterHint :=
+		[]card.Inferred{
+			card.NewInferred(
+				[]string{"expected first color", "expected second color"},
+				[]int{0, 1}),
+		}
+
+	expectedHandSize := len(expectedInferredHandAfterHint)
+
+	mockRulesetForTest :=
+		&mockRuleset{
+			ReturnForNumberOfMistakesIndicatingGameOver: 1,
+			ReturnForInferredHandAfterHint:              expectedInferredHandAfterHint,
+		}
+
+	testCases := []struct {
+		testName          string
+		errorForEnactTurn error
+	}{
+		{
+			testName:          "nil error",
+			errorForEnactTurn: nil,
+		},
+		{
+			testName:          "expected error",
+			errorForEnactTurn: fmt.Errorf("expected error"),
+		},
+	}
+
+	for _, testCase := range testCases {
+		testIdentifier :=
+			"invalid hint when calling persister write function/" +
+				testCase.testName
+
+		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			mockReadAndWriteState := NewMockGameState(unitTest)
+			mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
+			mockReadAndWriteState.ReturnForRuleset = mockRulesetForTest
+			mockReadAndWriteState.ReturnForTurn = 3
+			mockReadAndWriteState.ReturnForNumberOfReadyHints = 1
+			mockReadAndWriteState.ReturnForNumberOfMistakesMade = 0
+
+			mockReadAndWriteState.TestErrorForEnactTurnByUpdatingHandWithHint = nil
+			mockReadAndWriteState.ReturnForNontestError = testCase.errorForEnactTurn
+
+			mockPersister.ReturnForReadAndWriteGame = mockReadAndWriteState
+
+			executorForPlayer, errorFromExecuteAction :=
+				gameCollection.ExecuteAction(
+					gameName,
+					hintingPlayer)
+			if errorFromExecuteAction != nil {
+				unitTest.Fatalf(
+					"ExecuteAction(%v, %v) produced error %v",
+					gameName,
+					hintingPlayer,
+					errorFromExecuteAction)
+			}
+
+			errorFromColorHint :=
+				executorForPlayer.TakeTurnByHintingColor(receivingPlayer, testColor)
+
+			if errorFromColorHint != testCase.errorForEnactTurn {
+				unitTest.Fatalf(
+					"TakeTurnByHintingColor(%v, %v) produced error %v instead of expected %v",
+					receivingPlayer,
+					testIndex,
+					errorFromColorHint,
+					testCase.errorForEnactTurn)
+			}
+
+			actualListOfArgumentsForColor :=
+				mockReadAndWriteState.ArgumentsFromEnactTurnByUpdatingHandWithHint
+			numberOfCallsForColor := len(actualListOfArgumentsForColor)
+			if numberOfCallsForColor != 1 {
+				unitTest.Fatalf(
+					"TakeTurnByHintingColor(%v, %v) called EnactTurnByUpdatingHandWithHint(...)"+
+						" wrong number of times, with arguments %+v, instead of once",
+					receivingPlayer,
+					testColor,
+					actualListOfArgumentsForColor)
+			}
+
+			actualArgumentsForColor := actualListOfArgumentsForColor[0]
+			if (actualArgumentsForColor.PlayerState.Name() != hintingPlayer) ||
+				(actualArgumentsForColor.ReceiverName != receivingPlayer) ||
+				(len(actualArgumentsForColor.UpdatedInferredHand) != expectedHandSize) ||
+				(actualArgumentsForColor.HintsInt != 1) {
+				unitTest.Fatalf(
+					"TakeTurnByHintingColor(%v, %v) called EnactTurnByUpdatingHandWithHint(...)"+
+						" with arguments %+v instead of expected hinter %v, receiver %v, hand size %v,"+
+						" and number of hints to subtract 1",
+					receivingPlayer,
+					testColor,
+					actualArgumentsForColor,
+					hintingPlayer,
+					receivingPlayer,
+					expectedHandSize)
+			}
+
+			for indexInHand := 0; indexInHand < expectedHandSize; indexInHand++ {
+				assertInferredCardPossibilitiesCorrect(
+					testIdentifier,
+					unitTest,
+					actualArgumentsForColor.UpdatedInferredHand[indexInHand],
+					expectedInferredHandAfterHint[indexInHand].PossibleColors(),
+					expectedInferredHandAfterHint[indexInHand].PossibleIndices())
+			}
+
+			// We reset the arguments before calling the function for hinting an index.
+			mockReadAndWriteState.ArgumentsFromEnactTurnByUpdatingHandWithHint =
+				[]argumentsForEnactTurnByHint{}
+			errorFromIndexHint :=
+				executorForPlayer.TakeTurnByHintingIndex(receivingPlayer, testIndex)
+
+			if errorFromIndexHint != testCase.errorForEnactTurn {
+				unitTest.Fatalf(
+					"TakeTurnByHintingIndex(%v, %v) produced error %v instead of expected %v",
+					receivingPlayer,
+					testIndex,
+					errorFromIndexHint,
+					testCase.errorForEnactTurn)
+			}
+
+			actualListOfArgumentsForIndex :=
+				mockReadAndWriteState.ArgumentsFromEnactTurnByUpdatingHandWithHint
+			numberOfCallsForIndex := len(actualListOfArgumentsForIndex)
+			if numberOfCallsForIndex != 1 {
+				unitTest.Fatalf(
+					"TakeTurnByHintingIndex(%v, %v) called EnactTurnByUpdatingHandWithHint(...)"+
+						" wrong number of times, with arguments %+v, instead of once",
+					receivingPlayer,
+					testColor,
+					actualListOfArgumentsForIndex)
+			}
+
+			actualArgumentsForIndex := actualListOfArgumentsForIndex[0]
+			if (actualArgumentsForIndex.PlayerState.Name() != hintingPlayer) ||
+				(actualArgumentsForIndex.ReceiverName != receivingPlayer) ||
+				(len(actualArgumentsForIndex.UpdatedInferredHand) != expectedHandSize) ||
+				(actualArgumentsForIndex.HintsInt != 1) {
+				unitTest.Fatalf(
+					"TakeTurnByHintingColor(%v, %v) called EnactTurnByUpdatingHandWithHint(...)"+
+						" with arguments %+v instead of expected hinter %v, receiver %v, hand size %v,"+
+						" and number of hints to subtract 1",
+					receivingPlayer,
+					testColor,
+					actualArgumentsForIndex,
+					hintingPlayer,
+					receivingPlayer,
+					expectedHandSize)
+			}
+
+			for indexInHand := 0; indexInHand < expectedHandSize; indexInHand++ {
+				assertInferredCardPossibilitiesCorrect(
+					testIdentifier,
+					unitTest,
+					actualArgumentsForIndex.UpdatedInferredHand[indexInHand],
+					expectedInferredHandAfterHint[indexInHand].PossibleColors(),
+					expectedInferredHandAfterHint[indexInHand].PossibleIndices())
 			}
 		})
 	}
