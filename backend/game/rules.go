@@ -169,6 +169,87 @@ func (standardRuleset *standardWithoutRainbowRuleset) IndicesAvailableAsHint() [
 	return standardRuleset.DistinctPossibleIndices()
 }
 
+// AfterColorHint returns the knowledge about a hand that a player has after applying
+// the given hint about color to the given knowledge about the hand prior to the hint.
+// In this case, if the color of the card matches the color of the hint, the
+// possibilities list is reduced to a single element which is that color; otherwise
+// the hinted color is removed from the possibilities list if it is on it.
+func (standardRuleset *standardWithoutRainbowRuleset) AfterColorHint(
+	knowledgeBeforeHint []card.Inferred,
+	cardsInHand []card.Readonly,
+	hintedColor string) []card.Inferred {
+	handSize := len(cardsInHand)
+	knowledgeAfterHint := make([]card.Inferred, handSize)
+	for indexInHand := 0; indexInHand < handSize; indexInHand++ {
+		colorOfCard := cardsInHand[indexInHand].ColorSuit()
+
+		var replacementColors []string
+
+		if colorOfCard == hintedColor {
+			replacementColors = []string{colorOfCard}
+		} else {
+			originalColors :=
+				knowledgeBeforeHint[indexInHand].PossibleColors()
+			replacementColors = nil
+
+			for _, possibleColor := range originalColors {
+				if possibleColor == hintedColor {
+					continue
+				}
+
+				replacementColors = append(replacementColors, possibleColor)
+			}
+		}
+
+		knowledgeAfterHint[indexInHand] =
+			card.NewInferred(
+				replacementColors,
+				knowledgeBeforeHint[indexInHand].PossibleIndices())
+	}
+
+	return knowledgeAfterHint
+}
+
+// AfterIndexHint should return the knowledge about a hand that a player has after applying
+// the given hint about index to the given knowledge about the hand prior to the hint.
+// In this case, if the sequence index of the card matches that of the hint, the
+// possibilities list is reduced to a single element which is that index; otherwise
+// the hinted index is removed from the possibilities list if it is on it.
+func (standardRuleset *standardWithoutRainbowRuleset) AfterIndexHint(
+	knowledgeBeforeHint []card.Inferred,
+	cardsInHand []card.Readonly,
+	hintedIndex int) []card.Inferred {
+	handSize := len(cardsInHand)
+	knowledgeAfterHint := make([]card.Inferred, handSize)
+	for indexInHand := 0; indexInHand < handSize; indexInHand++ {
+		sequenceIndexOfCard := cardsInHand[indexInHand].SequenceIndex()
+
+		var replacementIndices []int
+
+		if sequenceIndexOfCard == hintedIndex {
+			replacementIndices = []int{sequenceIndexOfCard}
+		} else {
+			originalSequenceIndices :=
+				knowledgeBeforeHint[indexInHand].PossibleIndices()
+
+			for _, possibleIndex := range originalSequenceIndices {
+				if possibleIndex == hintedIndex {
+					continue
+				}
+
+				replacementIndices = append(replacementIndices, possibleIndex)
+			}
+		}
+
+		knowledgeAfterHint[indexInHand] =
+			card.NewInferred(
+				knowledgeBeforeHint[indexInHand].PossibleColors(),
+				replacementIndices)
+	}
+
+	return knowledgeAfterHint
+}
+
 // NumberOfMistakesIndicatingGameOver returns the number of mistakes which indicates
 // that the game is over with the players having zero score.
 func (standardRuleset *standardWithoutRainbowRuleset) NumberOfMistakesIndicatingGameOver() int {
@@ -287,4 +368,56 @@ func (compoundRainbow *RainbowAsCompoundSuitRuleset) FrontendDescription() strin
 // rainbow) under the rainbow-as-compound-for-hints rules.
 func (compoundRainbow *RainbowAsCompoundSuitRuleset) ColorsAvailableAsHint() []string {
 	return compoundRainbow.standardWithoutRainbowRuleset.ColorSuits()
+}
+
+// AfterColorHint returns the knowledge about a hand that a player has after applying
+// the given hint about color to the given knowledge about the hand prior to the hint.
+// Under this ruleset, if the card is a rainbow card, it should count as "marked" when
+// any color hint is given. This means that any card "marked" by a hint could be either
+// the color of the hint or a rainbow card. If a card is "marked" by hints for two
+// different colors, then it is inferred to be a rainbow card. If it is "ignored" by a
+// hint, then it is inferred as not that color and also not a rainbow card.
+func (compoundRainbow *RainbowAsCompoundSuitRuleset) AfterColorHint(
+	knowledgeBeforeHint []card.Inferred,
+	cardsInHand []card.Readonly,
+	hintedColor string) []card.Inferred {
+	handSize := len(cardsInHand)
+	knowledgeAfterHint := make([]card.Inferred, handSize)
+	for indexInHand := 0; indexInHand < handSize; indexInHand++ {
+		colorOfCard := cardsInHand[indexInHand].ColorSuit()
+		originalColors :=
+			knowledgeBeforeHint[indexInHand].PossibleColors()
+		replacementColors := []string{}
+
+		if (colorOfCard == RainbowSuit) || (colorOfCard == hintedColor) {
+			// A hint in this ruleset can never be for rainbow directly, so we can
+			// remove all possibilities other than the hinted color and the rainbow
+			// color. In either case, the other option (rainbow if the card is not
+			// rainbow, or the hinted color if the card is rainbow) may have been
+			// already ruled out by another hint, or the card's suit may end up as
+			// the only possibility left after this hint.
+			for _, possibleColor := range originalColors {
+				if (possibleColor == hintedColor) || (possibleColor == RainbowSuit) {
+					replacementColors = append(replacementColors, possibleColor)
+				}
+			}
+		} else {
+			// If the card is "ignored" by this hint, the player can infer that it is
+			// not the hinted color and not a rainbow card.
+			for _, possibleColor := range originalColors {
+				if (colorOfCard == RainbowSuit) || (colorOfCard == hintedColor) {
+					continue
+				}
+
+				replacementColors = append(replacementColors, possibleColor)
+			}
+		}
+
+		knowledgeAfterHint[indexInHand] =
+			card.NewInferred(
+				replacementColors,
+				knowledgeBeforeHint[indexInHand].PossibleIndices())
+	}
+
+	return knowledgeAfterHint
 }

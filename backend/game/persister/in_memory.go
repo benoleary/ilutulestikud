@@ -211,6 +211,7 @@ type inMemoryState struct {
 	chatLog                     *rollingMessageAppender
 	actionLog                   *rollingMessageAppender
 	turnNumber                  int
+	turnsTakenWithEmptyDeck     int
 	numberOfReadyHints          int
 	numberOfMistakesMade        int
 	undrawnDeck                 []card.Readonly
@@ -249,6 +250,7 @@ func newInMemoryState(
 		chatLog:                     newEmptyRollingMessageAppender(chatLogLength),
 		actionLog:                   newRollingMessageAppender(initialActionLog),
 		turnNumber:                  1,
+		turnsTakenWithEmptyDeck:     0,
 		numberOfReadyHints:          gameRuleset.MaximumNumberOfHints(),
 		numberOfMistakesMade:        0,
 		undrawnDeck:                 shuffledDeck,
@@ -292,6 +294,12 @@ func (gameState *inMemoryState) ActionLog() []message.Readonly {
 // Turn returns the value of the private turnNumber int.
 func (gameState *inMemoryState) Turn() int {
 	return gameState.turnNumber
+}
+
+// TurnsTakenWithEmptyDeck returns the number of turns which have been taken
+// since the turn which drew the last card from the deck.
+func (gameState *inMemoryState) TurnsTakenWithEmptyDeck() int {
+	return gameState.turnsTakenWithEmptyDeck
 }
 
 // NumberOfReadyHints returns the total number of hints which are available to be
@@ -400,7 +408,9 @@ func (gameState *inMemoryState) RecordChatMessage(
 // and replaces it in the player's hand with the next card from the deck,
 // bundled with the given knowledge about the new card from the deck which the
 // player should have (which should always be that any color suit is possible
-// and any sequence index is possible). It also adds the given numbers to the
+// and any sequence index is possible). If there is no card to draw from the
+// deck, it increments the number of turns taken with an empty deck of
+// replacing the card in the hand. It also adds the given numbers to the
 // counts of available hints and mistakes made respectively.
 func (gameState *inMemoryState) EnactTurnByDiscardingAndReplacing(
 	actionMessage string,
@@ -428,7 +438,7 @@ func (gameState *inMemoryState) EnactTurnByDiscardingAndReplacing(
 
 	gameState.numberOfReadyHints += numberOfReadyHintsToAdd
 	gameState.numberOfMistakesMade += numberOfMistakesMadeToAdd
-	gameState.turnNumber++
+	gameState.incrementTurnNumbers()
 
 	gameState.recordActionMessage(
 		actingPlayer,
@@ -442,9 +452,10 @@ func (gameState *inMemoryState) EnactTurnByDiscardingAndReplacing(
 // sequence, and replaces it in the player's hand with the next card from the
 // deck, bundled with the given knowledge about the new card from the deck which
 // the player should have (which should always be that any color suit is possible
-// and any sequence index is possible). It also adds the given number of hints to
-// the count of ready hints available (such as when playing the end of sequence
-// gives a bonus hint).
+// and any sequence index is possible). If there is no card to draw from the deck,
+// it increments the number of turns taken with an empty deck of replacing the
+// card in the hand. It also adds the given number of hints to the count of ready
+// hints available (such as when playing the end of sequence gives a bonus hint).
 func (gameState *inMemoryState) EnactTurnByPlayingAndReplacing(
 	actionMessage string,
 	actingPlayer player.ReadonlyState,
@@ -470,7 +481,7 @@ func (gameState *inMemoryState) EnactTurnByPlayingAndReplacing(
 	gameState.playedCardsForColor[playedSuit] = append(sequenceBeforeNow, playedCard)
 
 	gameState.numberOfReadyHints += numberOfReadyHintsToAdd
-	gameState.turnNumber++
+	gameState.incrementTurnNumbers()
 
 	gameState.recordActionMessage(
 		actingPlayer,
@@ -481,7 +492,9 @@ func (gameState *inMemoryState) EnactTurnByPlayingAndReplacing(
 
 // EnactTurnByUpdatingHandWithHint increments the turn number and replaces the
 // given player's inferred hand with the given inferred hand, while also
-// decrementing the number of available hints appropriately.
+// decrementing the number of available hints appropriately. If the deck is
+// empty, this function also increments the number of turns taken with an empty
+// deck.
 func (gameState *inMemoryState) EnactTurnByUpdatingHandWithHint(
 	actionMessage string,
 	actingPlayer player.ReadonlyState,
@@ -507,7 +520,17 @@ func (gameState *inMemoryState) EnactTurnByUpdatingHandWithHint(
 		receiverHand[indexInHand].Inferred = updatedReceiverKnowledgeOfOwnHand[indexInHand]
 	}
 
+	gameState.incrementTurnNumbers()
+
 	return nil
+}
+
+func (gameState *inMemoryState) incrementTurnNumbers() {
+	gameState.turnNumber++
+
+	if gameState.DeckSize() <= 0 {
+		gameState.turnsTakenWithEmptyDeck++
+	}
 }
 
 func (gameState *inMemoryState) recordActionMessage(

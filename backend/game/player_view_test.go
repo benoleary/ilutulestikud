@@ -213,50 +213,6 @@ func TestWrapperFunctions(unitTest *testing.T) {
 	}
 }
 
-func TestPropagateErrorFromGameIsFinished(unitTest *testing.T) {
-	gameName := "Test game"
-	testPlayersInOriginalOrder :=
-		[]string{
-			playerNamesAvailableInTest[0],
-			playerNamesAvailableInTest[1],
-			playerNamesAvailableInTest[2],
-			playerNamesAvailableInTest[3],
-		}
-	playerName := testPlayersInOriginalOrder[0]
-	gameCollection, mockPersister, _ :=
-		prepareCollection(unitTest, testPlayersInOriginalOrder)
-
-	mockReadAndWriteState := NewMockGameState(unitTest)
-	mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
-	mockReadAndWriteState.ReturnForRuleset = testRuleset
-	mockReadAndWriteState.ReturnForNontestError = fmt.Errorf("expected error")
-
-	mockPersister.TestErrorForReadAndWriteGame = nil
-	mockPersister.ReturnForReadAndWriteGame = mockReadAndWriteState
-
-	viewForPlayer, errorFromViewState :=
-		gameCollection.ViewState(
-			gameName,
-			playerName)
-
-	if errorFromViewState != nil {
-		unitTest.Fatalf(
-			"ViewState(%v, %v) produced error %v",
-			gameName,
-			playerName,
-			errorFromViewState)
-	}
-
-	actualGameIsFinished, errorFromGameIsFinished :=
-		viewForPlayer.GameIsFinished()
-
-	if errorFromGameIsFinished == nil {
-		unitTest.Fatalf(
-			"GameIsFinished() %v produced nil error",
-			actualGameIsFinished)
-	}
-}
-
 func TestGameIsFinishedWhenEnoughMistakes(unitTest *testing.T) {
 	gameName := "Test game"
 	testPlayersInOriginalOrder :=
@@ -306,15 +262,7 @@ func TestGameIsFinishedWhenEnoughMistakes(unitTest *testing.T) {
 			errorFromViewState)
 	}
 
-	actualGameIsFinished, errorFromGameIsFinished :=
-		viewForPlayer.GameIsFinished()
-
-	if errorFromGameIsFinished != nil {
-		unitTest.Fatalf(
-			"GameIsFinished() produced error %v",
-			errorFromGameIsFinished)
-	}
-
+	actualGameIsFinished := viewForPlayer.GameIsFinished()
 	if !actualGameIsFinished {
 		unitTest.Fatalf(
 			"GameIsFinished() produced %v when the number of mistakes was too high",
@@ -367,15 +315,7 @@ func TestGameIsNotFinishedWhenDeckNotEmpty(unitTest *testing.T) {
 			errorFromViewState)
 	}
 
-	actualGameIsFinished, errorFromGameIsFinished :=
-		viewForPlayer.GameIsFinished()
-
-	if errorFromGameIsFinished != nil {
-		unitTest.Fatalf(
-			"GameIsFinished() produced error %v",
-			errorFromGameIsFinished)
-	}
-
+	actualGameIsFinished := viewForPlayer.GameIsFinished()
 	if actualGameIsFinished {
 		unitTest.Fatalf(
 			"GameIsFinished() produced %v when the deck was not empty",
@@ -383,7 +323,7 @@ func TestGameIsNotFinishedWhenDeckNotEmpty(unitTest *testing.T) {
 	}
 }
 
-func TestGameIsFinishedWhenCurrentPlayerHandTooSmall(unitTest *testing.T) {
+func TestGameIsFinishedWhenTurnsWithEmptyDeckTooLarge(unitTest *testing.T) {
 	gameName := "Test game"
 	testPlayersInOriginalOrder :=
 		[]string{
@@ -399,11 +339,8 @@ func TestGameIsFinishedWhenCurrentPlayerHandTooSmall(unitTest *testing.T) {
 	mockReadAndWriteState := NewMockGameState(unitTest)
 	mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
 	mockReadAndWriteState.ReturnForRuleset = testRuleset
-
-	singleHandWithSingleInferredCard := make(map[string][]card.Inferred, 0)
-	singleHandWithSingleInferredCard[playerName] =
-		[]card.Inferred{card.ErrorInferred()}
-	mockReadAndWriteState.ReturnForInferredHand = singleHandWithSingleInferredCard
+	mockReadAndWriteState.ReturnForTurnsTakenWithEmptyDeck =
+		len(testPlayersInOriginalOrder)
 
 	mockPersister.TestErrorForReadAndWriteGame = nil
 	mockPersister.ReturnForReadAndWriteGame = mockReadAndWriteState
@@ -421,18 +358,11 @@ func TestGameIsFinishedWhenCurrentPlayerHandTooSmall(unitTest *testing.T) {
 			errorFromViewState)
 	}
 
-	actualGameIsFinished, errorFromGameIsFinished :=
-		viewForPlayer.GameIsFinished()
-
-	if errorFromGameIsFinished != nil {
-		unitTest.Fatalf(
-			"GameIsFinished() produced error %v",
-			errorFromGameIsFinished)
-	}
-
+	actualGameIsFinished := viewForPlayer.GameIsFinished()
 	if !actualGameIsFinished {
 		unitTest.Fatalf(
-			"GameIsFinished() produced %v when the current player hand was just a single inferred card",
+			"GameIsFinished() produced %v when the number of turns with an"+
+				" empty deck is equal to the number of participants",
 			actualGameIsFinished)
 	}
 }

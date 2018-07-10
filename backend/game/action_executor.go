@@ -161,42 +161,18 @@ func (actionExecutor *ActionExecutor) TakeTurnByPlaying(indexInHand int) error {
 func (actionExecutor *ActionExecutor) TakeTurnByHintingColor(
 	receivingPlayer string,
 	hintedColor string) error {
-	visibleHandOfReceiver, inferredHandOfReceiver, handSize, errorFromhand :=
+	visibleHandOfReceiver, inferredHandOfReceiverBeforeHint, errorFromhand :=
 		actionExecutor.handOfHintReceiver(receivingPlayer)
 
 	if errorFromhand != nil {
 		return errorFromhand
 	}
 
-	// We use receiverKnowledgeOfOwnHand which may or may not be a copy
-	// or a reference, but we will pass it in to the game state as an
-	// argument and let it sort out if it is copying back from a copy,
-	// or just over-writing a modified array with itself.
-	for indexInHand := 0; indexInHand < handSize; indexInHand++ {
-		colorOfCard := visibleHandOfReceiver[indexInHand].ColorSuit()
-
-		replacementColors := []string{}
-
-		if colorOfCard == hintedColor {
-			replacementColors = []string{colorOfCard}
-		} else {
-			originalColors :=
-				inferredHandOfReceiver[indexInHand].PossibleColors()
-
-			for _, possibleColor := range originalColors {
-				if possibleColor == hintedColor {
-					continue
-				}
-
-				replacementColors = append(replacementColors, possibleColor)
-			}
-		}
-
-		inferredHandOfReceiver[indexInHand] =
-			card.NewInferred(
-				replacementColors,
-				inferredHandOfReceiver[indexInHand].PossibleIndices())
-	}
+	inferredHandOfReceiverAfterHint :=
+		actionExecutor.gameState.Read().Ruleset().AfterColorHint(
+			inferredHandOfReceiverBeforeHint,
+			visibleHandOfReceiver,
+			hintedColor)
 
 	actionMessage :=
 		fmt.Sprintf(
@@ -208,7 +184,7 @@ func (actionExecutor *ActionExecutor) TakeTurnByHintingColor(
 		actionMessage,
 		actionExecutor.actingPlayer,
 		receivingPlayer,
-		inferredHandOfReceiver,
+		inferredHandOfReceiverAfterHint,
 		1)
 
 	return nil
@@ -220,45 +196,70 @@ func (actionExecutor *ActionExecutor) TakeTurnByHintingColor(
 func (actionExecutor *ActionExecutor) TakeTurnByHintingIndex(
 	receivingPlayer string,
 	hintedIndex int) error {
-	fmt.Printf("do something here!")
+	visibleHandOfReceiver, inferredHandOfReceiverBeforeHint, errorFromhand :=
+		actionExecutor.handOfHintReceiver(receivingPlayer)
+
+	if errorFromhand != nil {
+		return errorFromhand
+	}
+
+	inferredHandOfReceiverAfterHint :=
+		actionExecutor.gameState.Read().Ruleset().AfterIndexHint(
+			inferredHandOfReceiverBeforeHint,
+			visibleHandOfReceiver,
+			hintedIndex)
+
+	actionMessage :=
+		fmt.Sprintf(
+			"gives hint to %v about number %v",
+			receivingPlayer,
+			hintedIndex)
+
+	actionExecutor.gameState.EnactTurnByUpdatingHandWithHint(
+		actionMessage,
+		actionExecutor.actingPlayer,
+		receivingPlayer,
+		inferredHandOfReceiverAfterHint,
+		1)
+
 	return nil
 }
 
 func (actionExecutor *ActionExecutor) handOfHintReceiver(
-	receivingPlayer string) ([]card.Readonly, []card.Inferred, int, error) {
+	receivingPlayer string) ([]card.Readonly, []card.Inferred, error) {
 	if receivingPlayer == actionExecutor.actingPlayer.Name() {
-		return nil, nil, -1, fmt.Errorf("Player cannot give a hint to self")
+		return nil, nil, fmt.Errorf("Player cannot give a hint to self")
 	}
 
 	readonlyGame := actionExecutor.gameState.Read()
 	if readonlyGame.NumberOfReadyHints() <= 0 {
-		return nil, nil, -1, fmt.Errorf("No hints available to use")
+		return nil, nil, fmt.Errorf("No hints available to use")
 	}
 
 	// First we must determine if the player is allowed to take an action,
 	// though we do not need to see the hand - it just has to be found to
 	// determine if the game is not yet over. The hand size is useful though.
-	_, handSize, errorFromHinterHand := actionExecutor.playerHandIfTurnElseError()
+	_, _, errorFromHinterHand := actionExecutor.playerHandIfTurnElseError()
 
 	if errorFromHinterHand != nil {
-		return nil, nil, -1, errorFromHinterHand
+		return nil, nil, errorFromHinterHand
 	}
 
 	receiverKnowledgeOfOwnHand, errorFromReceiverInferredHand :=
 		readonlyGame.InferredHand(receivingPlayer)
 
 	if errorFromReceiverInferredHand != nil {
-		return nil, nil, -1, errorFromReceiverInferredHand
+		return nil, nil, errorFromReceiverInferredHand
 	}
 
 	visibleHandOfReceiver, errorFromReceiverVisibleHand :=
 		readonlyGame.VisibleHand(receivingPlayer)
 
 	if errorFromReceiverVisibleHand != nil {
-		return nil, nil, -1, errorFromReceiverVisibleHand
+		return nil, nil, errorFromReceiverVisibleHand
 	}
 
-	return visibleHandOfReceiver, receiverKnowledgeOfOwnHand, handSize, nil
+	return visibleHandOfReceiver, receiverKnowledgeOfOwnHand, nil
 }
 
 func (actionExecutor *ActionExecutor) playerHandIfTurnElseError() ([]card.Readonly, int, error) {

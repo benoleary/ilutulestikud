@@ -43,6 +43,10 @@ type ReadonlyState interface {
 	// player).
 	Turn() int
 
+	// TurnsTakenWithEmptyDeck should return the number of turns which have been taken
+	// since the turn which drew the last card from the deck.
+	TurnsTakenWithEmptyDeck() int
+
 	// NumberOfReadyHints should return the total number of hints which are available
 	// to be played.
 	NumberOfReadyHints() int
@@ -85,8 +89,10 @@ type ReadAndWriteState interface {
 	// replace it in the player's hand with the next card from the deck, bundled with
 	// the given knowledge about the new card from the deck which the player should
 	// have (which should always be that any color suit is possible and any sequence
-	// index is possible). It should also add the given numbers to the counts of
-	// available hints and mistakes made respectively.
+	// index is possible). If there is no card to draw from the deck, it should
+	// increment the number of turns taken with an empty deck of replacing the card in
+	// the hand. It should also add the given numbers to the counts of available hints
+	// and mistakes made respectively.
 	EnactTurnByDiscardingAndReplacing(
 		actionMessage string,
 		actingPlayer player.ReadonlyState,
@@ -100,9 +106,11 @@ type ReadAndWriteState interface {
 	// sequence, and replace it in the player's hand with the next card from the deck,
 	// bundled with the given knowledge about the new card from the deck which the
 	// player should have (which should always be that any color suit is possible and
-	// any sequence index is possible). It should also add the given number of hints
-	// to the count of ready hints available (such as when playing the end of sequence
-	// gives a bonus hint).
+	// any sequence index is possible). If there is no card to draw from the deck, it
+	// should increment the number of turns taken with an empty deck of replacing the
+	// card in the hand. It should also add the given number of hints to the count of
+	// ready hints available (such as when playing the end of sequence gives a bonus
+	// hint).
 	EnactTurnByPlayingAndReplacing(
 		actionMessage string,
 		actingPlayer player.ReadonlyState,
@@ -112,7 +120,9 @@ type ReadAndWriteState interface {
 
 	// EnactTurnByUpdatingHandWithHint should increment the turn number and replace
 	// the given player's inferred hand with the given inferred hand, while also
-	// decrementing the number of available hints appropriately.
+	// decrementing the number of available hints appropriately. If the deck is empty,
+	// this function should also increment the number of turns taken with an empty
+	// deck.
 	EnactTurnByUpdatingHandWithHint(
 		actionMessage string,
 		actingPlayer player.ReadonlyState,

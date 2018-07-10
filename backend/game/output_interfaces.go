@@ -45,6 +45,20 @@ type Ruleset interface {
 	// game's ruleset.
 	IndicesAvailableAsHint() []int
 
+	// AfterColorHint should return the knowledge about a hand that a player has after applying
+	// the given hint about color to the given knowledge about the hand prior to the hint.
+	AfterColorHint(
+		knowledgeBeforeHint []card.Inferred,
+		cardsInHand []card.Readonly,
+		hintedColor string) []card.Inferred
+
+	// AfterIndexHint should return the knowledge about a hand that a player has after applying
+	// the given hint about index to the given knowledge about the hand prior to the hint.
+	AfterIndexHint(
+		knowledgeBeforeHint []card.Inferred,
+		cardsInHand []card.Readonly,
+		hintedIndex int) []card.Inferred
+
 	// NumberOfMistakesIndicatingGameOver should return the number of mistakes which indicates
 	// that the game is over with the players having zero score.
 	NumberOfMistakesIndicatingGameOver() int
@@ -77,7 +91,7 @@ type ViewForPlayer interface {
 	ActionLog() []message.Readonly
 
 	// GameIsFinished should return true if the game is finished.
-	GameIsFinished() (bool, error)
+	GameIsFinished() bool
 
 	// CurrentTurnOrder should return the names of the participants of the game in the
 	// order which their next turns are in, along with the index of the viewing

@@ -98,30 +98,12 @@ func (playerView *PlayerView) ActionLog() []message.Readonly {
 }
 
 // GameIsFinished returns true if the game is finished because either too many
-// mistakes have been made, or if there are no more cards to draw and the turn
-// is for a player with a hand which is smaller than the full hand size for the
-// ruleset (which indicates that all players have played a card after the deck
-// was exhausted).
-func (playerView *PlayerView) GameIsFinished() (bool, error) {
-	if playerView.gameOverBecauseOfMistakes() {
-		return true, nil
-	}
-
-	if playerView.DeckSize() > 0 {
-		return false, nil
-	}
-
-	fullHandSize :=
-		playerView.gameRuleset.NumberOfCardsInPlayerHand(playerView.numberOfParticipants)
-
-	currentPlayer := playerView.gameParticipants[playerView.playerIndexForTurn(0)]
-	inferredHand, errorFromState := playerView.gameState.InferredHand(currentPlayer)
-
-	if errorFromState != nil {
-		return true, errorFromState
-	}
-
-	return (len(inferredHand) < fullHandSize), nil
+// mistakes have been made, or if there have been as many turns with an empty
+// deck as there are players (so that each player has had one turn while the
+// deck was empty).
+func (playerView *PlayerView) GameIsFinished() bool {
+	return playerView.gameOverBecauseOfMistakes() ||
+		(playerView.gameState.TurnsTakenWithEmptyDeck() >= playerView.numberOfParticipants)
 }
 
 // CurrentTurnOrder returns the names of the participants of the game in the

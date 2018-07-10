@@ -22,7 +22,6 @@ type mockViewForPlayer struct {
 	MockGameName                string
 	MockPlayers                 []string
 	MockChatLog                 []message.Readonly
-	ErrorForGameIsFinished      error
 	MockPlayerTurnIndex         int
 	MockScore                   int
 	ErrorForVisibleHand         error
@@ -37,7 +36,6 @@ func NewMockView() *mockViewForPlayer {
 		MockGameName:                "",
 		MockPlayers:                 nil,
 		MockChatLog:                 nil,
-		ErrorForGameIsFinished:      nil,
 		MockPlayerTurnIndex:         -1,
 		MockScore:                   -1,
 		ErrorForVisibleHand:         nil,
@@ -69,8 +67,8 @@ func (mockView *mockViewForPlayer) ActionLog() []message.Readonly {
 }
 
 // GameIsFinished gets mocked.
-func (mockView *mockViewForPlayer) GameIsFinished() (bool, error) {
-	return false, mockView.ErrorForGameIsFinished
+func (mockView *mockViewForPlayer) GameIsFinished() bool {
+	return false
 }
 
 // CurrentTurnOrder gets mocked.
@@ -172,6 +170,20 @@ func (mockExecutor *mockActionExecutor) TakeTurnByDiscarding(indexInHandToDiscar
 
 // TakeTurnByPlaying gets mocked.
 func (mockExecutor *mockActionExecutor) TakeTurnByPlaying(indexInHandToDiscard int) error {
+	return mockExecutor.ErrorToReturn
+}
+
+// TakeTurnByHintingColor gets mocked.
+func (mockExecutor *mockActionExecutor) TakeTurnByHintingColor(
+	receivingPlayer string,
+	hintedColor string) error {
+	return mockExecutor.ErrorToReturn
+}
+
+// TakeTurnByHintingIndex gets mocked.
+func (mockExecutor *mockActionExecutor) TakeTurnByHintingIndex(
+	receivingPlayer string,
+	hintedIndex int) error {
 	return mockExecutor.ErrorToReturn
 }
 

@@ -69,13 +69,21 @@ type argumentsForRecordChatMessage struct {
 	MessageString string
 }
 
-type argumentsForEnactTurn struct {
+type argumentsForEnactTurnByCardAction struct {
 	MessageString string
 	PlayerState   player.ReadonlyState
 	IndexInt      int
 	DrawnInferred card.Inferred
 	HintsInt      int
 	MistakesInt   int
+}
+
+type argumentsForEnactTurnByHint struct {
+	MessageString       string
+	PlayerState         player.ReadonlyState
+	ReceiverName        string
+	UpdatedInferredHand []card.Inferred
+	HintsInt            int
 }
 
 // mockGameState mocks the game.ReadAndWriteState, causing test failures if
@@ -92,6 +100,7 @@ type mockGameState struct {
 	ReturnForActionLog                             []message.Readonly
 	ReturnForGameIsFinished                        bool
 	ReturnForTurn                                  int
+	ReturnForTurnsTakenWithEmptyDeck               int
 	ReturnForNumberOfReadyHints                    int
 	ReturnForNumberOfMistakesMade                  int
 	ReturnForDeckSize                              int
@@ -102,9 +111,11 @@ type mockGameState struct {
 	TestErrorForRecordChatMessage                  error
 	ArgumentsFromRecordChatMessage                 []argumentsForRecordChatMessage
 	TestErrorForEnactTurnByDiscardingAndReplacing  error
-	ArgumentsFromEnactTurnByDiscardingAndReplacing []argumentsForEnactTurn
+	ArgumentsFromEnactTurnByDiscardingAndReplacing []argumentsForEnactTurnByCardAction
 	TestErrorForEnactTurnByPlayingAndReplacing     error
-	ArgumentsFromEnactTurnByPlayingAndReplacing    []argumentsForEnactTurn
+	ArgumentsFromEnactTurnByPlayingAndReplacing    []argumentsForEnactTurnByCardAction
+	TestErrorForEnactTurnByUpdatingHandWithHint    error
+	ArgumentsFromEnactTurnByUpdatingHandWithHint   []argumentsForEnactTurnByHint
 }
 
 func NewMockGameState(testReference *testing.T) *mockGameState {
@@ -120,6 +131,7 @@ func NewMockGameState(testReference *testing.T) *mockGameState {
 		ReturnForActionLog:                             nil,
 		ReturnForGameIsFinished:                        false,
 		ReturnForTurn:                                  1,
+		ReturnForTurnsTakenWithEmptyDeck:               0,
 		ReturnForNumberOfReadyHints:                    -1,
 		ReturnForNumberOfMistakesMade:                  -1,
 		ReturnForDeckSize:                              -1,
@@ -130,9 +142,11 @@ func NewMockGameState(testReference *testing.T) *mockGameState {
 		TestErrorForRecordChatMessage:                  testError,
 		ArgumentsFromRecordChatMessage:                 make([]argumentsForRecordChatMessage, 0),
 		TestErrorForEnactTurnByDiscardingAndReplacing:  testError,
-		ArgumentsFromEnactTurnByDiscardingAndReplacing: make([]argumentsForEnactTurn, 0),
+		ArgumentsFromEnactTurnByDiscardingAndReplacing: make([]argumentsForEnactTurnByCardAction, 0),
 		TestErrorForEnactTurnByPlayingAndReplacing:     testError,
-		ArgumentsFromEnactTurnByPlayingAndReplacing:    make([]argumentsForEnactTurn, 0),
+		ArgumentsFromEnactTurnByPlayingAndReplacing:    make([]argumentsForEnactTurnByCardAction, 0),
+		TestErrorForEnactTurnByUpdatingHandWithHint:    testError,
+		ArgumentsFromEnactTurnByUpdatingHandWithHint:   make([]argumentsForEnactTurnByHint, 0),
 	}
 }
 
@@ -167,13 +181,18 @@ func (mockGame *mockGameState) ChatLog() []message.Readonly {
 }
 
 // GameIsFinished gets mocked.
-func (mockGame *mockGameState) GameIsFinished() (bool, error) {
-	return mockGame.ReturnForGameIsFinished, mockGame.ReturnForNontestError
+func (mockGame *mockGameState) GameIsFinished() bool {
+	return mockGame.ReturnForGameIsFinished
 }
 
 // Turn gets mocked.
 func (mockGame *mockGameState) Turn() int {
 	return mockGame.ReturnForTurn
+}
+
+// TurnsTakenWithEmptyDeck gets mocked.
+func (mockGame *mockGameState) TurnsTakenWithEmptyDeck() int {
+	return mockGame.ReturnForTurnsTakenWithEmptyDeck
 }
 
 // NumberOfReadyHints gets mocked.
@@ -270,7 +289,7 @@ func (mockGame *mockGameState) EnactTurnByDiscardingAndReplacing(
 	mockGame.ArgumentsFromEnactTurnByDiscardingAndReplacing =
 		append(
 			mockGame.ArgumentsFromEnactTurnByDiscardingAndReplacing,
-			argumentsForEnactTurn{
+			argumentsForEnactTurnByCardAction{
 				MessageString: actionMessage,
 				PlayerState:   actingPlayer,
 				IndexInt:      indexInHand,
@@ -303,13 +322,45 @@ func (mockGame *mockGameState) EnactTurnByPlayingAndReplacing(
 	mockGame.ArgumentsFromEnactTurnByPlayingAndReplacing =
 		append(
 			mockGame.ArgumentsFromEnactTurnByPlayingAndReplacing,
-			argumentsForEnactTurn{
+			argumentsForEnactTurnByCardAction{
 				MessageString: actionMessage,
 				PlayerState:   actingPlayer,
 				IndexInt:      indexInHand,
 				DrawnInferred: knowledgeOfDrawnCard,
 				HintsInt:      numberOfReadyHintsToAdd,
 				MistakesInt:   0,
+			})
+
+	return mockGame.ReturnForNontestError
+}
+
+// EnactTurnByUpdatingHandWithHint gets mocked.
+func (mockGame *mockGameState) EnactTurnByUpdatingHandWithHint(
+	actionMessage string,
+	actingPlayer player.ReadonlyState,
+	receivingPlayerName string,
+	updatedReceiverKnowledgeOfOwnHand []card.Inferred,
+	numberOfReadyHintsToSubtract int) error {
+	if mockGame.TestErrorForEnactTurnByUpdatingHandWithHint != nil {
+		mockGame.testReference.Fatalf(
+			"EnactTurnByUpdatingHandWithHint(%v, %v, %v, %+v, %v): %v",
+			actionMessage,
+			actingPlayer,
+			receivingPlayerName,
+			updatedReceiverKnowledgeOfOwnHand,
+			numberOfReadyHintsToSubtract,
+			mockGame.TestErrorForEnactTurnByUpdatingHandWithHint)
+	}
+
+	mockGame.ArgumentsFromEnactTurnByUpdatingHandWithHint =
+		append(
+			mockGame.ArgumentsFromEnactTurnByUpdatingHandWithHint,
+			argumentsForEnactTurnByHint{
+				MessageString:       actionMessage,
+				PlayerState:         actingPlayer,
+				ReceiverName:        receivingPlayerName,
+				UpdatedInferredHand: updatedReceiverKnowledgeOfOwnHand,
+				HintsInt:            numberOfReadyHintsToSubtract,
 			})
 
 	return mockGame.ReturnForNontestError

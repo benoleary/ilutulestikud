@@ -647,12 +647,6 @@ func TestGetGameForPlayerRejectedIfViewStateYieldsError(unitTest *testing.T) {
 				errorForKnowledgeOfOwnHand: fmt.Errorf("mock error"),
 				errorForGameIsFinished:     nil,
 			},
-			{
-				testName:                   "error from GameIsFinished",
-				errorForVisibleHand:        nil,
-				errorForKnowledgeOfOwnHand: nil,
-				errorForGameIsFinished:     fmt.Errorf("mock error"),
-			},
 		}
 
 	for _, testCase := range testCases {
@@ -671,7 +665,6 @@ func TestGetGameForPlayerRejectedIfViewStateYieldsError(unitTest *testing.T) {
 			mockView.MockPlayerTurnIndex = 1
 			mockView.ErrorForVisibleHand = testCase.errorForVisibleHand
 			mockView.ErrorForKnowledgeOfOwnHand = testCase.errorForKnowledgeOfOwnHand
-			mockView.ErrorForGameIsFinished = testCase.errorForGameIsFinished
 
 			mockCollection.ReturnForViewState = mockView
 
@@ -1779,6 +1772,306 @@ func TestAcceptValidPlay(unitTest *testing.T) {
 
 	_, responseCode :=
 		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-attempting-to-play"})
+
+	if responseCode != http.StatusOK {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusOK,
+			responseCode)
+	}
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "ExecuteAction",
+			FunctionArgument: stringPair{first: bodyObject.GameName, second: bodyObject.PlayerName},
+		},
+		testIdentifier)
+}
+
+func TestRejectInvalidColorHintWithMalformedRequest(unitTest *testing.T) {
+	testIdentifier :=
+		"Reject invalid POST take-turn-by-hinting-color with malformed JSON body"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockCollection.ErrorToReturn = errors.New("expected error")
+
+	// There is no point testing with valid JSON objects which do not correspond
+	// to the expected JSON object, as the JSON will just be parsed with empty
+	// strings for the missing attributes and extra attributes will just be
+	// ignored. The tests of the game state collection can cover the cases of
+	// empty attributes.
+	bodyString := "{\"PlayerName\" :\"Something\", \"GameName\":}"
+
+	bodyDecoder :=
+		json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-hinting-color"})
+
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
+
+	assertNoFunctionWasCalled(
+		unitTest,
+		mockCollection.FunctionsAndArgumentsReceived,
+		testIdentifier)
+}
+
+func TestRejectColorHintIfCollectionRejectsIt(unitTest *testing.T) {
+	testIdentifier :=
+		"Reject POST take-turn-by-hinting-color if collection rejects it"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockCollection.ErrorToReturn = errors.New("expected error")
+
+	bodyObject := parsing.PlayerColorHint{}
+	bodyObject.GameName = "Test game"
+	bodyObject.PlayerName = "A. Player Name"
+	bodyObject.ReceiverName = "Another Player"
+	bodyObject.HintedColor = "test color"
+
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-hinting-color"})
+
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+
+				"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "ExecuteAction",
+			FunctionArgument: stringPair{first: bodyObject.GameName, second: bodyObject.PlayerName},
+		},
+		testIdentifier)
+}
+
+func TestPropagateErrorFromColorHint(unitTest *testing.T) {
+	testIdentifier := "Reject POST take-turn-by-hinting-color if collection rejects it"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockExecutor := &mockActionExecutor{}
+	mockExecutor.ErrorToReturn = fmt.Errorf("expected error")
+	mockCollection.ReturnForExecuteAction = mockExecutor
+
+	bodyObject := parsing.PlayerColorHint{}
+	bodyObject.GameName = "Test game"
+	bodyObject.PlayerName = "A. Player Name"
+	bodyObject.ReceiverName = "Another Player"
+	bodyObject.HintedColor = "test color"
+
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-hinting-color"})
+
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "ExecuteAction",
+			FunctionArgument: stringPair{first: bodyObject.GameName, second: bodyObject.PlayerName},
+		},
+		testIdentifier)
+}
+
+func TestAcceptValidColorHint(unitTest *testing.T) {
+	testIdentifier := "POST take-turn-by-hinting-color"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockCollection.ReturnForExecuteAction = &mockActionExecutor{}
+
+	bodyObject := parsing.PlayerColorHint{}
+	bodyObject.GameName = "Test game"
+	bodyObject.PlayerName = "A. Player Name"
+	bodyObject.ReceiverName = "Another Player"
+	bodyObject.HintedColor = "test color"
+
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-hinting-color"})
+
+	if responseCode != http.StatusOK {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusOK,
+			responseCode)
+	}
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "ExecuteAction",
+			FunctionArgument: stringPair{first: bodyObject.GameName, second: bodyObject.PlayerName},
+		},
+		testIdentifier)
+}
+
+func TestRejectInvalidIndexHintWithMalformedRequest(unitTest *testing.T) {
+	testIdentifier :=
+		"Reject invalid POST take-turn-by-hinting-number with malformed JSON body"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockCollection.ErrorToReturn = errors.New("expected error")
+
+	// There is no point testing with valid JSON objects which do not correspond
+	// to the expected JSON object, as the JSON will just be parsed with empty
+	// strings for the missing attributes and extra attributes will just be
+	// ignored. The tests of the game state collection can cover the cases of
+	// empty attributes.
+	bodyString := "{\"PlayerName\" :\"Something\", \"GameName\":}"
+
+	bodyDecoder :=
+		json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-hinting-number"})
+
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
+
+	assertNoFunctionWasCalled(
+		unitTest,
+		mockCollection.FunctionsAndArgumentsReceived,
+		testIdentifier)
+}
+
+func TestRejectIndexHintIfCollectionRejectsIt(unitTest *testing.T) {
+	testIdentifier :=
+		"Reject POST take-turn-by-hinting-number if collection rejects it"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockCollection.ErrorToReturn = errors.New("expected error")
+
+	bodyObject := parsing.PlayerIndexHint{}
+	bodyObject.GameName = "Test game"
+	bodyObject.PlayerName = "A. Player Name"
+	bodyObject.ReceiverName = "Another Player"
+	bodyObject.HintedIndex = 1
+
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-hinting-number"})
+
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+
+				"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "ExecuteAction",
+			FunctionArgument: stringPair{first: bodyObject.GameName, second: bodyObject.PlayerName},
+		},
+		testIdentifier)
+}
+
+func TestPropagateErrorFromIndexHint(unitTest *testing.T) {
+	testIdentifier := "Reject POST take-turn-by-hinting-number if collection rejects it"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockExecutor := &mockActionExecutor{}
+	mockExecutor.ErrorToReturn = fmt.Errorf("expected error")
+	mockCollection.ReturnForExecuteAction = mockExecutor
+
+	bodyObject := parsing.PlayerIndexHint{}
+	bodyObject.GameName = "Test game"
+	bodyObject.PlayerName = "A. Player Name"
+	bodyObject.ReceiverName = "Another Player"
+	bodyObject.HintedIndex = 1
+
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-hinting-number"})
+
+	if responseCode != http.StatusBadRequest {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusBadRequest,
+			responseCode)
+	}
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "ExecuteAction",
+			FunctionArgument: stringPair{first: bodyObject.GameName, second: bodyObject.PlayerName},
+		},
+		testIdentifier)
+}
+
+func TestAcceptValidIndexHint(unitTest *testing.T) {
+	testIdentifier := "POST take-turn-by-hinting-number"
+	mockCollection, testHandler := newGameCollectionAndHandler()
+	mockCollection.ReturnForExecuteAction = &mockActionExecutor{}
+
+	bodyObject := parsing.PlayerIndexHint{}
+	bodyObject.GameName = "Test game"
+	bodyObject.PlayerName = "A. Player Name"
+	bodyObject.ReceiverName = "Another Player"
+	bodyObject.HintedIndex = 1
+
+	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
+
+	_, responseCode :=
+		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-hinting-number"})
 
 	if responseCode != http.StatusOK {
 		unitTest.Fatalf(
