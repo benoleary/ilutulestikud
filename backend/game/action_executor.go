@@ -180,14 +180,12 @@ func (actionExecutor *ActionExecutor) TakeTurnByHintingColor(
 			receivingPlayer,
 			hintedColor)
 
-	actionExecutor.gameState.EnactTurnByUpdatingHandWithHint(
+	return actionExecutor.gameState.EnactTurnByUpdatingHandWithHint(
 		actionMessage,
 		actionExecutor.actingPlayer,
 		receivingPlayer,
 		inferredHandOfReceiverAfterHint,
 		1)
-
-	return nil
 }
 
 // TakeTurnByHintingIndex enacts a turn by giving a hint to the receiving player
@@ -215,14 +213,12 @@ func (actionExecutor *ActionExecutor) TakeTurnByHintingIndex(
 			receivingPlayer,
 			hintedIndex)
 
-	actionExecutor.gameState.EnactTurnByUpdatingHandWithHint(
+	return actionExecutor.gameState.EnactTurnByUpdatingHandWithHint(
 		actionMessage,
 		actionExecutor.actingPlayer,
 		receivingPlayer,
 		inferredHandOfReceiverAfterHint,
 		1)
-
-	return nil
 }
 
 func (actionExecutor *ActionExecutor) handOfHintReceiver(
@@ -242,7 +238,7 @@ func (actionExecutor *ActionExecutor) handOfHintReceiver(
 
 	// First we must determine if the player is allowed to take an action,
 	// though we do not need to see the hand - it just has to be found to
-	// determine if the game is not yet over. The hand size is useful though.
+	// determine if the game is not yet over.
 	_, _, errorFromHinterHand := actionExecutor.playerHandIfTurnElseError()
 
 	if errorFromHinterHand != nil {
