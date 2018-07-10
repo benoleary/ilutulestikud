@@ -75,6 +75,25 @@ type Ruleset interface {
 	PointsForCard(cardToEvaluate card.Readonly) int
 }
 
+// IsFinished returns true if the game is finished because either too many
+// mistakes have been made, or if there have been as many turns with an empty
+// deck as there are players (so that each player has had one turn while the
+// deck was empty).
+func IsFinished(gameState ReadonlyState) bool {
+	return IsOverBecauseOfMistakes(gameState) ||
+		(gameState.TurnsTakenWithEmptyDeck() >= len(gameState.PlayerNames()))
+}
+
+// IsOverBecauseOfMistakes returns true if the game is finished because too
+// many mistakes have been made. However, it does not return true if the game
+// is over for reasons other than the number of mistakes made.
+func IsOverBecauseOfMistakes(gameState ReadonlyState) bool {
+	mistakeCount := gameState.NumberOfMistakesMade()
+	thresholdForGameOver :=
+		gameState.Ruleset().NumberOfMistakesIndicatingGameOver()
+	return mistakeCount >= thresholdForGameOver
+}
+
 // ViewForPlayer should encapsulate functions to view the state of the game as seen by a
 // particular player.
 type ViewForPlayer interface {

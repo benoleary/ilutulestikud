@@ -239,7 +239,7 @@ func (actionExecutor *ActionExecutor) handOfHintReceiver(
 	// First we must determine if the player is allowed to take an action,
 	// though we do not need to see the hand - it just has to be found to
 	// determine if the game is not yet over.
-	_, _, errorFromHinterHand := actionExecutor.playerHandIfTurnElseError()
+	_, errorFromHinterHand := actionExecutor.playerHandIfTurnElseError()
 
 	if errorFromHinterHand != nil {
 		return nil, nil, errorFromHinterHand
@@ -262,17 +262,10 @@ func (actionExecutor *ActionExecutor) handOfHintReceiver(
 	return visibleHandOfReceiver, receiverKnowledgeOfOwnHand, nil
 }
 
-func (actionExecutor *ActionExecutor) playerHandIfTurnElseError() ([]card.Readonly, int, error) {
+func (actionExecutor *ActionExecutor) playerHandIfTurnElseError() ([]card.Readonly, error) {
 	gameReadState := actionExecutor.gameState.Read()
-	gameRuleset := gameReadState.Ruleset()
-	if gameReadState.NumberOfMistakesMade() >= gameRuleset.NumberOfMistakesIndicatingGameOver() {
-		errorToReturn :=
-			fmt.Errorf(
-				"Too many mistakes made %v (game over at %v)",
-				gameReadState.NumberOfMistakesMade(),
-				gameRuleset.NumberOfMistakesIndicatingGameOver())
-
-		return nil, -1, errorToReturn
+	if IsFinished(gameReadState) {
+		return nil, fmt.Errorf("Game is finished, cannot take turn")
 	}
 
 	// The turn number starts from 1.
@@ -287,7 +280,7 @@ func (actionExecutor *ActionExecutor) playerHandIfTurnElseError() ([]card.Readon
 				actionExecutor.actingPlayer.Name(),
 				playerForCurrentTurn)
 
-		return nil, -1, errorToReturn
+		return nil, errorToReturn
 	}
 
 	playerHand, errorFromVisibleHand :=
@@ -300,31 +293,21 @@ func (actionExecutor *ActionExecutor) playerHandIfTurnElseError() ([]card.Readon
 				actionExecutor.actingPlayer.Name(),
 				errorFromVisibleHand)
 
-		return nil, -1, errorToReturn
+		return nil, errorToReturn
 	}
 
-	handSize := len(playerHand)
-	numberOfParticipants := len(actionExecutor.gameParticipants)
-
-	if handSize < gameRuleset.NumberOfCardsInPlayerHand(numberOfParticipants) {
-		errorToReturn :=
-			fmt.Errorf(
-				"Player %v could not take a turn because their last turn has already been taken",
-				actionExecutor.actingPlayer.Name())
-
-		return nil, -1, errorToReturn
-	}
-
-	return playerHand, handSize, nil
+	return playerHand, nil
 }
 
-func (actionExecutor *ActionExecutor) cardFromHandIfTurnElseError(indexInHand int) (card.Readonly, error) {
-	playerHand, handSize, errorFromGettingHand := actionExecutor.playerHandIfTurnElseError()
+func (actionExecutor *ActionExecutor) cardFromHandIfTurnElseError(
+	indexInHand int) (card.Readonly, error) {
+	playerHand, errorFromGettingHand := actionExecutor.playerHandIfTurnElseError()
 
 	if errorFromGettingHand != nil {
 		return card.ErrorReadonly(), errorFromGettingHand
 	}
 
+	handSize := len(playerHand)
 	if (indexInHand < 0) || (indexInHand >= handSize) {
 		errorToReturn := fmt.Errorf(
 			"Index %v is out of the acceptable range %v to %v of the player's hand",

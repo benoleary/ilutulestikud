@@ -107,7 +107,9 @@ type mockGameState struct {
 	ReturnForPlayedForColor                        map[string][]card.Readonly
 	ReturnForNumberOfDiscardedCards                map[card.Readonly]int
 	ReturnForVisibleHand                           map[string][]card.Readonly
+	ReturnErrorMapForVisibleHand                   map[string]error
 	ReturnForInferredHand                          map[string][]card.Inferred
+	ReturnErrorForInferredHand                     error
 	TestErrorForRecordChatMessage                  error
 	ArgumentsFromRecordChatMessage                 []argumentsForRecordChatMessage
 	TestErrorForEnactTurnByDiscardingAndReplacing  error
@@ -138,7 +140,9 @@ func NewMockGameState(testReference *testing.T) *mockGameState {
 		ReturnForPlayedForColor:                        make(map[string][]card.Readonly, 0),
 		ReturnForNumberOfDiscardedCards:                make(map[card.Readonly]int, 0),
 		ReturnForVisibleHand:                           make(map[string][]card.Readonly, 0),
+		ReturnErrorMapForVisibleHand:                   make(map[string]error, 0),
 		ReturnForInferredHand:                          make(map[string][]card.Inferred, 0),
+		ReturnErrorForInferredHand:                     nil,
 		TestErrorForRecordChatMessage:                  testError,
 		ArgumentsFromRecordChatMessage:                 make([]argumentsForRecordChatMessage, 0),
 		TestErrorForEnactTurnByDiscardingAndReplacing:  testError,
@@ -228,14 +232,14 @@ func (mockGame *mockGameState) NumberOfDiscardedCards(
 func (mockGame *mockGameState) VisibleHand(holdingPlayerName string) ([]card.Readonly, error) {
 	visibleCard :=
 		mockGame.ReturnForVisibleHand[holdingPlayerName]
-	return visibleCard, mockGame.ReturnForNontestError
+	return visibleCard, mockGame.ReturnErrorMapForVisibleHand[holdingPlayerName]
 }
 
 // InferredHand gets mocked.
 func (mockGame *mockGameState) InferredHand(holdingPlayerName string) ([]card.Inferred, error) {
 	inferredCard :=
 		mockGame.ReturnForInferredHand[holdingPlayerName]
-	return inferredCard, mockGame.ReturnForNontestError
+	return inferredCard, mockGame.ReturnErrorForInferredHand
 }
 
 // Read actually does what it is supposed to.

@@ -1331,3 +1331,150 @@ func TestTakeTurnByPlayingWithBonusHintWhenLessThanMaximumHints(unitTest *testin
 		testRuleset.ColorSuits(),
 		testRuleset.DistinctPossibleIndices())
 }
+
+func TestRejectTakeTurnByHintWithoutCallingPersisterWriteFunction(unitTest *testing.T) {
+	gameName := "Test game"
+	testPlayersInOriginalOrder :=
+		[]string{
+			playerNamesAvailableInTest[0],
+			playerNamesAvailableInTest[1],
+			playerNamesAvailableInTest[2],
+			playerNamesAvailableInTest[3],
+		}
+	hintingPlayer := testPlayersInOriginalOrder[2]
+	receivingPlayer := testPlayersInOriginalOrder[1]
+	gameCollection, mockPersister, _ :=
+		prepareCollection(unitTest, testPlayersInOriginalOrder)
+	mockPersister.TestErrorForReadAndWriteGame = nil
+	testColor := "test color"
+	testIndex := 1
+
+	testCases := []struct {
+		testName                     string
+		receiverName                 string
+		numberOfReadyHints           int
+		numberOfMistakesMade         int
+		errorForHinterVisibleHand    error
+		errorForReceiverInferredHand error
+		errorForReceiverVisibleHand  error
+	}{
+		{
+			testName:                     "same player giving and receiving hint",
+			receiverName:                 hintingPlayer,
+			numberOfReadyHints:           1,
+			numberOfMistakesMade:         0,
+			errorForHinterVisibleHand:    nil,
+			errorForReceiverInferredHand: nil,
+			errorForReceiverVisibleHand:  nil,
+		},
+		{
+			testName:                     "no hints available",
+			receiverName:                 receivingPlayer,
+			numberOfReadyHints:           0,
+			numberOfMistakesMade:         0,
+			errorForHinterVisibleHand:    nil,
+			errorForReceiverInferredHand: nil,
+			errorForReceiverVisibleHand:  nil,
+		},
+		{
+			testName:                     "too many mistakes",
+			receiverName:                 receivingPlayer,
+			numberOfReadyHints:           1,
+			numberOfMistakesMade:         testRuleset.NumberOfMistakesIndicatingGameOver(),
+			errorForHinterVisibleHand:    nil,
+			errorForReceiverInferredHand: nil,
+			errorForReceiverVisibleHand:  nil,
+		},
+		{
+			testName:                     "error from inferred hand",
+			receiverName:                 receivingPlayer,
+			numberOfReadyHints:           1,
+			numberOfMistakesMade:         0,
+			errorForHinterVisibleHand:    fmt.Errorf("expected error"),
+			errorForReceiverInferredHand: nil,
+			errorForReceiverVisibleHand:  nil,
+		},
+		{
+			testName:                     "error from inferred hand",
+			receiverName:                 receivingPlayer,
+			numberOfReadyHints:           1,
+			numberOfMistakesMade:         0,
+			errorForReceiverInferredHand: fmt.Errorf("expected error"),
+			errorForReceiverVisibleHand:  nil,
+		},
+		{
+			testName:                     "error from visible hand",
+			receiverName:                 receivingPlayer,
+			numberOfReadyHints:           1,
+			numberOfMistakesMade:         0,
+			errorForReceiverInferredHand: nil,
+			errorForReceiverVisibleHand:  fmt.Errorf("expected error"),
+		},
+	}
+
+	for _, testCase := range testCases {
+		testIdentifier :=
+			"invalid hint without calling persister write function/" +
+				testCase.testName
+
+		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			mockReadAndWriteState := NewMockGameState(unitTest)
+			mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
+			mockReadAndWriteState.ReturnForRuleset = testRuleset
+			mockReadAndWriteState.ReturnForTurn = 3
+			mockReadAndWriteState.ReturnForNumberOfReadyHints =
+				testCase.numberOfReadyHints
+			mockReadAndWriteState.ReturnForNumberOfMistakesMade =
+				testCase.numberOfMistakesMade
+
+			errorMap := make(map[string]error, 2)
+			errorMap[hintingPlayer] = testCase.errorForHinterVisibleHand
+			errorMap[receivingPlayer] = testCase.errorForReceiverVisibleHand
+			mockReadAndWriteState.ReturnErrorMapForVisibleHand = errorMap
+			mockReadAndWriteState.ReturnErrorForInferredHand =
+				testCase.errorForReceiverInferredHand
+
+			mockReadAndWriteState.TestErrorForEnactTurnByPlayingAndReplacing = nil
+
+			mockPersister.ReturnForReadAndWriteGame = mockReadAndWriteState
+
+			executorForPlayer, errorFromExecuteAction :=
+				gameCollection.ExecuteAction(
+					gameName,
+					hintingPlayer)
+			if errorFromExecuteAction != nil {
+				unitTest.Fatalf(
+					"ExecuteAction(%v, %v) produced error %v",
+					gameName,
+					hintingPlayer,
+					errorFromExecuteAction)
+			}
+
+			errorFromColorHint :=
+				executorForPlayer.TakeTurnByHintingColor(testCase.receiverName, testColor)
+
+				// debug
+			fmt.Printf("\n\ntest %v: error from color %v\n\n", testIdentifier, errorFromColorHint)
+
+			if errorFromColorHint == nil {
+				unitTest.Fatalf(
+					"TakeTurnByHintingColor(%v, %v) produced nil error",
+					testCase.receiverName,
+					testColor)
+			}
+
+			errorFromIndexHint :=
+				executorForPlayer.TakeTurnByHintingIndex(testCase.receiverName, testIndex)
+
+				// debug
+			fmt.Printf("\n\ntest %v: error from index %v\n\n", testIdentifier, errorFromIndexHint)
+
+			if errorFromIndexHint == nil {
+				unitTest.Fatalf(
+					"TakeTurnByHintingIndex(%v, %v) produced nil error",
+					testCase.receiverName,
+					testIndex)
+			}
+		})
+	}
+}

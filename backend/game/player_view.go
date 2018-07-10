@@ -102,8 +102,7 @@ func (playerView *PlayerView) ActionLog() []message.Readonly {
 // deck as there are players (so that each player has had one turn while the
 // deck was empty).
 func (playerView *PlayerView) GameIsFinished() bool {
-	return playerView.gameOverBecauseOfMistakes() ||
-		(playerView.gameState.TurnsTakenWithEmptyDeck() >= playerView.numberOfParticipants)
+	return IsFinished(playerView.gameState)
 }
 
 // CurrentTurnOrder returns the names of the participants of the game in the
@@ -133,7 +132,7 @@ func (playerView *PlayerView) Turn() int {
 
 // Score derives the score from the cards in the played area.
 func (playerView *PlayerView) Score() int {
-	if playerView.gameOverBecauseOfMistakes() {
+	if IsOverBecauseOfMistakes(playerView.gameState) {
 		return 0
 	}
 
@@ -244,9 +243,4 @@ func (playerView *PlayerView) playerIndexForTurn(turnsAfterCurrent int) int {
 	// values will be 2, then 3, then 4, then 0, then 1.
 	turnIndexFromZero := (turnsAfterCurrent + playerView.gameState.Turn() - 1)
 	return turnIndexFromZero % playerView.numberOfParticipants
-}
-
-func (playerView *PlayerView) gameOverBecauseOfMistakes() bool {
-	return playerView.NumberOfMistakesMade() >=
-		playerView.NumberOfMistakesIndicatingGameOver()
 }
