@@ -161,11 +161,11 @@ func (actionExecutor *ActionExecutor) TakeTurnByPlaying(indexInHand int) error {
 func (actionExecutor *ActionExecutor) TakeTurnByHintingColor(
 	receivingPlayer string,
 	hintedColor string) error {
-	visibleHandOfReceiver, inferredHandOfReceiverBeforeHint, errorFromhand :=
+	visibleHandOfReceiver, inferredHandOfReceiverBeforeHint, errorFromHand :=
 		actionExecutor.handOfHintReceiver(receivingPlayer)
 
-	if errorFromhand != nil {
-		return errorFromhand
+	if errorFromHand != nil {
+		return errorFromHand
 	}
 
 	inferredHandOfReceiverAfterHint :=
@@ -196,11 +196,11 @@ func (actionExecutor *ActionExecutor) TakeTurnByHintingColor(
 func (actionExecutor *ActionExecutor) TakeTurnByHintingIndex(
 	receivingPlayer string,
 	hintedIndex int) error {
-	visibleHandOfReceiver, inferredHandOfReceiverBeforeHint, errorFromhand :=
+	visibleHandOfReceiver, inferredHandOfReceiverBeforeHint, errorFromHand :=
 		actionExecutor.handOfHintReceiver(receivingPlayer)
 
-	if errorFromhand != nil {
-		return errorFromhand
+	if errorFromHand != nil {
+		return errorFromHand
 	}
 
 	inferredHandOfReceiverAfterHint :=
@@ -228,7 +228,11 @@ func (actionExecutor *ActionExecutor) TakeTurnByHintingIndex(
 func (actionExecutor *ActionExecutor) handOfHintReceiver(
 	receivingPlayer string) ([]card.Readonly, []card.Inferred, error) {
 	if receivingPlayer == actionExecutor.actingPlayer.Name() {
-		return nil, nil, fmt.Errorf("Player cannot give a hint to self")
+		errorToReturn :=
+			fmt.Errorf(
+				"Player %v cannot give a hint to self",
+				actionExecutor.actingPlayer.Name())
+		return nil, nil, errorToReturn
 	}
 
 	readonlyGame := actionExecutor.gameState.Read()

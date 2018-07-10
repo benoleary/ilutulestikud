@@ -520,6 +520,7 @@ func (gameState *inMemoryState) EnactTurnByUpdatingHandWithHint(
 		receiverHand[indexInHand].Inferred = updatedReceiverKnowledgeOfOwnHand[indexInHand]
 	}
 
+	gameState.numberOfReadyHints -= numberOfReadyHintsToSubtract
 	gameState.incrementTurnNumbers()
 
 	return nil

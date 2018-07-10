@@ -275,21 +275,22 @@ func prepareGameStates(
 }
 
 type expectedState struct {
-	Name                   string
-	Ruleset                game.Ruleset
-	PlayerNames            []string
-	CreationTime           time.Time
-	ChatLog                []message.Readonly
-	ActionLog              []message.Readonly
-	Turn                   int
-	Score                  int
-	NumberOfReadyHints     int
-	NumberOfMistakesMade   int
-	DeckSize               int
-	PlayedForColor         map[string][]card.Readonly
-	NumberOfDiscardedCards map[card.Readonly]int
-	VisibleCardInHand      map[string][]card.Readonly
-	InferredCardInHand     map[string][]card.Inferred
+	Name                    string
+	Ruleset                 game.Ruleset
+	PlayerNames             []string
+	CreationTime            time.Time
+	ChatLog                 []message.Readonly
+	ActionLog               []message.Readonly
+	Turn                    int
+	TurnsTakenWithEmptyDeck int
+	Score                   int
+	NumberOfReadyHints      int
+	NumberOfMistakesMade    int
+	DeckSize                int
+	PlayedForColor          map[string][]card.Readonly
+	NumberOfDiscardedCards  map[card.Readonly]int
+	VisibleCardInHand       map[string][]card.Readonly
+	InferredCardInHand      map[string][]card.Inferred
 }
 
 func prepareExpected(
@@ -342,20 +343,21 @@ func prepareExpected(
 	}
 
 	return expectedState{
-		Name:                   pristineState.Name(),
-		Ruleset:                pristineRuleset,
-		PlayerNames:            pristineState.PlayerNames(),
-		CreationTime:           pristineState.CreationTime(),
-		ChatLog:                copyLog(unitTest, pristineState.ChatLog()),
-		ActionLog:              copyLog(unitTest, pristineState.ActionLog()),
-		Turn:                   pristineState.Turn(),
-		NumberOfReadyHints:     pristineState.NumberOfReadyHints(),
-		NumberOfMistakesMade:   pristineState.NumberOfMistakesMade(),
-		DeckSize:               pristineState.DeckSize(),
-		PlayedForColor:         playedCards,
-		NumberOfDiscardedCards: discardedCards,
-		VisibleCardInHand:      visibleHands,
-		InferredCardInHand:     inferredHands,
+		Name:         pristineState.Name(),
+		Ruleset:      pristineRuleset,
+		PlayerNames:  pristineState.PlayerNames(),
+		CreationTime: pristineState.CreationTime(),
+		ChatLog:      copyLog(unitTest, pristineState.ChatLog()),
+		ActionLog:    copyLog(unitTest, pristineState.ActionLog()),
+		Turn:         pristineState.Turn(),
+		TurnsTakenWithEmptyDeck: pristineState.TurnsTakenWithEmptyDeck(),
+		NumberOfReadyHints:      pristineState.NumberOfReadyHints(),
+		NumberOfMistakesMade:    pristineState.NumberOfMistakesMade(),
+		DeckSize:                pristineState.DeckSize(),
+		PlayedForColor:          playedCards,
+		NumberOfDiscardedCards:  discardedCards,
+		VisibleCardInHand:       visibleHands,
+		InferredCardInHand:      inferredHands,
 	}
 }
 

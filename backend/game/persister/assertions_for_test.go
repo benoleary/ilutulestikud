@@ -88,6 +88,7 @@ func assertGameStateAsExpected(
 		(actualGame.Ruleset() != expectedGame.Ruleset) ||
 		(actualGame.CreationTime() != expectedGame.CreationTime) ||
 		(actualGame.Turn() != expectedGame.Turn) ||
+		(actualGame.TurnsTakenWithEmptyDeck() != expectedGame.TurnsTakenWithEmptyDeck) ||
 		(actualGame.NumberOfReadyHints() != expectedGame.NumberOfReadyHints) ||
 		(actualGame.NumberOfMistakesMade() != expectedGame.NumberOfMistakesMade) ||
 		(actualGame.DeckSize() != expectedGame.DeckSize) ||
@@ -95,7 +96,7 @@ func assertGameStateAsExpected(
 		(len(actualGame.ChatLog()) != len(expectedGame.ChatLog)) ||
 		(len(actualGame.ActionLog()) != len(expectedGame.ActionLog)) {
 		unitTest.Fatalf(
-			testIdentifier+"/actual %+v did not match expected %+v in easy comparisons",
+			testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin easy comparisons",
 			actualGame,
 			expectedGame)
 	}
@@ -103,7 +104,7 @@ func assertGameStateAsExpected(
 	for chatIndex, chatMessage := range actualGame.ChatLog() {
 		if chatMessage != expectedGame.ChatLog[chatIndex] {
 			unitTest.Fatalf(
-				testIdentifier+"/actual %+v did not match expected %+v in chat log",
+				testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin chat log",
 				actualGame,
 				expectedGame)
 		}
@@ -112,7 +113,7 @@ func assertGameStateAsExpected(
 	for actionIndex, actionMessage := range actualGame.ActionLog() {
 		if actionMessage != expectedGame.ActionLog[actionIndex] {
 			unitTest.Fatalf(
-				testIdentifier+"/actual %+v did not match expected %+v in action log",
+				testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin action log",
 				actualGame,
 				expectedGame)
 		}
@@ -123,7 +124,7 @@ func assertGameStateAsExpected(
 		expectedPlayedCards := expectedGame.PlayedForColor[colorSuit]
 		if len(actualPlayedCards) != len(expectedPlayedCards) {
 			unitTest.Fatalf(
-				testIdentifier+"/actual %+v did not match expected %+v in PlayedForColor",
+				testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin PlayedForColor",
 				actualGame,
 				expectedGame)
 		}
@@ -131,7 +132,7 @@ func assertGameStateAsExpected(
 		for cardIndex, actualPlayedCard := range actualPlayedCards {
 			if actualPlayedCard != expectedPlayedCards[cardIndex] {
 				unitTest.Fatalf(
-					testIdentifier+"/actual %+v did not match expected %+v in PlayedForColor",
+					testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin PlayedForColor",
 					actualGame,
 					expectedGame)
 			}
@@ -146,7 +147,7 @@ func assertGameStateAsExpected(
 
 			if actualNumberOfDiscardedCopies != expectedNumberOfDiscardedCopies {
 				unitTest.Fatalf(
-					testIdentifier+"/actual %+v did not match expected %+v in NumberOfDiscardedCards",
+					testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin NumberOfDiscardedCards",
 					actualGame,
 					expectedGame)
 			}
@@ -156,7 +157,7 @@ func assertGameStateAsExpected(
 	for playerIndex, playerName := range actualGame.PlayerNames() {
 		if playerName != expectedGame.PlayerNames[playerIndex] {
 			unitTest.Fatalf(
-				testIdentifier+"/actual %+v did not match expected %+v in player names",
+				testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin player names",
 				actualGame,
 				expectedGame)
 		}
@@ -188,7 +189,7 @@ func assertGameStateAsExpected(
 		for indexInHand := 0; indexInHand < handSize; indexInHand++ {
 			if visibleHand[indexInHand] != expectedVisibleHand[indexInHand] {
 				unitTest.Fatalf(
-					testIdentifier+"/actual %+v did not match expected %+v in visible hands",
+					testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin visible hands",
 					actualGame,
 					expectedGame)
 			}
@@ -202,7 +203,7 @@ func assertGameStateAsExpected(
 			if (len(inferredCard.PossibleColors()) != len(expectedColors)) ||
 				(len(inferredCard.PossibleIndices()) != len(expectedIndices)) {
 				unitTest.Fatalf(
-					testIdentifier+"/actual %+v did not match expected %+v in inferred hands",
+					testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin inferred hands",
 					actualGame,
 					expectedGame)
 			}
@@ -210,7 +211,7 @@ func assertGameStateAsExpected(
 			for colorIndex, actualColor := range inferredCard.PossibleColors() {
 				if actualColor != expectedColors[colorIndex] {
 					unitTest.Fatalf(
-						"actual %+v did not match expected %+v in inferred hand colors",
+						"actual\n  %+v\ndid not match expected\n  %+v\nin inferred hand colors",
 						actualGame,
 						expectedGame)
 				}
@@ -219,7 +220,7 @@ func assertGameStateAsExpected(
 			for indexIndex, actualIndex := range inferredCard.PossibleIndices() {
 				if actualIndex != expectedIndices[indexIndex] {
 					unitTest.Fatalf(
-						testIdentifier+"/actual %+v did not match expected %+v in inferred hand indices",
+						testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin inferred hand indices",
 						actualGame,
 						expectedGame)
 				}
