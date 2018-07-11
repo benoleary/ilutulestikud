@@ -46,5 +46,5 @@ type PlayerColorHint struct {
 // player, about a sequence index with respect to the receiver's hand.
 type PlayerIndexHint struct {
 	PlayerHintToReceiver
-	HintedIndex int
+	HintedNumber int
 }

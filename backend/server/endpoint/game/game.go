@@ -392,7 +392,7 @@ func (handler *Handler) handleTakeTurnByHintingNumber(
 	errorFromTakeTurnByHinting :=
 		actionExecutor.TakeTurnByHintingIndex(
 			playerIndexHint.ReceiverName,
-			playerIndexHint.HintedIndex)
+			playerIndexHint.HintedNumber)
 
 	if errorFromTakeTurnByHinting != nil {
 		return errorFromTakeTurnByHinting, http.StatusBadRequest

@@ -192,6 +192,13 @@ import { InferredCard } from '../models/inferredcard.model';
       console.log(
         "The player wants to give a hint about color to "
         + this.handsAfterViewingPlayer[indexOfPlayer].playerName)
+
+        this.ilutulestikudService
+        .SendTakeTurnByGivingColorHint(
+          this.gameIdentification,
+          this.playerIdentification,
+          this.handsAfterViewingPlayer[indexOfPlayer].playerName,
+          "invalid color")
     }
 
     // The button for this is only shown for players after the viewing player and
@@ -203,6 +210,13 @@ import { InferredCard } from '../models/inferredcard.model';
       console.log(
         "The player wants to give a hint about index to "
         + this.handsAfterViewingPlayer[indexOfPlayer].playerName)
+
+        this.ilutulestikudService
+        .SendTakeTurnByGivingNumberHint(
+          this.gameIdentification,
+          this.playerIdentification,
+          this.handsAfterViewingPlayer[indexOfPlayer].playerName,
+          -1)
     }
 
     leaveGame(): void

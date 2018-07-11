@@ -114,6 +114,36 @@ export class IlutulestikudService {
       })
   }
 
+  SendTakeTurnByGivingColorHint(
+    gameIdentification: BackendIdentification,
+    hintingPlayerIdentification: BackendIdentification,
+    receivingPlayerName: string,
+    hintedColor: string): Observable<any> {
+    return this.httpClient.post(
+      this.uriRoot + "game/take-turn-by-hinting-color",
+      {
+        "GameName": gameIdentification.NameForPost,
+        "PlayerName": hintingPlayerIdentification.NameForPost,
+        "ReceiverName": receivingPlayerName,
+        "HintedColor": hintedColor
+      })
+  }
+
+  SendTakeTurnByGivingNumberHint(
+    gameIdentification: BackendIdentification,
+    hintingPlayerIdentification: BackendIdentification,
+    receivingPlayerName: string,
+    hintedNumber: number): Observable<any> {
+    return this.httpClient.post(
+      this.uriRoot + "game/take-turn-by-hinting-number",
+      {
+        "GameName": gameIdentification.NameForPost,
+        "PlayerName": hintingPlayerIdentification.NameForPost,
+        "ReceiverName": receivingPlayerName,
+        "HintedNumber": hintedNumber
+      })
+  }
+
   SendLeaveGame(
     gameIdentification: BackendIdentification,
     playerIdentification: BackendIdentification): Observable<any> {

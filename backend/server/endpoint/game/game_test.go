@@ -1987,7 +1987,7 @@ func TestRejectIndexHintIfCollectionRejectsIt(unitTest *testing.T) {
 	bodyObject.GameName = "Test game"
 	bodyObject.PlayerName = "A. Player Name"
 	bodyObject.ReceiverName = "Another Player"
-	bodyObject.HintedIndex = 1
+	bodyObject.HintedNumber = 1
 
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
@@ -2028,7 +2028,7 @@ func TestPropagateErrorFromIndexHint(unitTest *testing.T) {
 	bodyObject.GameName = "Test game"
 	bodyObject.PlayerName = "A. Player Name"
 	bodyObject.ReceiverName = "Another Player"
-	bodyObject.HintedIndex = 1
+	bodyObject.HintedNumber = 1
 
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
@@ -2066,7 +2066,7 @@ func TestAcceptValidIndexHint(unitTest *testing.T) {
 	bodyObject.GameName = "Test game"
 	bodyObject.PlayerName = "A. Player Name"
 	bodyObject.ReceiverName = "Another Player"
-	bodyObject.HintedIndex = 1
+	bodyObject.HintedNumber = 1
 
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
