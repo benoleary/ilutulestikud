@@ -316,3 +316,166 @@ func TestRainbowAsCompoundSuitDoesNotHaveRainbowForHints(unitTest *testing.T) {
 		}
 	}
 }
+
+func TestColorHintInRulesetsWithSimpleSuits(unitTest *testing.T) {
+	rulesetsFollowingStandardForIndexHints :=
+		[]game.Ruleset{
+			game.NewStandardWithoutRainbow(),
+			game.NewRainbowAsSeparateSuit(),
+		}
+
+	testIndex := 1
+
+	for _, rulesetToTest := range rulesetsFollowingStandardForIndexHints {
+		testIdentifier := rulesetToTest.FrontendDescription() + "/index hint"
+		possibleColors := rulesetToTest.ColorSuits()
+		hintedColor := possibleColors[2]
+		otherColor := possibleColors[3]
+		noiseColor := possibleColors[1]
+
+		readonlyHinted := card.NewReadonly(hintedColor, testIndex)
+		readonlyOther := card.NewReadonly(otherColor, testIndex)
+		inferredKnownAsHinted :=
+			card.NewInferred([]string{hintedColor}, []int{testIndex})
+		inferredKnownAsOther :=
+			card.NewInferred([]string{otherColor}, []int{testIndex})
+		inferredUnknown :=
+			card.NewInferred(
+				[]string{noiseColor, hintedColor, otherColor},
+				[]int{testIndex})
+		inferredKnownAsNotHinted :=
+			card.NewInferred(
+				[]string{noiseColor, otherColor},
+				[]int{testIndex})
+
+		knowledgeBeforeHint :=
+			[]card.Inferred{
+				inferredKnownAsHinted,
+				inferredUnknown,
+				inferredKnownAsOther,
+				inferredUnknown,
+			}
+
+		expectedKnowledgeAfterHint :=
+			[]card.Inferred{
+				inferredKnownAsHinted,
+				inferredKnownAsHinted,
+				inferredKnownAsOther,
+				inferredKnownAsNotHinted,
+			}
+
+		cardsInHand :=
+			[]card.Readonly{
+				readonlyHinted,
+				readonlyHinted,
+				readonlyOther,
+				readonlyOther,
+			}
+
+		actualKnowledgeAfterHint :=
+			rulesetToTest.AfterColorHint(
+				knowledgeBeforeHint,
+				cardsInHand,
+				hintedColor)
+
+		handSize := len(cardsInHand)
+		if len(actualKnowledgeAfterHint) != handSize {
+			unitTest.Fatalf(
+				"ruleset %v knowledge after hint %v had wrong length, expected %v",
+				rulesetToTest.FrontendDescription(),
+				actualKnowledgeAfterHint,
+				handSize)
+		}
+
+		for indexInHand := 0; indexInHand < handSize; indexInHand++ {
+			assertInferredCardPossibilitiesCorrect(
+				testIdentifier,
+				unitTest,
+				actualKnowledgeAfterHint[indexInHand],
+				expectedKnowledgeAfterHint[indexInHand].PossibleColors(),
+				expectedKnowledgeAfterHint[indexInHand].PossibleIndices())
+		}
+	}
+}
+
+func TestIndexHintInRulesetsFollowingStandard(unitTest *testing.T) {
+	rulesetsFollowingStandardForIndexHints :=
+		[]game.Ruleset{
+			game.NewStandardWithoutRainbow(),
+			game.NewRainbowAsSeparateSuit(),
+			game.NewRainbowAsCompoundSuit(),
+		}
+
+	testColor := "test color"
+
+	for _, rulesetToTest := range rulesetsFollowingStandardForIndexHints {
+		testIdentifier := rulesetToTest.FrontendDescription() + "/index hint"
+		possibleIndices := rulesetToTest.DistinctPossibleIndices()
+		hintedIndex := possibleIndices[2]
+		otherIndex := possibleIndices[3]
+		noiseIndex := possibleIndices[1]
+
+		readonlyHinted := card.NewReadonly(testColor, hintedIndex)
+		readonlyOther := card.NewReadonly(testColor, otherIndex)
+		inferredKnownAsHinted :=
+			card.NewInferred([]string{testColor}, []int{hintedIndex})
+		inferredKnownAsOther :=
+			card.NewInferred([]string{testColor}, []int{otherIndex})
+		inferredUnknown :=
+			card.NewInferred(
+				[]string{testColor},
+				[]int{noiseIndex, hintedIndex, otherIndex})
+		inferredKnownAsNotHinted :=
+			card.NewInferred(
+				[]string{testColor},
+				[]int{noiseIndex, otherIndex})
+
+		knowledgeBeforeHint :=
+			[]card.Inferred{
+				inferredKnownAsHinted,
+				inferredUnknown,
+				inferredKnownAsOther,
+				inferredUnknown,
+			}
+
+		expectedKnowledgeAfterHint :=
+			[]card.Inferred{
+				inferredKnownAsHinted,
+				inferredKnownAsHinted,
+				inferredKnownAsOther,
+				inferredKnownAsNotHinted,
+			}
+
+		cardsInHand :=
+			[]card.Readonly{
+				readonlyHinted,
+				readonlyHinted,
+				readonlyOther,
+				readonlyOther,
+			}
+
+		actualKnowledgeAfterHint :=
+			rulesetToTest.AfterIndexHint(
+				knowledgeBeforeHint,
+				cardsInHand,
+				hintedIndex)
+
+		handSize := len(cardsInHand)
+		if len(actualKnowledgeAfterHint) != handSize {
+			unitTest.Fatalf(
+				"ruleset %v knowledge after hint %v had wrong length, expected %v",
+				rulesetToTest.FrontendDescription(),
+				actualKnowledgeAfterHint,
+				handSize)
+		}
+
+		for indexInHand := 0; indexInHand < handSize; indexInHand++ {
+			assertInferredCardPossibilitiesCorrect(
+				testIdentifier,
+				unitTest,
+				actualKnowledgeAfterHint[indexInHand],
+				expectedKnowledgeAfterHint[indexInHand].PossibleColors(),
+				expectedKnowledgeAfterHint[indexInHand].PossibleIndices())
+		}
+	}
+}

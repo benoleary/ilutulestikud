@@ -89,7 +89,6 @@ func assertInferredCardPossibilitiesCorrect(
 	actualCard card.Inferred,
 	expectedColors []string,
 	expectedIndices []int) {
-
 	// We compare the possible colors and indices as sets. Then it is
 	// sufficient to check that the lengths are the same and that every
 	// actual value is found in the map of expected values.
