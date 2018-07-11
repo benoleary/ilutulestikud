@@ -405,7 +405,7 @@ func (compoundRainbow *RainbowAsCompoundSuitRuleset) AfterColorHint(
 			// If the card is "ignored" by this hint, the player can infer that it is
 			// not the hinted color and not a rainbow card.
 			for _, possibleColor := range originalColors {
-				if (colorOfCard == RainbowSuit) || (colorOfCard == hintedColor) {
+				if (possibleColor == hintedColor) || (possibleColor == RainbowSuit) {
 					continue
 				}
 

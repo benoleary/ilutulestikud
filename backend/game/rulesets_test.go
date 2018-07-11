@@ -1,11 +1,11 @@
 package game_test
 
 import (
+	"fmt"
 	"testing"
 
-	"github.com/benoleary/ilutulestikud/backend/game/card"
-
 	"github.com/benoleary/ilutulestikud/backend/game"
+	"github.com/benoleary/ilutulestikud/backend/game/card"
 )
 
 func TestInvalidIdentifierProducesError(unitTest *testing.T) {
@@ -327,7 +327,6 @@ func TestColorHintInRulesetsWithSimpleSuits(unitTest *testing.T) {
 	testIndex := 1
 
 	for _, rulesetToTest := range rulesetsFollowingStandardForIndexHints {
-		testIdentifier := rulesetToTest.FrontendDescription() + "/index hint"
 		possibleColors := rulesetToTest.ColorSuits()
 		hintedColor := possibleColors[2]
 		otherColor := possibleColors[3]
@@ -335,10 +334,12 @@ func TestColorHintInRulesetsWithSimpleSuits(unitTest *testing.T) {
 
 		readonlyHinted := card.NewReadonly(hintedColor, testIndex)
 		readonlyOther := card.NewReadonly(otherColor, testIndex)
+
 		inferredKnownAsHinted :=
 			card.NewInferred([]string{hintedColor}, []int{testIndex})
 		inferredKnownAsOther :=
 			card.NewInferred([]string{otherColor}, []int{testIndex})
+
 		inferredUnknown :=
 			card.NewInferred(
 				[]string{noiseColor, hintedColor, otherColor},
@@ -347,6 +348,14 @@ func TestColorHintInRulesetsWithSimpleSuits(unitTest *testing.T) {
 			card.NewInferred(
 				[]string{noiseColor, otherColor},
 				[]int{testIndex})
+
+		cardsInHand :=
+			[]card.Readonly{
+				readonlyHinted,
+				readonlyHinted,
+				readonlyOther,
+				readonlyOther,
+			}
 
 		knowledgeBeforeHint :=
 			[]card.Inferred{
@@ -362,14 +371,6 @@ func TestColorHintInRulesetsWithSimpleSuits(unitTest *testing.T) {
 				inferredKnownAsHinted,
 				inferredKnownAsOther,
 				inferredKnownAsNotHinted,
-			}
-
-		cardsInHand :=
-			[]card.Readonly{
-				readonlyHinted,
-				readonlyHinted,
-				readonlyOther,
-				readonlyOther,
 			}
 
 		actualKnowledgeAfterHint :=
@@ -388,6 +389,12 @@ func TestColorHintInRulesetsWithSimpleSuits(unitTest *testing.T) {
 		}
 
 		for indexInHand := 0; indexInHand < handSize; indexInHand++ {
+			testIdentifier :=
+				fmt.Sprintf(
+					"%v/color hint when all suits simple/index in hand %v",
+					rulesetToTest.FrontendDescription(),
+					indexInHand)
+
 			assertInferredCardPossibilitiesCorrect(
 				testIdentifier,
 				unitTest,
@@ -395,6 +402,126 @@ func TestColorHintInRulesetsWithSimpleSuits(unitTest *testing.T) {
 				expectedKnowledgeAfterHint[indexInHand].PossibleColors(),
 				expectedKnowledgeAfterHint[indexInHand].PossibleIndices())
 		}
+	}
+}
+
+func TestColorHintWhenRainbowMatchesAllColorHints(unitTest *testing.T) {
+	testIndex := 1
+	rulesetToTest := game.NewRainbowAsCompoundSuit()
+	possibleColors := rulesetToTest.ColorSuits()
+	hintedColor := possibleColors[2]
+	otherColor := possibleColors[3]
+	noiseColor := possibleColors[1]
+	rainbowColor := game.RainbowSuit
+
+	// If any of the suits happen to be the rainbow suit, we switch it
+	// to another suit so that the rainbow suit is separate.
+	if hintedColor == rainbowColor {
+		hintedColor = possibleColors[0]
+	} else if otherColor == rainbowColor {
+		otherColor = possibleColors[0]
+	} else if noiseColor == rainbowColor {
+		noiseColor = possibleColors[0]
+	}
+
+	readonlyHinted := card.NewReadonly(hintedColor, testIndex)
+	readonlyOther := card.NewReadonly(otherColor, testIndex)
+	readonlyRainbow := card.NewReadonly(rainbowColor, testIndex)
+
+	inferredKnownAsHinted :=
+		card.NewInferred([]string{hintedColor}, []int{testIndex})
+	inferredKnownAsOther :=
+		card.NewInferred([]string{otherColor}, []int{testIndex})
+	inferredKnownAsRainbow :=
+		card.NewInferred([]string{rainbowColor}, []int{testIndex})
+
+	inferredUnknown :=
+		card.NewInferred(
+			[]string{noiseColor, hintedColor, otherColor, rainbowColor},
+			[]int{testIndex})
+	inferredKnownAsNotHinted :=
+		card.NewInferred(
+			[]string{noiseColor, otherColor},
+			[]int{testIndex})
+	inferredKnownAsRainbowOrHinted :=
+		card.NewInferred(
+			[]string{rainbowColor, hintedColor},
+			[]int{testIndex})
+	inferredKnownAsRainbowOrOther :=
+		card.NewInferred(
+			[]string{rainbowColor, otherColor},
+			[]int{testIndex})
+
+	cardsInHand :=
+		[]card.Readonly{
+			readonlyHinted,
+			readonlyHinted,
+			readonlyHinted,
+			readonlyOther,
+			readonlyOther,
+			readonlyOther,
+			readonlyRainbow,
+			readonlyRainbow,
+			readonlyRainbow,
+			readonlyRainbow,
+		}
+
+	knowledgeBeforeHint :=
+		[]card.Inferred{
+			inferredKnownAsHinted,
+			inferredKnownAsRainbowOrHinted,
+			inferredUnknown,
+			inferredKnownAsOther,
+			inferredKnownAsRainbowOrOther,
+			inferredUnknown,
+			inferredKnownAsRainbow,
+			inferredKnownAsRainbowOrHinted,
+			inferredKnownAsRainbowOrOther,
+			inferredUnknown,
+		}
+
+	expectedKnowledgeAfterHint :=
+		[]card.Inferred{
+			inferredKnownAsHinted,
+			inferredKnownAsRainbowOrHinted,
+			inferredKnownAsRainbowOrHinted,
+			inferredKnownAsOther,
+			inferredKnownAsOther,
+			inferredKnownAsNotHinted,
+			inferredKnownAsRainbow,
+			inferredKnownAsRainbowOrHinted,
+			inferredKnownAsRainbow,
+			inferredKnownAsRainbowOrHinted,
+		}
+
+	actualKnowledgeAfterHint :=
+		rulesetToTest.AfterColorHint(
+			knowledgeBeforeHint,
+			cardsInHand,
+			hintedColor)
+
+	handSize := len(cardsInHand)
+	if len(actualKnowledgeAfterHint) != handSize {
+		unitTest.Fatalf(
+			"ruleset %v knowledge after hint %v had wrong length, expected %v",
+			rulesetToTest.FrontendDescription(),
+			actualKnowledgeAfterHint,
+			handSize)
+	}
+
+	for indexInHand := 0; indexInHand < handSize; indexInHand++ {
+		testIdentifier :=
+			fmt.Sprintf(
+				"%v/color hint for compound rainbow/index in hand %v",
+				rulesetToTest.FrontendDescription(),
+				indexInHand)
+
+		assertInferredCardPossibilitiesCorrect(
+			testIdentifier,
+			unitTest,
+			actualKnowledgeAfterHint[indexInHand],
+			expectedKnowledgeAfterHint[indexInHand].PossibleColors(),
+			expectedKnowledgeAfterHint[indexInHand].PossibleIndices())
 	}
 }
 
@@ -409,7 +536,6 @@ func TestIndexHintInRulesetsFollowingStandard(unitTest *testing.T) {
 	testColor := "test color"
 
 	for _, rulesetToTest := range rulesetsFollowingStandardForIndexHints {
-		testIdentifier := rulesetToTest.FrontendDescription() + "/index hint"
 		possibleIndices := rulesetToTest.DistinctPossibleIndices()
 		hintedIndex := possibleIndices[2]
 		otherIndex := possibleIndices[3]
@@ -417,10 +543,12 @@ func TestIndexHintInRulesetsFollowingStandard(unitTest *testing.T) {
 
 		readonlyHinted := card.NewReadonly(testColor, hintedIndex)
 		readonlyOther := card.NewReadonly(testColor, otherIndex)
+
 		inferredKnownAsHinted :=
 			card.NewInferred([]string{testColor}, []int{hintedIndex})
 		inferredKnownAsOther :=
 			card.NewInferred([]string{testColor}, []int{otherIndex})
+
 		inferredUnknown :=
 			card.NewInferred(
 				[]string{testColor},
@@ -429,6 +557,14 @@ func TestIndexHintInRulesetsFollowingStandard(unitTest *testing.T) {
 			card.NewInferred(
 				[]string{testColor},
 				[]int{noiseIndex, otherIndex})
+
+		cardsInHand :=
+			[]card.Readonly{
+				readonlyHinted,
+				readonlyHinted,
+				readonlyOther,
+				readonlyOther,
+			}
 
 		knowledgeBeforeHint :=
 			[]card.Inferred{
@@ -444,14 +580,6 @@ func TestIndexHintInRulesetsFollowingStandard(unitTest *testing.T) {
 				inferredKnownAsHinted,
 				inferredKnownAsOther,
 				inferredKnownAsNotHinted,
-			}
-
-		cardsInHand :=
-			[]card.Readonly{
-				readonlyHinted,
-				readonlyHinted,
-				readonlyOther,
-				readonlyOther,
 			}
 
 		actualKnowledgeAfterHint :=
@@ -470,6 +598,12 @@ func TestIndexHintInRulesetsFollowingStandard(unitTest *testing.T) {
 		}
 
 		for indexInHand := 0; indexInHand < handSize; indexInHand++ {
+			testIdentifier :=
+				fmt.Sprintf(
+					"%v/index hint when all indices simple/index in hand %v",
+					rulesetToTest.FrontendDescription(),
+					indexInHand)
+
 			assertInferredCardPossibilitiesCorrect(
 				testIdentifier,
 				unitTest,
