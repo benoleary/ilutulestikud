@@ -217,7 +217,9 @@ func (handler *Handler) writeGameForPlayer(
 	}
 
 	handOfThisPlayer, errorFromInferredHand :=
-		handler.handOfViewingPlayer(gameView)
+		handler.playerKnowledgeOfHand(
+			gameView,
+			playerName)
 	if errorFromInferredHand != nil {
 		return errorFromInferredHand, http.StatusInternalServerError
 	}
@@ -510,11 +512,21 @@ func (handler *Handler) visibleHandsBeforeAndAfter(
 				}
 			}
 
-			visibleHandForFrontend := parsing.VisibleHand{
-				PlayerName:  playerWithVisibleHand,
-				PlayerColor: playerChatColor,
-				HandCards:   handCards,
+			knowledgeOfOwnHand, errorFromInferredHand :=
+				handler.playerKnowledgeOfHand(
+					gameView,
+					playersInTurnOrder[playerIndex])
+			if errorFromInferredHand != nil {
+				return nil, nil, false, errorFromInferredHand
 			}
+
+			visibleHandForFrontend :=
+				parsing.VisibleHand{
+					PlayerName:         playerWithVisibleHand,
+					PlayerColor:        playerChatColor,
+					HandCards:          handCards,
+					KnowledgeOfOwnHand: knowledgeOfOwnHand,
+				}
 
 			if playerIndex < playerIndexInTurnOrder {
 				allVisibleHands[playerIndex] = visibleHandForFrontend
@@ -530,24 +542,27 @@ func (handler *Handler) visibleHandsBeforeAndAfter(
 	return handsBeforeViewingPlayer, handsAfterViewingPlayer, playerIndexInTurnOrder == 0, nil
 }
 
-func (handler *Handler) handOfViewingPlayer(
-	gameView game.ViewForPlayer) ([]parsing.CardFromBehind, error) {
-	inferredHandFromView, errorFromInferredHand := gameView.KnowledgeOfOwnHand()
+func (handler *Handler) playerKnowledgeOfHand(
+	gameView game.ViewForPlayer,
+	holdingPlayer string) ([]parsing.CardFromBehind, error) {
+	inferredHandFromView, errorFromInferredHand :=
+		gameView.KnowledgeOfOwnHand(holdingPlayer)
 	if errorFromInferredHand != nil {
 		return nil, errorFromInferredHand
 	}
 
 	numberOfCardsInHand := len(inferredHandFromView)
-	handOfThisPlayer := make([]parsing.CardFromBehind, numberOfCardsInHand)
+	handFromBehind := make([]parsing.CardFromBehind, numberOfCardsInHand)
 	for cardIndex := 0; cardIndex < numberOfCardsInHand; cardIndex++ {
 		inferredCard := inferredHandFromView[cardIndex]
-		handOfThisPlayer[cardIndex] = parsing.CardFromBehind{
-			PossibleColorSuits:      inferredCard.PossibleColors(),
-			PossibleSequenceIndices: inferredCard.PossibleIndices(),
-		}
+		handFromBehind[cardIndex] =
+			parsing.CardFromBehind{
+				PossibleColorSuits:      inferredCard.PossibleColors(),
+				PossibleSequenceIndices: inferredCard.PossibleIndices(),
+			}
 	}
 
-	return handOfThisPlayer, nil
+	return handFromBehind, nil
 }
 
 func playedCards(playedPilesFromView [][]card.Readonly) [][]parsing.VisibleCard {

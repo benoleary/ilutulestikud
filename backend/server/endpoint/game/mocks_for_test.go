@@ -19,30 +19,30 @@ import (
 // that it is read-only, so there should never be a problem with any
 // tested code ever reading various properties.
 type mockViewForPlayer struct {
-	MockGameName                string
-	MockPlayers                 []string
-	MockChatLog                 []message.Readonly
-	MockPlayerTurnIndex         int
-	MockScore                   int
-	ErrorForVisibleHand         error
-	ReturnForVisibleHand        []card.Readonly
-	ErrorForKnowledgeOfOwnHand  error
-	ReturnForKnowledgeOfOwnHand []card.Inferred
-	ReturnForPlayedCards        [][]card.Readonly
+	MockGameName                  string
+	MockPlayers                   []string
+	MockChatLog                   []message.Readonly
+	MockPlayerTurnIndex           int
+	MockScore                     int
+	ErrorForVisibleHand           error
+	ReturnForVisibleHand          []card.Readonly
+	ErrorMapForKnowledgeOfOwnHand map[string]error
+	ReturnForKnowledgeOfOwnHand   []card.Inferred
+	ReturnForPlayedCards          [][]card.Readonly
 }
 
 func NewMockView() *mockViewForPlayer {
 	return &mockViewForPlayer{
-		MockGameName:                "",
-		MockPlayers:                 nil,
-		MockChatLog:                 nil,
-		MockPlayerTurnIndex:         -1,
-		MockScore:                   -1,
-		ErrorForVisibleHand:         nil,
-		ReturnForVisibleHand:        nil,
-		ErrorForKnowledgeOfOwnHand:  nil,
-		ReturnForKnowledgeOfOwnHand: nil,
-		ReturnForPlayedCards:        nil,
+		MockGameName:                  "",
+		MockPlayers:                   nil,
+		MockChatLog:                   nil,
+		MockPlayerTurnIndex:           -1,
+		MockScore:                     -1,
+		ErrorForVisibleHand:           nil,
+		ReturnForVisibleHand:          nil,
+		ErrorMapForKnowledgeOfOwnHand: make(map[string]error, 0),
+		ReturnForKnowledgeOfOwnHand:   nil,
+		ReturnForPlayedCards:          nil,
 	}
 }
 
@@ -138,8 +138,10 @@ func (mockView *mockViewForPlayer) VisibleHand(
 }
 
 // KnowledgeOfOwnHand gets mocked.
-func (mockView *mockViewForPlayer) KnowledgeOfOwnHand() ([]card.Inferred, error) {
-	return mockView.ReturnForKnowledgeOfOwnHand, mockView.ErrorForKnowledgeOfOwnHand
+func (mockView *mockViewForPlayer) KnowledgeOfOwnHand(
+	holdingPlayer string) ([]card.Inferred, error) {
+	errorToReturn, _ := mockView.ErrorMapForKnowledgeOfOwnHand[holdingPlayer]
+	return mockView.ReturnForKnowledgeOfOwnHand, errorToReturn
 }
 
 // mockGameDefinition takes up to five players, not as an array so that

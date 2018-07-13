@@ -229,10 +229,11 @@ func (playerView *PlayerView) VisibleHand(playerName string) ([]card.Readonly, s
 	return visibleCards, playerState.Color(), errorFromGameState
 }
 
-// KnowledgeOfOwnHand returns the knowledge about the player's own cards which
-// was inferred directly from the hints officially given so far.
-func (playerView *PlayerView) KnowledgeOfOwnHand() ([]card.Inferred, error) {
-	return playerView.gameState.InferredHand(playerView.playerName)
+// KnowledgeOfOwnHand returns the knowledge which the given player has about the cards
+// in their hand which was inferred directly from the hints officially given so far.
+func (playerView *PlayerView) KnowledgeOfOwnHand(
+	holdingPlayer string) ([]card.Inferred, error) {
+	return playerView.gameState.InferredHand(holdingPlayer)
 }
 
 func (playerView *PlayerView) playerIndexForTurn(turnsAfterCurrent int) int {

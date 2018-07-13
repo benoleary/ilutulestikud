@@ -161,9 +161,10 @@ type ViewForPlayer interface {
 	// player cannot see the cards.
 	VisibleHand(playerName string) ([]card.Readonly, string, error)
 
-	// KnowledgeOfOwnHand should return the knowledge about the player's own cards which
-	// was inferred directly from the hints officially given so far.
-	KnowledgeOfOwnHand() ([]card.Inferred, error)
+	// KnowledgeOfOwnHand should return the knowledge which the given player has about the
+	// cards in their hand which was inferred directly from the hints officially given so
+	// far.
+	KnowledgeOfOwnHand(holdingPlayer string) ([]card.Inferred, error)
 }
 
 // ExecutorForPlayer should encapsulate functions to execute actions by a particular player

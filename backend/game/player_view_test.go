@@ -962,11 +962,13 @@ func TestPlayerSeesOwnInferredHandCorrectly(unitTest *testing.T) {
 			errorFromViewState)
 	}
 
-	actualInferredHand, errorFromInferredHand := viewForPlayer.KnowledgeOfOwnHand()
+	actualInferredHand, errorFromInferredHand :=
+		viewForPlayer.KnowledgeOfOwnHand(viewingPlayer)
 
 	if errorFromInferredHand != nil {
 		unitTest.Fatalf(
-			"KnowledgeOfOwnHand() from player view %+v produced error %v",
+			"KnowledgeOfOwnHand(%v) from player view %+v produced error %v",
+			viewingPlayer,
 			viewForPlayer,
 			errorFromInferredHand)
 	}

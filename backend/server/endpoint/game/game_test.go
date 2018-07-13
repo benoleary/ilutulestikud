@@ -630,22 +630,32 @@ func TestGetGameForPlayerRejectedIfCollectionRejectsIt(unitTest *testing.T) {
 func TestGetGameForPlayerRejectedIfViewStateYieldsError(unitTest *testing.T) {
 	testCases :=
 		[]struct {
-			testName                   string
-			errorForVisibleHand        error
-			errorForKnowledgeOfOwnHand error
-			errorForGameIsFinished     error
+			testName                         string
+			errorForVisibleHand              error
+			errorForViewerKnowledgeOfOwnHand error
+			errorForOtherKnowledgeOfOwnHand  error
+			errorForGameIsFinished           error
 		}{
 			{
-				testName:                   "error from VisibleHand",
-				errorForVisibleHand:        fmt.Errorf("mock error"),
-				errorForKnowledgeOfOwnHand: nil,
-				errorForGameIsFinished:     nil,
+				testName:                         "error from VisibleHand",
+				errorForVisibleHand:              fmt.Errorf("mock error"),
+				errorForViewerKnowledgeOfOwnHand: nil,
+				errorForOtherKnowledgeOfOwnHand:  nil,
+				errorForGameIsFinished:           nil,
 			},
 			{
-				testName:                   "error from KnowledgeOfOwnHand",
-				errorForVisibleHand:        nil,
-				errorForKnowledgeOfOwnHand: fmt.Errorf("mock error"),
-				errorForGameIsFinished:     nil,
+				testName:                         "error from viewer KnowledgeOfOwnHand",
+				errorForVisibleHand:              nil,
+				errorForViewerKnowledgeOfOwnHand: fmt.Errorf("mock error"),
+				errorForOtherKnowledgeOfOwnHand:  nil,
+				errorForGameIsFinished:           nil,
+			},
+			{
+				testName:                         "error from other KnowledgeOfOwnHand",
+				errorForVisibleHand:              nil,
+				errorForViewerKnowledgeOfOwnHand: nil,
+				errorForOtherKnowledgeOfOwnHand:  fmt.Errorf("mock error"),
+				errorForGameIsFinished:           nil,
 			},
 		}
 
@@ -664,7 +674,12 @@ func TestGetGameForPlayerRejectedIfViewStateYieldsError(unitTest *testing.T) {
 			mockView.MockPlayers = testPlayers
 			mockView.MockPlayerTurnIndex = 1
 			mockView.ErrorForVisibleHand = testCase.errorForVisibleHand
-			mockView.ErrorForKnowledgeOfOwnHand = testCase.errorForKnowledgeOfOwnHand
+			mockView.ErrorMapForKnowledgeOfOwnHand[mockPlayerName] =
+				testCase.errorForViewerKnowledgeOfOwnHand
+			for _, participantName := range testPlayers {
+				mockView.ErrorMapForKnowledgeOfOwnHand[participantName] =
+					testCase.errorForOtherKnowledgeOfOwnHand
+			}
 
 			mockCollection.ReturnForViewState = mockView
 
