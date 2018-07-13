@@ -211,7 +211,8 @@ import { SelectHintDialogComponent } from './selecthintdialog.component'
       let dialogRef = this.materialDialog.open(SelectHintDialogComponent, {
         width: '200px',
         data: {
-          hintPossibilities: this.colorsForHints
+          hintPossibilities: this.colorsForHints,
+          hintsAreColors: true
         }
       });
 
@@ -251,7 +252,8 @@ import { SelectHintDialogComponent } from './selecthintdialog.component'
       let dialogRef = this.materialDialog.open(SelectHintDialogComponent, {
         width: '200px',
         data: {
-          hintPossibilities: this.indicesForHints
+          hintPossibilities: this.indicesForHints,
+          hintsAreColors: false
         }
       });
 

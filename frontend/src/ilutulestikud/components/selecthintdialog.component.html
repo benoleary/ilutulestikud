@@ -1,7 +1,12 @@
 <h1 mat-dialog-title>Hint about...</h1>
 <mat-dialog-content>
     <div *ngFor="let hintPossibility of hintPossibilities">
-        <button mat-button (click)="emitHint(hintPossibility)">{{ hintPossibility }}</button>
+        <button
+            mat-button
+            [ngStyle]="{'color': hintPossibility[1]}"
+            (click)="emitHint(hintPossibility[0])">
+            {{ hintPossibility[0] }}
+        </button>
     </div>
 </mat-dialog-content>
 <mat-dialog-actions>

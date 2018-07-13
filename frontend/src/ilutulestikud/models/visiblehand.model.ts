@@ -1,10 +1,12 @@
 import { VisibleCard } from './visiblecard.model';
+import { InferredCard } from './inferredcard.model';
 
 export class VisibleHand
 {
     playerName: string;
     playerColor: string;
     visibleCards: VisibleCard[]
+    knowledgeOfCards: InferredCard[]
 
     constructor(handObject: Object)
     {
@@ -20,6 +22,9 @@ export class VisibleHand
         this.visibleCards = [];
         Array.from(handObject["HandCards"])
              .forEach(cardAsObject => this.visibleCards.push(new VisibleCard(cardAsObject)));
+        this.knowledgeOfCards = [];
+        Array.from(handObject["KnowledgeOfOwnHand"])
+             .forEach(cardAsObject => this.knowledgeOfCards.push(new InferredCard(cardAsObject)));
     }
 
     static RefreshListFromSource(listToRefresh: VisibleHand[], handObjectList: Object[])
