@@ -148,7 +148,6 @@ export class IlutulestikudComponent implements OnInit, OnDestroy
       thrownError => this.handleError(thrownError),
       () => {});
     
-
     let dialogRef = this.materialDialog.open(CreateGameDialogComponent, {
       width: '250px',
       data: {

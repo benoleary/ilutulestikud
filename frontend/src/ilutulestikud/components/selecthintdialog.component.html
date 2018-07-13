@@ -1,0 +1,9 @@
+<h1 mat-dialog-title>Hint about...</h1>
+<mat-dialog-content>
+    <div *ngFor="let hintPossibility of hintPossibilities">
+        <button mat-button (click)="emitHint(hintPossibility)">{{ hintPossibility }}</button>
+    </div>
+</mat-dialog-content>
+<mat-dialog-actions>
+    <button mat-button (click)="cancelDialog()">Cancel</button>
+</mat-dialog-actions>

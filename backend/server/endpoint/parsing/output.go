@@ -67,11 +67,13 @@ type VisibleCard struct {
 }
 
 // VisibleHand is a struct to hold the details of the hand of cards held by a player
-// other than the player who is viewing the game state.
+// other than the player who is viewing the game state, including what the holding
+// player knows about the cards.
 type VisibleHand struct {
-	PlayerName  string
-	PlayerColor string
-	HandCards   []VisibleCard
+	PlayerName         string
+	PlayerColor        string
+	HandCards          []VisibleCard
+	KnowledgeOfOwnHand []CardFromBehind
 }
 
 // CardFromBehind is a struct to hold the details of a single outgoing card as known

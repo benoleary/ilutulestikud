@@ -19,6 +19,7 @@ import { AddPlayerDialogComponent } from './components/addplayerdialog.component
 import { CreateGameDialogComponent } from './components/creategamedialog.component'
 import { GameDisplayComponent } from './components/gamedisplay.component'
 import { CardArrayDisplayComponent } from './components/cardarraydisplay.component'
+import { SelectHintDialogComponent } from './components/selecthintdialog.component'
 
 @NgModule({
   declarations: [
@@ -26,11 +27,13 @@ import { CardArrayDisplayComponent } from './components/cardarraydisplay.compone
     AddPlayerDialogComponent,
     CreateGameDialogComponent,
     GameDisplayComponent,
-    CardArrayDisplayComponent
+    CardArrayDisplayComponent,
+    SelectHintDialogComponent
   ],
   entryComponents: [
     AddPlayerDialogComponent,
-    CreateGameDialogComponent
+    CreateGameDialogComponent,
+    SelectHintDialogComponent
   ],
   imports: [
     BrowserModule,

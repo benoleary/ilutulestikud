@@ -1,5 +1,6 @@
 import { Component, Input, Output, EventEmitter } from '@angular/core';
 import { OnInit, OnDestroy } from '@angular/core/src/metadata/lifecycle_hooks';
+import { MatDialog } from '@angular/material';
 import { Observable } from 'rxjs/Rx';
 import { Subscription } from 'rxjs/Subscription';
 import { IlutulestikudService } from '../ilutulestikud.service';
@@ -8,6 +9,7 @@ import { BackendIdentification } from '../models/backendidentification.model';
 import { VisibleCard } from '../models/visiblecard.model';
 import { VisibleHand } from '../models/visiblehand.model';
 import { InferredCard } from '../models/inferredcard.model';
+import { SelectHintDialogComponent } from './selecthintdialog.component'
 
 
 @Component({
@@ -34,10 +36,11 @@ import { InferredCard } from '../models/inferredcard.model';
     handOfViewingPlayer: InferredCard[];
     handsAfterViewingPlayer: VisibleHand[];
     turnButtonsDisabled: boolean;
+    hintButtonsDisabled: boolean;
     colorsForHints: string[];
     indicesForHints: number[];
 
-    constructor(public ilutulestikudService: IlutulestikudService)
+    constructor(public ilutulestikudService: IlutulestikudService, public materialDialog: MatDialog)
     {
         this.gameIdentification = null;
         this.playerIdentification = null;
@@ -53,6 +56,7 @@ import { InferredCard } from '../models/inferredcard.model';
         this.handOfViewingPlayer = [];
         this.handsAfterViewingPlayer = [];
         this.turnButtonsDisabled = true;
+        this.hintButtonsDisabled = true;
         this.colorsForHints = [];
         this.indicesForHints = [];
     }
@@ -112,8 +116,9 @@ import { InferredCard } from '../models/inferredcard.model';
         this.gameIsFinished = fetchedGameData["GameIsFinished"];
         this.scoreFromCardsPlayed = fetchedGameData["ScoreSoFar"];
 
+        const numberOfHintsAvailable: number = fetchedGameData["NumberOfReadyHints"];
         this.noncardInformationText = "Score: " + this.scoreFromCardsPlayed
-         + " - Hints: " + fetchedGameData["NumberOfReadyHints"] + " / " + fetchedGameData["MaximumNumberOfHints"]
+         + " - Hints: " + numberOfHintsAvailable + " / " + fetchedGameData["MaximumNumberOfHints"]
          + " - Mistakes: " + fetchedGameData["NumberOfMistakesMade"] + " / " + fetchedGameData["NumberOfMistakesIndicatingGameOver"]
          + " - Cards left in deck: " + fetchedGameData["NumberOfCardsLeftInDeck"];
 
@@ -128,6 +133,7 @@ import { InferredCard } from '../models/inferredcard.model';
         VisibleHand.RefreshListFromSource(this.handsAfterViewingPlayer, fetchedGameData["HandsAfterThisPlayer"]);
 
         this.turnButtonsDisabled = !fetchedGameData["ThisPlayerCanTakeTurn"];
+        this.hintButtonsDisabled = this.turnButtonsDisabled || (numberOfHintsAvailable <= 0)
 
         this.colorsForHints = fetchedGameData["HintColorSuits"];
         this.indicesForHints = fetchedGameData["HintSequenceIndices"];
@@ -148,7 +154,10 @@ import { InferredCard } from '../models/inferredcard.model';
         if (this.chatInput)
         {
             this.ilutulestikudService
-            .SendChatMessage(this.gameIdentification, this.playerIdentification, this.chatInput)
+            .SendChatMessage(
+              this.gameIdentification,
+              this.playerIdentification,
+              this.chatInput)
             .subscribe(
                 () => {},
                 thrownError => this.onError.emit(thrownError),
@@ -163,7 +172,10 @@ import { InferredCard } from '../models/inferredcard.model';
       // if the user clicks too many times too quickly.
       this.turnButtonsDisabled = true;
       this.ilutulestikudService
-      .SendTakeTurnByDiscarding(this.gameIdentification, this.playerIdentification, indexInHand)
+      .SendTakeTurnByDiscarding(
+        this.gameIdentification,
+        this.playerIdentification,
+        indexInHand)
       .subscribe(
           () => {},
           thrownError => this.onError.emit(thrownError),
@@ -176,7 +188,10 @@ import { InferredCard } from '../models/inferredcard.model';
       // if the user clicks too many times too quickly.
       this.turnButtonsDisabled = true;
       this.ilutulestikudService
-      .SendTakeTurnByAttemptingToPlay(this.gameIdentification, this.playerIdentification, indexInHand)
+      .SendTakeTurnByAttemptingToPlay(
+        this.gameIdentification,
+        this.playerIdentification,
+        indexInHand)
       .subscribe(
           () => {},
           thrownError => this.onError.emit(thrownError),
@@ -189,16 +204,38 @@ import { InferredCard } from '../models/inferredcard.model';
     // after the viewing player.
     hintColor(indexOfPlayer): void
     {
-      console.log(
-        "The player wants to give a hint about color to "
-        + this.handsAfterViewingPlayer[indexOfPlayer].playerName)
+      // We turn off the buttons to prevent messy errors
+      // if the user clicks too many times too quickly.
+      this.turnButtonsDisabled = true;
 
-        this.ilutulestikudService
-        .SendTakeTurnByGivingColorHint(
-          this.gameIdentification,
-          this.playerIdentification,
-          this.handsAfterViewingPlayer[indexOfPlayer].playerName,
-          "invalid color")
+      let dialogRef = this.materialDialog.open(SelectHintDialogComponent, {
+        width: '200px',
+        data: {
+          hintPossibilities: this.colorsForHints
+        }
+      });
+
+      dialogRef.afterClosed().subscribe(resultFromClose =>
+      {
+        if (!resultFromClose)
+        {
+          // If the player cancelled the hint, we re-enable the buttons so that they can take their turn.
+          this.turnButtonsDisabled = false;
+        }
+        else
+        {
+          this.ilutulestikudService
+          .SendTakeTurnByGivingColorHint(
+            this.gameIdentification,
+            this.playerIdentification,
+            this.handsAfterViewingPlayer[indexOfPlayer].playerName,
+            resultFromClose)
+            .subscribe(
+                () => {},
+                thrownError => this.onError.emit(thrownError),
+                () => {});
+        }
+      });
     }
 
     // The button for this is only shown for players after the viewing player and
@@ -207,16 +244,38 @@ import { InferredCard } from '../models/inferredcard.model';
     // after the viewing player.
     hintIndex(indexOfPlayer): void
     {
-      console.log(
-        "The player wants to give a hint about index to "
-        + this.handsAfterViewingPlayer[indexOfPlayer].playerName)
+      // We turn off the buttons to prevent messy errors
+      // if the user clicks too many times too quickly.
+      this.turnButtonsDisabled = true;
 
-        this.ilutulestikudService
-        .SendTakeTurnByGivingNumberHint(
-          this.gameIdentification,
-          this.playerIdentification,
-          this.handsAfterViewingPlayer[indexOfPlayer].playerName,
-          -1)
+      let dialogRef = this.materialDialog.open(SelectHintDialogComponent, {
+        width: '200px',
+        data: {
+          hintPossibilities: this.indicesForHints
+        }
+      });
+
+      dialogRef.afterClosed().subscribe(resultFromClose =>
+      {
+        if (!resultFromClose)
+        {
+          // If the player cancelled the hint, we re-enable the buttons so that they can take their turn.
+          this.turnButtonsDisabled = false;
+        }
+        else
+        {
+          this.ilutulestikudService
+          .SendTakeTurnByGivingNumberHint(
+            this.gameIdentification,
+            this.playerIdentification,
+            this.handsAfterViewingPlayer[indexOfPlayer].playerName,
+            resultFromClose)
+            .subscribe(
+                () => {},
+                thrownError => this.onError.emit(thrownError),
+                () => {});
+        }
+      });
     }
 
     leaveGame(): void

@@ -1,6 +1,5 @@
 import { Component } from '@angular/core';
 import { Inject } from '@angular/core';
-import { MatInputModule } from '@angular/material';
 import { MatDialogRef } from '@angular/material';
 import { MAT_DIALOG_DATA } from '@angular/material';
 import { Player } from '../models/player.model'

@@ -33,10 +33,10 @@
 </mat-dialog-content>
 <mat-dialog-actions>
     <button
-        mat-button
-        (click)="createGame()"
-        [disabled]="!isAllowedToCreateGame()">
-        Confirm create game
+      mat-raised-button
+      (click)="createGame()"
+      [disabled]="!isAllowedToCreateGame()">
+      Confirm create game
     </button>
-    <button mat-button (click)="cancelDialog()">Cancel</button>
+    <button mat-raised-button (click)="cancelDialog()">Cancel</button>
 </mat-dialog-actions>
