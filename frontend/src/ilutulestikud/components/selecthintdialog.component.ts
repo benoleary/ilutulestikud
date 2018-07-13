@@ -9,7 +9,7 @@ import { MAT_DIALOG_DATA } from '@angular/material';
   })
   export class SelectHintDialogComponent
   {
-    hintPossibilities: [string, string][];
+    hintPossibilities: [string | number, string][];
 
     constructor(
         public dialogReference: MatDialogRef<SelectHintDialogComponent>,
@@ -22,15 +22,13 @@ import { MAT_DIALOG_DATA } from '@angular/material';
             if (data.hintsAreColors)
             {
                 data.hintPossibilities.forEach(hintPossibility => {
-                    const colorHint: string = String(hintPossibility)
-                    this.hintPossibilities.push([colorHint, colorHint])
+                    this.hintPossibilities.push([hintPossibility, String(hintPossibility)])
                 });
             }
             else
             {
                 data.hintPossibilities.forEach(hintPossibility => {
-                    const otherHint: string = String(hintPossibility)
-                    this.hintPossibilities.push([otherHint, "white"])
+                    this.hintPossibilities.push([hintPossibility, "white"])
                 });
             }
         }

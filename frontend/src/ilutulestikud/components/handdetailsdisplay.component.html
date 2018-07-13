@@ -1,0 +1,22 @@
+<h1 mat-dialog-title>Card / known from hints</h1>
+<mat-dialog-content>
+    <mat-list dense role="list">
+        <mat-list-item *ngFor="let cardWithPossibilities of cardsWithPossibilities">
+            <span>
+                <single-card-display
+                    [singleCard]="cardWithPossibilities[0]">
+                </single-card-display>
+            </span>
+            <span>
+                &nbsp;/&nbsp;
+            </span>
+            <span>
+                [{{ cardWithPossibilities[1].PossibleColorSuits }}]<br>
+                [{{ cardWithPossibilities[1].PossibleSequenceIndices }}]
+            </span>
+        </mat-list-item>
+    </mat-list>
+</mat-dialog-content>
+<mat-dialog-actions>
+    <button mat-button (click)="closeDialog()">Close</button>
+</mat-dialog-actions>

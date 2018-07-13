@@ -10,6 +10,7 @@ import { VisibleCard } from '../models/visiblecard.model';
 import { VisibleHand } from '../models/visiblehand.model';
 import { InferredCard } from '../models/inferredcard.model';
 import { SelectHintDialogComponent } from './selecthintdialog.component'
+import { HandDetailsDisplayComponent } from './handdetailsdisplay.component';
 
 
 @Component({
@@ -196,6 +197,38 @@ import { SelectHintDialogComponent } from './selecthintdialog.component'
           () => {},
           thrownError => this.onError.emit(thrownError),
           () => {});
+    }
+
+    handDetailsBefore(indexOfPlayerBefore: number): void
+    {
+      console.log("indexOfPlayerBefore = " + JSON.stringify(indexOfPlayerBefore));
+      console.log("this.handsBeforeViewingPlayer = " + JSON.stringify(this.handsBeforeViewingPlayer));
+      console.log("this.handsAfterViewingPlayer = " + JSON.stringify(this.handsAfterViewingPlayer));
+      const playerHand: VisibleHand =
+       this.handsBeforeViewingPlayer[indexOfPlayerBefore];
+      this.materialDialog.open(HandDetailsDisplayComponent, {
+        width: '300px',
+        data: {
+          visibleCards: playerHand.visibleCards,
+          inferredCards: playerHand.knowledgeOfCards
+        }
+      });
+    }
+
+    handDetailsAfter(indexOfPlayerAfter): void
+    {
+      console.log("indexOfPlayerBefore = " + JSON.stringify(indexOfPlayerAfter));
+      console.log("this.handsBeforeViewingPlayer = " + JSON.stringify(this.handsBeforeViewingPlayer));
+      console.log("this.handsAfterViewingPlayer = " + JSON.stringify(this.handsAfterViewingPlayer));
+      const playerHand: VisibleHand =
+       this.handsAfterViewingPlayer[indexOfPlayerAfter];
+      this.materialDialog.open(HandDetailsDisplayComponent, {
+        width: '300px',
+        data: {
+          visibleCards: playerHand.visibleCards,
+          inferredCards: playerHand.knowledgeOfCards
+        }
+      });
     }
 
     // The button for this is only shown for players after the viewing player and

@@ -18,8 +18,10 @@ import { IlutulestikudService } from './ilutulestikud.service';
 import { AddPlayerDialogComponent } from './components/addplayerdialog.component'
 import { CreateGameDialogComponent } from './components/creategamedialog.component'
 import { GameDisplayComponent } from './components/gamedisplay.component'
+import { SingleCardDisplayComponent } from './components/singlecarddisplay.component'
 import { CardArrayDisplayComponent } from './components/cardarraydisplay.component'
 import { SelectHintDialogComponent } from './components/selecthintdialog.component'
+import { HandDetailsDisplayComponent } from './components/handdetailsdisplay.component'
 
 @NgModule({
   declarations: [
@@ -27,13 +29,16 @@ import { SelectHintDialogComponent } from './components/selecthintdialog.compone
     AddPlayerDialogComponent,
     CreateGameDialogComponent,
     GameDisplayComponent,
+    SingleCardDisplayComponent,
     CardArrayDisplayComponent,
-    SelectHintDialogComponent
+    SelectHintDialogComponent,
+    HandDetailsDisplayComponent
   ],
   entryComponents: [
     AddPlayerDialogComponent,
     CreateGameDialogComponent,
-    SelectHintDialogComponent
+    SelectHintDialogComponent,
+    HandDetailsDisplayComponent
   ],
   imports: [
     BrowserModule,
@@ -68,6 +73,7 @@ import { SelectHintDialogComponent } from './components/selecthintdialog.compone
     MatListModule,
     IlutulestikudComponent,
     GameDisplayComponent,
+    SingleCardDisplayComponent,
     CardArrayDisplayComponent
   ],
   providers: [IlutulestikudService]

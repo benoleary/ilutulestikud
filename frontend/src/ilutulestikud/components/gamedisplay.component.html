@@ -7,7 +7,6 @@
             {{ chatMessage.Text }}
         </mat-list-item>
     </mat-list>
-
     <mat-form-field>
         <input matInput [(ngModel)]="chatInput">
         <button mat-button matSuffix mat-icon-button aria-label="Send" (click)="sendChat()">
@@ -66,24 +65,37 @@
         Players before you:<br>
         <mat-list dense role="list">
             <mat-list-item
-                *ngFor="let playerHand of handsBeforeViewingPlayer"
+                *ngFor="let playerHand of handsBeforeViewingPlayer; let indexOfPlayer = index"
                 [ngStyle]="{'color': playerHand.playerColor, 'background-color': 'black'}">
-                {{ playerHand.playerName }}:
-                <card-array-display
-                    [cardArray]="playerHand.visibleCards">
-                </card-array-display>
+                <span>
+                    {{ playerHand.playerName }}:
+                    <card-array-display
+                        [cardArray]="playerHand.visibleCards">
+                    </card-array-display>
+                </span>
+                <span>
+                    &nbsp;
+                </span>
+                <span>
+                    <button
+                        mat-raised-button
+                        [ngStyle]="{'color': 'white'}"
+                        (click)="handDetailsBefore(indexOfPlayer)">
+                        What's known
+                    </button>
+                </span>
             </mat-list-item>
         </mat-list>
     </div>
 </div>
 
 <div [ngStyle]="{'background-color': 'black'}">
-    What you know about your cards:<br>
+    Possibilities you know for your cards:<br>
     <mat-list dense role="list">
         <mat-list-item *ngFor="let playerCard of handOfViewingPlayer; let indexInHand = index">
             <span>
-                Possible colors: {{ playerCard.PossibleColorSuits }}<br>
-                Possible values: {{ playerCard.PossibleSequenceIndices }}
+                [{{ playerCard.PossibleColorSuits }}]<br>
+                [{{ playerCard.PossibleSequenceIndices }}]
             </span>
             <span>
                 &nbsp;
@@ -123,7 +135,20 @@
                 [ngStyle]="{'color': playerHand.playerColor, 'background-color': 'black'}">
                 <span>
                     {{ playerHand.playerName }}:
-                    <card-array-display [cardArray]="playerHand.visibleCards"></card-array-display>
+                    <card-array-display
+                        [cardArray]="playerHand.visibleCards">
+                    </card-array-display>
+                </span>
+                <span>
+                    &nbsp;
+                </span>
+                <span>
+                    <button
+                        mat-raised-button
+                        [ngStyle]="{'color': 'white'}"
+                        (click)="handDetailsAfter(indexOfPlayer)">
+                        What's known
+                    </button>
                 </span>
                 <span>
                     &nbsp;
