@@ -419,6 +419,12 @@ func (gameState *inMemoryState) EnactTurnByDiscardingAndReplacing(
 	knowledgeOfDrawnCard card.Inferred,
 	numberOfReadyHintsToAdd int,
 	numberOfMistakesMadeToAdd int) error {
+	// We need to check if the deck was empty at the start of the turn so that
+	// we do not mistakenly increment the number of turns with an empty deck
+	// on a turn which empties the deck, but we cannot increment the turn counts
+	// until we have checked that we generate no errors.
+	deckAlreadyEmptyAtStartOfTurn := gameState.DeckSize() <= 0
+
 	discardedCard, errorFromTakingCard :=
 		gameState.takeCardFromHandReplacingIfPossible(
 			actingPlayer.Name(),
@@ -426,10 +432,6 @@ func (gameState *inMemoryState) EnactTurnByDiscardingAndReplacing(
 			knowledgeOfDrawnCard)
 
 	if errorFromTakingCard != nil {
-		gameState.recordActionMessage(
-			actingPlayer,
-			errorFromTakingCard.Error())
-
 		return errorFromTakingCard
 	}
 
@@ -438,7 +440,7 @@ func (gameState *inMemoryState) EnactTurnByDiscardingAndReplacing(
 
 	gameState.numberOfReadyHints += numberOfReadyHintsToAdd
 	gameState.numberOfMistakesMade += numberOfMistakesMadeToAdd
-	gameState.incrementTurnNumbers()
+	gameState.incrementTurnNumbers(deckAlreadyEmptyAtStartOfTurn)
 
 	gameState.recordActionMessage(
 		actingPlayer,
@@ -462,6 +464,12 @@ func (gameState *inMemoryState) EnactTurnByPlayingAndReplacing(
 	indexInHand int,
 	knowledgeOfDrawnCard card.Inferred,
 	numberOfReadyHintsToAdd int) error {
+	// We need to check if the deck was empty at the start of the turn so that
+	// we do not mistakenly increment the number of turns with an empty deck
+	// on a turn which empties the deck, but we cannot increment the turn counts
+	// until we have checked that we generate no errors.
+	deckAlreadyEmptyAtStartOfTurn := gameState.DeckSize() <= 0
+
 	playedCard, errorFromTakingCard :=
 		gameState.takeCardFromHandReplacingIfPossible(
 			actingPlayer.Name(),
@@ -469,10 +477,6 @@ func (gameState *inMemoryState) EnactTurnByPlayingAndReplacing(
 			knowledgeOfDrawnCard)
 
 	if errorFromTakingCard != nil {
-		gameState.recordActionMessage(
-			actingPlayer,
-			errorFromTakingCard.Error())
-
 		return errorFromTakingCard
 	}
 
@@ -481,7 +485,7 @@ func (gameState *inMemoryState) EnactTurnByPlayingAndReplacing(
 	gameState.playedCardsForColor[playedSuit] = append(sequenceBeforeNow, playedCard)
 
 	gameState.numberOfReadyHints += numberOfReadyHintsToAdd
-	gameState.incrementTurnNumbers()
+	gameState.incrementTurnNumbers(deckAlreadyEmptyAtStartOfTurn)
 
 	gameState.recordActionMessage(
 		actingPlayer,
@@ -517,19 +521,28 @@ func (gameState *inMemoryState) EnactTurnByUpdatingHandWithHint(
 	}
 
 	for indexInHand := 0; indexInHand < handSize; indexInHand++ {
-		receiverHand[indexInHand].Inferred = updatedReceiverKnowledgeOfOwnHand[indexInHand]
+		receiverHand[indexInHand].Inferred =
+			updatedReceiverKnowledgeOfOwnHand[indexInHand]
 	}
 
 	gameState.numberOfReadyHints -= numberOfReadyHintsToSubtract
-	gameState.incrementTurnNumbers()
+
+	// It is not a problem to take the deck size now as giving a hint does
+	// not involve drawing from the deck.
+	gameState.incrementTurnNumbers(gameState.DeckSize() <= 0)
+
+	gameState.recordActionMessage(
+		actingPlayer,
+		actionMessage)
 
 	return nil
 }
 
-func (gameState *inMemoryState) incrementTurnNumbers() {
+func (gameState *inMemoryState) incrementTurnNumbers(
+	deckAlreadyEmptyAtStartOfTurn bool) {
 	gameState.turnNumber++
 
-	if gameState.DeckSize() <= 0 {
+	if deckAlreadyEmptyAtStartOfTurn {
 		gameState.turnsTakenWithEmptyDeck++
 	}
 }

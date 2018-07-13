@@ -72,8 +72,8 @@ func (mockView *mockViewForPlayer) GameIsFinished() bool {
 }
 
 // CurrentTurnOrder gets mocked.
-func (mockView *mockViewForPlayer) CurrentTurnOrder() ([]string, int) {
-	return mockView.MockPlayers, mockView.MockPlayerTurnIndex
+func (mockView *mockViewForPlayer) CurrentTurnOrder() ([]string, int, int) {
+	return mockView.MockPlayers, mockView.MockPlayerTurnIndex, 0
 }
 
 // Turn gets mocked.

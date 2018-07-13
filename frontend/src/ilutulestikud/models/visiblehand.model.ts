@@ -7,6 +7,7 @@ export class VisibleHand
     playerColor: string;
     visibleCards: VisibleCard[]
     knowledgeOfCards: InferredCard[]
+    playerHasTakenLastTurn: boolean;
 
     constructor(handObject: Object)
     {
@@ -25,6 +26,18 @@ export class VisibleHand
         this.knowledgeOfCards = [];
         Array.from(handObject["KnowledgeOfOwnHand"])
              .forEach(cardAsObject => this.knowledgeOfCards.push(new InferredCard(cardAsObject)));
+
+        this.playerHasTakenLastTurn = handObject["PlayerHasTakenLastTurn"];
+    }
+
+    DisplayNameIncludingIfLastTurnTaken(): string
+    {
+        if (this.playerHasTakenLastTurn)
+        {
+            return this.playerName + " (no more turns)"
+        }
+
+        return this.playerName
     }
 
     static RefreshListFromSource(listToRefresh: VisibleHand[], handObjectList: Object[])

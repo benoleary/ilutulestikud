@@ -107,8 +107,9 @@ func (playerView *PlayerView) GameIsFinished() bool {
 
 // CurrentTurnOrder returns the names of the participants of the game in the
 // order which their next turns are in, along with the index of the viewing
-// player in that list.
-func (playerView *PlayerView) CurrentTurnOrder() ([]string, int) {
+// player in that list, and the number of players who have taken their last
+// turns.
+func (playerView *PlayerView) CurrentTurnOrder() ([]string, int, int) {
 	playerNamesInTurnOrder := make([]string, playerView.numberOfParticipants)
 	playerIndexInTurnOrder := -1
 
@@ -122,7 +123,7 @@ func (playerView *PlayerView) CurrentTurnOrder() ([]string, int) {
 		}
 	}
 
-	return playerNamesInTurnOrder, playerIndexInTurnOrder
+	return playerNamesInTurnOrder, playerIndexInTurnOrder, playerView.gameState.TurnsTakenWithEmptyDeck()
 }
 
 // Turn just wraps around the read-only game state's Turn function.

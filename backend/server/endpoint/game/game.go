@@ -143,7 +143,7 @@ func (handler *Handler) writeTurnSummariesForPlayer(
 
 	for gameIndex := 0; gameIndex < numberOfGamesWithPlayer; gameIndex++ {
 		gameView := allGamesWithPlayer[gameIndex]
-		_, playerTurnIndex := gameView.CurrentTurnOrder()
+		_, playerTurnIndex, _ := gameView.CurrentTurnOrder()
 		turnSummaries[gameIndex] = parsing.TurnSummary{
 			GameIdentifier: handler.segmentTranslator.ToSegment(gameView.GameName()),
 			GameName:       gameView.GameName(),
@@ -230,7 +230,7 @@ func (handler *Handler) writeGameForPlayer(
 		parsing.GameView{
 			ChatLog:                            handler.logForFrontend(gameView.ChatLog()),
 			ActionLog:                          handler.logForFrontend(gameView.ActionLog()),
-			GameIsFinished:                     gameView.GameIsFinished(),
+			GameIsFinished:                     gameIsFinished,
 			ScoreSoFar:                         gameView.Score(),
 			NumberOfReadyHints:                 gameView.NumberOfReadyHints(),
 			MaximumNumberOfHints:               gameView.MaximumNumberOfHints(),
@@ -488,7 +488,8 @@ func (handler *Handler) logForFrontend(
 
 func (handler *Handler) visibleHandsBeforeAndAfter(
 	gameView game.ViewForPlayer) ([]parsing.VisibleHand, []parsing.VisibleHand, bool, error) {
-	playersInTurnOrder, playerIndexInTurnOrder := gameView.CurrentTurnOrder()
+	playersInTurnOrder, playerIndexInTurnOrder, numberOfLastTurns :=
+		gameView.CurrentTurnOrder()
 	numberOfPlayers := len(playersInTurnOrder)
 
 	allVisibleHands := make([]parsing.VisibleHand, numberOfPlayers-1)
@@ -520,12 +521,16 @@ func (handler *Handler) visibleHandsBeforeAndAfter(
 				return nil, nil, false, errorFromInferredHand
 			}
 
+			playerHasTakenLastTurn :=
+				(playerIndex + numberOfLastTurns) >= numberOfPlayers
+
 			visibleHandForFrontend :=
 				parsing.VisibleHand{
-					PlayerName:         playerWithVisibleHand,
-					PlayerColor:        playerChatColor,
-					HandCards:          handCards,
-					KnowledgeOfOwnHand: knowledgeOfOwnHand,
+					PlayerName:             playerWithVisibleHand,
+					PlayerColor:            playerChatColor,
+					HandCards:              handCards,
+					KnowledgeOfOwnHand:     knowledgeOfOwnHand,
+					PlayerHasTakenLastTurn: playerHasTakenLastTurn,
 				}
 
 			if playerIndex < playerIndexInTurnOrder {

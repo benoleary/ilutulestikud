@@ -50,6 +50,12 @@ func TestWrapperFunctions(unitTest *testing.T) {
 	testDeckSize := 11
 	mockReadAndWriteState.ReturnForDeckSize = testDeckSize
 
+	// Last turns being non-zero is inconsistent for a non-zero deck size,
+	// but it does not matter for the test.
+	expectedNumberOfLastTurns := 2
+	mockReadAndWriteState.ReturnForTurnsTakenWithEmptyDeck =
+		expectedNumberOfLastTurns
+
 	mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
 
 	testChatLog :=
@@ -187,16 +193,19 @@ func TestWrapperFunctions(unitTest *testing.T) {
 	}
 
 	expectedNumberOfPlayers := len(testPlayersInCurrentTurnOrder)
-	actualPlayersInCurrentTurnOrder, actualCurrentPlayerIndex :=
+	actualPlayersInCurrentTurnOrder, actualCurrentPlayerIndex, actualNumberOfLastTurns :=
 		viewForPlayer.CurrentTurnOrder()
 	if (len(actualPlayersInCurrentTurnOrder) != expectedNumberOfPlayers) ||
 		(actualCurrentPlayerIndex != expectedTurnIndex) {
 		unitTest.Fatalf(
-			"player view current turn order %v, index %v did not have expected order %v, index %v",
+			"player view current turn order %v, index %v, last turn count %v"+
+				" did not have expected order %v, index %v, last turn count %v",
 			actualPlayersInCurrentTurnOrder,
 			actualCurrentPlayerIndex,
+			actualNumberOfLastTurns,
 			testPlayersInCurrentTurnOrder,
-			expectedTurnIndex)
+			expectedTurnIndex,
+			expectedNumberOfLastTurns)
 	}
 
 	for turnIndex := 0; turnIndex < expectedNumberOfPlayers; turnIndex++ {

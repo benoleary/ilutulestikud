@@ -113,9 +113,9 @@ type ViewForPlayer interface {
 	GameIsFinished() bool
 
 	// CurrentTurnOrder should return the names of the participants of the game in the
-	// order which their next turns are in, along with the index of the viewing
-	// player in that list.
-	CurrentTurnOrder() ([]string, int)
+	// order which their next turns are in, along with the index of the viewing player
+	// in that list, and the number of players who have taken their last turns.
+	CurrentTurnOrder() ([]string, int, int)
 
 	// Turn should just wrap around the read-only game state's Turn function.
 	Turn() int

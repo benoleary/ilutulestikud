@@ -70,10 +70,11 @@ type VisibleCard struct {
 // other than the player who is viewing the game state, including what the holding
 // player knows about the cards.
 type VisibleHand struct {
-	PlayerName         string
-	PlayerColor        string
-	HandCards          []VisibleCard
-	KnowledgeOfOwnHand []CardFromBehind
+	PlayerName             string
+	PlayerColor            string
+	HandCards              []VisibleCard
+	KnowledgeOfOwnHand     []CardFromBehind
+	PlayerHasTakenLastTurn bool
 }
 
 // CardFromBehind is a struct to hold the details of a single outgoing card as known

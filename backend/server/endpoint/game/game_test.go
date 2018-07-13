@@ -473,7 +473,7 @@ func TestGetAllGamesWithPlayerWhenThreeGames(unitTest *testing.T) {
 		for _, actualTurnSummary := range responseTurnSummaryList.TurnSummaries {
 			expectedIdentifier :=
 				segmentTranslatorForTest().ToSegment(expectedView.GameName())
-			_, expectedPlayerTurnIndex := expectedView.CurrentTurnOrder()
+			_, expectedPlayerTurnIndex, _ := expectedView.CurrentTurnOrder()
 			if (actualTurnSummary.GameIdentifier == expectedIdentifier) &&
 				(actualTurnSummary.GameName == expectedView.GameName()) &&
 				(actualTurnSummary.IsPlayerTurn == (expectedPlayerTurnIndex == 0)) {
@@ -834,7 +834,8 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 		unitTest,
 		responseGameView.HandsBeforeThisPlayer[0],
 		testView.MockPlayers[0],
-		testView.ReturnForVisibleHand)
+		testView.ReturnForVisibleHand,
+		false)
 
 	assertInferredCardSlicesCorrect(
 		testIdentifier,
@@ -855,14 +856,16 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 		unitTest,
 		responseGameView.HandsAfterThisPlayer[0],
 		testView.MockPlayers[2],
-		testView.ReturnForVisibleHand)
+		testView.ReturnForVisibleHand,
+		false)
 
 	assertVisibleHandCorrect(
 		testIdentifier,
 		unitTest,
 		responseGameView.HandsAfterThisPlayer[1],
 		testView.MockPlayers[3],
-		testView.ReturnForVisibleHand)
+		testView.ReturnForVisibleHand,
+		false)
 
 	numberOfExpectedPiles := len(testView.ReturnForPlayedCards)
 	if len(responseGameView.PlayedCards) != numberOfExpectedPiles {
@@ -2115,11 +2118,12 @@ func assertVisibleHandCorrect(
 	unitTest *testing.T,
 	actualHand parsing.VisibleHand,
 	expectedPlayer string,
-	expectedCards []card.Readonly) {
+	expectedCards []card.Readonly,
+	expectedHasTakenLastTurn bool) {
 	if actualHand.PlayerName != expectedPlayer {
 		unitTest.Fatalf(
 			testIdentifier+
-				"/actuals hand %v did not have expected player name %v",
+				"/actual hand %v did not have expected player name %v",
 			actualHand,
 			expectedPlayer)
 	}
@@ -2129,6 +2133,14 @@ func assertVisibleHandCorrect(
 		unitTest,
 		actualHand.HandCards,
 		expectedCards)
+
+	if actualHand.PlayerHasTakenLastTurn != expectedHasTakenLastTurn {
+		unitTest.Fatalf(
+			testIdentifier+
+				"/actual hand %v did not agree with expectedHasTakenLastTurn %v",
+			actualHand,
+			expectedHasTakenLastTurn)
+	}
 }
 
 func assertVisibleCardSlicesCorrect(
@@ -2144,7 +2156,7 @@ func assertVisibleCardSlicesCorrect(
 	if len(actualCards) != numberOfExpectedCards {
 		unitTest.Fatalf(
 			testIdentifier+
-				"/actuals card %v did not match expected cards %v",
+				"/actual card %v did not match expected cards %v",
 			actualCards,
 			expectedCards)
 	}
@@ -2157,7 +2169,7 @@ func assertVisibleCardSlicesCorrect(
 			(actualCard.SequenceIndex != expectedCard.SequenceIndex()) {
 			unitTest.Fatalf(
 				testIdentifier+
-					"/actuals card %v did not match expected cards %v",
+					"/actual card %v did not match expected cards %v",
 				actualCards,
 				expectedCards)
 		}
@@ -2177,7 +2189,7 @@ func assertInferredCardSlicesCorrect(
 	if len(actualCards) != numberOfExpectedCards {
 		unitTest.Fatalf(
 			testIdentifier+
-				"/actuals card %v did not match expected cards %v",
+				"/actual card %v did not match expected cards %v",
 			actualCards,
 			expectedCards)
 	}

@@ -68,7 +68,7 @@
                 *ngFor="let playerHand of handsBeforeViewingPlayer; let indexOfPlayer = index"
                 [ngStyle]="{'color': playerHand.playerColor, 'background-color': 'black'}">
                 <span>
-                    {{ playerHand.playerName }}:
+                    {{ playerHand.DisplayNameIncludingIfLastTurnTaken() }}:
                     <card-array-display
                         [cardArray]="playerHand.visibleCards">
                     </card-array-display>
@@ -134,7 +134,7 @@
                 *ngFor="let playerHand of handsAfterViewingPlayer; let indexOfPlayer = index"
                 [ngStyle]="{'color': playerHand.playerColor, 'background-color': 'black'}">
                 <span>
-                    {{ playerHand.playerName }}:
+                    {{ playerHand.DisplayNameIncludingIfLastTurnTaken() }}:
                     <card-array-display
                         [cardArray]="playerHand.visibleCards">
                     </card-array-display>

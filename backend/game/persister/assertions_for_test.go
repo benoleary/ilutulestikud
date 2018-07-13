@@ -2,6 +2,9 @@ package persister_test
 
 import (
 	"testing"
+	"time"
+
+	"github.com/benoleary/ilutulestikud/backend/game/message"
 
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/game/card"
@@ -101,21 +104,37 @@ func assertGameStateAsExpected(
 			expectedGame)
 	}
 
-	for chatIndex, chatMessage := range actualGame.ChatLog() {
-		if chatMessage != expectedGame.ChatLog[chatIndex] {
+	toleranceInNanosecondsForLogMessages := 100 * 1000
+
+	for indexInLog, actualMessage := range actualGame.ChatLog() {
+		expectedMessage := expectedGame.ChatLog[indexInLog]
+		if !doMessagesMatchwithinTimeTolerance(
+			actualMessage,
+			expectedMessage,
+			toleranceInNanosecondsForLogMessages) {
 			unitTest.Fatalf(
-				testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin chat log",
+				testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin chat log\n"+
+					"actual:\n%+v\n\nexpected:\n%+v\n\n",
 				actualGame,
-				expectedGame)
+				expectedGame,
+				actualGame.ChatLog(),
+				expectedGame.ChatLog)
 		}
 	}
 
-	for actionIndex, actionMessage := range actualGame.ActionLog() {
-		if actionMessage != expectedGame.ActionLog[actionIndex] {
+	for indexInLog, actualMessage := range actualGame.ActionLog() {
+		expectedMessage := expectedGame.ActionLog[indexInLog]
+		if !doMessagesMatchwithinTimeTolerance(
+			actualMessage,
+			expectedMessage,
+			toleranceInNanosecondsForLogMessages) {
 			unitTest.Fatalf(
-				testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin action log",
+				testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin action log\n"+
+					"actual:\n%+v\n\nexpected:\n%+v\n\n",
 				actualGame,
-				expectedGame)
+				expectedGame,
+				actualGame.ActionLog(),
+				expectedGame.ActionLog)
 		}
 	}
 
@@ -124,17 +143,23 @@ func assertGameStateAsExpected(
 		expectedPlayedCards := expectedGame.PlayedForColor[colorSuit]
 		if len(actualPlayedCards) != len(expectedPlayedCards) {
 			unitTest.Fatalf(
-				testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin PlayedForColor",
+				testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin PlayedForColor\n"+
+					"actual:\n%+v\n\nexpected:\n%+v\n\n",
 				actualGame,
-				expectedGame)
+				expectedGame,
+				actualPlayedCards,
+				expectedPlayedCards)
 		}
 
 		for cardIndex, actualPlayedCard := range actualPlayedCards {
 			if actualPlayedCard != expectedPlayedCards[cardIndex] {
 				unitTest.Fatalf(
-					testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin PlayedForColor",
+					testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin PlayedForColor\n"+
+						"actual:\n%+v\n\nexpected:\n%+v\n\n",
 					actualGame,
-					expectedGame)
+					expectedGame,
+					actualPlayedCards,
+					expectedPlayedCards)
 			}
 		}
 
@@ -157,9 +182,12 @@ func assertGameStateAsExpected(
 	for playerIndex, playerName := range actualGame.PlayerNames() {
 		if playerName != expectedGame.PlayerNames[playerIndex] {
 			unitTest.Fatalf(
-				testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin player names",
+				testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin player names\n"+
+					"actual:\n%+v\n\nexpected:\n%+v\n\n",
 				actualGame,
-				expectedGame)
+				expectedGame,
+				actualGame.PlayerNames(),
+				expectedGame.PlayerNames)
 		}
 
 		expectedVisibleHand := expectedGame.VisibleCardInHand[playerName]
@@ -189,9 +217,12 @@ func assertGameStateAsExpected(
 		for indexInHand := 0; indexInHand < handSize; indexInHand++ {
 			if visibleHand[indexInHand] != expectedVisibleHand[indexInHand] {
 				unitTest.Fatalf(
-					testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin visible hands",
+					testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin visible hands\n"+
+						"actual:\n%+v\n\nexpected:\n%v\n\n",
 					actualGame,
-					expectedGame)
+					expectedGame,
+					visibleHand,
+					expectedVisibleHand)
 			}
 
 			inferredCard := inferredHand[indexInHand]
@@ -203,28 +234,55 @@ func assertGameStateAsExpected(
 			if (len(inferredCard.PossibleColors()) != len(expectedColors)) ||
 				(len(inferredCard.PossibleIndices()) != len(expectedIndices)) {
 				unitTest.Fatalf(
-					testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin inferred hands",
+					testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin inferred hands\n"+
+						"actual:\n%+v\n\nexpected:\n%v\n\n",
 					actualGame,
-					expectedGame)
+					expectedGame,
+					inferredHand,
+					expectedInferredHand)
 			}
 
 			for colorIndex, actualColor := range inferredCard.PossibleColors() {
 				if actualColor != expectedColors[colorIndex] {
 					unitTest.Fatalf(
-						"actual\n  %+v\ndid not match expected\n  %+v\nin inferred hand colors",
+						"actual\n  %+v\ndid not match expected\n  %+v\nin inferred hand colors\n"+
+							"actual:\n%+v\n\nexpected:\n%v\n\n",
 						actualGame,
-						expectedGame)
+						expectedGame,
+						inferredCard.PossibleColors(),
+						expectedColors)
 				}
 			}
 
 			for indexIndex, actualIndex := range inferredCard.PossibleIndices() {
 				if actualIndex != expectedIndices[indexIndex] {
 					unitTest.Fatalf(
-						testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin inferred hand indices",
+						testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin inferred hand indices\n"+
+							"actual:\n%+v\n\nexpected:\n%v\n\n",
 						actualGame,
-						expectedGame)
+						expectedGame,
+						inferredCard.PossibleIndices(),
+						expectedIndices)
 				}
 			}
 		}
 	}
+}
+
+func doMessagesMatchwithinTimeTolerance(
+	actualMessage message.Readonly,
+	expectedMessage message.Readonly,
+	toleranceInNanoseconds int) bool {
+	if (actualMessage.PlayerName() != expectedMessage.PlayerName()) ||
+		(actualMessage.TextColor() != expectedMessage.TextColor()) ||
+		(actualMessage.MessageText() != expectedMessage.MessageText()) {
+		return false
+	}
+
+	timeDifference := actualMessage.CreationTime().Sub(expectedMessage.CreationTime())
+	if timeDifference < 0 {
+		timeDifference = -timeDifference
+	}
+
+	return timeDifference < time.Duration(toleranceInNanoseconds)
 }
