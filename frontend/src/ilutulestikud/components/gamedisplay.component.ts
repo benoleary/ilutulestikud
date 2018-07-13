@@ -201,9 +201,6 @@ import { HandDetailsDisplayComponent } from './handdetailsdisplay.component';
 
     handDetailsBefore(indexOfPlayerBefore: number): void
     {
-      console.log("indexOfPlayerBefore = " + JSON.stringify(indexOfPlayerBefore));
-      console.log("this.handsBeforeViewingPlayer = " + JSON.stringify(this.handsBeforeViewingPlayer));
-      console.log("this.handsAfterViewingPlayer = " + JSON.stringify(this.handsAfterViewingPlayer));
       const playerHand: VisibleHand =
        this.handsBeforeViewingPlayer[indexOfPlayerBefore];
       this.materialDialog.open(HandDetailsDisplayComponent, {
@@ -217,9 +214,6 @@ import { HandDetailsDisplayComponent } from './handdetailsdisplay.component';
 
     handDetailsAfter(indexOfPlayerAfter): void
     {
-      console.log("indexOfPlayerBefore = " + JSON.stringify(indexOfPlayerAfter));
-      console.log("this.handsBeforeViewingPlayer = " + JSON.stringify(this.handsBeforeViewingPlayer));
-      console.log("this.handsAfterViewingPlayer = " + JSON.stringify(this.handsAfterViewingPlayer));
       const playerHand: VisibleHand =
        this.handsAfterViewingPlayer[indexOfPlayerAfter];
       this.materialDialog.open(HandDetailsDisplayComponent, {

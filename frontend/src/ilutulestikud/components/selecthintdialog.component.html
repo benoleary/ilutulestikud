@@ -1,11 +1,29 @@
 <h1 mat-dialog-title>Hint about...</h1>
 <mat-dialog-content>
     <div *ngFor="let hintPossibility of hintPossibilities">
+        <!-- There is probably a more elegant way of making "rainbow" appear in many colors... -->
         <button
             mat-button
+            *ngIf="hintPossibility[1] == 'rainbow'"
+            (click)="emitHint(hintPossibility[0])">
+            <b>
+                <!-- Apparently having the HTML elements right up alongside each other prevents spaces between them.
+                     Comments apparently work as a means of spacing things out while keeping the elements right beside each other.
+                     https://css-tricks.com/fighting-the-space-between-inline-block-elements/ -->
+                <font color="red">r</font><!--
+                --><font color="orange">a</font><!--
+                --><font color="yellow">in</font><!--
+                --><font color="green">b</font><!--
+                --><font color="blue">o</font><!--
+                --><font color="purple">w</font>
+            </b>
+        </button>
+        <button
+            mat-button
+            *ngIf="hintPossibility[1] != 'rainbow'"
             [ngStyle]="{'color': hintPossibility[1]}"
             (click)="emitHint(hintPossibility[0])">
-            {{ hintPossibility[0] }}
+            <b>{{ hintPossibility[0] }}</b>
         </button>
     </div>
 </mat-dialog-content>
