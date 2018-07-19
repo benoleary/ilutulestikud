@@ -10,6 +10,24 @@ type ReadonlyState interface {
 	Color() string
 }
 
+// ReadAndWriteState provides a simple implementation of the ReadonlyState interface
+// which is used by several persisters as a simple struct to emit as an instance of
+// ReadonlyState.
+type ReadAndWriteState struct {
+	PlayerName string
+	ChatColor  string
+}
+
+// Name implents one of the requirements for the ReadonlyState interface.
+func (readAndWriteState *ReadAndWriteState) Name() string {
+	return readAndWriteState.PlayerName
+}
+
+// Color implents one of the requirements for the ReadonlyState interface.
+func (readAndWriteState *ReadAndWriteState) Color() string {
+	return readAndWriteState.ChatColor
+}
+
 // StatePersister defines the interface for structs which should be able to create
 // objects implementing the ReadOnly interface out of player names with colors.
 type StatePersister interface {
@@ -18,7 +36,7 @@ type StatePersister interface {
 	// unchanged persistence store (analogously to the entry set of a standard Golang
 	// map, for example), though of course an implementation may order the slice
 	// consistently.
-	All() []ReadonlyState
+	All() ([]ReadonlyState, error)
 
 	// Get should return the read-only state corresponding to the given player name if it
 	// exists already along with an error which of course should be nil if there was no
@@ -41,5 +59,5 @@ type StatePersister interface {
 	Delete(playerName string) error
 
 	// Reset should remove all players.
-	Reset()
+	Reset() error
 }

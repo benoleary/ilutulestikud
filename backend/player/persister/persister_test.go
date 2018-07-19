@@ -8,11 +8,14 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/player/persister"
 )
 
+const testPrefix = "Tough_no_player_name_can_start_like_this:"
+const invalidName = testPrefix + "Not A. Participant"
+
 var colorsAvailableInTest []string = defaults.AvailableColors()
 var defaultTestPlayerNames []string = []string{
-	"Player One",
-	"Player Two",
-	"Player Three",
+	testPrefix + "Player One",
+	testPrefix + "Player Two",
+	testPrefix + "Player Three",
 }
 
 func mapStringsToTrue(stringsToMap []string) map[string]bool {
@@ -45,7 +48,6 @@ func TestReturnErrorWhenPlayerNotFoundWithGet(unitTest *testing.T) {
 		testIdentifier := "Get(unknown player)/" + statePersister.PersisterDescription
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			invalidName := "Not A. Participant"
 			playerState, errorFromGet := statePersister.PlayerPersister.Get(invalidName)
 
 			if errorFromGet == nil {
@@ -65,7 +67,6 @@ func TestReturnErrorWhenPlayerNotFoundForDelete(unitTest *testing.T) {
 		testIdentifier := "Delete(unknown player)/" + statePersister.PersisterDescription
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			invalidName := "Not A. Participant"
 			errorFromDelete := statePersister.PlayerPersister.Delete(invalidName)
 
 			if errorFromDelete == nil {
@@ -214,6 +215,15 @@ func TestAddPlayerWithValidColorAndTestGet(unitTest *testing.T) {
 						testCase.playerName,
 						newState)
 				}
+
+				// We also clean up afterwards, but report any error as a test failure.
+				errorFromDelete := statePersister.PlayerPersister.Delete(testCase.playerName)
+				if errorFromDelete != nil {
+					unitTest.Fatalf(
+						"Delete(%v) produced error %v",
+						testCase.playerName,
+						errorFromDelete)
+				}
 			})
 		}
 	}
@@ -235,7 +245,6 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
 			errorFromFirstAdd :=
 				statePersister.PlayerPersister.Add(firstPlayer, firstColor)
-
 			if errorFromFirstAdd != nil {
 				unitTest.Fatalf(
 					"Add(%v, %v) produced an error %v",
@@ -244,7 +253,16 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 					errorFromFirstAdd)
 			}
 
-			statesFromAllAfterFirstAdd := statePersister.PlayerPersister.All()
+			statesFromAllAfterFirstAdd, errorFromAllAfterFirstAdd :=
+				statePersister.PlayerPersister.All()
+			if errorFromAllAfterFirstAdd != nil {
+				unitTest.Fatalf(
+					"All() after first Add(%v, %v) produced an error %v",
+					firstPlayer,
+					colorsAvailableInTest[0],
+					errorFromAllAfterFirstAdd)
+			}
+
 			if len(statesFromAllAfterFirstAdd) != 1 {
 				unitTest.Fatalf(
 					"Adding first player to a new persister resulted in states %v",
@@ -286,7 +304,16 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 					errorFromSecondAdd)
 			}
 
-			statesFromAllAfterSecondAdd := statePersister.PlayerPersister.All()
+			statesFromAllAfterSecondAdd, errorFromAllAfterSecondAdd :=
+				statePersister.PlayerPersister.All()
+			if errorFromAllAfterSecondAdd != nil {
+				unitTest.Fatalf(
+					"All() after second Add(%v, %v) produced an error %v",
+					firstPlayer,
+					colorsAvailableInTest[0],
+					errorFromAllAfterSecondAdd)
+			}
+
 			if len(statesFromAllAfterSecondAdd) != 2 {
 				unitTest.Fatalf(
 					"Adding second player after adding first player to a new persister resulted in states %v",
@@ -341,7 +368,15 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 					errorFromFirstDelete)
 			}
 
-			statesFromAllAfterFirstDelete := statePersister.PlayerPersister.All()
+			statesFromAllAfterFirstDelete, errorFromAllAfterFirstDelete :=
+				statePersister.PlayerPersister.All()
+			if errorFromAllAfterFirstDelete != nil {
+				unitTest.Fatalf(
+					"All() after first Delete(%+v) produced an error %v",
+					firstPlayer,
+					errorFromAllAfterFirstDelete)
+			}
+
 			if len(statesFromAllAfterFirstDelete) != 1 {
 				unitTest.Fatalf(
 					"Deleting the first player after adding two players to a new persister resulted in states %v",
@@ -372,7 +407,15 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 					errorFromSecondDelete)
 			}
 
-			statesFromAllAfterSecondDelete := statePersister.PlayerPersister.All()
+			statesFromAllAfterSecondDelete, errorFromAllAfterSecondDelete :=
+				statePersister.PlayerPersister.All()
+			if errorFromAllAfterSecondDelete != nil {
+				unitTest.Fatalf(
+					"All() after second Delete(%+v) produced an error %v",
+					secondPlayer,
+					errorFromAllAfterSecondDelete)
+			}
+
 			if len(statesFromAllAfterSecondDelete) != 0 {
 				unitTest.Fatalf(
 					"Deleting the second player after deleting first player after"+
@@ -602,7 +645,14 @@ func assertPlayerNamesAreCorrectAndGetIsConsistentWithAll(
 	playerPersister player.StatePersister) {
 	numberOfPlayerNames := len(playerNames)
 
-	statesFromAll := playerPersister.All()
+	statesFromAll, errorFromAll := playerPersister.All()
+	if errorFromAll != nil {
+		unitTest.Fatalf(
+			testIdentifier+
+				"/All() returned %+v and error %v",
+			statesFromAll,
+			errorFromAll)
+	}
 
 	if len(playerNames) != numberOfPlayerNames {
 		unitTest.Fatalf(

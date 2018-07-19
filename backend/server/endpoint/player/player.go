@@ -74,7 +74,11 @@ func (handler *Handler) HandlePost(
 // the list of player objects as its "Players" attribute. The order of the players
 // may not consistent with repeated calls as ForEndpoint does not guarantee it.
 func (handler *Handler) writeRegisteredPlayers() (interface{}, int) {
-	playerStates := handler.stateCollection.All()
+	playerStates, errorFromAll := handler.stateCollection.All()
+	if errorFromAll != nil {
+		return errorFromAll, http.StatusInternalServerError
+	}
+
 	playerList := make([]parsing.PlayerState, 0, len(playerStates))
 	for _, playerState := range playerStates {
 		playerName := playerState.Name()

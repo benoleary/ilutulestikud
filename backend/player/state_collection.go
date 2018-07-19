@@ -57,7 +57,7 @@ func NewCollection(
 }
 
 // All just wraps around the All function of the internal persistence store.
-func (stateCollection *StateCollection) All() []ReadonlyState {
+func (stateCollection *StateCollection) All() ([]ReadonlyState, error) {
 	return stateCollection.statePersister.All()
 }
 
@@ -86,7 +86,12 @@ func (stateCollection *StateCollection) Add(
 	}
 
 	if chatColor == "" {
-		playerCount := len(stateCollection.statePersister.All())
+		allPlayers, errorFromAll := stateCollection.statePersister.All()
+		if errorFromAll != nil {
+			return errorFromAll
+		}
+
+		playerCount := len(allPlayers)
 		colorIndex := playerCount % stateCollection.numberOfColors
 		chatColor = stateCollection.chatColorSlice[colorIndex]
 	} else if !stateCollection.chatColorMap[chatColor] {
@@ -121,13 +126,23 @@ func (stateCollection *StateCollection) Delete(playerName string) error {
 
 // Reset calls the Reset of the internal persistence store then adds the
 // initial players again.
-func (stateCollection *StateCollection) Reset() {
-	stateCollection.statePersister.Reset()
-	stateCollection.addInitialPlayers()
+func (stateCollection *StateCollection) Reset() error {
+	errorFromReset := stateCollection.statePersister.Reset()
+	if errorFromReset != nil {
+		return errorFromReset
+	}
+
+	return stateCollection.addInitialPlayers()
 }
 
-func (stateCollection *StateCollection) addInitialPlayers() {
+func (stateCollection *StateCollection) addInitialPlayers() error {
 	for _, initialPlayerName := range stateCollection.initialPlayerNames {
-		stateCollection.Add(initialPlayerName, "")
+		errorFromAdd := stateCollection.Add(initialPlayerName, "")
+
+		if errorFromAdd != nil {
+			return errorFromAdd
+		}
 	}
+
+	return nil
 }

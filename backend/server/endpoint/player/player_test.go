@@ -101,11 +101,11 @@ func (mockCollection *mockPlayerCollection) UpdateColor(
 }
 
 // All gets mocked.
-func (mockCollection *mockPlayerCollection) All() []player_state.ReadonlyState {
+func (mockCollection *mockPlayerCollection) All() ([]player_state.ReadonlyState, error) {
 	mockCollection.recordFunctionAndArgument(
 		"All",
 		nil)
-	return mockCollection.ReturnForAll
+	return mockCollection.ReturnForAll, nil
 }
 
 // Get gets mocked.
@@ -125,10 +125,11 @@ func (mockCollection *mockPlayerCollection) Delete(playerName string) error {
 }
 
 // Reset gets mocked.
-func (mockCollection *mockPlayerCollection) Reset() {
+func (mockCollection *mockPlayerCollection) Reset() error {
 	mockCollection.recordFunctionAndArgument(
 		"Reset",
 		nil)
+	return mockCollection.ErrorToReturn
 }
 
 // AvailableChatColors gets mocked.

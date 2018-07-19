@@ -12,7 +12,7 @@ type StateCollection interface {
 	// mandated, and may even change with repeated calls to the same unchanged collection
 	// (analogously to the entry set of a standard Golang map, for example), though of
 	// course an implementation may order the slice consistently.
-	All() []player.ReadonlyState
+	All() ([]player.ReadonlyState, error)
 
 	// Get should return a read-only state for the given player.
 	Get(playerName string) (player.ReadonlyState, error)
@@ -30,5 +30,5 @@ type StateCollection interface {
 	Delete(playerName string) error
 
 	// Reset should reset the players to the initial set.
-	Reset()
+	Reset() error
 }

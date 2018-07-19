@@ -20,19 +20,6 @@ func mapStringsToTrue(stringsToMap []string) map[string]bool {
 	return stringMap
 }
 
-type mockPlayerState struct {
-	mockName  string
-	mockColor string
-}
-
-func (mockState *mockPlayerState) Name() string {
-	return mockState.mockName
-}
-
-func (mockState *mockPlayerState) Color() string {
-	return mockState.mockColor
-}
-
 type mockPersister struct {
 	testReference           *testing.T
 	ReturnForAll            []player.ReadonlyState
@@ -44,7 +31,7 @@ type mockPersister struct {
 	TestErrorForUpdateColor error
 	TestErrorForReset       error
 	TestErrorForDelete      error
-	ArgumentsForAdd         []mockPlayerState
+	ArgumentsForAdd         []player.ReadAndWriteState
 }
 
 func NewMockPersister(testReference *testing.T, testError error) *mockPersister {
@@ -59,18 +46,18 @@ func NewMockPersister(testReference *testing.T, testError error) *mockPersister 
 		TestErrorForUpdateColor: testError,
 		TestErrorForReset:       testError,
 		TestErrorForDelete:      testError,
-		ArgumentsForAdd:         make([]mockPlayerState, 0),
+		ArgumentsForAdd:         make([]player.ReadAndWriteState, 0),
 	}
 }
 
-func (mockImplementation *mockPersister) All() []player.ReadonlyState {
+func (mockImplementation *mockPersister) All() ([]player.ReadonlyState, error) {
 	if mockImplementation.TestErrorForAll != nil {
 		mockImplementation.testReference.Errorf(
 			"All(): %v",
 			mockImplementation.TestErrorForAll)
 	}
 
-	return mockImplementation.ReturnForAll
+	return mockImplementation.ReturnForAll, mockImplementation.ReturnForNontestError
 }
 
 func (mockImplementation *mockPersister) Get(playerName string) (player.ReadonlyState, error) {
@@ -93,11 +80,14 @@ func (mockImplementation *mockPersister) Add(playerName string, chatColor string
 			mockImplementation.TestErrorForAdd)
 	}
 
+	argumentAsPlayer :=
+		player.ReadAndWriteState{
+			PlayerName: playerName,
+			ChatColor:  chatColor,
+		}
+
 	mockImplementation.ArgumentsForAdd =
-		append(mockImplementation.ArgumentsForAdd, mockPlayerState{
-			mockName:  playerName,
-			mockColor: chatColor,
-		})
+		append(mockImplementation.ArgumentsForAdd, argumentAsPlayer)
 
 	return mockImplementation.ReturnForNontestError
 }
@@ -125,12 +115,14 @@ func (mockImplementation *mockPersister) Delete(playerName string) error {
 	return mockImplementation.ReturnForNontestError
 }
 
-func (mockImplementation *mockPersister) Reset() {
+func (mockImplementation *mockPersister) Reset() error {
 	if mockImplementation.TestErrorForReset != nil {
 		mockImplementation.testReference.Errorf(
 			"Reset(): %v",
 			mockImplementation.TestErrorForReset)
 	}
+
+	return mockImplementation.ReturnForNontestError
 }
 
 func prepareCollection(
@@ -245,7 +237,7 @@ func TestFactoryFunctionAndResetBothAddCorrectly(unitTest *testing.T) {
 			// We clear the record of calls to the persister's function, and allow Reset()
 			// to be called, along with Add(...) and All(), so that the initial players
 			// can be restored in the persister.
-			mockImplementation.ArgumentsForAdd = make([]mockPlayerState, 0)
+			mockImplementation.ArgumentsForAdd = make([]player.ReadAndWriteState, 0)
 			mockImplementation.TestErrorForReset = nil
 			mockImplementation.TestErrorForAdd = nil
 			mockImplementation.TestErrorForAll = nil
@@ -278,17 +270,17 @@ func TestReturnFromAllIsCorrect(unitTest *testing.T) {
 		{
 			testName: "Three players",
 			expectedReturn: []player.ReadonlyState{
-				&mockPlayerState{
-					mockName:  "Mock Player One",
-					mockColor: colorsAvailableInTest[0],
+				&player.ReadAndWriteState{
+					PlayerName: "Mock Player One",
+					ChatColor:  colorsAvailableInTest[0],
 				},
-				&mockPlayerState{
-					mockName:  "Mock Player Two",
-					mockColor: colorsAvailableInTest[1],
+				&player.ReadAndWriteState{
+					PlayerName: "Mock Player Two",
+					ChatColor:  colorsAvailableInTest[1],
 				},
-				&mockPlayerState{
-					mockName:  "Mock Player Three",
-					mockColor: colorsAvailableInTest[0], // Same as Mock Player One
+				&player.ReadAndWriteState{
+					PlayerName: "Mock Player Three",
+					ChatColor:  colorsAvailableInTest[0], // Same as Mock Player One
 				},
 			},
 		},
@@ -310,7 +302,13 @@ func TestReturnFromAllIsCorrect(unitTest *testing.T) {
 					colorsAvailableInTest,
 					mockImplementation)
 
-			actualReturnFromAll := stateCollection.All()
+			actualReturnFromAll, errorFromAll := stateCollection.All()
+			if errorFromAll != nil {
+				unitTest.Fatalf(
+					"All() %+v produced error %v",
+					actualReturnFromAll,
+					errorFromAll)
+			}
 
 			if len(actualReturnFromAll) != expectedNumberOfPlayers {
 				unitTest.Fatalf(
@@ -351,9 +349,9 @@ func TestReturnFromGetIsCorrect(unitTest *testing.T) {
 		},
 		{
 			testName: "Valid player, nil error",
-			expectedReturn: &mockPlayerState{
-				mockName:  "Mock Player",
-				mockColor: colorsAvailableInTest[0],
+			expectedReturn: &player.ReadAndWriteState{
+				PlayerName: "Mock Player",
+				ChatColor:  colorsAvailableInTest[0],
 			},
 			expectedError: nil,
 		},
@@ -578,7 +576,7 @@ func TestAddPlayerWithNoColorGetsValidColor(unitTest *testing.T) {
 			mockImplementation.ArgumentsForAdd)
 	}
 
-	assignedColor := mockImplementation.ArgumentsForAdd[0].mockColor
+	assignedColor := mockImplementation.ArgumentsForAdd[0].ChatColor
 	if !validColors[assignedColor] {
 		unitTest.Fatalf(
 			"Assigned color %v is not in the valid color map %v",
@@ -713,7 +711,7 @@ func assertPersisterAddCalledCorrectly(
 	unitTest *testing.T,
 	initialPlayerNames []string,
 	validColors map[string]bool,
-	argumentsForPersisterAdd []mockPlayerState) {
+	argumentsForPersisterAdd []player.ReadAndWriteState) {
 	numberOfAddedPlayers := len(argumentsForPersisterAdd)
 
 	if numberOfAddedPlayers != len(initialPlayerNames) {
@@ -727,14 +725,14 @@ func assertPersisterAddCalledCorrectly(
 		numberOfAdds := 0
 
 		for _, argumentsFromSingleAdd := range argumentsForPersisterAdd {
-			if argumentsFromSingleAdd.mockName == initialPlayerName {
+			if argumentsFromSingleAdd.PlayerName == initialPlayerName {
 				numberOfAdds++
 
-				if !validColors[argumentsFromSingleAdd.mockColor] {
+				if !validColors[argumentsFromSingleAdd.ChatColor] {
 					unitTest.Errorf(
 						"Add(...) for player %v had invalid color %v (valid colors are %v)",
 						initialPlayerName,
-						argumentsFromSingleAdd.mockColor,
+						argumentsFromSingleAdd.ChatColor,
 						validColors)
 				}
 			}
@@ -787,7 +785,13 @@ func assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
 
 	numberOfPlayerNames := len(playerNames)
 
-	statesFromAll := playerCollection.All()
+	statesFromAll, errorFromAll := playerCollection.All()
+	if errorFromAll != nil {
+		unitTest.Fatalf(
+			"All() %+v produced error %v",
+			statesFromAll,
+			errorFromAll)
+	}
 
 	if len(playerNames) != numberOfPlayerNames {
 		unitTest.Fatalf(

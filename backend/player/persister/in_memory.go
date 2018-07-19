@@ -12,7 +12,7 @@ import (
 // mapped to by their names.
 type inMemoryPersister struct {
 	mutualExclusion sync.Mutex
-	playerStates    map[string]*inMemoryState
+	playerStates    map[string]*player.ReadAndWriteState
 }
 
 // NewInMemory creates a player state persister around a map of players
@@ -21,7 +21,7 @@ type inMemoryPersister struct {
 func NewInMemory() player.StatePersister {
 	return &inMemoryPersister{
 		mutualExclusion: sync.Mutex{},
-		playerStates:    make(map[string]*inMemoryState, 0),
+		playerStates:    make(map[string]*player.ReadAndWriteState, 0),
 	}
 }
 
@@ -40,9 +40,9 @@ func (playerPersister *inMemoryPersister) Add(
 	playerPersister.mutualExclusion.Lock()
 
 	playerPersister.playerStates[playerName] =
-		&inMemoryState{
-			name:  playerName,
-			color: chatColor,
+		&player.ReadAndWriteState{
+			PlayerName: playerName,
+			ChatColor:  chatColor,
 		}
 
 	playerPersister.mutualExclusion.Unlock()
@@ -65,7 +65,7 @@ func (playerPersister *inMemoryPersister) UpdateColor(
 	}
 
 	playerPersister.mutualExclusion.Lock()
-	playerToUpdate.color = chatColor
+	playerToUpdate.ChatColor = chatColor
 	playerPersister.mutualExclusion.Unlock()
 
 	return nil
@@ -79,9 +79,11 @@ func (playerPersister *inMemoryPersister) Get(
 	playerName string) (player.ReadonlyState, error) {
 	playerState, playerExists := playerPersister.playerStates[playerName]
 	if !playerExists {
-		return nil, fmt.Errorf(
-			"No player with name %v is registered",
-			playerName)
+		errorToReturn :=
+			fmt.Errorf(
+				"No player with name %v is registered",
+				playerName)
+		return nil, errorToReturn
 	}
 
 	return playerState, nil
@@ -90,13 +92,14 @@ func (playerPersister *inMemoryPersister) Get(
 // All returns a slice of all the players in the collection as ReadonlyState
 // instances, ordered in the random way the iteration over the entries of a
 // Golang map normally is.
-func (playerPersister *inMemoryPersister) All() []player.ReadonlyState {
-	playerList := make([]player.ReadonlyState, 0, len(playerPersister.playerStates))
+func (playerPersister *inMemoryPersister) All() ([]player.ReadonlyState, error) {
+	playerList :=
+		make([]player.ReadonlyState, 0, len(playerPersister.playerStates))
 	for _, playerState := range playerPersister.playerStates {
 		playerList = append(playerList, playerState)
 	}
 
-	return playerList
+	return playerList, nil
 }
 
 // Delete deletes the given player from the collection. It returns an error
@@ -114,25 +117,10 @@ func (playerPersister *inMemoryPersister) Delete(playerName string) error {
 }
 
 // Reset removes all players.
-func (playerPersister *inMemoryPersister) Reset() {
+func (playerPersister *inMemoryPersister) Reset() error {
 	for playerName := range playerPersister.playerStates {
 		delete(playerPersister.playerStates, playerName)
 	}
-}
 
-// inMemoryState encapsulates all the state that the backend needs to know
-// about a player.
-type inMemoryState struct {
-	name  string
-	color string
-}
-
-// Name returns the private name field.
-func (playerState *inMemoryState) Name() string {
-	return playerState.name
-}
-
-// Color returns the private color field.
-func (playerState *inMemoryState) Color() string {
-	return playerState.color
+	return nil
 }
