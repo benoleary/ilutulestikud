@@ -4,4 +4,18 @@ api_version: go1
 handlers:
 - url: /backend/.*
   script: _go_app
-  
+
+#[START env]
+env_variables:
+  # See https://godoc.org/github.com/lib/pq
+  POSTGRES_CONNECTION: "user=postgres password=pw dbname=db host=/cloudsql/ilutulestikud-191419:europe-west3:ilutulestikud-postgresql"
+  #
+  # If you're testing locally using the Cloud SQL proxy with TCP,
+  # instead set this environment variable:
+  # POSTGRES_CONNECTION="user=postgres password=pw dbname=db sslmode=disable"
+#[END env]
+
+#[START cloudsql_settings]
+beta_settings:
+  cloud_sql_instances: ilutulestikud-191419:europe-west3:ilutulestikud-postgresql
+#[END cloudsql_settings]
