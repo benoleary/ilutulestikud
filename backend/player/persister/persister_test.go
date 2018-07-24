@@ -1,6 +1,8 @@
 package persister_test
 
 import (
+	"fmt"
+	"os"
 	"testing"
 
 	"github.com/benoleary/ilutulestikud/backend/defaults"
@@ -32,17 +34,38 @@ type persisterAndDescription struct {
 	PersisterDescription string
 }
 
-func preparePersisters() []persisterAndDescription {
+func preparePersisters(unitTest *testing.T) []persisterAndDescription {
+	postgresqlUsername := os.Getenv("POSTGRESQL_USERNAME")
+	postgresqlPassword := os.Getenv("POSTGRESQL_PASSWORD")
+	postgresqlDatabase := os.Getenv("POSTGRESQL_DATABASE")
+	connectionString :=
+		fmt.Sprintf(
+			"user=%v password=%v dbname=%v port=5233 sslmode=disable",
+			postgresqlUsername,
+			postgresqlPassword,
+			postgresqlDatabase)
+	postgresqlPersister, errorFromPostgresql := persister.NewInPostgresql(connectionString)
+
+	if errorFromPostgresql != nil {
+		unitTest.Fatalf(
+			"error when creating PostgreSQL persister: %v",
+			errorFromPostgresql)
+	}
+
 	return []persisterAndDescription{
 		persisterAndDescription{
 			PlayerPersister:      persister.NewInMemory(),
 			PersisterDescription: "in-memory persister",
 		},
+		persisterAndDescription{
+			PlayerPersister:      postgresqlPersister,
+			PersisterDescription: "in-PostgreSQL persister",
+		},
 	}
 }
 
 func TestReturnErrorWhenPlayerNotFoundWithGet(unitTest *testing.T) {
-	statePersisters := preparePersisters()
+	statePersisters := preparePersisters(unitTest)
 
 	for _, statePersister := range statePersisters {
 		testIdentifier := "Get(unknown player)/" + statePersister.PersisterDescription
@@ -61,7 +84,7 @@ func TestReturnErrorWhenPlayerNotFoundWithGet(unitTest *testing.T) {
 }
 
 func TestReturnErrorWhenPlayerNotFoundForDelete(unitTest *testing.T) {
-	statePersisters := preparePersisters()
+	statePersisters := preparePersisters(unitTest)
 
 	for _, statePersister := range statePersisters {
 		testIdentifier := "Delete(unknown player)/" + statePersister.PersisterDescription
@@ -79,7 +102,7 @@ func TestReturnErrorWhenPlayerNotFoundForDelete(unitTest *testing.T) {
 }
 
 func TestRejectAddPlayerWithExistingName(unitTest *testing.T) {
-	statePersisters := preparePersisters()
+	statePersisters := preparePersisters(unitTest)
 
 	for _, statePersister := range statePersisters {
 		for _, playerName := range defaultTestPlayerNames {
@@ -153,7 +176,7 @@ func TestRejectAddPlayerWithExistingName(unitTest *testing.T) {
 }
 
 func TestAddPlayerWithValidColorAndTestGet(unitTest *testing.T) {
-	statePersisters := preparePersisters()
+	statePersisters := preparePersisters(unitTest)
 
 	chatColor := colorsAvailableInTest[1]
 
@@ -230,7 +253,7 @@ func TestAddPlayerWithValidColorAndTestGet(unitTest *testing.T) {
 }
 
 func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
-	statePersisters := preparePersisters()
+	statePersisters := preparePersisters(unitTest)
 	firstPlayer := "First Player"
 	firstColor := colorsAvailableInTest[0]
 	secondPlayer := "Second Player"
@@ -427,7 +450,7 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 }
 
 func TestRejectUpdateInvalidPlayer(unitTest *testing.T) {
-	statePersisters := preparePersisters()
+	statePersisters := preparePersisters(unitTest)
 
 	playerName := "Not A. Participant"
 	chatColor := colorsAvailableInTest[0]
@@ -469,7 +492,7 @@ func TestRejectUpdateInvalidPlayer(unitTest *testing.T) {
 }
 
 func TestUpdateAllPlayersToNewColor(unitTest *testing.T) {
-	statePersisters := preparePersisters()
+	statePersisters := preparePersisters(unitTest)
 
 	initialColor := colorsAvailableInTest[0]
 	newColor := colorsAvailableInTest[1]
@@ -567,7 +590,7 @@ func TestReset(unitTest *testing.T) {
 	}
 
 	for _, testCase := range testCases {
-		statePersisters := preparePersisters()
+		statePersisters := preparePersisters(unitTest)
 
 		for _, statePersister := range statePersisters {
 			testIdentifier :=
