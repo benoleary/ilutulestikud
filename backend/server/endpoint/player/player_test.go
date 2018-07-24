@@ -125,14 +125,6 @@ func (mockCollection *mockPlayerCollection) Delete(playerName string) error {
 	return mockCollection.ErrorToReturn
 }
 
-// Reset gets mocked.
-func (mockCollection *mockPlayerCollection) Reset() error {
-	mockCollection.recordFunctionAndArgument(
-		"Reset",
-		nil)
-	return mockCollection.ErrorToReturn
-}
-
 // AvailableChatColors gets mocked.
 func (mockCollection *mockPlayerCollection) AvailableChatColors() []string {
 	mockCollection.recordFunctionAndArgument(
@@ -842,38 +834,6 @@ func TestAcceptValidDeletePlayer(unitTest *testing.T) {
 		functionNameAndArgument{
 			FunctionName:     "Delete",
 			FunctionArgument: bodyObject.Name,
-		},
-		functionNameAndArgument{
-			FunctionName:     "All",
-			FunctionArgument: nil,
-		},
-	}
-
-	assertFunctionRecordsAreCorrect(
-		unitTest,
-		mockCollection.FunctionsAndArgumentsReceived,
-		expectedRecords,
-		testIdentifier)
-}
-
-func TestResetPlayers(unitTest *testing.T) {
-	testIdentifier := "POST reset-players"
-	mockCollection, testHandler := newPlayerCollectionAndHandler()
-
-	_, responseCode :=
-		testHandler.HandlePost(nil, []string{"reset-players"})
-
-	if responseCode != http.StatusOK {
-		unitTest.Fatalf(
-			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
-			http.StatusOK,
-			responseCode)
-	}
-
-	expectedRecords := []functionNameAndArgument{
-		functionNameAndArgument{
-			FunctionName:     "Reset",
-			FunctionArgument: nil,
 		},
 		functionNameAndArgument{
 			FunctionName:     "All",

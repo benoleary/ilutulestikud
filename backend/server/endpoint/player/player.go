@@ -63,8 +63,6 @@ func (handler *Handler) HandlePost(
 		return handler.handleUpdatePlayer(httpBodyDecoder)
 	case "delete-player":
 		return handler.handleDeletePlayer(httpBodyDecoder)
-	case "reset-players":
-		return handler.handleResetPlayers()
 	default:
 		return "URI segment " + relevantSegments[0] + " not valid", http.StatusNotFound
 	}
@@ -171,14 +169,6 @@ func (handler *Handler) handleDeletePlayer(
 	if deleteError != nil {
 		return deleteError, http.StatusInternalServerError
 	}
-
-	return handler.writeRegisteredPlayers()
-}
-
-// handleResetPlayers resets the player list to the initial list, and returns the updated list
-// as writeRegisteredPlayers would.
-func (handler *Handler) handleResetPlayers() (interface{}, int) {
-	handler.stateCollection.Reset()
 
 	return handler.writeRegisteredPlayers()
 }

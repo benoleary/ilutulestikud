@@ -25,13 +25,11 @@ type mockPersister struct {
 	ReturnForAll            []player.ReadonlyState
 	ReturnForGet            player.ReadonlyState
 	ReturnForAdd            error
-	ReturnForReset          error
 	ReturnForNontestError   error
 	TestErrorForAll         error
 	TestErrorForGet         error
 	TestErrorForAdd         error
 	TestErrorForUpdateColor error
-	TestErrorForReset       error
 	TestErrorForDelete      error
 	ArgumentsForAdd         []player.ReadAndWriteState
 }
@@ -42,13 +40,11 @@ func NewMockPersister(testReference *testing.T, testError error) *mockPersister 
 		ReturnForAll:            nil,
 		ReturnForGet:            nil,
 		ReturnForAdd:            nil,
-		ReturnForReset:          nil,
 		ReturnForNontestError:   nil,
 		TestErrorForAll:         testError,
 		TestErrorForGet:         testError,
 		TestErrorForAdd:         testError,
 		TestErrorForUpdateColor: testError,
-		TestErrorForReset:       testError,
 		TestErrorForDelete:      testError,
 		ArgumentsForAdd:         make([]player.ReadAndWriteState, 0),
 	}
@@ -117,16 +113,6 @@ func (mockImplementation *mockPersister) Delete(playerName string) error {
 	}
 
 	return mockImplementation.ReturnForNontestError
-}
-
-func (mockImplementation *mockPersister) Reset() error {
-	if mockImplementation.TestErrorForReset != nil {
-		mockImplementation.testReference.Errorf(
-			"Reset(): %v",
-			mockImplementation.TestErrorForReset)
-	}
-
-	return mockImplementation.ReturnForReset
 }
 
 func prepareCollection(
@@ -200,7 +186,29 @@ func TestFactoryMethodRejectsInvalidColorLists(unitTest *testing.T) {
 	}
 }
 
-func TestFactoryFunctionAndResetBothAddCorrectly(unitTest *testing.T) {
+func TestFactoryMethodPropagatesErrorFromPersisterAdd(unitTest *testing.T) {
+	mockImplementation :=
+		NewMockPersister(unitTest, fmt.Errorf("Only Add(...) and All() should be called"))
+	mockImplementation.TestErrorForAdd = nil
+	mockImplementation.TestErrorForAll = nil
+	mockImplementation.ReturnForAdd = fmt.Errorf("expected error")
+	stateCollection, errorFromCreation :=
+		player.NewCollection(
+			mockImplementation,
+			defaultTestPlayerNames,
+			colorsAvailableInTest)
+
+	if errorFromCreation == nil {
+		unitTest.Fatalf(
+			"player.NewCollection(%v, %v, %v) produced nil error, instead produced %v",
+			mockImplementation,
+			defaultTestPlayerNames,
+			colorsAvailableInTest,
+			stateCollection)
+	}
+}
+
+func TestFactoryFunctionAddsCorrectly(unitTest *testing.T) {
 	testCases := []struct {
 		testName           string
 		initialPlayerNames []string
@@ -224,7 +232,7 @@ func TestFactoryFunctionAndResetBothAddCorrectly(unitTest *testing.T) {
 			// Allowing Add(...) and All() is taken care of in prepareCollection(...).
 			mockImplementation :=
 				NewMockPersister(unitTest, fmt.Errorf("Only Add(...) and All() should be called"))
-			stateCollection, validColors :=
+			_, validColors :=
 				prepareCollection(
 					unitTest,
 					testCase.initialPlayerNames,
@@ -237,76 +245,7 @@ func TestFactoryFunctionAndResetBothAddCorrectly(unitTest *testing.T) {
 				testCase.initialPlayerNames,
 				validColors,
 				mockImplementation.ArgumentsForAdd)
-
-			// We clear the record of calls to the persister's function, and allow Reset()
-			// to be called, along with Add(...) and All(), so that the initial players
-			// can be restored in the persister.
-			mockImplementation.ArgumentsForAdd = make([]player.ReadAndWriteState, 0)
-			mockImplementation.TestErrorForReset = nil
-			mockImplementation.TestErrorForAdd = nil
-			mockImplementation.TestErrorForAll = nil
-
-			stateCollection.Reset()
-
-			assertPersisterAddCalledCorrectly(
-				testCase.testName,
-				unitTest,
-				testCase.initialPlayerNames,
-				validColors,
-				mockImplementation.ArgumentsForAdd)
 		})
-	}
-}
-
-func TestReturnErrorFromPersisterAllDuringReset(unitTest *testing.T) {
-	expectedError := fmt.Errorf("expected error (Reset())")
-	mockImplementation :=
-		NewMockPersister(unitTest, fmt.Errorf("Only Reset() should be called"))
-	mockImplementation.TestErrorForReset = nil
-	mockImplementation.ReturnForReset = expectedError
-
-	stateCollection, _ :=
-		prepareCollection(
-			unitTest,
-			nil,
-			colorsAvailableInTest,
-			mockImplementation)
-
-	actualError := stateCollection.Reset()
-
-	if actualError != expectedError {
-		unitTest.Errorf(
-			"Reset() returned error %v - expected %v",
-			actualError,
-			expectedError)
-	}
-}
-
-func TestReturnErrorFromPersisterAddDuringReset(unitTest *testing.T) {
-	expectedError := fmt.Errorf("expected error (Add(...))")
-	mockImplementation :=
-		NewMockPersister(unitTest, fmt.Errorf("Only Reset(), All() and Add(...) should be called"))
-	mockImplementation.TestErrorForReset = nil
-	mockImplementation.TestErrorForAll = nil
-	mockImplementation.TestErrorForAdd = nil
-	mockImplementation.ReturnForAdd = expectedError
-
-	// We need to prepare the collection with some default player names, or else
-	// the reset will not call the mock Add(...) and there will be no error.
-	stateCollection, _ :=
-		prepareCollection(
-			unitTest,
-			defaultTestPlayerNames,
-			colorsAvailableInTest,
-			mockImplementation)
-
-	actualError := stateCollection.Reset()
-
-	if actualError != expectedError {
-		unitTest.Errorf(
-			"Reset() returned error %v - expected %v",
-			actualError,
-			expectedError)
 	}
 }
 

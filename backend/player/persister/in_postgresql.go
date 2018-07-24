@@ -24,9 +24,14 @@ func NewInPostgresql(connectionArguments string) (player.StatePersister, error) 
 		return nil, errorFromConnection
 	}
 
-	// This is PostgreSQL-specific, and would not work for another dialect of SQL.
+	// This is PostgreSQL-specific (IF NOT EXISTS), and would not work for another
+	// dialect of SQL.
 	tableCreationStatement :=
-		"CREATE TABLE IF NOT EXISTS player (name VARCHAR(255), color VARCHAR(255))"
+		`CREATE TABLE IF NOT EXISTS player (
+			name VARCHAR(255) PRIMARY KEY NOT NULL UNIQUE,
+			color VARCHAR(255)
+		)`
+
 	_, errorFromTableCreation := postgresqlDatabase.Exec(tableCreationStatement)
 	if errorFromTableCreation != nil {
 		return nil, errorFromTableCreation
@@ -50,6 +55,7 @@ func (playerPersister *inPostgresqlPersister) Add(
 			playerCreationStatement,
 			playerName,
 			chatColor)
+
 	return errorFromExecution
 }
 
@@ -62,25 +68,13 @@ func (playerPersister *inPostgresqlPersister) UpdateColor(
 	resultFromExecution, errorFromExecution :=
 		playerPersister.connectionToDatabase.Exec(
 			playerUpdateStatement,
-			playerName,
-			chatColor)
-	if errorFromExecution != nil {
-		return errorFromExecution
-	}
+			chatColor,
+			playerName)
 
-	numberOfRowsUpdated, errorFromParsing := resultFromExecution.RowsAffected()
-	if errorFromParsing != nil {
-		return errorFromParsing
-	}
-
-	if numberOfRowsUpdated != 1 {
-		return fmt.Errorf(
-			"Expected to update 1 row (for player %v), instead updated %v rows",
-			playerName,
-			numberOfRowsUpdated)
-	}
-
-	return nil
+	return errorUnlessExactlyOneRowAffected(
+		playerName,
+		resultFromExecution,
+		errorFromExecution)
 }
 
 // Get returns the ReadOnly corresponding to the given player name if it exists.
@@ -130,7 +124,7 @@ func (playerPersister *inPostgresqlPersister) Get(
 // All returns a slice of all the players in the collection as ReadonlyState
 // instances, ordered as given by the database.
 func (playerPersister *inPostgresqlPersister) All() ([]player.ReadonlyState, error) {
-	playerSelectStatement := "SELECT name FROM player"
+	playerSelectStatement := "SELECT name, color FROM player"
 	playerRows, errorFromExecution :=
 		playerPersister.connectionToDatabase.Query(playerSelectStatement)
 	if errorFromExecution != nil {
@@ -158,20 +152,36 @@ func (playerPersister *inPostgresqlPersister) All() ([]player.ReadonlyState, err
 // if the player does not exist before the deletion attempt.
 func (playerPersister *inPostgresqlPersister) Delete(playerName string) error {
 	playerDeletionStatement := "DELETE FROM player WHERE name = $1"
-	_, errorFromExecution :=
+	resultFromExecution, errorFromExecution :=
 		playerPersister.connectionToDatabase.Exec(
 			playerDeletionStatement,
 			playerName)
 
-	return errorFromExecution
+	return errorUnlessExactlyOneRowAffected(
+		playerName,
+		resultFromExecution,
+		errorFromExecution)
 }
 
-// Reset removes all players.
-func (playerPersister *inPostgresqlPersister) Reset() error {
-	playerDeletionStatement := "DELETE FROM player"
-	_, errorFromExecution :=
-		playerPersister.connectionToDatabase.Exec(
-			playerDeletionStatement)
+func errorUnlessExactlyOneRowAffected(
+	playerName string,
+	resultFromExecution sql.Result,
+	errorFromExecution error) error {
+	if errorFromExecution != nil {
+		return errorFromExecution
+	}
 
-	return errorFromExecution
+	numberOfRowsAffected, errorFromParsing := resultFromExecution.RowsAffected()
+	if errorFromParsing != nil {
+		return errorFromParsing
+	}
+
+	if numberOfRowsAffected != 1 {
+		return fmt.Errorf(
+			"Expected to affect 1 row (for player %v), instead affected %v rows",
+			playerName,
+			numberOfRowsAffected)
+	}
+
+	return nil
 }

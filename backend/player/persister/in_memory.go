@@ -115,12 +115,3 @@ func (playerPersister *inMemoryPersister) Delete(playerName string) error {
 
 	return nil
 }
-
-// Reset removes all players.
-func (playerPersister *inMemoryPersister) Reset() error {
-	for playerName := range playerPersister.playerStates {
-		delete(playerPersister.playerStates, playerName)
-	}
-
-	return nil
-}

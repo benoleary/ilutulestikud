@@ -57,7 +57,4 @@ type StatePersister interface {
 
 	// Delete should delete the given player from the persistence store.
 	Delete(playerName string) error
-
-	// Reset should remove all players.
-	Reset() error
 }

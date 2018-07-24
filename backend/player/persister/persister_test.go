@@ -10,7 +10,7 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/player/persister"
 )
 
-const testPrefix = "Tough_no_player_name_can_start_like_this:"
+const testPrefix = "Tough_no_player_name_can_start_like_this_"
 const invalidName = testPrefix + "Not A. Participant"
 
 var colorsAvailableInTest []string = defaults.AvailableColors()
@@ -37,13 +37,16 @@ type persisterAndDescription struct {
 func preparePersisters(unitTest *testing.T) []persisterAndDescription {
 	postgresqlUsername := os.Getenv("POSTGRESQL_USERNAME")
 	postgresqlPassword := os.Getenv("POSTGRESQL_PASSWORD")
-	postgresqlDatabase := os.Getenv("POSTGRESQL_DATABASE")
+	postgresqlPlayerdb := os.Getenv("POSTGRESQL_PLAYERDB")
+	postgresqlExtra := os.Getenv("POSTGRESQL_EXTRA")
 	connectionString :=
 		fmt.Sprintf(
-			"user=%v password=%v dbname=%v port=5233 sslmode=disable",
+			"user=%v password=%v dbname=%v %v",
 			postgresqlUsername,
 			postgresqlPassword,
-			postgresqlDatabase)
+			postgresqlPlayerdb,
+			postgresqlExtra)
+
 	postgresqlPersister, errorFromPostgresql := persister.NewInPostgresql(connectionString)
 
 	if errorFromPostgresql != nil {
@@ -170,6 +173,15 @@ func TestRejectAddPlayerWithExistingName(unitTest *testing.T) {
 						initialState,
 						existingStateAfterAddWithNewColor)
 				}
+
+				// We also clean up afterwards, but report any error as a test failure.
+				errorFromDelete := statePersister.PlayerPersister.Delete(playerName)
+				if errorFromDelete != nil {
+					unitTest.Fatalf(
+						"Delete(%v) produced error %v",
+						playerName,
+						errorFromDelete)
+				}
 			})
 		}
 	}
@@ -186,15 +198,15 @@ func TestAddPlayerWithValidColorAndTestGet(unitTest *testing.T) {
 	}{
 		{
 			testName:   "Simple ASCII",
-			playerName: "New Player",
+			playerName: testPrefix + "New Player",
 		},
 		{
 			testName:   "Non-ASCII and punctuation",
-			playerName: "?ß@äô#\"'\"\\\\\\",
+			playerName: testPrefix + "?ß@äô#\"'\"\\\\\\",
 		},
 		{
 			testName:   "Slashes",
-			playerName: "/Slashes/are/reserved/for/parsing/URI/segments/",
+			playerName: testPrefix + "/Slashes/are/reserved/for/parsing/URI/segments/",
 		},
 	}
 
@@ -254,9 +266,9 @@ func TestAddPlayerWithValidColorAndTestGet(unitTest *testing.T) {
 
 func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 	statePersisters := preparePersisters(unitTest)
-	firstPlayer := "First Player"
+	firstPlayer := testPrefix + "First Player"
 	firstColor := colorsAvailableInTest[0]
-	secondPlayer := "Second Player"
+	secondPlayer := testPrefix + "Second Player"
 	secondColor := colorsAvailableInTest[1]
 
 	for _, statePersister := range statePersisters {
@@ -452,7 +464,6 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 func TestRejectUpdateInvalidPlayer(unitTest *testing.T) {
 	statePersisters := preparePersisters(unitTest)
 
-	playerName := "Not A. Participant"
 	chatColor := colorsAvailableInTest[0]
 
 	for _, statePersister := range statePersisters {
@@ -461,12 +472,12 @@ func TestRejectUpdateInvalidPlayer(unitTest *testing.T) {
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
 			errorFromUpdate :=
-				statePersister.PlayerPersister.UpdateColor(playerName, chatColor)
+				statePersister.PlayerPersister.UpdateColor(invalidName, chatColor)
 
 			if errorFromUpdate == nil {
 				unitTest.Fatalf(
 					"UpdateColor(%v, %v) did not produce an error",
-					playerName,
+					invalidName,
 					chatColor)
 			}
 
@@ -478,13 +489,13 @@ func TestRejectUpdateInvalidPlayer(unitTest *testing.T) {
 				statePersister.PlayerPersister)
 
 			// We check that the player was not added.
-			playerState, errorFromGet := statePersister.PlayerPersister.Get(playerName)
+			playerState, errorFromGet := statePersister.PlayerPersister.Get(invalidName)
 
 			// If there was no error, then something went wrong.
 			if errorFromGet == nil {
 				unitTest.Fatalf(
 					"Get(%v) did not produce an error, instead retrieved %v",
-					playerName,
+					invalidName,
 					playerState)
 			}
 		})
@@ -502,7 +513,7 @@ func TestUpdateAllPlayersToNewColor(unitTest *testing.T) {
 			"Update player to new color/" + statePersister.PersisterDescription
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			// First we have to add all the required players
+			// First we have to add all the required players.
 			for _, playerName := range defaultTestPlayerNames {
 				errorFromAdd := statePersister.PlayerPersister.Add(playerName, initialColor)
 
@@ -552,112 +563,19 @@ func TestUpdateAllPlayersToNewColor(unitTest *testing.T) {
 						updatedState)
 				}
 			}
-		})
-	}
-}
 
-func TestReset(unitTest *testing.T) {
-	playerNameToAdd := "Added player"
-	chatColorForAdd := colorsAvailableInTest[0]
-	playerNameToUpdate := defaultTestPlayerNames[0]
-	chatColorForUpdate := colorsAvailableInTest[1]
+			// Finally, we have to clean up the added test players.
+			for _, playerName := range defaultTestPlayerNames {
+				errorFromDelete := statePersister.PlayerPersister.Delete(playerName)
 
-	testCases := []struct {
-		testName                string
-		shouldAddBeforeReset    bool
-		shouldUpdateBeforeReset bool
-	}{
-		{
-			testName:                "No add, no update",
-			shouldAddBeforeReset:    false,
-			shouldUpdateBeforeReset: false,
-		},
-		{
-			testName:                "Just add, no update",
-			shouldAddBeforeReset:    true,
-			shouldUpdateBeforeReset: false,
-		},
-		{
-			testName:                "No add, just update",
-			shouldAddBeforeReset:    false,
-			shouldUpdateBeforeReset: true,
-		},
-		{
-			testName:                "Both add and update",
-			shouldAddBeforeReset:    true,
-			shouldUpdateBeforeReset: true,
-		},
-	}
-
-	for _, testCase := range testCases {
-		statePersisters := preparePersisters(unitTest)
-
-		for _, statePersister := range statePersisters {
-			testIdentifier :=
-				testCase.testName + "/" + statePersister.PersisterDescription
-
-			unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-				// First we have to add all the required players
-				for _, playerName := range defaultTestPlayerNames {
-					errorFromAdd := statePersister.PlayerPersister.Add(playerName, chatColorForAdd)
-
-					if errorFromAdd != nil {
-						unitTest.Fatalf(
-							"Add(%v, %v) produced an error %v",
-							playerName,
-							chatColorForAdd,
-							errorFromAdd)
-					}
-				}
-
-				if testCase.shouldAddBeforeReset {
-					errorFromAdd :=
-						statePersister.PlayerPersister.Add(playerNameToAdd, chatColorForAdd)
-
-					if errorFromAdd != nil {
-						unitTest.Fatalf(
-							"Add(%v, %v) produced an error: %v",
-							playerNameToAdd,
-							chatColorForAdd,
-							errorFromAdd)
-					}
-				}
-
-				if testCase.shouldUpdateBeforeReset {
-					errorFromUpdate :=
-						statePersister.PlayerPersister.UpdateColor(playerNameToUpdate, chatColorForUpdate)
-					if errorFromUpdate != nil {
-						unitTest.Fatalf(
-							"UpdateColor(%v, %v) produced an error: %v",
-							playerNameToUpdate,
-							chatColorForUpdate,
-							errorFromUpdate)
-					}
-				}
-
-				// Now we can reset.
-				statePersister.PlayerPersister.Reset()
-
-				// We check that the persister still produces valid states.
-				assertPlayerNamesAreCorrectAndGetIsConsistentWithAll(
-					testIdentifier,
-					unitTest,
-					defaultTestPlayerNames,
-					statePersister.PlayerPersister)
-
-				// We check that if a player had been added, it is no longer retrievable.
-				addedState, errorFromGet :=
-					statePersister.PlayerPersister.Get(playerNameToAdd)
-
-				// If there was no error, then something went wrong.
-				if errorFromGet == nil {
+				if errorFromDelete != nil {
 					unitTest.Fatalf(
-						"Get(%v) did not produce an error, instead retrieved %v",
-						playerNameToAdd,
-						addedState)
+						"Delete(%v) produced error %v",
+						playerName,
+						errorFromDelete)
 				}
-			})
-		}
+			}
+		})
 	}
 }
 

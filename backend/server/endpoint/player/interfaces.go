@@ -28,7 +28,4 @@ type StateCollection interface {
 
 	// Delete should delete the given player from the collection.
 	Delete(playerName string) error
-
-	// Reset should reset the players to the initial set.
-	Reset() error
 }

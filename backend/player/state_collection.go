@@ -51,7 +51,11 @@ func NewCollection(
 			numberOfColors:     len(uniqueColors),
 		}
 
-	newCollection.addInitialPlayers()
+	errorFromInitialPlayers := newCollection.addInitialPlayers()
+
+	if errorFromInitialPlayers != nil {
+		return nil, errorFromInitialPlayers
+	}
 
 	return newCollection, nil
 }
@@ -122,17 +126,6 @@ func (stateCollection *StateCollection) UpdateColor(
 // Delete calls the Delete of the internal persistence store.
 func (stateCollection *StateCollection) Delete(playerName string) error {
 	return stateCollection.statePersister.Delete(playerName)
-}
-
-// Reset calls the Reset of the internal persistence store then adds the
-// initial players again.
-func (stateCollection *StateCollection) Reset() error {
-	errorFromReset := stateCollection.statePersister.Reset()
-	if errorFromReset != nil {
-		return errorFromReset
-	}
-
-	return stateCollection.addInitialPlayers()
 }
 
 func (stateCollection *StateCollection) addInitialPlayers() error {

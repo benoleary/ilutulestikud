@@ -8,11 +8,13 @@ handlers:
 #[START env]
 env_variables:
   # See https://godoc.org/github.com/lib/pq
-  POSTGRES_CONNECTION: "user=postgres password=pw dbname=db host=/cloudsql/ilutulestikud-191419:europe-west3:ilutulestikud-postgresql"
-  #
-  # If you're testing locally using the Cloud SQL proxy with TCP,
-  # instead set this environment variable:
-  # POSTGRES_CONNECTION="user=postgres password=pw dbname=db sslmode=disable"
+  POSTGRESQL_CONNECTION: "user=USERNAME password=PASSWORD dbname=DATABASE host=/cloudsql/ilutulestikud-191419:europe-west3:ilutulestikud-postgresql"
+  # Having lots of problems with above, might try keeping each thing separate:
+  POSTGRESQL_USERNAME: "USERNAME"
+  POSTGRESQL_PASSWORD: "PASSWORD"
+  POSTGRESQL_PLAYERDATABASE: "DATABASE"
+  POSTGRESQL_EXTRA: "host=/cloudsql/ilutulestikud-191419:europe-west3:ilutulestikud-postgresql"
+  # POSTGRESQL_EXTRA: "port=5233 sslmode=disable"
 #[END env]
 
 #[START cloudsql_settings]
