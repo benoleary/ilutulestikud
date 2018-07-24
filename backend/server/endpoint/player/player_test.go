@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -105,7 +106,7 @@ func (mockCollection *mockPlayerCollection) All() ([]player_state.ReadonlyState,
 	mockCollection.recordFunctionAndArgument(
 		"All",
 		nil)
-	return mockCollection.ReturnForAll, nil
+	return mockCollection.ReturnForAll, mockCollection.ErrorToReturn
 }
 
 // Get gets mocked.
@@ -279,6 +280,36 @@ func TestPostPlayerInvalidSegmentNotFound(unitTest *testing.T) {
 	assertNoFunctionWasCalled(
 		unitTest,
 		mockCollection.FunctionsAndArgumentsReceived,
+		testIdentifier)
+}
+
+func TestErrorFromPlayerListDelivered(unitTest *testing.T) {
+	testIdentifier := "error during GET registered-players"
+	mockCollection, testHandler := newPlayerCollectionAndHandler()
+	mockCollection.ErrorToReturn = fmt.Errorf("expected error")
+
+	_, responseCode :=
+		testHandler.HandleGet([]string{"registered-players"})
+
+	if responseCode != http.StatusInternalServerError {
+		unitTest.Fatalf(
+			testIdentifier+"/did not return expected HTTP code %v, instead was %v.",
+			http.StatusInternalServerError,
+			responseCode)
+	}
+
+	functionRecord :=
+		mockCollection.getFirstAndEnsureOnly(
+			unitTest,
+			testIdentifier)
+
+	assertFunctionRecordIsCorrect(
+		unitTest,
+		functionRecord,
+		functionNameAndArgument{
+			FunctionName:     "All",
+			FunctionArgument: nil,
+		},
 		testIdentifier)
 }
 

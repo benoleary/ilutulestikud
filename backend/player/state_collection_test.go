@@ -24,6 +24,8 @@ type mockPersister struct {
 	testReference           *testing.T
 	ReturnForAll            []player.ReadonlyState
 	ReturnForGet            player.ReadonlyState
+	ReturnForAdd            error
+	ReturnForReset          error
 	ReturnForNontestError   error
 	TestErrorForAll         error
 	TestErrorForGet         error
@@ -39,6 +41,8 @@ func NewMockPersister(testReference *testing.T, testError error) *mockPersister 
 		testReference:           testReference,
 		ReturnForAll:            nil,
 		ReturnForGet:            nil,
+		ReturnForAdd:            nil,
+		ReturnForReset:          nil,
 		ReturnForNontestError:   nil,
 		TestErrorForAll:         testError,
 		TestErrorForGet:         testError,
@@ -89,7 +93,7 @@ func (mockImplementation *mockPersister) Add(playerName string, chatColor string
 	mockImplementation.ArgumentsForAdd =
 		append(mockImplementation.ArgumentsForAdd, argumentAsPlayer)
 
-	return mockImplementation.ReturnForNontestError
+	return mockImplementation.ReturnForAdd
 }
 
 func (mockImplementation *mockPersister) UpdateColor(playerName string, chatColor string) error {
@@ -122,7 +126,7 @@ func (mockImplementation *mockPersister) Reset() error {
 			mockImplementation.TestErrorForReset)
 	}
 
-	return mockImplementation.ReturnForNontestError
+	return mockImplementation.ReturnForReset
 }
 
 func prepareCollection(
@@ -251,6 +255,58 @@ func TestFactoryFunctionAndResetBothAddCorrectly(unitTest *testing.T) {
 				validColors,
 				mockImplementation.ArgumentsForAdd)
 		})
+	}
+}
+
+func TestReturnErrorFromPersisterAllDuringReset(unitTest *testing.T) {
+	expectedError := fmt.Errorf("expected error (Reset())")
+	mockImplementation :=
+		NewMockPersister(unitTest, fmt.Errorf("Only Reset() should be called"))
+	mockImplementation.TestErrorForReset = nil
+	mockImplementation.ReturnForReset = expectedError
+
+	stateCollection, _ :=
+		prepareCollection(
+			unitTest,
+			nil,
+			colorsAvailableInTest,
+			mockImplementation)
+
+	actualError := stateCollection.Reset()
+
+	if actualError != expectedError {
+		unitTest.Errorf(
+			"Reset() returned error %v - expected %v",
+			actualError,
+			expectedError)
+	}
+}
+
+func TestReturnErrorFromPersisterAddDuringReset(unitTest *testing.T) {
+	expectedError := fmt.Errorf("expected error (Add(...))")
+	mockImplementation :=
+		NewMockPersister(unitTest, fmt.Errorf("Only Reset(), All() and Add(...) should be called"))
+	mockImplementation.TestErrorForReset = nil
+	mockImplementation.TestErrorForAll = nil
+	mockImplementation.TestErrorForAdd = nil
+	mockImplementation.ReturnForAdd = expectedError
+
+	// We need to prepare the collection with some default player names, or else
+	// the reset will not call the mock Add(...) and there will be no error.
+	stateCollection, _ :=
+		prepareCollection(
+			unitTest,
+			defaultTestPlayerNames,
+			colorsAvailableInTest,
+			mockImplementation)
+
+	actualError := stateCollection.Reset()
+
+	if actualError != expectedError {
+		unitTest.Errorf(
+			"Reset() returned error %v - expected %v",
+			actualError,
+			expectedError)
 	}
 }
 
@@ -500,16 +556,24 @@ func TestRejectAddWithInvalidColor(unitTest *testing.T) {
 
 func TestReturnErrorFromPersisterAdd(unitTest *testing.T) {
 	testCases := []struct {
-		testName      string
-		expectedError error
+		testName             string
+		expectedErrorFromAll error
+		expectedErrorFromAdd error
 	}{
 		{
-			testName:      "String error",
-			expectedError: fmt.Errorf("Expected error from Add(...)"),
+			testName:             "error from All()",
+			expectedErrorFromAll: fmt.Errorf("expected error from All()"),
+			expectedErrorFromAdd: nil,
 		},
 		{
-			testName:      "Nil error",
-			expectedError: nil,
+			testName:             "error from Add(...)",
+			expectedErrorFromAll: nil,
+			expectedErrorFromAdd: fmt.Errorf("expected error from Add(...)"),
+		},
+		{
+			testName:             "Nil error",
+			expectedErrorFromAll: nil,
+			expectedErrorFromAdd: nil,
 		},
 	}
 
@@ -518,7 +582,8 @@ func TestReturnErrorFromPersisterAdd(unitTest *testing.T) {
 			NewMockPersister(unitTest, fmt.Errorf("Only Add(...) and All() should be called"))
 		mockImplementation.TestErrorForAdd = nil
 		mockImplementation.TestErrorForAll = nil
-		mockImplementation.ReturnForNontestError = testCase.expectedError
+		mockImplementation.ReturnForNontestError = testCase.expectedErrorFromAll
+		mockImplementation.ReturnForAdd = testCase.expectedErrorFromAdd
 
 		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
 			stateCollection, _ :=
@@ -529,17 +594,31 @@ func TestReturnErrorFromPersisterAdd(unitTest *testing.T) {
 					mockImplementation)
 
 			playerName := "Mock Player"
-			chatColor := colorsAvailableInTest[0]
+
+			// We need an empty chat color to ensure that we trigger the error
+			// from Add(...) if required.
+			chatColor := ""
 
 			actualError := stateCollection.Add(playerName, chatColor)
 
-			if actualError != testCase.expectedError {
+			if (testCase.expectedErrorFromAll != nil) &&
+				(actualError != testCase.expectedErrorFromAll) {
 				unitTest.Errorf(
 					"Add(player name %v, chat color %v) returned error %v - expected %v",
 					playerName,
 					chatColor,
 					actualError,
-					testCase.expectedError)
+					testCase.expectedErrorFromAll)
+			}
+
+			if (testCase.expectedErrorFromAdd != nil) &&
+				(actualError != testCase.expectedErrorFromAdd) {
+				unitTest.Errorf(
+					"Add(player name %v, chat color %v) returned error %v - expected %v",
+					playerName,
+					chatColor,
+					actualError,
+					testCase.expectedErrorFromAdd)
 			}
 		})
 	}
