@@ -10,11 +10,53 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// RowsAsResult defines the subset of the functions of the sql.Rows struct used by the
+// inPostgresqlPersister struct.
+type RowsAsResult interface {
+	Next() bool
+	Close() error
+	Err() error
+	Scan(rowDestination ...interface{}) error
+}
+
+// MetadataAsResult defines the subset of the functions of the sql.Result interface used
+// by the inPostgresqlPersister struct.
+type MetadataAsResult interface {
+	RowsAffected() (int64, error)
+}
+
 // LimitedExecutor defines the subset of the functions of the sql.DB interface used
 // by the inPostgresqlPersister struct.
 type LimitedExecutor interface {
-	Exec(query string, args ...interface{}) (sql.Result, error)
-	Query(query string, args ...interface{}) (*sql.Rows, error)
+	// ExecuteQuery should execute a query and return the resulting rows.
+	ExecuteQuery(
+		queryStatement string,
+		argumentsForStatement ...interface{}) (RowsAsResult, error)
+
+	// ExecuteStatement should execute a statement and return metadata about the operation.
+	ExecuteStatement(
+		statementWithoutRowsAsResult string,
+		argumentsForStatement ...interface{}) (MetadataAsResult, error)
+}
+
+type wrappingLimitedExecutor struct {
+	wrappedInterface *sql.DB
+}
+
+func (wrappingExecutor *wrappingLimitedExecutor) ExecuteQuery(
+	statementWithoutRowsAsResult string,
+	argumentsForStatement ...interface{}) (RowsAsResult, error) {
+	return wrappingExecutor.wrappedInterface.Query(
+		statementWithoutRowsAsResult,
+		argumentsForStatement...)
+}
+
+func (wrappingExecutor *wrappingLimitedExecutor) ExecuteStatement(
+	statementWithoutRowsAsResult string,
+	argumentsForStatement ...interface{}) (MetadataAsResult, error) {
+	return wrappingExecutor.wrappedInterface.Exec(
+		statementWithoutRowsAsResult,
+		argumentsForStatement...)
 }
 
 // inPostgresqlPersister stores players in a PostgreSQL database.
@@ -48,7 +90,7 @@ func NewInPostgresql(connectionArguments string) (player.StatePersister, error) 
 		)`
 
 	return NewInPostgresqlWithInitialStatements(
-		postgresqlDatabase,
+		&wrappingLimitedExecutor{wrappedInterface: postgresqlDatabase},
 		tableCreationStatement)
 }
 
@@ -58,7 +100,8 @@ func NewInPostgresqlWithInitialStatements(
 	connectionToDatabase LimitedExecutor,
 	initialStatements ...string) (player.StatePersister, error) {
 	for _, initialStatement := range initialStatements {
-		_, errorFromExecution := connectionToDatabase.Exec(initialStatement)
+		_, errorFromExecution :=
+			connectionToDatabase.ExecuteStatement(initialStatement)
 		if errorFromExecution != nil {
 			return nil, errorFromExecution
 		}
@@ -78,7 +121,7 @@ func (playerPersister *inPostgresqlPersister) Add(
 	chatColor string) error {
 	playerCreationStatement := "INSERT INTO player (name, color) VALUES ($1, $2)"
 	_, errorFromExecution :=
-		playerPersister.connectionToDatabase.Exec(
+		playerPersister.connectionToDatabase.ExecuteStatement(
 			playerCreationStatement,
 			playerName,
 			chatColor)
@@ -93,7 +136,7 @@ func (playerPersister *inPostgresqlPersister) UpdateColor(
 	chatColor string) error {
 	playerUpdateStatement := "UPDATE player SET color = $1 WHERE name = $2"
 	resultFromExecution, errorFromExecution :=
-		playerPersister.connectionToDatabase.Exec(
+		playerPersister.connectionToDatabase.ExecuteStatement(
 			playerUpdateStatement,
 			chatColor,
 			playerName)
@@ -110,7 +153,9 @@ func (playerPersister *inPostgresqlPersister) Get(
 	playerSelectStatement :=
 		"SELECT color FROM player WHERE name = $1"
 	playerRows, errorFromExecution :=
-		playerPersister.connectionToDatabase.Query(playerSelectStatement, playerName)
+		playerPersister.connectionToDatabase.ExecuteQuery(
+			playerSelectStatement,
+			playerName)
 	if errorFromExecution != nil {
 		return nil, errorFromExecution
 	}
@@ -153,7 +198,7 @@ func (playerPersister *inPostgresqlPersister) Get(
 func (playerPersister *inPostgresqlPersister) All() ([]player.ReadonlyState, error) {
 	playerSelectStatement := "SELECT name, color FROM player"
 	playerRows, errorFromExecution :=
-		playerPersister.connectionToDatabase.Query(playerSelectStatement)
+		playerPersister.connectionToDatabase.ExecuteQuery(playerSelectStatement)
 	if errorFromExecution != nil {
 		return nil, errorFromExecution
 	}
@@ -180,7 +225,7 @@ func (playerPersister *inPostgresqlPersister) All() ([]player.ReadonlyState, err
 func (playerPersister *inPostgresqlPersister) Delete(playerName string) error {
 	playerDeletionStatement := "DELETE FROM player WHERE name = $1"
 	resultFromExecution, errorFromExecution :=
-		playerPersister.connectionToDatabase.Exec(
+		playerPersister.connectionToDatabase.ExecuteStatement(
 			playerDeletionStatement,
 			playerName)
 
@@ -192,7 +237,7 @@ func (playerPersister *inPostgresqlPersister) Delete(playerName string) error {
 
 func errorUnlessExactlyOneRowAffected(
 	playerName string,
-	resultFromExecution sql.Result,
+	resultFromExecution MetadataAsResult,
 	errorFromExecution error) error {
 	if errorFromExecution != nil {
 		return errorFromExecution
