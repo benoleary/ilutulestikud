@@ -129,7 +129,23 @@ func (stateCollection *StateCollection) Delete(playerName string) error {
 }
 
 func (stateCollection *StateCollection) addInitialPlayers() error {
+	// First we get the players in the persistence store so that we don't
+	// try to add a player who is already in the system.
+	existingPlayers, errorFromAll := stateCollection.All()
+	if errorFromAll != nil {
+		return errorFromAll
+	}
+
+	existingPlayerSet := make(map[string]bool, len(existingPlayers))
+	for _, existingPlayer := range existingPlayers {
+		existingPlayerSet[existingPlayer.Name()] = true
+	}
+
 	for _, initialPlayerName := range stateCollection.initialPlayerNames {
+		if existingPlayerSet[initialPlayerName] {
+			continue
+		}
+
 		errorFromAdd := stateCollection.Add(initialPlayerName, "")
 
 		if errorFromAdd != nil {

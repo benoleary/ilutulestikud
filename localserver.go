@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/benoleary/ilutulestikud/backend/defaults"
 	"github.com/benoleary/ilutulestikud/backend/game"
@@ -14,11 +15,31 @@ import (
 	endpoint_parsing "github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
 
+// This main function just injects hard-coded dependencies.
 func main() {
 	fmt.Printf("Local server started.\n")
 
-	// This main function just injects hard-coded dependencies.
-	playerPersister := player_persister.NewInMemory()
+	postgresqlUsername := os.Getenv("POSTGRESQL_USERNAME")
+	postgresqlPassword := os.Getenv("POSTGRESQL_PASSWORD")
+	postgresqlPlayerdb := os.Getenv("POSTGRESQL_PLAYERDB")
+	postgresqlLocation := os.Getenv("POSTGRESQL_LOCATION")
+	connectionString :=
+		fmt.Sprintf(
+			"user=%v password=%v dbname=%v %v",
+			postgresqlUsername,
+			postgresqlPassword,
+			postgresqlPlayerdb,
+			postgresqlLocation)
+
+	playerPersister, errorFromPersister :=
+		player_persister.NewInPostgresql(connectionString)
+
+	if errorFromPersister != nil {
+		log.Fatalf(
+			"error when creating PostgreSQL persister: %v",
+			errorFromPersister)
+	}
+
 	playerCollection, errorCreatingPlayerCollection :=
 		player.NewCollection(
 			playerPersister,

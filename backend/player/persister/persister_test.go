@@ -38,14 +38,14 @@ func preparePersisters(unitTest *testing.T) []persisterAndDescription {
 	postgresqlUsername := os.Getenv("POSTGRESQL_USERNAME")
 	postgresqlPassword := os.Getenv("POSTGRESQL_PASSWORD")
 	postgresqlPlayerdb := os.Getenv("POSTGRESQL_PLAYERDB")
-	postgresqlExtra := os.Getenv("POSTGRESQL_LOCATION")
+	postgresqlLocation := os.Getenv("POSTGRESQL_LOCATION")
 	connectionString :=
 		fmt.Sprintf(
 			"user=%v password=%v dbname=%v %v",
 			postgresqlUsername,
 			postgresqlPassword,
 			postgresqlPlayerdb,
-			postgresqlExtra)
+			postgresqlLocation)
 
 	postgresqlPersister, errorFromPostgresql := persister.NewInPostgresql(connectionString)
 
@@ -167,7 +167,7 @@ func TestRejectAddPlayerWithExistingName(unitTest *testing.T) {
 				if (existingStateAfterAddWithNewColor.Name() != initialState.Name()) ||
 					(existingStateAfterAddWithNewColor.Color() != initialState.Color()) {
 					unitTest.Fatalf(
-						"Add(existing player %v, new color %v) changed the player state from %v to %v",
+						"Add(existing player %v, new color %v) changed the player state from %+v to %+v",
 						playerName,
 						colorsAvailableInTest[1],
 						initialState,
@@ -244,7 +244,8 @@ func TestAddPlayerWithValidColorAndTestGet(unitTest *testing.T) {
 
 				if newState.Color() != chatColor {
 					unitTest.Fatalf(
-						"Add(%v, %v) then Get(%v) produced a state %v which does not have the correct color",
+						"Add(%v, %v) then Get(%v) produced a state %v which does not have"+
+							" the correct color",
 						testCase.playerName,
 						chatColor,
 						testCase.playerName,
@@ -278,6 +279,16 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 				") then Delete(" + firstPlayer + ") then Delete(" + secondPlayer + ")"
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			preexistingPlayers, errorFromPreexistingAll :=
+				statePersister.PlayerPersister.All()
+			if errorFromPreexistingAll != nil {
+				unitTest.Fatalf(
+					"All() produced an error %v",
+					errorFromPreexistingAll)
+			}
+
+			numberOfPreexistingPlayers := len(preexistingPlayers)
+
 			errorFromFirstAdd :=
 				statePersister.PlayerPersister.Add(firstPlayer, firstColor)
 			if errorFromFirstAdd != nil {
@@ -298,9 +309,9 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 					errorFromAllAfterFirstAdd)
 			}
 
-			if len(statesFromAllAfterFirstAdd) != 1 {
+			if len(statesFromAllAfterFirstAdd) != (numberOfPreexistingPlayers + 1) {
 				unitTest.Fatalf(
-					"Adding first player to a new persister resulted in states %v",
+					"Adding first player to a new persister resulted in states %+v",
 					statesFromAllAfterFirstAdd)
 			}
 
@@ -321,7 +332,8 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 
 			if firstStateBeforeSecondAdd.Color() != firstColor {
 				unitTest.Fatalf(
-					"Add(%v, %v) then Get(%v) produced a state %v which does not have the correct color",
+					"Add(%v, %v) then Get(%v) produced a state %+v which does not have"+
+						" the correct color",
 					firstPlayer,
 					firstColor,
 					firstPlayer,
@@ -349,9 +361,10 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 					errorFromAllAfterSecondAdd)
 			}
 
-			if len(statesFromAllAfterSecondAdd) != 2 {
+			if len(statesFromAllAfterSecondAdd) != (numberOfPreexistingPlayers + 2) {
 				unitTest.Fatalf(
-					"Adding second player after adding first player to a new persister resulted in states %v",
+					"Adding second player after adding first player to a new persister"+
+						" resulted in states %+v",
 					statesFromAllAfterSecondAdd)
 			}
 
@@ -372,7 +385,7 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 
 			if firstStateAfterSecondAdd.Color() != firstColor {
 				unitTest.Fatalf(
-					"First state %v changed color from expected %v",
+					"First state %+v changed color from expected %v",
 					firstStateAfterSecondAdd,
 					firstColor)
 			}
@@ -387,7 +400,8 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 
 			if secondStateBeforeFirstDelete.Color() != secondColor {
 				unitTest.Fatalf(
-					"Add(%v, %v) then Get(%v) produced a state %v which does not have the correct color",
+					"Add(%v, %v) then Get(%v) produced a state %v which does not have"+
+						" the correct color",
 					secondPlayer,
 					secondColor,
 					secondPlayer,
@@ -407,14 +421,15 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 				statePersister.PlayerPersister.All()
 			if errorFromAllAfterFirstDelete != nil {
 				unitTest.Fatalf(
-					"All() after first Delete(%+v) produced an error %v",
+					"All() after first Delete(%v) produced an error %v",
 					firstPlayer,
 					errorFromAllAfterFirstDelete)
 			}
 
-			if len(statesFromAllAfterFirstDelete) != 1 {
+			if len(statesFromAllAfterFirstDelete) != (numberOfPreexistingPlayers + 1) {
 				unitTest.Fatalf(
-					"Deleting the first player after adding two players to a new persister resulted in states %v",
+					"Deleting the first player after adding two players to a new persister"+
+						" resulted in states %+v",
 					statesFromAllAfterFirstDelete)
 			}
 
@@ -428,7 +443,7 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 
 			if secondStateAfterFirstDelete.Color() != secondColor {
 				unitTest.Fatalf(
-					"Second state %v changed color from expected %v",
+					"Second state %+v changed color from expected %v",
 					secondStateAfterFirstDelete,
 					secondColor)
 			}
@@ -446,15 +461,15 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 				statePersister.PlayerPersister.All()
 			if errorFromAllAfterSecondDelete != nil {
 				unitTest.Fatalf(
-					"All() after second Delete(%+v) produced an error %v",
+					"All() after second Delete(%v) produced an error %v",
 					secondPlayer,
 					errorFromAllAfterSecondDelete)
 			}
 
-			if len(statesFromAllAfterSecondDelete) != 0 {
+			if len(statesFromAllAfterSecondDelete) != numberOfPreexistingPlayers {
 				unitTest.Fatalf(
 					"Deleting the second player after deleting first player after"+
-						" adding two players to a new persister resulted in states %v",
+						" adding two players to a new persister resulted in states %+v",
 					statesFromAllAfterSecondDelete)
 			}
 		})
