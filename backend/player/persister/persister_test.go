@@ -38,7 +38,7 @@ func preparePersisters(unitTest *testing.T) []persisterAndDescription {
 	postgresqlUsername := os.Getenv("POSTGRESQL_USERNAME")
 	postgresqlPassword := os.Getenv("POSTGRESQL_PASSWORD")
 	postgresqlPlayerdb := os.Getenv("POSTGRESQL_PLAYERDB")
-	postgresqlExtra := os.Getenv("POSTGRESQL_EXTRA")
+	postgresqlExtra := os.Getenv("POSTGRESQL_LOCATION")
 	connectionString :=
 		fmt.Sprintf(
 			"user=%v password=%v dbname=%v %v",

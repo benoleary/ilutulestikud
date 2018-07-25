@@ -10,9 +10,16 @@ import (
 	_ "github.com/lib/pq"
 )
 
+// LimitedExecutor defines the subset of the functions of the sql.DB interface used
+// by the inPostgresqlPersister struct.
+type LimitedExecutor interface {
+	Exec(query string, args ...interface{}) (sql.Result, error)
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+}
+
 // inPostgresqlPersister stores players in a PostgreSQL database.
 type inPostgresqlPersister struct {
-	connectionToDatabase *sql.DB
+	connectionToDatabase LimitedExecutor
 }
 
 // NewInPostgresql creates a player state persister which connects to a
@@ -20,6 +27,14 @@ type inPostgresqlPersister struct {
 func NewInPostgresql(connectionArguments string) (player.StatePersister, error) {
 	postgresqlDatabase, errorFromConnection :=
 		sql.Open("postgres", connectionArguments)
+
+	// Even if the connection string is junk, sql.Open(...) might not return an
+	// error because it might not yet have opened any connection. In this case,
+	// the appropriate thing to do is to check the connection with a ping.
+	if errorFromConnection == nil {
+		errorFromConnection = postgresqlDatabase.Ping()
+	}
+
 	if errorFromConnection != nil {
 		return nil, errorFromConnection
 	}
@@ -32,17 +47,29 @@ func NewInPostgresql(connectionArguments string) (player.StatePersister, error) 
 			color VARCHAR(255)
 		)`
 
-	_, errorFromTableCreation := postgresqlDatabase.Exec(tableCreationStatement)
-	if errorFromTableCreation != nil {
-		return nil, errorFromTableCreation
+	return NewInPostgresqlWithInitialStatements(
+		postgresqlDatabase,
+		tableCreationStatement)
+}
+
+// NewInPostgresqlWithInitialStatements runs the given SQL statements on the
+// given executor, then wraps it into an inPostgresqlPersister.
+func NewInPostgresqlWithInitialStatements(
+	connectionToDatabase LimitedExecutor,
+	initialStatements ...string) (player.StatePersister, error) {
+	for _, initialStatement := range initialStatements {
+		_, errorFromExecution := connectionToDatabase.Exec(initialStatement)
+		if errorFromExecution != nil {
+			return nil, errorFromExecution
+		}
 	}
 
 	playerPersister :=
 		&inPostgresqlPersister{
-			connectionToDatabase: postgresqlDatabase,
+			connectionToDatabase: connectionToDatabase,
 		}
 
-	return playerPersister, errorFromTableCreation
+	return playerPersister, nil
 }
 
 // Add inserts the given name and color as a row in the database.
