@@ -173,7 +173,7 @@ func TestSetUpInitialMetadataCorrectly(unitTest *testing.T) {
 				for indexInHand := 0; indexInHand < numberOfCardsInHand; indexInHand++ {
 					expectedInHand :=
 						expectedNameWithHand.InitialHand[indexInHand]
-					expectedVisible := expectedInHand.Readonly
+					expectedVisible := expectedInHand.Defined
 					expectedInferred := expectedInHand.Inferred
 					if actualVisibleHand[indexInHand] != expectedVisible {
 						unitTest.Errorf(
@@ -187,14 +187,14 @@ func TestSetUpInitialMetadataCorrectly(unitTest *testing.T) {
 					assertStringSlicesMatch(
 						testIdentifier+"/inferred possible colors",
 						unitTest,
-						expectedInferred.PossibleColors(),
-						actualInferredHand[indexInHand].PossibleColors())
+						expectedInferred.PossibleColors,
+						actualInferredHand[indexInHand].PossibleColors)
 
 					assertIntSlicesMatch(
 						testIdentifier+"/inferred possible indices",
 						unitTest,
-						expectedInferred.PossibleIndices(),
-						actualInferredHand[indexInHand].PossibleIndices())
+						expectedInferred.PossibleIndices,
+						actualInferredHand[indexInHand].PossibleIndices)
 				}
 			}
 		})

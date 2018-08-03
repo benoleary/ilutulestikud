@@ -12,7 +12,7 @@ type Ruleset interface {
 
 	// CopyOfFullCardset should return a new array populated with every card which should
 	// be present for a game under the ruleset, including duplicates.
-	CopyOfFullCardset() []card.Readonly
+	CopyOfFullCardset() []card.Defined
 
 	// NumberOfCardsInPlayerHand should return the number of cards held
 	// in a player's hand, dependent on the number of players in the game.
@@ -49,14 +49,14 @@ type Ruleset interface {
 	// the given hint about color to the given knowledge about the hand prior to the hint.
 	AfterColorHint(
 		knowledgeBeforeHint []card.Inferred,
-		cardsInHand []card.Readonly,
+		cardsInHand []card.Defined,
 		hintedColor string) []card.Inferred
 
 	// AfterIndexHint should return the knowledge about a hand that a player has after applying
 	// the given hint about index to the given knowledge about the hand prior to the hint.
 	AfterIndexHint(
 		knowledgeBeforeHint []card.Inferred,
-		cardsInHand []card.Readonly,
+		cardsInHand []card.Defined,
 		hintedIndex int) []card.Inferred
 
 	// NumberOfMistakesIndicatingGameOver should return the number of mistakes which indicates
@@ -65,14 +65,14 @@ type Ruleset interface {
 
 	// IsCardPlayable should return true if the given card can be played onto the given
 	// sequence of cards already played in the cards's suit.
-	IsCardPlayable(cardToPlay card.Readonly, cardsAlreadyPlayedInSuit []card.Readonly) bool
+	IsCardPlayable(cardToPlay card.Defined, cardsAlreadyPlayedInSuit []card.Defined) bool
 
 	// HintsForPlayingCard should return the number of hints to refresh upon successfully
 	// playing the given card.
-	HintsForPlayingCard(cardToEvaluate card.Readonly) int
+	HintsForPlayingCard(cardToEvaluate card.Defined) int
 
 	// PointsPerCard should return the points value of the given card.
-	PointsForCard(cardToEvaluate card.Readonly) int
+	PointsForCard(cardToEvaluate card.Defined) int
 }
 
 // IsFinished returns true if the game is finished because either too many
@@ -151,15 +151,15 @@ type ViewForPlayer interface {
 	DeckSize() int
 
 	// PlayedCards should list the cards in play, in slices per suit.
-	PlayedCards() [][]card.Readonly
+	PlayedCards() [][]card.Defined
 
 	// DiscardedCards should list the discarded cards, ordered by suit first then by index.
-	DiscardedCards() []card.Readonly
+	DiscardedCards() []card.Defined
 
 	// VisibleHand should return the cards held by the given player along with the chat
 	// color for that player, or nil and a string which will be ignored and an error if the
 	// player cannot see the cards.
-	VisibleHand(playerName string) ([]card.Readonly, string, error)
+	VisibleHand(playerName string) ([]card.Defined, string, error)
 
 	// KnowledgeOfOwnHand should return the knowledge which the given player has about the
 	// cards in their hand which was inferred directly from the hints officially given so

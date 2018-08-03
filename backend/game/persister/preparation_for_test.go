@@ -54,44 +54,54 @@ var threePlayersWithHands = []game.PlayerNameWithHand{
 		PlayerName: defaultTestPlayers[0],
 		InitialHand: []card.InHand{
 			card.InHand{
-				Readonly: card.NewReadonly(
-					colorsForTest[0],
-					indicesForTest[0]),
-				Inferred: card.NewInferred(
-					threeColors,
-					threeIndices),
+				Defined: card.Defined{
+					ColorSuit:     colorsForTest[0],
+					SequenceIndex: indicesForTest[0],
+				},
+				Inferred: card.Inferred{
+					PossibleColors:  threeColors,
+					PossibleIndices: threeIndices,
+				},
 			},
 			card.InHand{
-				Readonly: card.NewReadonly(
-					colorsForTest[0],
-					indicesForTest[0]),
-				Inferred: card.NewInferred(
-					threeColors,
-					threeIndices),
+				Defined: card.Defined{
+					ColorSuit:     colorsForTest[0],
+					SequenceIndex: indicesForTest[0],
+				},
+				Inferred: card.Inferred{
+					PossibleColors:  threeColors,
+					PossibleIndices: threeIndices,
+				},
 			},
 			card.InHand{
-				Readonly: card.NewReadonly(
-					colorsForTest[0],
-					indicesForTest[1]),
-				Inferred: card.NewInferred(
-					threeColors,
-					threeIndices),
+				Defined: card.Defined{
+					ColorSuit:     colorsForTest[0],
+					SequenceIndex: indicesForTest[1],
+				},
+				Inferred: card.Inferred{
+					PossibleColors:  threeColors,
+					PossibleIndices: threeIndices,
+				},
 			},
 			card.InHand{
-				Readonly: card.NewReadonly(
-					colorsForTest[0],
-					indicesForTest[0]),
-				Inferred: card.NewInferred(
-					threeColors,
-					threeIndices),
+				Defined: card.Defined{
+					ColorSuit:     colorsForTest[0],
+					SequenceIndex: indicesForTest[0],
+				},
+				Inferred: card.Inferred{
+					PossibleColors:  threeColors,
+					PossibleIndices: threeIndices,
+				},
 			},
 			card.InHand{
-				Readonly: card.NewReadonly(
-					colorsForTest[0],
-					indicesForTest[1]),
-				Inferred: card.NewInferred(
-					threeColors,
-					threeIndices),
+				Defined: card.Defined{
+					ColorSuit:     colorsForTest[0],
+					SequenceIndex: indicesForTest[1],
+				},
+				Inferred: card.Inferred{
+					PossibleColors:  threeColors,
+					PossibleIndices: threeIndices,
+				},
 			},
 		},
 	},
@@ -99,44 +109,54 @@ var threePlayersWithHands = []game.PlayerNameWithHand{
 		PlayerName: defaultTestPlayers[1],
 		InitialHand: []card.InHand{
 			card.InHand{
-				Readonly: card.NewReadonly(
-					colorsForTest[0],
-					indicesForTest[0]),
-				Inferred: card.NewInferred(
-					threeColors,
-					fourIndices),
+				Defined: card.Defined{
+					ColorSuit:     colorsForTest[0],
+					SequenceIndex: indicesForTest[0],
+				},
+				Inferred: card.Inferred{
+					PossibleColors:  threeColors,
+					PossibleIndices: fourIndices,
+				},
 			},
 			card.InHand{
-				Readonly: card.NewReadonly(
-					colorsForTest[1],
-					indicesForTest[0]),
-				Inferred: card.NewInferred(
-					fourColors,
-					threeIndices),
+				Defined: card.Defined{
+					ColorSuit:     colorsForTest[1],
+					SequenceIndex: indicesForTest[0],
+				},
+				Inferred: card.Inferred{
+					PossibleColors:  fourColors,
+					PossibleIndices: threeIndices,
+				},
 			},
 			card.InHand{
-				Readonly: card.NewReadonly(
-					colorsForTest[1],
-					indicesForTest[1]),
-				Inferred: card.NewInferred(
-					threeColors,
-					threeIndices),
+				Defined: card.Defined{
+					ColorSuit:     colorsForTest[1],
+					SequenceIndex: indicesForTest[1],
+				},
+				Inferred: card.Inferred{
+					PossibleColors:  threeColors,
+					PossibleIndices: threeIndices,
+				},
 			},
 			card.InHand{
-				Readonly: card.NewReadonly(
-					colorsForTest[2],
-					indicesForTest[1]),
-				Inferred: card.NewInferred(
-					threeColors,
-					threeIndices),
+				Defined: card.Defined{
+					ColorSuit:     colorsForTest[2],
+					SequenceIndex: indicesForTest[1],
+				},
+				Inferred: card.Inferred{
+					PossibleColors:  threeColors,
+					PossibleIndices: threeIndices,
+				},
 			},
 			card.InHand{
-				Readonly: card.NewReadonly(
-					colorsForTest[2],
-					indicesForTest[2]),
-				Inferred: card.NewInferred(
-					threeColors,
-					threeIndices),
+				Defined: card.Defined{
+					ColorSuit:     colorsForTest[2],
+					SequenceIndex: indicesForTest[2],
+				},
+				Inferred: card.Inferred{
+					PossibleColors:  threeColors,
+					PossibleIndices: threeIndices,
+				},
 			},
 		},
 	},
@@ -144,44 +164,54 @@ var threePlayersWithHands = []game.PlayerNameWithHand{
 		PlayerName: defaultTestPlayers[2],
 		InitialHand: []card.InHand{
 			card.InHand{
-				Readonly: card.NewReadonly(
-					colorsForTest[2],
-					indicesForTest[2]),
-				Inferred: card.NewInferred(
-					threeColors,
-					fourIndices),
+				Defined: card.Defined{
+					ColorSuit:     colorsForTest[2],
+					SequenceIndex: indicesForTest[2],
+				},
+				Inferred: card.Inferred{
+					PossibleColors:  threeColors,
+					PossibleIndices: fourIndices,
+				},
 			},
 			card.InHand{
-				Readonly: card.NewReadonly(
-					colorsForTest[1],
-					indicesForTest[2]),
-				Inferred: card.NewInferred(
-					threeColors,
-					threeIndices),
+				Defined: card.Defined{
+					ColorSuit:     colorsForTest[1],
+					SequenceIndex: indicesForTest[2],
+				},
+				Inferred: card.Inferred{
+					PossibleColors:  threeColors,
+					PossibleIndices: threeIndices,
+				},
 			},
 			card.InHand{
-				Readonly: card.NewReadonly(
-					colorsForTest[0],
-					indicesForTest[2]),
-				Inferred: card.NewInferred(
-					threeColors,
-					threeIndices),
+				Defined: card.Defined{
+					ColorSuit:     colorsForTest[0],
+					SequenceIndex: indicesForTest[2],
+				},
+				Inferred: card.Inferred{
+					PossibleColors:  threeColors,
+					PossibleIndices: threeIndices,
+				},
 			},
 			card.InHand{
-				Readonly: card.NewReadonly(
-					colorsForTest[3],
-					indicesForTest[2]),
-				Inferred: card.NewInferred(
-					fourColors,
-					threeIndices),
+				Defined: card.Defined{
+					ColorSuit:     colorsForTest[3],
+					SequenceIndex: indicesForTest[2],
+				},
+				Inferred: card.Inferred{
+					PossibleColors:  fourColors,
+					PossibleIndices: threeIndices,
+				},
 			},
 			card.InHand{
-				Readonly: card.NewReadonly(
-					colorsForTest[3],
-					indicesForTest[0]),
-				Inferred: card.NewInferred(
-					fourColors,
-					threeIndices),
+				Defined: card.Defined{
+					ColorSuit:     colorsForTest[3],
+					SequenceIndex: indicesForTest[0],
+				},
+				Inferred: card.Inferred{
+					PossibleColors:  fourColors,
+					PossibleIndices: threeIndices,
+				},
 			},
 		},
 	},
@@ -233,7 +263,7 @@ func prepareGameStates(
 	unitTest *testing.T,
 	gameRuleset game.Ruleset,
 	playersInTurnOrderWithInitialHands []game.PlayerNameWithHand,
-	initialDeck []card.Readonly,
+	initialDeck []card.Defined,
 	initialActionLog []message.Readonly) []gameAndDescription {
 	statePersisters := preparePersisters()
 
@@ -287,9 +317,9 @@ type expectedState struct {
 	NumberOfReadyHints      int
 	NumberOfMistakesMade    int
 	DeckSize                int
-	PlayedForColor          map[string][]card.Readonly
-	NumberOfDiscardedCards  map[card.Readonly]int
-	VisibleCardInHand       map[string][]card.Readonly
+	PlayedForColor          map[string][]card.Defined
+	NumberOfDiscardedCards  map[card.Defined]int
+	VisibleCardInHand       map[string][]card.Defined
 	InferredCardInHand      map[string][]card.Inferred
 }
 
@@ -302,21 +332,25 @@ func prepareExpected(
 
 	pristineRuleset := pristineState.Ruleset()
 
-	playedCards := make(map[string][]card.Readonly, 0)
-	discardedCards := make(map[card.Readonly]int, 0)
+	playedCards := make(map[string][]card.Defined, 0)
+	discardedCards := make(map[card.Defined]int, 0)
 	for _, colorSuit := range pristineRuleset.ColorSuits() {
 		playedCards[colorSuit] = pristineState.PlayedForColor(colorSuit)
 
 		for _, sequenceIndex := range pristineRuleset.DistinctPossibleIndices() {
 			numberOfDiscardedCopies := pristineState.NumberOfDiscardedCards(colorSuit, sequenceIndex)
 			if numberOfDiscardedCopies != 0 {
-				discardedCard := card.NewReadonly(colorSuit, sequenceIndex)
+				discardedCard :=
+					card.Defined{
+						ColorSuit:     colorSuit,
+						SequenceIndex: sequenceIndex,
+					}
 				discardedCards[discardedCard] = numberOfDiscardedCopies
 			}
 		}
 	}
 
-	visibleHands := make(map[string][]card.Readonly, 0)
+	visibleHands := make(map[string][]card.Defined, 0)
 	inferredHands := make(map[string][]card.Inferred, 0)
 
 	for _, playerName := range pristineState.PlayerNames() {

@@ -20,7 +20,7 @@ type PlayerView struct {
 	gameRuleset             Ruleset
 	colorSuits              []string
 	distinctPossibleIndices []int
-	playedCards             [][]card.Readonly
+	playedCards             [][]card.Defined
 }
 
 // ViewOnStateForPlayer creates a PlayerView around the given game
@@ -40,7 +40,7 @@ func ViewOnStateForPlayer(
 			distinctPossibleIndices := rulesetOfGame.DistinctPossibleIndices()
 
 			numberOfSuits := len(gameColorSuits)
-			playedCards := make([][]card.Readonly, numberOfSuits)
+			playedCards := make([][]card.Defined, numberOfSuits)
 			for suitIndex := 0; suitIndex < numberOfSuits; suitIndex++ {
 				suitColor := gameColorSuits[suitIndex]
 
@@ -189,19 +189,23 @@ func (playerView *PlayerView) DeckSize() int {
 }
 
 // PlayedCards lists the cards in play, in slices per suit.
-func (playerView *PlayerView) PlayedCards() [][]card.Readonly {
+func (playerView *PlayerView) PlayedCards() [][]card.Defined {
 	return playerView.playedCards
 }
 
 // DiscardedCards lists the discarded cards, ordered by suit first then by index.
-func (playerView *PlayerView) DiscardedCards() []card.Readonly {
-	discardedCards := make([]card.Readonly, 0)
+func (playerView *PlayerView) DiscardedCards() []card.Defined {
+	discardedCards := make([]card.Defined, 0)
 
 	for _, colorSuit := range playerView.colorSuits {
 		for _, sequenceIndex := range playerView.distinctPossibleIndices {
 			numberOfDiscardedCopies :=
 				playerView.gameState.NumberOfDiscardedCards(colorSuit, sequenceIndex)
-			discardedCard := card.NewReadonly(colorSuit, sequenceIndex)
+			discardedCard :=
+				card.Defined{
+					ColorSuit:     colorSuit,
+					SequenceIndex: sequenceIndex,
+				}
 
 			for copiesCount := 0; copiesCount < numberOfDiscardedCopies; copiesCount++ {
 				discardedCards = append(discardedCards, discardedCard)
@@ -215,7 +219,7 @@ func (playerView *PlayerView) DiscardedCards() []card.Readonly {
 // VisibleHand returns the cards held by the given player along with the chat color for
 // that player, or nil and a string which will be ignored and an error if the player
 // cannot see the cards.
-func (playerView *PlayerView) VisibleHand(playerName string) ([]card.Readonly, string, error) {
+func (playerView *PlayerView) VisibleHand(playerName string) ([]card.Defined, string, error) {
 	if playerName == playerView.playerName {
 		return nil, "no color because of error", fmt.Errorf("Player is not allowed to view own hand")
 	}

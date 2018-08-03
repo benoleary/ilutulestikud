@@ -60,14 +60,14 @@ type ReadonlyState interface {
 
 	// PlayedForColor should return the cards, in order, which have been played
 	// correctly for the given color suit.
-	PlayedForColor(colorSuit string) []card.Readonly
+	PlayedForColor(colorSuit string) []card.Defined
 
 	// NumberOfDiscardedCards should return the number of cards with the given suit
 	// and index which were discarded or played incorrectly.
 	NumberOfDiscardedCards(colorSuit string, sequenceIndex int) int
 
 	// VisibleHand should return the card helds by the given player.
-	VisibleHand(holdingPlayerName string) ([]card.Readonly, error)
+	VisibleHand(holdingPlayerName string) ([]card.Defined, error)
 
 	// InferredHand should return the inferred information about the cards held by
 	// the given player.
@@ -160,7 +160,7 @@ type StatePersister interface {
 		initialActionLog []message.Readonly,
 		gameRuleset Ruleset,
 		playersInTurnOrderWithInitialHands []PlayerNameWithHand,
-		initialDeck []card.Readonly) error
+		initialDeck []card.Defined) error
 
 	// RemoveGameFromListForPlayer should remove the given player from the given game in
 	// the sense that the game will no longer show up in the result of

@@ -166,7 +166,11 @@ func assertGameStateAsExpected(
 		for _, sequenceIndex := range actualGame.Ruleset().DistinctPossibleIndices() {
 			actualNumberOfDiscardedCopies :=
 				actualGame.NumberOfDiscardedCards(colorSuit, sequenceIndex)
-			discardedCard := card.NewReadonly(colorSuit, sequenceIndex)
+			discardedCard :=
+				card.Defined{
+					ColorSuit:     colorSuit,
+					SequenceIndex: sequenceIndex,
+				}
 			expectedNumberOfDiscardedCopies :=
 				expectedGame.NumberOfDiscardedCards[discardedCard]
 
@@ -228,11 +232,11 @@ func assertGameStateAsExpected(
 			inferredCard := inferredHand[indexInHand]
 
 			expectedInferred := expectedInferredHand[indexInHand]
-			expectedColors := expectedInferred.PossibleColors()
-			expectedIndices := expectedInferred.PossibleIndices()
+			expectedColors := expectedInferred.PossibleColors
+			expectedIndices := expectedInferred.PossibleIndices
 
-			if (len(inferredCard.PossibleColors()) != len(expectedColors)) ||
-				(len(inferredCard.PossibleIndices()) != len(expectedIndices)) {
+			if (len(inferredCard.PossibleColors) != len(expectedColors)) ||
+				(len(inferredCard.PossibleIndices) != len(expectedIndices)) {
 				unitTest.Fatalf(
 					testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin inferred hands\n"+
 						"actual:\n%+v\n\nexpected:\n%v\n\n",
@@ -242,26 +246,26 @@ func assertGameStateAsExpected(
 					expectedInferredHand)
 			}
 
-			for colorIndex, actualColor := range inferredCard.PossibleColors() {
+			for colorIndex, actualColor := range inferredCard.PossibleColors {
 				if actualColor != expectedColors[colorIndex] {
 					unitTest.Fatalf(
 						"actual\n  %+v\ndid not match expected\n  %+v\nin inferred hand colors\n"+
 							"actual:\n%+v\n\nexpected:\n%v\n\n",
 						actualGame,
 						expectedGame,
-						inferredCard.PossibleColors(),
+						inferredCard.PossibleColors,
 						expectedColors)
 				}
 			}
 
-			for indexIndex, actualIndex := range inferredCard.PossibleIndices() {
+			for indexIndex, actualIndex := range inferredCard.PossibleIndices {
 				if actualIndex != expectedIndices[indexIndex] {
 					unitTest.Fatalf(
 						testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin inferred hand indices\n"+
 							"actual:\n%+v\n\nexpected:\n%v\n\n",
 						actualGame,
 						expectedGame,
-						inferredCard.PossibleIndices(),
+						inferredCard.PossibleIndices,
 						expectedIndices)
 				}
 			}

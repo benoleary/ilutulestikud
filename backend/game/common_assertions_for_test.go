@@ -9,8 +9,8 @@ import (
 func assertReadonlyCardSlicesMatch(
 	testIdentifier string,
 	unitTest *testing.T,
-	actualCards []card.Readonly,
-	expectedCards []card.Readonly) {
+	actualCards []card.Defined,
+	expectedCards []card.Defined) {
 	numberOfExpectedCards := len(expectedCards)
 
 	if len(actualCards) != numberOfExpectedCards {
@@ -24,8 +24,8 @@ func assertReadonlyCardSlicesMatch(
 	for cardIndex := 0; cardIndex < numberOfExpectedCards; cardIndex++ {
 		actualCard := actualCards[cardIndex]
 		expectedCard := expectedCards[cardIndex]
-		if (actualCard.ColorSuit() != expectedCard.ColorSuit()) ||
-			(actualCard.SequenceIndex() != expectedCard.SequenceIndex()) {
+		if (actualCard.ColorSuit != expectedCard.ColorSuit) ||
+			(actualCard.SequenceIndex != expectedCard.SequenceIndex) {
 			unitTest.Fatalf(
 				testIdentifier+
 					"/Card slices do not match in element %v - actual: %v; expected %v"+
@@ -58,11 +58,11 @@ func assertInHandCardSlicesMatch(
 		actualCard := actualCards[cardIndex]
 		expectedCard := expectedCards[cardIndex]
 
-		actualReadonly := actualCard.Readonly
-		expectedReadonly := expectedCard.Readonly
+		actualDefined := actualCard.Defined
+		expectedDefined := expectedCard.Defined
 
-		if (actualReadonly.ColorSuit() != expectedReadonly.ColorSuit()) ||
-			(actualReadonly.SequenceIndex() != expectedReadonly.SequenceIndex()) {
+		if (actualDefined.ColorSuit != expectedDefined.ColorSuit) ||
+			(actualDefined.SequenceIndex != expectedDefined.SequenceIndex) {
 			unitTest.Fatalf(
 				testIdentifier+
 					"/Card slices do not match in element %v - actual: %v; expected %v"+
@@ -78,8 +78,8 @@ func assertInHandCardSlicesMatch(
 			testIdentifier,
 			unitTest,
 			actualCard.Inferred,
-			expectedCard.PossibleColors(),
-			expectedCard.PossibleIndices())
+			expectedCard.PossibleColors,
+			expectedCard.PossibleIndices)
 	}
 }
 
@@ -92,8 +92,8 @@ func assertInferredCardPossibilitiesCorrect(
 	// We compare the possible colors and indices as sets. Then it is
 	// sufficient to check that the lengths are the same and that every
 	// actual value is found in the map of expected values.
-	if (len(actualCard.PossibleColors()) != len(expectedColors)) ||
-		(len(actualCard.PossibleIndices()) != len(expectedIndices)) {
+	if (len(actualCard.PossibleColors) != len(expectedColors)) ||
+		(len(actualCard.PossibleIndices) != len(expectedIndices)) {
 		unitTest.Fatalf(
 			testIdentifier+
 				"/inferred card %v did not match expected colors %v and indices %v",
@@ -114,7 +114,7 @@ func assertInferredCardPossibilitiesCorrect(
 		expectedColorMap[expectedColor] = true
 	}
 
-	for _, actualColor := range actualCard.PossibleColors() {
+	for _, actualColor := range actualCard.PossibleColors {
 		if !expectedColorMap[actualColor] {
 			unitTest.Fatalf(
 				testIdentifier+
@@ -137,7 +137,7 @@ func assertInferredCardPossibilitiesCorrect(
 		expectedIndexMap[expectedIndex] = true
 	}
 
-	for _, actualIndex := range actualCard.PossibleIndices() {
+	for _, actualIndex := range actualCard.PossibleIndices {
 		if !expectedIndexMap[actualIndex] {
 			unitTest.Fatalf(
 				testIdentifier+

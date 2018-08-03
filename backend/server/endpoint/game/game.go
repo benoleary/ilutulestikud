@@ -508,8 +508,8 @@ func (handler *Handler) visibleHandsBeforeAndAfter(
 			for cardIndex := 0; cardIndex < numberOfCardsInHand; cardIndex++ {
 				visibleCard := visibleHandFromView[cardIndex]
 				handCards[cardIndex] = parsing.VisibleCard{
-					ColorSuit:     visibleCard.ColorSuit(),
-					SequenceIndex: visibleCard.SequenceIndex(),
+					ColorSuit:     visibleCard.ColorSuit,
+					SequenceIndex: visibleCard.SequenceIndex,
 				}
 			}
 
@@ -562,15 +562,15 @@ func (handler *Handler) playerKnowledgeOfHand(
 		inferredCard := inferredHandFromView[cardIndex]
 		handFromBehind[cardIndex] =
 			parsing.CardFromBehind{
-				PossibleColorSuits:      inferredCard.PossibleColors(),
-				PossibleSequenceIndices: inferredCard.PossibleIndices(),
+				PossibleColorSuits:      inferredCard.PossibleColors,
+				PossibleSequenceIndices: inferredCard.PossibleIndices,
 			}
 	}
 
 	return handFromBehind, nil
 }
 
-func playedCards(playedPilesFromView [][]card.Readonly) [][]parsing.VisibleCard {
+func playedCards(playedPilesFromView [][]card.Defined) [][]parsing.VisibleCard {
 	numberOfPiles := len(playedPilesFromView)
 
 	playedPilesForFrontend := make([][]parsing.VisibleCard, numberOfPiles)
@@ -583,7 +583,7 @@ func playedCards(playedPilesFromView [][]card.Readonly) [][]parsing.VisibleCard 
 	return playedPilesForFrontend
 }
 
-func cardsForFrontend(backendCards []card.Readonly) []parsing.VisibleCard {
+func cardsForFrontend(backendCards []card.Defined) []parsing.VisibleCard {
 	numberOfCards := len(backendCards)
 
 	forFrontend := make([]parsing.VisibleCard, numberOfCards)
@@ -592,8 +592,8 @@ func cardsForFrontend(backendCards []card.Readonly) []parsing.VisibleCard {
 		backendCard := backendCards[cardIndex]
 
 		forFrontend[cardIndex] = parsing.VisibleCard{
-			ColorSuit:     backendCard.ColorSuit(),
-			SequenceIndex: backendCard.SequenceIndex(),
+			ColorSuit:     backendCard.ColorSuit,
+			SequenceIndex: backendCard.SequenceIndex,
 		}
 	}
 

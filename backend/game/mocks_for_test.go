@@ -74,7 +74,7 @@ func (mockedRuleset *mockRuleset) FrontendDescription() string {
 }
 
 // CopyOfFullCardset gets mocked.
-func (mockedRuleset *mockRuleset) CopyOfFullCardset() []card.Readonly {
+func (mockedRuleset *mockRuleset) CopyOfFullCardset() []card.Defined {
 	return nil
 }
 
@@ -122,7 +122,7 @@ func (mockedRuleset *mockRuleset) IndicesAvailableAsHint() []int {
 // AfterColorHint gets mocked.
 func (mockedRuleset *mockRuleset) AfterColorHint(
 	knowledgeBeforeHint []card.Inferred,
-	cardsInHand []card.Readonly,
+	cardsInHand []card.Defined,
 	hintedColor string) []card.Inferred {
 	return mockedRuleset.ReturnForInferredHandAfterHint
 }
@@ -130,7 +130,7 @@ func (mockedRuleset *mockRuleset) AfterColorHint(
 // AfterIndexHint gets mocked.
 func (mockedRuleset *mockRuleset) AfterIndexHint(
 	knowledgeBeforeHint []card.Inferred,
-	cardsInHand []card.Readonly,
+	cardsInHand []card.Defined,
 	hintedIndex int) []card.Inferred {
 	return mockedRuleset.ReturnForInferredHandAfterHint
 }
@@ -142,20 +142,20 @@ func (mockedRuleset *mockRuleset) NumberOfMistakesIndicatingGameOver() int {
 
 // IsCardPlayable gets mocked.
 func (mockedRuleset *mockRuleset) IsCardPlayable(
-	cardToPlay card.Readonly,
-	cardsAlreadyPlayedInSuit []card.Readonly) bool {
+	cardToPlay card.Defined,
+	cardsAlreadyPlayedInSuit []card.Defined) bool {
 	return false
 }
 
 // HintsForPlayingCard gets mocked.
 func (mockedRuleset *mockRuleset) HintsForPlayingCard(
-	cardToEvaluate card.Readonly) int {
+	cardToEvaluate card.Defined) int {
 	return -1
 }
 
 // PointsPerCard gets mocked.
 func (mockedRuleset *mockRuleset) PointsForCard(
-	cardToEvaluate card.Readonly) int {
+	cardToEvaluate card.Defined) int {
 	return -1
 }
 
@@ -200,9 +200,9 @@ type mockGameState struct {
 	ReturnForNumberOfReadyHints                    int
 	ReturnForNumberOfMistakesMade                  int
 	ReturnForDeckSize                              int
-	ReturnForPlayedForColor                        map[string][]card.Readonly
-	ReturnForNumberOfDiscardedCards                map[card.Readonly]int
-	ReturnForVisibleHand                           map[string][]card.Readonly
+	ReturnForPlayedForColor                        map[string][]card.Defined
+	ReturnForNumberOfDiscardedCards                map[card.Defined]int
+	ReturnForVisibleHand                           map[string][]card.Defined
 	ReturnErrorMapForVisibleHand                   map[string]error
 	ReturnForInferredHand                          map[string][]card.Inferred
 	ReturnErrorForInferredHand                     error
@@ -233,9 +233,9 @@ func NewMockGameState(testReference *testing.T) *mockGameState {
 		ReturnForNumberOfReadyHints:                    -1,
 		ReturnForNumberOfMistakesMade:                  -1,
 		ReturnForDeckSize:                              -1,
-		ReturnForPlayedForColor:                        make(map[string][]card.Readonly, 0),
-		ReturnForNumberOfDiscardedCards:                make(map[card.Readonly]int, 0),
-		ReturnForVisibleHand:                           make(map[string][]card.Readonly, 0),
+		ReturnForPlayedForColor:                        make(map[string][]card.Defined, 0),
+		ReturnForNumberOfDiscardedCards:                make(map[card.Defined]int, 0),
+		ReturnForVisibleHand:                           make(map[string][]card.Defined, 0),
 		ReturnErrorMapForVisibleHand:                   make(map[string]error, 0),
 		ReturnForInferredHand:                          make(map[string][]card.Inferred, 0),
 		ReturnErrorForInferredHand:                     nil,
@@ -312,7 +312,7 @@ func (mockGame *mockGameState) DeckSize() int {
 
 // PlayedForColor gets mocked.
 func (mockGame *mockGameState) PlayedForColor(
-	colorSuit string) []card.Readonly {
+	colorSuit string) []card.Defined {
 	return mockGame.ReturnForPlayedForColor[colorSuit]
 }
 
@@ -320,12 +320,16 @@ func (mockGame *mockGameState) PlayedForColor(
 func (mockGame *mockGameState) NumberOfDiscardedCards(
 	colorSuit string,
 	sequenceIndex int) int {
-	cardAsKey := card.NewReadonly(colorSuit, sequenceIndex)
+	cardAsKey :=
+		card.Defined{
+			ColorSuit:     colorSuit,
+			SequenceIndex: sequenceIndex,
+		}
 	return mockGame.ReturnForNumberOfDiscardedCards[cardAsKey]
 }
 
 // VisibleHand gets mocked.
-func (mockGame *mockGameState) VisibleHand(holdingPlayerName string) ([]card.Readonly, error) {
+func (mockGame *mockGameState) VisibleHand(holdingPlayerName string) ([]card.Defined, error) {
 	visibleCard :=
 		mockGame.ReturnForVisibleHand[holdingPlayerName]
 	return visibleCard, mockGame.ReturnErrorMapForVisibleHand[holdingPlayerName]
@@ -471,7 +475,7 @@ type mockGameDefinition struct {
 	chatLogLength                      int
 	gameRuleset                        game.Ruleset
 	playersInTurnOrderWithInitialHands []game.PlayerNameWithHand
-	initialDeck                        []card.Readonly
+	initialDeck                        []card.Defined
 }
 
 type gameAndPlayerNamePair struct {
@@ -559,7 +563,7 @@ func (mockImplementation *mockGamePersister) AddGame(
 	initialActionLog []message.Readonly,
 	gameRuleset game.Ruleset,
 	playersInTurnOrderWithInitialHands []game.PlayerNameWithHand,
-	initialDeck []card.Readonly) error {
+	initialDeck []card.Defined) error {
 	if mockImplementation.TestErrorForAddGame != nil {
 		mockImplementation.TestReference.Fatalf(
 			"AddGame(%v, %v, %v, %v, %v, %v): %v",

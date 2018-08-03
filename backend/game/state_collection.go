@@ -113,7 +113,7 @@ func (gameCollection *StateCollection) AddNewWithGivenDeck(
 	gameName string,
 	gameRuleset Ruleset,
 	playerNames []string,
-	initialDeck []card.Readonly) error {
+	initialDeck []card.Defined) error {
 	if gameName == "" {
 		return fmt.Errorf("Game must have a name")
 	}
@@ -188,9 +188,9 @@ func (gameCollection *StateCollection) Delete(gameName string) error {
 func (gameCollection *StateCollection) createPlayerHands(
 	playerNames []string,
 	gameRuleset Ruleset,
-	initialDeck []card.Readonly) (
+	initialDeck []card.Defined) (
 	[]PlayerNameWithHand,
-	[]card.Readonly,
+	[]card.Defined,
 	[]message.Readonly,
 	error) {
 	// A nil slice still has a length of 0, so this is OK.
@@ -251,15 +251,20 @@ func (gameCollection *StateCollection) createPlayerHands(
 		for cardsInHand := 0; cardsInHand < handSize; cardsInHand++ {
 			playerHand[cardsInHand] =
 				card.InHand{
-					Readonly: initialDeck[cardsInHand],
-					Inferred: card.NewInferred(
-						gameRuleset.ColorSuits(),
-						gameRuleset.DistinctPossibleIndices()),
+					Defined: initialDeck[cardsInHand],
+					Inferred: card.Inferred{
+						PossibleColors:  gameRuleset.ColorSuits(),
+						PossibleIndices: gameRuleset.DistinctPossibleIndices(),
+					},
 				}
 
 			// We should not ever re-visit these cards, but we set them to
 			// represent an error just in case.
-			initialDeck[cardsInHand] = card.ErrorReadonly()
+			initialDeck[cardsInHand] =
+				card.Defined{
+					ColorSuit:     "error: already removed from deck",
+					SequenceIndex: -1,
+				}
 		}
 
 		actionLog[playerIndex] =

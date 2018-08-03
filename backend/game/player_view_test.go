@@ -241,13 +241,19 @@ func TestGameIsFinishedWhenEnoughMistakes(unitTest *testing.T) {
 
 	// We also mock that some cards were played to test that the score from
 	// played cards is ignored if the game ends because of mistakes.
-	expectedPlayedCards := make(map[string][]card.Readonly, 0)
+	expectedPlayedCards := make(map[string][]card.Defined, 0)
 	playedColor := testRuleset.ColorSuits()[0]
 	possibleIndices := testRuleset.DistinctPossibleIndices()
 	expectedPlayedCards[playedColor] =
-		[]card.Readonly{
-			card.NewReadonly(playedColor, possibleIndices[0]),
-			card.NewReadonly(playedColor, possibleIndices[1]),
+		[]card.Defined{
+			card.Defined{
+				ColorSuit:     playedColor,
+				SequenceIndex: possibleIndices[0],
+			},
+			card.Defined{
+				ColorSuit:     playedColor,
+				SequenceIndex: possibleIndices[1],
+			},
 		}
 
 	mockReadAndWriteState.ReturnForPlayedForColor = expectedPlayedCards
@@ -393,7 +399,7 @@ func TestPlayedSequencesWhenSomeAreEmpty(unitTest *testing.T) {
 	mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
 	mockReadAndWriteState.ReturnForRuleset = testRuleset
 
-	expectedPlayedCards := make(map[string][]card.Readonly, 0)
+	expectedPlayedCards := make(map[string][]card.Defined, 0)
 	colorSuits := testRuleset.ColorSuits()
 	numberOfSuits := len(colorSuits)
 	if numberOfSuits < 3 {
@@ -411,19 +417,32 @@ func TestPlayedSequencesWhenSomeAreEmpty(unitTest *testing.T) {
 
 	colorWithSeveralCards := colorSuits[0]
 	severalCardsForColor :=
-		[]card.Readonly{
-			card.NewReadonly(colorWithSeveralCards, sequenceIndices[0]),
-			card.NewReadonly(colorWithSeveralCards, sequenceIndices[1]),
-			card.NewReadonly(colorWithSeveralCards, sequenceIndices[3]),
+		[]card.Defined{
+			card.Defined{
+				ColorSuit:     colorWithSeveralCards,
+				SequenceIndex: sequenceIndices[0],
+			},
+			card.Defined{
+				ColorSuit:     colorWithSeveralCards,
+				SequenceIndex: sequenceIndices[1],
+			},
+			card.Defined{
+				ColorSuit:     colorWithSeveralCards,
+				SequenceIndex: sequenceIndices[3],
+			},
 		}
 
 	numberWhichIsSeveral := len(severalCardsForColor)
 	expectedPlayedCards[colorWithSeveralCards] = severalCardsForColor
 
 	colorWithSingleCard := colorSuits[2]
-	singleCardForColor := card.NewReadonly(colorWithSingleCard, sequenceIndices[0])
+	singleCardForColor :=
+		card.Defined{
+			ColorSuit:     colorWithSingleCard,
+			SequenceIndex: sequenceIndices[0],
+		}
 	expectedPlayedCards[colorWithSingleCard] =
-		[]card.Readonly{
+		[]card.Defined{
 			singleCardForColor,
 		}
 
@@ -473,7 +492,7 @@ func TestPlayedSequencesWhenSomeAreEmpty(unitTest *testing.T) {
 		actualPile := actualPlayedCards[suitIndex]
 
 		if len(actualPile) > 0 {
-			pileColor := actualPile[0].ColorSuit()
+			pileColor := actualPile[0].ColorSuit
 
 			if pileColor == colorWithSeveralCards {
 				foundColorWithSeveralCards = true
@@ -551,7 +570,7 @@ func TestPlayedSequencesWhenAllAreNonempty(unitTest *testing.T) {
 	mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
 	mockReadAndWriteState.ReturnForRuleset = testRuleset
 
-	expectedPlayedCards := make(map[string][]card.Readonly, 0)
+	expectedPlayedCards := make(map[string][]card.Defined, 0)
 	colorSuits := testRuleset.ColorSuits()
 	numberOfSuits := len(colorSuits)
 	if numberOfSuits < 2 {
@@ -572,9 +591,13 @@ func TestPlayedSequencesWhenAllAreNonempty(unitTest *testing.T) {
 	expectedScore := 0
 	for colorCount := 0; colorCount < numberOfSuits; colorCount++ {
 		colorSuit := colorSuits[colorCount]
-		sequenceForColor := make([]card.Readonly, colorCount+1)
+		sequenceForColor := make([]card.Defined, colorCount+1)
 		for cardCount := 0; cardCount <= colorCount; cardCount++ {
-			sequenceForColor[cardCount] = card.NewReadonly(colorSuit, sequenceIndices[cardCount])
+			sequenceForColor[cardCount] =
+				card.Defined{
+					ColorSuit:     colorSuit,
+					SequenceIndex: sequenceIndices[cardCount],
+				}
 			expectedScore++
 		}
 
@@ -627,7 +650,7 @@ func TestPlayedSequencesWhenAllAreNonempty(unitTest *testing.T) {
 				expectedPlayedCards)
 		}
 
-		pileColor := actualPile[0].ColorSuit()
+		pileColor := actualPile[0].ColorSuit
 
 		expectedPile := expectedPlayedCards[pileColor]
 		expectedPileSize := len(expectedPile)
@@ -668,7 +691,7 @@ func TestDiscardedCards(unitTest *testing.T) {
 	mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
 	mockReadAndWriteState.ReturnForRuleset = testRuleset
 
-	expectedDiscardedCards := make(map[card.Readonly]int, 0)
+	expectedDiscardedCards := make(map[card.Defined]int, 0)
 	colorSuits := testRuleset.ColorSuits()
 	numberOfSuits := len(colorSuits)
 	if numberOfSuits < 3 {
@@ -684,12 +707,28 @@ func TestDiscardedCards(unitTest *testing.T) {
 	}
 
 	// We set up with several copies each of cards with the same color and different indices.
-	expectedDiscardedCards[card.NewReadonly(colorSuits[0], sequenceIndices[0])] = 3
-	expectedDiscardedCards[card.NewReadonly(colorSuits[0], sequenceIndices[1])] = 1
-	expectedDiscardedCards[card.NewReadonly(colorSuits[0], sequenceIndices[3])] = 1
+	firstKeyOfFirstColor :=
+		card.Defined{ColorSuit: colorSuits[0],
+			SequenceIndex: sequenceIndices[0],
+		}
+	secondKeyOfFirstColor :=
+		card.Defined{ColorSuit: colorSuits[0],
+			SequenceIndex: sequenceIndices[1],
+		}
+	thirdKeyOfFirstColor :=
+		card.Defined{ColorSuit: colorSuits[0],
+			SequenceIndex: sequenceIndices[3],
+		}
+	expectedDiscardedCards[firstKeyOfFirstColor] = 3
+	expectedDiscardedCards[secondKeyOfFirstColor] = 1
+	expectedDiscardedCards[thirdKeyOfFirstColor] = 1
 
 	// We also add several copies of a single sequence index of a different color.
-	expectedDiscardedCards[card.NewReadonly(colorSuits[2], sequenceIndices[1])] = 2
+	keyOfSecondColor :=
+		card.Defined{ColorSuit: colorSuits[2],
+			SequenceIndex: sequenceIndices[1],
+		}
+	expectedDiscardedCards[keyOfSecondColor] = 2
 
 	mockReadAndWriteState.ReturnForNumberOfDiscardedCards = expectedDiscardedCards
 
@@ -850,24 +889,54 @@ func TestPlayerSeesOtherHandCorrectly(unitTest *testing.T) {
 	}
 
 	firstPlayerHand :=
-		[]card.Readonly{
-			card.NewReadonly(colorSuits[0], sequenceIndices[0]),
-			card.NewReadonly(colorSuits[0], sequenceIndices[0]),
-			card.NewReadonly(colorSuits[1], sequenceIndices[0]),
-			card.NewReadonly(colorSuits[0], sequenceIndices[1]),
-			card.NewReadonly(colorSuits[1], sequenceIndices[1]),
+		[]card.Defined{
+			card.Defined{
+				ColorSuit:     colorSuits[0],
+				SequenceIndex: sequenceIndices[0],
+			},
+			card.Defined{
+				ColorSuit:     colorSuits[0],
+				SequenceIndex: sequenceIndices[0],
+			},
+			card.Defined{
+				ColorSuit:     colorSuits[1],
+				SequenceIndex: sequenceIndices[0],
+			},
+			card.Defined{
+				ColorSuit:     colorSuits[0],
+				SequenceIndex: sequenceIndices[1],
+			},
+			card.Defined{
+				ColorSuit:     colorSuits[1],
+				SequenceIndex: sequenceIndices[1],
+			},
 		}
 
 	lastPlayerHand :=
-		[]card.Readonly{
-			card.NewReadonly(colorSuits[1], sequenceIndices[0]),
-			card.NewReadonly(colorSuits[1], sequenceIndices[0]),
-			card.NewReadonly(colorSuits[0], sequenceIndices[0]),
-			card.NewReadonly(colorSuits[0], sequenceIndices[1]),
-			card.NewReadonly(colorSuits[1], sequenceIndices[1]),
+		[]card.Defined{
+			card.Defined{
+				ColorSuit:     colorSuits[1],
+				SequenceIndex: sequenceIndices[0],
+			},
+			card.Defined{
+				ColorSuit:     colorSuits[1],
+				SequenceIndex: sequenceIndices[0],
+			},
+			card.Defined{
+				ColorSuit:     colorSuits[0],
+				SequenceIndex: sequenceIndices[0],
+			},
+			card.Defined{
+				ColorSuit:     colorSuits[0],
+				SequenceIndex: sequenceIndices[1],
+			},
+			card.Defined{
+				ColorSuit:     colorSuits[1],
+				SequenceIndex: sequenceIndices[1],
+			},
 		}
 
-	expectedVisibleHands := make(map[string][]card.Readonly, 0)
+	expectedVisibleHands := make(map[string][]card.Defined, 0)
 	expectedVisibleHands[playerWithVisibleHand] = firstPlayerHand
 	expectedVisibleHands[playerNamesAvailableInTest[2]] = lastPlayerHand
 
@@ -938,13 +1007,26 @@ func TestPlayerSeesOwnInferredHandCorrectly(unitTest *testing.T) {
 
 	viewingPlayerHand :=
 		[]card.Inferred{
-			card.NewInferred(colorSuits, sequenceIndices),
-			card.NewInferred([]string{colorSuits[0]}, sequenceIndices),
-			card.NewInferred(colorSuits, []int{sequenceIndices[0]}),
-			card.NewInferred([]string{colorSuits[0]}, []int{sequenceIndices[0]}),
-			card.NewInferred(
-				[]string{colorSuits[0], colorSuits[1]},
-				[]int{sequenceIndices[0], sequenceIndices[1]}),
+			card.Inferred{
+				PossibleColors:  colorSuits,
+				PossibleIndices: sequenceIndices,
+			},
+			card.Inferred{
+				PossibleColors:  []string{colorSuits[0]},
+				PossibleIndices: sequenceIndices,
+			},
+			card.Inferred{
+				PossibleColors:  colorSuits,
+				PossibleIndices: []int{sequenceIndices[0]},
+			},
+			card.Inferred{
+				PossibleColors:  []string{colorSuits[0]},
+				PossibleIndices: []int{sequenceIndices[0]},
+			},
+			card.Inferred{
+				PossibleColors:  []string{colorSuits[0], colorSuits[1]},
+				PossibleIndices: []int{sequenceIndices[0], sequenceIndices[1]},
+			},
 		}
 
 	otherPlayerHand := []card.Inferred{}
@@ -996,7 +1078,7 @@ func TestPlayerSeesOwnInferredHandCorrectly(unitTest *testing.T) {
 			fmt.Sprintf("own inferred hand at index %v", indexInHand),
 			unitTest,
 			actualInferredHand[indexInHand],
-			viewingPlayerHand[indexInHand].PossibleColors(),
-			viewingPlayerHand[indexInHand].PossibleIndices())
+			viewingPlayerHand[indexInHand].PossibleColors,
+			viewingPlayerHand[indexInHand].PossibleIndices)
 	}
 }

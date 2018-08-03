@@ -253,8 +253,8 @@ func TestRejectTakeTurnByDiscardingIfPlayerHandAlreadyTooSmall(unitTest *testing
 	mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
 	mockReadAndWriteState.ReturnForRuleset = testRuleset
 	mockReadAndWriteState.ReturnForTurn = 3
-	reducedSizeHands := make(map[string][]card.Readonly, 1)
-	reducedSizeHands[playerName] = []card.Readonly{}
+	reducedSizeHands := make(map[string][]card.Defined, 1)
+	reducedSizeHands[playerName] = []card.Defined{}
 	mockReadAndWriteState.ReturnForVisibleHand = reducedSizeHands
 
 	mockPersister.TestErrorForReadAndWriteGame = nil
@@ -306,8 +306,8 @@ func TestRejectTakeTurnByDiscardingIfIndexNegative(unitTest *testing.T) {
 	// just that the hand slice is the correct length.
 	correctHandSize :=
 		testRuleset.NumberOfCardsInPlayerHand(len(testPlayersInOriginalOrder))
-	correctSizeHands := make(map[string][]card.Readonly, 1)
-	correctSizeHands[playerName] = make([]card.Readonly, correctHandSize)
+	correctSizeHands := make(map[string][]card.Defined, 1)
+	correctSizeHands[playerName] = make([]card.Defined, correctHandSize)
 	mockReadAndWriteState.ReturnForVisibleHand = correctSizeHands
 
 	mockPersister.TestErrorForReadAndWriteGame = nil
@@ -359,8 +359,8 @@ func TestRejectTakeTurnByDiscardingIfIndexTooLarge(unitTest *testing.T) {
 	// just that the hand slice is the correct length.
 	correctHandSize :=
 		testRuleset.NumberOfCardsInPlayerHand(len(testPlayersInOriginalOrder))
-	correctSizeHands := make(map[string][]card.Readonly, 1)
-	correctSizeHands[playerName] = make([]card.Readonly, correctHandSize)
+	correctSizeHands := make(map[string][]card.Defined, 1)
+	correctSizeHands[playerName] = make([]card.Defined, correctHandSize)
 	mockReadAndWriteState.ReturnForVisibleHand = correctSizeHands
 
 	mockPersister.TestErrorForReadAndWriteGame = nil
@@ -416,9 +416,13 @@ func TestTakeTurnByDiscardingWhenAlreadyMaximumHints(unitTest *testing.T) {
 	// just that the hand slice is the correct length.
 	correctHandSize :=
 		testRuleset.NumberOfCardsInPlayerHand(len(testPlayersInOriginalOrder))
-	correctSizeHands := make(map[string][]card.Readonly, 1)
-	correctSizeHands[playerName] = make([]card.Readonly, correctHandSize)
-	expectedDiscardedCard := card.NewReadonly("some_color", 123)
+	correctSizeHands := make(map[string][]card.Defined, 1)
+	correctSizeHands[playerName] = make([]card.Defined, correctHandSize)
+	expectedDiscardedCard :=
+		card.Defined{
+			ColorSuit:     "some_color",
+			SequenceIndex: 123,
+		}
 	correctSizeHands[playerName][indexInHandToDiscard] = expectedDiscardedCard
 	mockReadAndWriteState.ReturnForVisibleHand = correctSizeHands
 
@@ -471,8 +475,8 @@ func TestTakeTurnByDiscardingWhenAlreadyMaximumHints(unitTest *testing.T) {
 	expectedActionMessage :=
 		fmt.Sprintf(
 			"discards card %v %v",
-			expectedDiscardedCard.ColorSuit(),
-			expectedDiscardedCard.SequenceIndex())
+			expectedDiscardedCard.ColorSuit,
+			expectedDiscardedCard.SequenceIndex)
 	if (actualArgument.MessageString != expectedActionMessage) ||
 		(actualArgument.PlayerState != expectedPlayerState) ||
 		(actualArgument.IndexInt != indexInHandToDiscard) ||
@@ -519,9 +523,13 @@ func TestTakeTurnByDiscardingWhenLessThanMaximumHints(unitTest *testing.T) {
 	// just that the hand slice is the correct length.
 	correctHandSize :=
 		testRuleset.NumberOfCardsInPlayerHand(len(testPlayersInOriginalOrder))
-	correctSizeHands := make(map[string][]card.Readonly, 1)
-	correctSizeHands[playerName] = make([]card.Readonly, correctHandSize)
-	expectedDiscardedCard := card.NewReadonly("some_color", 123)
+	correctSizeHands := make(map[string][]card.Defined, 1)
+	correctSizeHands[playerName] = make([]card.Defined, correctHandSize)
+	expectedDiscardedCard :=
+		card.Defined{
+			ColorSuit:     "some_color",
+			SequenceIndex: 123,
+		}
 	correctSizeHands[playerName][indexInHandToDiscard] = expectedDiscardedCard
 	mockReadAndWriteState.ReturnForVisibleHand = correctSizeHands
 
@@ -574,8 +582,8 @@ func TestTakeTurnByDiscardingWhenLessThanMaximumHints(unitTest *testing.T) {
 	expectedActionMessage :=
 		fmt.Sprintf(
 			"discards card %v %v",
-			expectedDiscardedCard.ColorSuit(),
-			expectedDiscardedCard.SequenceIndex())
+			expectedDiscardedCard.ColorSuit,
+			expectedDiscardedCard.SequenceIndex)
 	if (actualArgument.MessageString != expectedActionMessage) ||
 		(actualArgument.PlayerState != expectedPlayerState) ||
 		(actualArgument.IndexInt != indexInHandToDiscard) ||
@@ -750,8 +758,8 @@ func TestRejectTakeTurnByPlayingIfPlayerHandAlreadyTooSmall(unitTest *testing.T)
 	mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
 	mockReadAndWriteState.ReturnForRuleset = testRuleset
 	mockReadAndWriteState.ReturnForTurn = 3
-	reducedSizeHands := make(map[string][]card.Readonly, 1)
-	reducedSizeHands[playerName] = []card.Readonly{}
+	reducedSizeHands := make(map[string][]card.Defined, 1)
+	reducedSizeHands[playerName] = []card.Defined{}
 	mockReadAndWriteState.ReturnForVisibleHand = reducedSizeHands
 
 	mockPersister.TestErrorForReadAndWriteGame = nil
@@ -803,8 +811,8 @@ func TestRejectTakeTurnByPlayingIfIndexNegative(unitTest *testing.T) {
 	// just that the hand slice is the correct length.
 	correctHandSize :=
 		testRuleset.NumberOfCardsInPlayerHand(len(testPlayersInOriginalOrder))
-	correctSizeHands := make(map[string][]card.Readonly, 1)
-	correctSizeHands[playerName] = make([]card.Readonly, correctHandSize)
+	correctSizeHands := make(map[string][]card.Defined, 1)
+	correctSizeHands[playerName] = make([]card.Defined, correctHandSize)
 	mockReadAndWriteState.ReturnForVisibleHand = correctSizeHands
 
 	mockPersister.TestErrorForReadAndWriteGame = nil
@@ -856,8 +864,8 @@ func TestRejectTakeTurnByPlayingIfIndexTooLarge(unitTest *testing.T) {
 	// just that the hand slice is the correct length.
 	correctHandSize :=
 		testRuleset.NumberOfCardsInPlayerHand(len(testPlayersInOriginalOrder))
-	correctSizeHands := make(map[string][]card.Readonly, 1)
-	correctSizeHands[playerName] = make([]card.Readonly, correctHandSize)
+	correctSizeHands := make(map[string][]card.Defined, 1)
+	correctSizeHands[playerName] = make([]card.Defined, correctHandSize)
 	mockReadAndWriteState.ReturnForVisibleHand = correctSizeHands
 
 	mockPersister.TestErrorForReadAndWriteGame = nil
@@ -915,14 +923,23 @@ func TestMistakeWhenTakingTurnByPlaying(unitTest *testing.T) {
 	testSuit := testRuleset.ColorSuits()[1]
 	correctHandSize :=
 		testRuleset.NumberOfCardsInPlayerHand(len(testPlayersInOriginalOrder))
-	correctSizeHands := make(map[string][]card.Readonly, 1)
-	correctSizeHands[playerName] = make([]card.Readonly, correctHandSize)
-	expectedDiscardedCard := card.NewReadonly(testSuit, 3)
+	correctSizeHands := make(map[string][]card.Defined, 1)
+	correctSizeHands[playerName] = make([]card.Defined, correctHandSize)
+	expectedDiscardedCard :=
+		card.Defined{
+			ColorSuit:     testSuit,
+			SequenceIndex: 3,
+		}
 	correctSizeHands[playerName][indexInHandToAttemptToPlay] = expectedDiscardedCard
 	mockReadAndWriteState.ReturnForVisibleHand = correctSizeHands
 
-	alreadyPlayed := make(map[string][]card.Readonly, 0)
-	alreadyPlayed[testSuit] = []card.Readonly{card.NewReadonly(testSuit, 1)}
+	alreadyPlayed := make(map[string][]card.Defined, 0)
+	alreadyPlayed[testSuit] = []card.Defined{
+		card.Defined{
+			ColorSuit:     testSuit,
+			SequenceIndex: 1,
+		},
+	}
 	mockReadAndWriteState.ReturnForPlayedForColor = alreadyPlayed
 
 	mockReadAndWriteState.TestErrorForEnactTurnByDiscardingAndReplacing = nil
@@ -974,8 +991,8 @@ func TestMistakeWhenTakingTurnByPlaying(unitTest *testing.T) {
 	expectedActionMessage :=
 		fmt.Sprintf(
 			"mistakenly tries to play card %v %v",
-			expectedDiscardedCard.ColorSuit(),
-			expectedDiscardedCard.SequenceIndex())
+			expectedDiscardedCard.ColorSuit,
+			expectedDiscardedCard.SequenceIndex)
 	if (actualArgument.MessageString != expectedActionMessage) ||
 		(actualArgument.PlayerState != expectedPlayerState) ||
 		(actualArgument.IndexInt != indexInHandToAttemptToPlay) ||
@@ -1026,15 +1043,24 @@ func TestTakeTurnByPlayingWithNoBonusHintWhenLessThanMaximumHints(unitTest *test
 	sequenceIndexToPlay := 4
 	correctHandSize :=
 		testRuleset.NumberOfCardsInPlayerHand(len(testPlayersInOriginalOrder))
-	correctSizeHands := make(map[string][]card.Readonly, 1)
-	correctSizeHands[playerName] = make([]card.Readonly, correctHandSize)
-	expectedPlayedCard := card.NewReadonly(testSuit, sequenceIndexToPlay)
+	correctSizeHands := make(map[string][]card.Defined, 1)
+	correctSizeHands[playerName] = make([]card.Defined, correctHandSize)
+	expectedPlayedCard :=
+		card.Defined{
+			ColorSuit:     testSuit,
+			SequenceIndex: sequenceIndexToPlay,
+		}
 	correctSizeHands[playerName][indexInHandToPlay] = expectedPlayedCard
 	mockReadAndWriteState.ReturnForVisibleHand = correctSizeHands
 
-	alreadyPlayed := make(map[string][]card.Readonly, 0)
+	alreadyPlayed := make(map[string][]card.Defined, 0)
 	alreadyPlayed[testSuit] =
-		[]card.Readonly{card.NewReadonly(testSuit, sequenceIndexToPlay-1)}
+		[]card.Defined{
+			card.Defined{
+				ColorSuit:     testSuit,
+				SequenceIndex: sequenceIndexToPlay - 1,
+			},
+		}
 	mockReadAndWriteState.ReturnForPlayedForColor = alreadyPlayed
 
 	mockReadAndWriteState.TestErrorForEnactTurnByPlayingAndReplacing = nil
@@ -1086,8 +1112,8 @@ func TestTakeTurnByPlayingWithNoBonusHintWhenLessThanMaximumHints(unitTest *test
 	expectedActionMessage :=
 		fmt.Sprintf(
 			"successfully plays card %v %v",
-			expectedPlayedCard.ColorSuit(),
-			expectedPlayedCard.SequenceIndex())
+			expectedPlayedCard.ColorSuit,
+			expectedPlayedCard.SequenceIndex)
 	if (actualArgument.MessageString != expectedActionMessage) ||
 		(actualArgument.PlayerState != expectedPlayerState) ||
 		(actualArgument.IndexInt != indexInHandToPlay) ||
@@ -1138,15 +1164,24 @@ func TestTakeTurnByPlayingWithBonusHintWhenAlreadyAtMaximumHints(unitTest *testi
 	sequenceIndexToPlay := 5
 	correctHandSize :=
 		testRuleset.NumberOfCardsInPlayerHand(len(testPlayersInOriginalOrder))
-	correctSizeHands := make(map[string][]card.Readonly, 1)
-	correctSizeHands[playerName] = make([]card.Readonly, correctHandSize)
-	expectedPlayedCard := card.NewReadonly(testSuit, sequenceIndexToPlay)
+	correctSizeHands := make(map[string][]card.Defined, 1)
+	correctSizeHands[playerName] = make([]card.Defined, correctHandSize)
+	expectedPlayedCard :=
+		card.Defined{
+			ColorSuit:     testSuit,
+			SequenceIndex: sequenceIndexToPlay,
+		}
 	correctSizeHands[playerName][indexInHandToPlay] = expectedPlayedCard
 	mockReadAndWriteState.ReturnForVisibleHand = correctSizeHands
 
-	alreadyPlayed := make(map[string][]card.Readonly, 0)
+	alreadyPlayed := make(map[string][]card.Defined, 0)
 	alreadyPlayed[testSuit] =
-		[]card.Readonly{card.NewReadonly(testSuit, sequenceIndexToPlay-1)}
+		[]card.Defined{
+			card.Defined{
+				ColorSuit:     testSuit,
+				SequenceIndex: sequenceIndexToPlay - 1,
+			},
+		}
 	mockReadAndWriteState.ReturnForPlayedForColor = alreadyPlayed
 
 	mockReadAndWriteState.TestErrorForEnactTurnByPlayingAndReplacing = nil
@@ -1198,8 +1233,8 @@ func TestTakeTurnByPlayingWithBonusHintWhenAlreadyAtMaximumHints(unitTest *testi
 	expectedActionMessage :=
 		fmt.Sprintf(
 			"successfully plays card %v %v",
-			expectedPlayedCard.ColorSuit(),
-			expectedPlayedCard.SequenceIndex())
+			expectedPlayedCard.ColorSuit,
+			expectedPlayedCard.SequenceIndex)
 	if (actualArgument.MessageString != expectedActionMessage) ||
 		(actualArgument.PlayerState != expectedPlayerState) ||
 		(actualArgument.IndexInt != indexInHandToPlay) ||
@@ -1250,15 +1285,24 @@ func TestTakeTurnByPlayingWithBonusHintWhenLessThanMaximumHints(unitTest *testin
 	sequenceIndexToPlay := 5
 	correctHandSize :=
 		testRuleset.NumberOfCardsInPlayerHand(len(testPlayersInOriginalOrder))
-	correctSizeHands := make(map[string][]card.Readonly, 1)
-	correctSizeHands[playerName] = make([]card.Readonly, correctHandSize)
-	expectedPlayedCard := card.NewReadonly(testSuit, sequenceIndexToPlay)
+	correctSizeHands := make(map[string][]card.Defined, 1)
+	correctSizeHands[playerName] = make([]card.Defined, correctHandSize)
+	expectedPlayedCard :=
+		card.Defined{
+			ColorSuit:     testSuit,
+			SequenceIndex: sequenceIndexToPlay,
+		}
 	correctSizeHands[playerName][indexInHandToPlay] = expectedPlayedCard
 	mockReadAndWriteState.ReturnForVisibleHand = correctSizeHands
 
-	alreadyPlayed := make(map[string][]card.Readonly, 0)
+	alreadyPlayed := make(map[string][]card.Defined, 0)
 	alreadyPlayed[testSuit] =
-		[]card.Readonly{card.NewReadonly(testSuit, sequenceIndexToPlay-1)}
+		[]card.Defined{
+			card.Defined{
+				ColorSuit:     testSuit,
+				SequenceIndex: sequenceIndexToPlay - 1,
+			},
+		}
 	mockReadAndWriteState.ReturnForPlayedForColor = alreadyPlayed
 
 	mockReadAndWriteState.TestErrorForEnactTurnByPlayingAndReplacing = nil
@@ -1310,8 +1354,8 @@ func TestTakeTurnByPlayingWithBonusHintWhenLessThanMaximumHints(unitTest *testin
 	expectedActionMessage :=
 		fmt.Sprintf(
 			"successfully plays card %v %v",
-			expectedPlayedCard.ColorSuit(),
-			expectedPlayedCard.SequenceIndex())
+			expectedPlayedCard.ColorSuit,
+			expectedPlayedCard.SequenceIndex)
 	if (actualArgument.MessageString != expectedActionMessage) ||
 		(actualArgument.PlayerState != expectedPlayerState) ||
 		(actualArgument.IndexInt != indexInHandToPlay) ||
@@ -1492,9 +1536,10 @@ func TestPropagateErrorFromTakeTurnByHintFromCallingPersisterWriteFunction(unitT
 
 	expectedInferredHandAfterHint :=
 		[]card.Inferred{
-			card.NewInferred(
-				[]string{"expected first color", "expected second color"},
-				[]int{0, 1}),
+			card.Inferred{
+				PossibleColors:  []string{"expected first", "expected second"},
+				PossibleIndices: []int{0, 1},
+			},
 		}
 
 	expectedHandSize := len(expectedInferredHandAfterHint)
@@ -1595,8 +1640,8 @@ func TestPropagateErrorFromTakeTurnByHintFromCallingPersisterWriteFunction(unitT
 					testIdentifier,
 					unitTest,
 					actualArgumentsForColor.UpdatedInferredHand[indexInHand],
-					expectedInferredHandAfterHint[indexInHand].PossibleColors(),
-					expectedInferredHandAfterHint[indexInHand].PossibleIndices())
+					expectedInferredHandAfterHint[indexInHand].PossibleColors,
+					expectedInferredHandAfterHint[indexInHand].PossibleIndices)
 			}
 
 			// We reset the arguments before calling the function for hinting an index.
@@ -1648,8 +1693,8 @@ func TestPropagateErrorFromTakeTurnByHintFromCallingPersisterWriteFunction(unitT
 					testIdentifier,
 					unitTest,
 					actualArgumentsForIndex.UpdatedInferredHand[indexInHand],
-					expectedInferredHandAfterHint[indexInHand].PossibleColors(),
-					expectedInferredHandAfterHint[indexInHand].PossibleIndices())
+					expectedInferredHandAfterHint[indexInHand].PossibleColors,
+					expectedInferredHandAfterHint[indexInHand].PossibleIndices)
 			}
 		})
 	}

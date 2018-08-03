@@ -736,28 +736,53 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 	testView.MockChatLog = expectedChatLog
 	testView.MockPlayerTurnIndex = 1
 	testView.ReturnForVisibleHand =
-		[]card.Readonly{
-			card.NewReadonly("some color", 1),
-			card.NewReadonly("some color", 2),
-			card.NewReadonly("another color", 1),
+		[]card.Defined{
+			card.Defined{ColorSuit: "some color",
+				SequenceIndex: 1,
+			},
+			card.Defined{ColorSuit: "some color",
+				SequenceIndex: 2,
+			},
+			card.Defined{ColorSuit: "another color",
+				SequenceIndex: 1,
+			},
 		}
 	testView.ReturnForKnowledgeOfOwnHand =
 		[]card.Inferred{
-			card.NewInferred([]string{"some color", "another color"}, []int{1, 2, 3}),
-			card.NewInferred([]string{"some color", "yet another color"}, []int{1, 2}),
-			card.NewInferred([]string{"some color"}, []int{3}),
+			card.Inferred{
+				PossibleColors:  []string{"some color", "another color"},
+				PossibleIndices: []int{1, 2, 3},
+			},
+			card.Inferred{
+				PossibleColors:  []string{"some color", "yet another color"},
+				PossibleIndices: []int{1, 2},
+			},
+			card.Inferred{
+				PossibleColors:  []string{"some color"},
+				PossibleIndices: []int{3},
+			},
 		}
 	testView.ReturnForPlayedCards =
-		[][]card.Readonly{
-			[]card.Readonly{
-				card.NewReadonly("another color", 1),
-				card.NewReadonly("another color", 2),
-				card.NewReadonly("another color", 3),
+		[][]card.Defined{
+			[]card.Defined{
+				card.Defined{ColorSuit: "another color",
+					SequenceIndex: 1,
+				},
+				card.Defined{ColorSuit: "another color",
+					SequenceIndex: 2,
+				},
+				card.Defined{ColorSuit: "another color",
+					SequenceIndex: 3,
+				},
 			},
-			[]card.Readonly{},
-			[]card.Readonly{
-				card.NewReadonly("some color", 1),
-				card.NewReadonly("some color", 2),
+			[]card.Defined{},
+			[]card.Defined{
+				card.Defined{ColorSuit: "some color",
+					SequenceIndex: 1,
+				},
+				card.Defined{ColorSuit: "some color",
+					SequenceIndex: 2,
+				},
 			},
 		}
 
@@ -2118,7 +2143,7 @@ func assertVisibleHandCorrect(
 	unitTest *testing.T,
 	actualHand parsing.VisibleHand,
 	expectedPlayer string,
-	expectedCards []card.Readonly,
+	expectedCards []card.Defined,
 	expectedHasTakenLastTurn bool) {
 	if actualHand.PlayerName != expectedPlayer {
 		unitTest.Fatalf(
@@ -2147,7 +2172,7 @@ func assertVisibleCardSlicesCorrect(
 	testIdentifier string,
 	unitTest *testing.T,
 	actualCards []parsing.VisibleCard,
-	expectedCards []card.Readonly) {
+	expectedCards []card.Defined) {
 	numberOfExpectedCards := len(expectedCards)
 
 	// We compare the possible colors and indices as sets. Then it is
@@ -2165,8 +2190,8 @@ func assertVisibleCardSlicesCorrect(
 		actualCard := actualCards[cardIndex]
 		expectedCard := expectedCards[cardIndex]
 
-		if (actualCard.ColorSuit != expectedCard.ColorSuit()) ||
-			(actualCard.SequenceIndex != expectedCard.SequenceIndex()) {
+		if (actualCard.ColorSuit != expectedCard.ColorSuit) ||
+			(actualCard.SequenceIndex != expectedCard.SequenceIndex) {
 			unitTest.Fatalf(
 				testIdentifier+
 					"/actual card %v did not match expected cards %v",
@@ -2202,8 +2227,8 @@ func assertInferredCardSlicesCorrect(
 			testIdentifier,
 			unitTest,
 			actualCard,
-			expectedCard.PossibleColors(),
-			expectedCard.PossibleIndices())
+			expectedCard.PossibleColors,
+			expectedCard.PossibleIndices)
 	}
 }
 

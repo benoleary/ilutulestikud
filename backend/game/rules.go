@@ -99,16 +99,22 @@ func (standardRuleset *standardWithoutRainbowRuleset) FrontendDescription() stri
 
 // CopyOfFullCardset returns an array populated with every card which should be present
 // for a game under the ruleset, including duplicates.
-func (standardRuleset *standardWithoutRainbowRuleset) CopyOfFullCardset() []card.Readonly {
+func (standardRuleset *standardWithoutRainbowRuleset) CopyOfFullCardset() []card.Defined {
 	colorSuits := standardRuleset.ColorSuits()
 	numberOfColors := len(colorSuits)
 	numberOfIndices := len(standardRuleset.indicesWithRepetition)
 	numberOfCardsInDeck := numberOfColors * numberOfIndices
-	fullCardset := make([]card.Readonly, 0, numberOfCardsInDeck)
+	fullCardset := make([]card.Defined, 0, numberOfCardsInDeck)
 
 	for _, colorSuit := range colorSuits {
 		for _, sequenceIndex := range standardRuleset.indicesWithRepetition {
-			fullCardset = append(fullCardset, card.NewReadonly(colorSuit, sequenceIndex))
+			fullCardset =
+				append(
+					fullCardset,
+					card.Defined{
+						ColorSuit:     colorSuit,
+						SequenceIndex: sequenceIndex,
+					})
 		}
 	}
 
@@ -176,12 +182,12 @@ func (standardRuleset *standardWithoutRainbowRuleset) IndicesAvailableAsHint() [
 // the hinted color is removed from the possibilities list if it is on it.
 func (standardRuleset *standardWithoutRainbowRuleset) AfterColorHint(
 	knowledgeBeforeHint []card.Inferred,
-	cardsInHand []card.Readonly,
+	cardsInHand []card.Defined,
 	hintedColor string) []card.Inferred {
 	handSize := len(cardsInHand)
 	knowledgeAfterHint := make([]card.Inferred, handSize)
 	for indexInHand := 0; indexInHand < handSize; indexInHand++ {
-		colorOfCard := cardsInHand[indexInHand].ColorSuit()
+		colorOfCard := cardsInHand[indexInHand].ColorSuit
 
 		var replacementColors []string
 
@@ -189,7 +195,7 @@ func (standardRuleset *standardWithoutRainbowRuleset) AfterColorHint(
 			replacementColors = []string{colorOfCard}
 		} else {
 			originalColors :=
-				knowledgeBeforeHint[indexInHand].PossibleColors()
+				knowledgeBeforeHint[indexInHand].PossibleColors
 			replacementColors = nil
 
 			for _, possibleColor := range originalColors {
@@ -202,9 +208,10 @@ func (standardRuleset *standardWithoutRainbowRuleset) AfterColorHint(
 		}
 
 		knowledgeAfterHint[indexInHand] =
-			card.NewInferred(
-				replacementColors,
-				knowledgeBeforeHint[indexInHand].PossibleIndices())
+			card.Inferred{
+				PossibleColors:  replacementColors,
+				PossibleIndices: knowledgeBeforeHint[indexInHand].PossibleIndices,
+			}
 	}
 
 	return knowledgeAfterHint
@@ -217,12 +224,12 @@ func (standardRuleset *standardWithoutRainbowRuleset) AfterColorHint(
 // the hinted index is removed from the possibilities list if it is on it.
 func (standardRuleset *standardWithoutRainbowRuleset) AfterIndexHint(
 	knowledgeBeforeHint []card.Inferred,
-	cardsInHand []card.Readonly,
+	cardsInHand []card.Defined,
 	hintedIndex int) []card.Inferred {
 	handSize := len(cardsInHand)
 	knowledgeAfterHint := make([]card.Inferred, handSize)
 	for indexInHand := 0; indexInHand < handSize; indexInHand++ {
-		sequenceIndexOfCard := cardsInHand[indexInHand].SequenceIndex()
+		sequenceIndexOfCard := cardsInHand[indexInHand].SequenceIndex
 
 		var replacementIndices []int
 
@@ -230,7 +237,7 @@ func (standardRuleset *standardWithoutRainbowRuleset) AfterIndexHint(
 			replacementIndices = []int{sequenceIndexOfCard}
 		} else {
 			originalSequenceIndices :=
-				knowledgeBeforeHint[indexInHand].PossibleIndices()
+				knowledgeBeforeHint[indexInHand].PossibleIndices
 
 			for _, possibleIndex := range originalSequenceIndices {
 				if possibleIndex == hintedIndex {
@@ -242,9 +249,10 @@ func (standardRuleset *standardWithoutRainbowRuleset) AfterIndexHint(
 		}
 
 		knowledgeAfterHint[indexInHand] =
-			card.NewInferred(
-				knowledgeBeforeHint[indexInHand].PossibleColors(),
-				replacementIndices)
+			card.Inferred{
+				PossibleColors:  knowledgeBeforeHint[indexInHand].PossibleColors,
+				PossibleIndices: replacementIndices,
+			}
 	}
 
 	return knowledgeAfterHint
@@ -261,22 +269,22 @@ func (standardRuleset *standardWithoutRainbowRuleset) NumberOfMistakesIndicating
 // the slice is not empty, or true if the sequence is empty and the card's value is
 // one, or false otherwise.
 func (standardRuleset *standardWithoutRainbowRuleset) IsCardPlayable(
-	cardToPlay card.Readonly,
-	cardsAlreadyPlayedInSuit []card.Readonly) bool {
+	cardToPlay card.Defined,
+	cardsAlreadyPlayedInSuit []card.Defined) bool {
 	numberOfCardsPlayedInSuit := len(cardsAlreadyPlayedInSuit)
 	if numberOfCardsPlayedInSuit <= 0 {
-		return cardToPlay.SequenceIndex() == 1
+		return cardToPlay.SequenceIndex == 1
 	}
 
 	topmostPlayedCard := cardsAlreadyPlayedInSuit[numberOfCardsPlayedInSuit-1]
-	return cardToPlay.SequenceIndex() == (topmostPlayedCard.SequenceIndex() + 1)
+	return cardToPlay.SequenceIndex == (topmostPlayedCard.SequenceIndex + 1)
 }
 
 // HintsForPlayingCard returns the number of hints to refresh upon successfully
 // playing the given card.
 func (standardRuleset *standardWithoutRainbowRuleset) HintsForPlayingCard(
-	cardToEvaluate card.Readonly) int {
-	if cardToEvaluate.SequenceIndex() >= 5 {
+	cardToEvaluate card.Defined) int {
+	if cardToEvaluate.SequenceIndex >= 5 {
 		return 1
 	}
 
@@ -285,7 +293,7 @@ func (standardRuleset *standardWithoutRainbowRuleset) HintsForPlayingCard(
 
 // PointsPerCard returns the points value of the given card.
 func (standardRuleset *standardWithoutRainbowRuleset) PointsForCard(
-	cardToEvaluate card.Readonly) int {
+	cardToEvaluate card.Defined) int {
 	// Every card is worth the same in the standard rules.
 	return 1
 }
@@ -318,11 +326,16 @@ func (separateRainbow *RainbowAsSeparateSuitRuleset) FrontendDescription() strin
 
 // CopyOfFullCardset returns an array populated with every card which should be present
 // for a game under the ruleset, including duplicates.
-func (separateRainbow *RainbowAsSeparateSuitRuleset) CopyOfFullCardset() []card.Readonly {
+func (separateRainbow *RainbowAsSeparateSuitRuleset) CopyOfFullCardset() []card.Defined {
 	fullCardset := separateRainbow.standardWithoutRainbowRuleset.CopyOfFullCardset()
 
 	for _, sequenceIndex := range separateRainbow.indicesWithRepetition {
-		fullCardset = append(fullCardset, card.NewReadonly(RainbowSuit, sequenceIndex))
+		fullCardset =
+			append(
+				fullCardset,
+				card.Defined{
+					ColorSuit: RainbowSuit, SequenceIndex: sequenceIndex,
+				})
 	}
 
 	return fullCardset
@@ -379,14 +392,14 @@ func (compoundRainbow *RainbowAsCompoundSuitRuleset) ColorsAvailableAsHint() []s
 // hint, then it is inferred as not that color and also not a rainbow card.
 func (compoundRainbow *RainbowAsCompoundSuitRuleset) AfterColorHint(
 	knowledgeBeforeHint []card.Inferred,
-	cardsInHand []card.Readonly,
+	cardsInHand []card.Defined,
 	hintedColor string) []card.Inferred {
 	handSize := len(cardsInHand)
 	knowledgeAfterHint := make([]card.Inferred, handSize)
 	for indexInHand := 0; indexInHand < handSize; indexInHand++ {
-		colorOfCard := cardsInHand[indexInHand].ColorSuit()
+		colorOfCard := cardsInHand[indexInHand].ColorSuit
 		originalColors :=
-			knowledgeBeforeHint[indexInHand].PossibleColors()
+			knowledgeBeforeHint[indexInHand].PossibleColors
 		replacementColors := []string{}
 
 		if (colorOfCard == RainbowSuit) || (colorOfCard == hintedColor) {
@@ -414,9 +427,10 @@ func (compoundRainbow *RainbowAsCompoundSuitRuleset) AfterColorHint(
 		}
 
 		knowledgeAfterHint[indexInHand] =
-			card.NewInferred(
-				replacementColors,
-				knowledgeBeforeHint[indexInHand].PossibleIndices())
+			card.Inferred{
+				PossibleColors:  replacementColors,
+				PossibleIndices: knowledgeBeforeHint[indexInHand].PossibleIndices,
+			}
 	}
 
 	return knowledgeAfterHint

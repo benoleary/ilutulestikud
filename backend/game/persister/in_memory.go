@@ -81,7 +81,7 @@ func (gamePersister *inMemoryPersister) AddGame(
 	initialActionLog []message.Readonly,
 	gameRuleset game.Ruleset,
 	playersInTurnOrderWithInitialHands []game.PlayerNameWithHand,
-	initialDeck []card.Readonly) error {
+	initialDeck []card.Defined) error {
 	if gameName == "" {
 		return fmt.Errorf("Game must have a name")
 	}
@@ -214,9 +214,9 @@ type inMemoryState struct {
 	turnsTakenWithEmptyDeck     int
 	numberOfReadyHints          int
 	numberOfMistakesMade        int
-	undrawnDeck                 []card.Readonly
-	playedCardsForColor         map[string][]card.Readonly
-	discardedCards              map[card.Readonly]int
+	undrawnDeck                 []card.Defined
+	playedCardsForColor         map[string][]card.Defined
+	discardedCards              map[card.Defined]int
 	playerHands                 map[string][]card.InHand
 }
 
@@ -228,7 +228,7 @@ func newInMemoryState(
 	initialActionLog []message.Readonly,
 	gameRuleset game.Ruleset,
 	playersInTurnOrderWithInitialHands []game.PlayerNameWithHand,
-	shuffledDeck []card.Readonly) game.ReadAndWriteState {
+	shuffledDeck []card.Defined) game.ReadAndWriteState {
 	numberOfParticipants := len(playersInTurnOrderWithInitialHands)
 	participantNamesInTurnOrder := make([]string, numberOfParticipants)
 	playerHands := make(map[string][]card.InHand, numberOfParticipants)
@@ -254,8 +254,8 @@ func newInMemoryState(
 		numberOfReadyHints:          gameRuleset.MaximumNumberOfHints(),
 		numberOfMistakesMade:        0,
 		undrawnDeck:                 shuffledDeck,
-		playedCardsForColor:         make(map[string][]card.Readonly, 0),
-		discardedCards:              make(map[card.Readonly]int, 0),
+		playedCardsForColor:         make(map[string][]card.Defined, 0),
+		discardedCards:              make(map[card.Defined]int, 0),
 		playerHands:                 playerHands,
 	}
 }
@@ -322,12 +322,12 @@ func (gameState *inMemoryState) DeckSize() int {
 // PlayedForColor returns the cards, in order, which have been played
 // correctly for the given color suit.
 func (gameState *inMemoryState) PlayedForColor(
-	colorSuit string) []card.Readonly {
+	colorSuit string) []card.Defined {
 	playedCards, _ :=
 		gameState.playedCardsForColor[colorSuit]
 
 	if playedCards == nil {
-		return []card.Readonly{}
+		return []card.Defined{}
 	}
 
 	return playedCards
@@ -338,7 +338,11 @@ func (gameState *inMemoryState) PlayedForColor(
 func (gameState *inMemoryState) NumberOfDiscardedCards(
 	colorSuit string,
 	sequenceIndex int) int {
-	mapKey := card.NewReadonly(colorSuit, sequenceIndex)
+	mapKey :=
+		card.Defined{
+			ColorSuit:     colorSuit,
+			SequenceIndex: sequenceIndex,
+		}
 
 	// We ignore the bool about whether it was found, as the default 0 for an int in
 	// Go is the correct value to return.
@@ -348,7 +352,7 @@ func (gameState *inMemoryState) NumberOfDiscardedCards(
 }
 
 // VisibleCardInHand returns the card held by the given player in the given position.
-func (gameState *inMemoryState) VisibleHand(holdingPlayerName string) ([]card.Readonly, error) {
+func (gameState *inMemoryState) VisibleHand(holdingPlayerName string) ([]card.Defined, error) {
 	playerHand, hasHand := gameState.playerHands[holdingPlayerName]
 
 	if !hasHand {
@@ -357,10 +361,10 @@ func (gameState *inMemoryState) VisibleHand(holdingPlayerName string) ([]card.Re
 
 	handSize := len(playerHand)
 
-	visibleHand := make([]card.Readonly, handSize)
+	visibleHand := make([]card.Defined, handSize)
 
 	for indexInHand := 0; indexInHand < handSize; indexInHand++ {
-		visibleHand[indexInHand] = playerHand[indexInHand].Readonly
+		visibleHand[indexInHand] = playerHand[indexInHand].Defined
 	}
 
 	return visibleHand, nil
@@ -480,7 +484,7 @@ func (gameState *inMemoryState) EnactTurnByPlayingAndReplacing(
 		return errorFromTakingCard
 	}
 
-	playedSuit := playedCard.ColorSuit()
+	playedSuit := playedCard.ColorSuit
 	sequenceBeforeNow := gameState.playedCardsForColor[playedSuit]
 	gameState.playedCardsForColor[playedSuit] = append(sequenceBeforeNow, playedCard)
 
@@ -562,19 +566,25 @@ func (gameState *inMemoryState) recordActionMessage(
 func (gameState *inMemoryState) takeCardFromHandReplacingIfPossible(
 	holdingPlayerName string,
 	indexInHand int,
-	knowledgeOfDrawnCard card.Inferred) (card.Readonly, error) {
+	knowledgeOfDrawnCard card.Inferred) (card.Defined, error) {
 	if indexInHand < 0 {
-		return card.ErrorReadonly(), fmt.Errorf("Index %v is out of allowed range", indexInHand)
+		return invalidCardAndErrorFromOutOfRange(indexInHand)
 	}
 
 	playerHand, hasHand := gameState.playerHands[holdingPlayerName]
 
 	if !hasHand {
-		return card.ErrorReadonly(), fmt.Errorf("Player has no hand")
+		errorFromNoHand := fmt.Errorf("Player has no hand")
+		invalidCard :=
+			card.Defined{
+				ColorSuit:     errorFromNoHand.Error(),
+				SequenceIndex: -1,
+			}
+		return invalidCard, errorFromNoHand
 	}
 
 	if indexInHand >= len(playerHand) {
-		return card.ErrorReadonly(), fmt.Errorf("Index %v is out of allowed range", indexInHand)
+		return invalidCardAndErrorFromOutOfRange(indexInHand)
 	}
 
 	cardBeingReplaced := playerHand[indexInHand]
@@ -585,7 +595,7 @@ func (gameState *inMemoryState) takeCardFromHandReplacingIfPossible(
 		knowledgeOfDrawnCard,
 		playerHand)
 
-	return cardBeingReplaced.Readonly, nil
+	return cardBeingReplaced.Defined, nil
 }
 
 func (gameState *inMemoryState) updatePlayerHand(
@@ -608,13 +618,17 @@ func (gameState *inMemoryState) updatePlayerHand(
 		// which the player should have.
 		playerHand[indexInHand] =
 			card.InHand{
-				Readonly: gameState.undrawnDeck[0],
+				Defined:  gameState.undrawnDeck[0],
 				Inferred: knowledgeOfDrawnCard,
 			}
 
 		// We should not ever re-visit this card, but in case we do somehow, we ensure
 		// that this element represents an error.
-		gameState.undrawnDeck[0] = card.ErrorReadonly()
+		gameState.undrawnDeck[0] =
+			card.Defined{
+				ColorSuit:     "error: already removed from deck",
+				SequenceIndex: -1,
+			}
 
 		gameState.undrawnDeck = gameState.undrawnDeck[1:]
 	}
@@ -700,4 +714,14 @@ func (rollingAppender *rollingMessageAppender) appendNewMessage(
 		(rollingAppender.indexOfOldest + 1) % rollingAppender.listLength
 
 	rollingAppender.mutualExclusion.Unlock()
+}
+
+func invalidCardAndErrorFromOutOfRange(indexOutOfRange int) (card.Defined, error) {
+	errorFromOutOfRange := fmt.Errorf("Index %v is out of allowed range", indexOutOfRange)
+	invalidCard :=
+		card.Defined{
+			ColorSuit:     errorFromOutOfRange.Error(),
+			SequenceIndex: -1,
+		}
+	return invalidCard, errorFromOutOfRange
 }

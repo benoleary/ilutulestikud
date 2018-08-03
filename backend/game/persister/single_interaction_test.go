@@ -8,6 +8,11 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/game/message"
 )
 
+var testDefaultInferred card.Inferred = card.Inferred{
+	PossibleColors:  []string{"no idea", "not a clue"},
+	PossibleIndices: []int{1, 2, 3},
+}
+
 func TestErrorFromInvalidPlayerVisibleHand(unitTest *testing.T) {
 	initialDeck := defaultTestRuleset.CopyOfFullCardset()
 
@@ -151,16 +156,13 @@ func TestRecordAndRetrieveSingleChatMessage(unitTest *testing.T) {
 }
 
 func TestErrorFromActionsInvalidlyTakingCardFromHand(unitTest *testing.T) {
-	initialDeck := []card.Readonly{}
+	initialDeck := []card.Defined{}
 
 	actionMessage := "action message"
 	testColor := "test color"
 	numberOfHintsToAdd := 2
 	numberOfMistakesToAdd := -1
-	knowledgeOfNewCard :=
-		card.NewInferred(
-			[]string{"no idea", "not a clue"},
-			[]int{1, 2, 3})
+	knowledgeOfNewCard := testDefaultInferred
 
 	gamesAndDescriptions :=
 		prepareGameStates(
@@ -271,21 +273,28 @@ func TestErrorFromActionsInvalidlyTakingCardFromHand(unitTest *testing.T) {
 }
 
 func TestValidDiscardOfCardWhenDeckNotYetEmpty(unitTest *testing.T) {
-	expectedReplacementCard := card.NewReadonly("a", 3)
+	expectedReplacementCard :=
+		card.Defined{
+			ColorSuit:     "a",
+			SequenceIndex: 3,
+		}
 	initialDeck :=
-		[]card.Readonly{
+		[]card.Defined{
 			expectedReplacementCard,
-			card.NewReadonly("b", 2),
-			card.NewReadonly("c", 1),
+			card.Defined{
+				ColorSuit:     "b",
+				SequenceIndex: 2,
+			},
+			card.Defined{
+				ColorSuit:     "c",
+				SequenceIndex: 1,
+			},
 		}
 
 	initialDeckSize := len(initialDeck)
 	numberOfHintsToAdd := -3
 	numberOfMistakesToAdd := 2
-	knowledgeOfNewCard :=
-		card.NewInferred(
-			[]string{"no idea", "not a clue"},
-			[]int{1, 2, 3})
+	knowledgeOfNewCard := testDefaultInferred
 
 	actionMessage := "action message"
 	comparisonActionLog := make([]message.Readonly, 3)
@@ -364,7 +373,7 @@ func TestValidDiscardOfCardWhenDeckNotYetEmpty(unitTest *testing.T) {
 			pristineState.Turn += 1
 			pristineState.VisibleCardInHand[playerName][indexInHand] = expectedReplacementCard
 			pristineState.InferredCardInHand[playerName][indexInHand] = knowledgeOfNewCard
-			pristineState.NumberOfDiscardedCards[expectedDiscardedCard.Readonly] = 1
+			pristineState.NumberOfDiscardedCards[expectedDiscardedCard.Defined] = 1
 			assertGameStateAsExpected(
 				testIdentifier,
 				unitTest,
@@ -375,19 +384,20 @@ func TestValidDiscardOfCardWhenDeckNotYetEmpty(unitTest *testing.T) {
 }
 
 func TestValidDiscardOfCardWhichEmptiesDeck(unitTest *testing.T) {
-	expectedReplacementCard := card.NewReadonly("a", 3)
+	expectedReplacementCard :=
+		card.Defined{
+			ColorSuit:     "a",
+			SequenceIndex: 3,
+		}
 	initialDeck :=
-		[]card.Readonly{
+		[]card.Defined{
 			expectedReplacementCard,
 		}
 
 	initialDeckSize := len(initialDeck)
 	numberOfHintsToAdd := -3
 	numberOfMistakesToAdd := 2
-	knowledgeOfNewCard :=
-		card.NewInferred(
-			[]string{"no idea", "not a clue"},
-			[]int{1, 2, 3})
+	knowledgeOfNewCard := testDefaultInferred
 
 	actionMessage := "action message"
 	comparisonActionLog := make([]message.Readonly, 3)
@@ -466,7 +476,7 @@ func TestValidDiscardOfCardWhichEmptiesDeck(unitTest *testing.T) {
 			pristineState.Turn += 1
 			pristineState.VisibleCardInHand[playerName][indexInHand] = expectedReplacementCard
 			pristineState.InferredCardInHand[playerName][indexInHand] = knowledgeOfNewCard
-			pristineState.NumberOfDiscardedCards[expectedDiscardedCard.Readonly] = 1
+			pristineState.NumberOfDiscardedCards[expectedDiscardedCard.Defined] = 1
 			assertGameStateAsExpected(
 				testIdentifier,
 				unitTest,
@@ -477,15 +487,12 @@ func TestValidDiscardOfCardWhichEmptiesDeck(unitTest *testing.T) {
 }
 
 func TestValidDiscardOfCardWhenDeckAlreadyEmpty(unitTest *testing.T) {
-	initialDeck := []card.Readonly{}
+	initialDeck := []card.Defined{}
 
 	initialDeckSize := len(initialDeck)
 	numberOfHintsToAdd := -3
 	numberOfMistakesToAdd := 2
-	knowledgeOfNewCard :=
-		card.NewInferred(
-			[]string{"no idea", "not a clue"},
-			[]int{1, 2, 3})
+	knowledgeOfNewCard := testDefaultInferred
 
 	actionMessage := "action message"
 	comparisonActionLog := make([]message.Readonly, 3)
@@ -569,7 +576,7 @@ func TestValidDiscardOfCardWhenDeckAlreadyEmpty(unitTest *testing.T) {
 			pristineInferredHand := pristineState.InferredCardInHand[playerName]
 			pristineState.InferredCardInHand[playerName] =
 				append(pristineInferredHand[:indexInHand], pristineInferredHand[indexInHand+1:]...)
-			pristineState.NumberOfDiscardedCards[expectedDiscardedCard.Readonly] = 1
+			pristineState.NumberOfDiscardedCards[expectedDiscardedCard.Defined] = 1
 			assertGameStateAsExpected(
 				testIdentifier,
 				unitTest,
@@ -580,20 +587,27 @@ func TestValidDiscardOfCardWhenDeckAlreadyEmpty(unitTest *testing.T) {
 }
 
 func TestValidPlayOfCardWhenDeckNotYetEmpty(unitTest *testing.T) {
-	expectedReplacementCard := card.NewReadonly("a", 3)
+	expectedReplacementCard :=
+		card.Defined{
+			ColorSuit:     "a",
+			SequenceIndex: 3,
+		}
 	initialDeck :=
-		[]card.Readonly{
+		[]card.Defined{
 			expectedReplacementCard,
-			card.NewReadonly("b", 2),
-			card.NewReadonly("c", 1),
+			card.Defined{
+				ColorSuit:     "b",
+				SequenceIndex: 2,
+			},
+			card.Defined{
+				ColorSuit:     "c",
+				SequenceIndex: 1,
+			},
 		}
 
 	initialDeckSize := len(initialDeck)
 	numberOfHintsToAdd := -2
-	knowledgeOfNewCard :=
-		card.NewInferred(
-			[]string{"no idea", "not a clue"},
-			[]int{1, 2, 3})
+	knowledgeOfNewCard := testDefaultInferred
 
 	actionMessage := "action message"
 	comparisonActionLog := make([]message.Readonly, 3)
@@ -669,8 +683,8 @@ func TestValidPlayOfCardWhenDeckNotYetEmpty(unitTest *testing.T) {
 			pristineState.Turn += 1
 			pristineState.VisibleCardInHand[playerName][indexInHand] = expectedReplacementCard
 			pristineState.InferredCardInHand[playerName][indexInHand] = knowledgeOfNewCard
-			pristineState.PlayedForColor[expectedPlayedCard.ColorSuit()] =
-				[]card.Readonly{expectedPlayedCard.Readonly}
+			pristineState.PlayedForColor[expectedPlayedCard.ColorSuit] =
+				[]card.Defined{expectedPlayedCard.Defined}
 			assertGameStateAsExpected(
 				testIdentifier,
 				unitTest,
@@ -681,18 +695,19 @@ func TestValidPlayOfCardWhenDeckNotYetEmpty(unitTest *testing.T) {
 }
 
 func TestValidPlayOfCardWhichEmptiesDeck(unitTest *testing.T) {
-	expectedReplacementCard := card.NewReadonly("a", 3)
+	expectedReplacementCard :=
+		card.Defined{
+			ColorSuit:     "a",
+			SequenceIndex: 3,
+		}
 	initialDeck :=
-		[]card.Readonly{
+		[]card.Defined{
 			expectedReplacementCard,
 		}
 
 	initialDeckSize := len(initialDeck)
 	numberOfHintsToAdd := -2
-	knowledgeOfNewCard :=
-		card.NewInferred(
-			[]string{"no idea", "not a clue"},
-			[]int{1, 2, 3})
+	knowledgeOfNewCard := testDefaultInferred
 
 	actionMessage := "action message"
 	comparisonActionLog := make([]message.Readonly, 3)
@@ -768,8 +783,8 @@ func TestValidPlayOfCardWhichEmptiesDeck(unitTest *testing.T) {
 			pristineState.Turn += 1
 			pristineState.VisibleCardInHand[playerName][indexInHand] = expectedReplacementCard
 			pristineState.InferredCardInHand[playerName][indexInHand] = knowledgeOfNewCard
-			pristineState.PlayedForColor[expectedPlayedCard.ColorSuit()] =
-				[]card.Readonly{expectedPlayedCard.Readonly}
+			pristineState.PlayedForColor[expectedPlayedCard.ColorSuit] =
+				[]card.Defined{expectedPlayedCard.Defined}
 			assertGameStateAsExpected(
 				testIdentifier,
 				unitTest,
@@ -780,14 +795,11 @@ func TestValidPlayOfCardWhichEmptiesDeck(unitTest *testing.T) {
 }
 
 func TestValidPlayOfCardWhenDeckAlreadyEmpty(unitTest *testing.T) {
-	initialDeck := []card.Readonly{}
+	initialDeck := []card.Defined{}
 
 	initialDeckSize := len(initialDeck)
 	numberOfHintsToAdd := -2
-	knowledgeOfNewCard :=
-		card.NewInferred(
-			[]string{"no idea", "not a clue"},
-			[]int{1, 2, 3})
+	knowledgeOfNewCard := testDefaultInferred
 
 	actionMessage := "action message"
 	comparisonActionLog := make([]message.Readonly, 3)
@@ -868,8 +880,8 @@ func TestValidPlayOfCardWhenDeckAlreadyEmpty(unitTest *testing.T) {
 			pristineInferredHand := pristineState.InferredCardInHand[playerName]
 			pristineState.InferredCardInHand[playerName] =
 				append(pristineInferredHand[:indexInHand], pristineInferredHand[indexInHand+1:]...)
-			pristineState.PlayedForColor[expectedPlayedCard.ColorSuit()] =
-				[]card.Readonly{expectedPlayedCard.Readonly}
+			pristineState.PlayedForColor[expectedPlayedCard.ColorSuit] =
+				[]card.Defined{expectedPlayedCard.Defined}
 			assertGameStateAsExpected(
 				testIdentifier,
 				unitTest,
@@ -880,7 +892,7 @@ func TestValidPlayOfCardWhenDeckAlreadyEmpty(unitTest *testing.T) {
 }
 
 func TestErrorFromHintToInvalidPlayer(unitTest *testing.T) {
-	initialDeck := []card.Readonly{}
+	initialDeck := []card.Defined{}
 
 	actionMessage := "action message"
 
@@ -946,7 +958,7 @@ func TestErrorFromHintToInvalidPlayer(unitTest *testing.T) {
 }
 
 func TestErrorFromHintWithTooSmallInferredHand(unitTest *testing.T) {
-	initialDeck := []card.Readonly{}
+	initialDeck := []card.Defined{}
 
 	actionMessage := "action message"
 
@@ -1013,7 +1025,7 @@ func TestErrorFromHintWithTooSmallInferredHand(unitTest *testing.T) {
 }
 
 func TestErrorFromHintWithTooLargeInferredHand(unitTest *testing.T) {
-	initialDeck := []card.Readonly{}
+	initialDeck := []card.Defined{}
 
 	actionMessage := "action message"
 
@@ -1080,7 +1092,7 @@ func TestErrorFromHintWithTooLargeInferredHand(unitTest *testing.T) {
 }
 
 func TestValidHintWhenDeckAlreadyEmpty(unitTest *testing.T) {
-	initialDeck := []card.Readonly{}
+	initialDeck := []card.Defined{}
 
 	initialDeckSize := len(initialDeck)
 
@@ -1114,7 +1126,10 @@ func TestValidHintWhenDeckAlreadyEmpty(unitTest *testing.T) {
 	testInferredColors := []string{"a test color", "another test color"}
 	for indexInHand := 0; indexInHand < handSize; indexInHand++ {
 		updatedInferredHand[indexInHand] =
-			card.NewInferred(testInferredColors, []int{indexInHand})
+			card.Inferred{
+				PossibleColors:  testInferredColors,
+				PossibleIndices: []int{indexInHand},
+			}
 	}
 
 	gamesAndDescriptions :=
@@ -1180,10 +1195,19 @@ func TestValidHintWhenDeckAlreadyEmpty(unitTest *testing.T) {
 
 func TestValidHintWhenDeckNotYetEmpty(unitTest *testing.T) {
 	initialDeck :=
-		[]card.Readonly{
-			card.NewReadonly("a", 3),
-			card.NewReadonly("b", 2),
-			card.NewReadonly("c", 1),
+		[]card.Defined{
+			card.Defined{
+				ColorSuit:     "a",
+				SequenceIndex: 3,
+			},
+			card.Defined{
+				ColorSuit:     "b",
+				SequenceIndex: 2,
+			},
+			card.Defined{
+				ColorSuit:     "c",
+				SequenceIndex: 1,
+			},
 		}
 
 	initialDeckSize := len(initialDeck)
@@ -1218,7 +1242,10 @@ func TestValidHintWhenDeckNotYetEmpty(unitTest *testing.T) {
 	testInferredColors := []string{"a test color", "another test color"}
 	for indexInHand := 0; indexInHand < handSize; indexInHand++ {
 		updatedInferredHand[indexInHand] =
-			card.NewInferred(testInferredColors, []int{indexInHand})
+			card.Inferred{
+				PossibleColors:  testInferredColors,
+				PossibleIndices: []int{indexInHand},
+			}
 	}
 
 	gamesAndDescriptions :=

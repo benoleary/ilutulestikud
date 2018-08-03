@@ -236,7 +236,7 @@ func TestRejectAddNewWhenInvalid(unitTest *testing.T) {
 		testName                   string
 		gameName                   string
 		playerNames                []string
-		initialDeck                []card.Readonly
+		initialDeck                []card.Defined
 		errorFromPlayerProviderGet error
 	}{
 		{
@@ -344,32 +344,92 @@ func TestAddNewWithGivenShuffle(unitTest *testing.T) {
 	// ((3 players * 5 cards per hand) + 1 for remaining deck).
 	// We choose a sequence that should prove that the cards
 	// have been propagated correctly.
-	testDeck := []card.Readonly{
-		card.NewReadonly("some color for player 1", 2),
-		card.NewReadonly("another color for player 1", 3),
-		card.NewReadonly("player 1 color", 1),
-		card.NewReadonly("some color for player 1", 1),
-		card.NewReadonly("player 1 color", 1),
-		card.NewReadonly("a color for player 2", 2),
-		card.NewReadonly("another color for player 2", 2),
-		card.NewReadonly("player 2 color", 2),
-		card.NewReadonly("some color for player 2", 2),
-		card.NewReadonly("player 2 color", 2),
-		card.NewReadonly("player 3 hand color", 1),
-		card.NewReadonly("player 3 hand color", 2),
-		card.NewReadonly("player 3 hand color", 3),
-		card.NewReadonly("player 3 hand color", 2),
-		card.NewReadonly("player 3 hand color", 1),
-		card.NewReadonly("color which should end up in remaining deck", 1),
-		card.NewReadonly("color which should end up in remaining deck", 2),
-		card.NewReadonly("color which should end up in remaining deck", 1),
-		card.NewReadonly("another color which should end up in remaining deck", 1),
-		card.NewReadonly("color which should end up in remaining deck", 1),
+	testDeck := []card.Defined{
+		card.Defined{
+			ColorSuit:     "some color for player 1",
+			SequenceIndex: 2,
+		},
+		card.Defined{
+			ColorSuit:     "another color for player 1",
+			SequenceIndex: 3,
+		},
+		card.Defined{
+			ColorSuit:     "player 1 color",
+			SequenceIndex: 1,
+		},
+		card.Defined{
+			ColorSuit:     "some color for player 1",
+			SequenceIndex: 1,
+		},
+		card.Defined{
+			ColorSuit:     "player 1 color",
+			SequenceIndex: 1,
+		},
+		card.Defined{
+			ColorSuit:     "a color for player 2",
+			SequenceIndex: 2,
+		},
+		card.Defined{
+			ColorSuit:     "another color for player 2",
+			SequenceIndex: 2,
+		},
+		card.Defined{
+			ColorSuit:     "player 2 color",
+			SequenceIndex: 2,
+		},
+		card.Defined{
+			ColorSuit:     "some color for player 2",
+			SequenceIndex: 2,
+		},
+		card.Defined{
+			ColorSuit:     "player 2 color",
+			SequenceIndex: 2,
+		},
+		card.Defined{
+			ColorSuit:     "player 3 hand color",
+			SequenceIndex: 1,
+		},
+		card.Defined{
+			ColorSuit:     "player 3 hand color",
+			SequenceIndex: 2,
+		},
+		card.Defined{
+			ColorSuit:     "player 3 hand color",
+			SequenceIndex: 3,
+		},
+		card.Defined{
+			ColorSuit:     "player 3 hand color",
+			SequenceIndex: 2,
+		},
+		card.Defined{
+			ColorSuit:     "player 3 hand color",
+			SequenceIndex: 1,
+		},
+		card.Defined{
+			ColorSuit:     "color which should end up in remaining deck",
+			SequenceIndex: 1,
+		},
+		card.Defined{
+			ColorSuit:     "color which should end up in remaining deck",
+			SequenceIndex: 2,
+		},
+		card.Defined{
+			ColorSuit:     "color which should end up in remaining deck",
+			SequenceIndex: 1,
+		},
+		card.Defined{
+			ColorSuit:     "another color which should end up in remaining deck",
+			SequenceIndex: 1,
+		},
+		card.Defined{
+			ColorSuit:     "color which should end up in remaining deck",
+			SequenceIndex: 1,
+		},
 	}
 
 	// We need a deep copy of the deck as adding the game
 	// modifies the deck given to it.
-	copyOfInputDeck := make([]card.Readonly, len(testDeck))
+	copyOfInputDeck := make([]card.Defined, len(testDeck))
 	copy(copyOfInputDeck, testDeck)
 
 	gameParticipants :=
@@ -456,10 +516,11 @@ func TestAddNewWithGivenShuffle(unitTest *testing.T) {
 		for indexInHand := 0; indexInHand < lengthOfExpectedHand; indexInHand++ {
 			expectedPlayerHand[indexInHand] =
 				card.InHand{
-					Readonly: expectedVisibleHand[indexInHand],
-					Inferred: card.NewInferred(
-						expectedColors,
-						expectedIndices),
+					Defined: expectedVisibleHand[indexInHand],
+					Inferred: card.Inferred{
+						PossibleColors:  expectedColors,
+						PossibleIndices: expectedIndices,
+					},
 				}
 		}
 
@@ -553,7 +614,7 @@ func TestAddNewWithDefaultShuffle(unitTest *testing.T) {
 	// We check that the inferred information is correct (conveniently independent
 	// of what the cards are at the moment when the initial deal has just been made)
 	// and collect all the cards together to check against the initial deck.
-	shuffledCards := make(map[card.Readonly]int, 0)
+	shuffledCards := make(map[card.Defined]int, 0)
 	numberOfCardsInTotal := 0
 	for playerIndex := 0; playerIndex < numberOfExpectedPlayers; playerIndex++ {
 		nameAndHand := playersAndHandsFromCall[playerIndex]
@@ -572,8 +633,8 @@ func TestAddNewWithDefaultShuffle(unitTest *testing.T) {
 				expectedColors,
 				expectedIndices)
 
-			numberOfCopiesBeforeThis := shuffledCards[inHandCard.Readonly]
-			shuffledCards[inHandCard.Readonly] = numberOfCopiesBeforeThis + 1
+			numberOfCopiesBeforeThis := shuffledCards[inHandCard.Defined]
+			shuffledCards[inHandCard.Defined] = numberOfCopiesBeforeThis + 1
 			numberOfCardsInTotal++
 		}
 	}

@@ -75,7 +75,7 @@ func TestAllCardsPresentInCompoundRainbow(unitTest *testing.T) {
 
 	for _, cardInDeck := range rainbowRuleset.CopyOfFullCardset() {
 		countOfSuitUntilNow, isValidSuit :=
-			colorSuitMap[cardInDeck.ColorSuit()]
+			colorSuitMap[cardInDeck.ColorSuit]
 
 		if !isValidSuit {
 			unitTest.Fatalf(
@@ -83,7 +83,7 @@ func TestAllCardsPresentInCompoundRainbow(unitTest *testing.T) {
 				cardInDeck)
 		}
 
-		colorSuitMap[cardInDeck.ColorSuit()] = countOfSuitUntilNow + 1
+		colorSuitMap[cardInDeck.ColorSuit] = countOfSuitUntilNow + 1
 
 		// All the official rulesets give one point per card successfully played,
 		// no matter which card.
@@ -95,8 +95,8 @@ func TestAllCardsPresentInCompoundRainbow(unitTest *testing.T) {
 		}
 
 		hintsForPlayingCard := rainbowRuleset.HintsForPlayingCard(cardInDeck)
-		if ((cardInDeck.SequenceIndex() < 5) && (hintsForPlayingCard != 0)) ||
-			((cardInDeck.SequenceIndex() >= 5) && (hintsForPlayingCard != 1)) {
+		if ((cardInDeck.SequenceIndex < 5) && (hintsForPlayingCard != 0)) ||
+			((cardInDeck.SequenceIndex >= 5) && (hintsForPlayingCard != 1)) {
 			unitTest.Fatalf(
 				"card %+v gives %v hints when successfully played",
 				cardInDeck,
@@ -116,10 +116,14 @@ func TestAllCardsPresentInCompoundRainbow(unitTest *testing.T) {
 func TestStandardRejectsWrongInitialCardInSequence(unitTest *testing.T) {
 	standardRuleset := game.NewStandardWithoutRainbow()
 	testColor := standardRuleset.ColorSuits()[0]
-	playedCards := []card.Readonly{}
+	playedCards := []card.Defined{}
 
 	for _, possibleIndex := range standardRuleset.DistinctPossibleIndices() {
-		candidateCard := card.NewReadonly(testColor, possibleIndex)
+		candidateCard :=
+			card.Defined{
+				ColorSuit:     testColor,
+				SequenceIndex: possibleIndex,
+			}
 		isPlayable := standardRuleset.IsCardPlayable(candidateCard, playedCards)
 		if isPlayable && (possibleIndex != 1) {
 			unitTest.Fatalf(
@@ -133,16 +137,27 @@ func TestStandardRejectsWrongCardInNonemptySequence(unitTest *testing.T) {
 	standardRuleset := game.NewStandardWithoutRainbow()
 	testColor := standardRuleset.ColorSuits()[0]
 	possibleIndices := standardRuleset.DistinctPossibleIndices()
-	topmostCard := card.NewReadonly(testColor, possibleIndices[1])
-	playedCards := []card.Readonly{
-		card.NewReadonly(testColor, possibleIndices[0]),
+	topmostCard := card.Defined{
+		ColorSuit:     testColor,
+		SequenceIndex: possibleIndices[1],
+	}
+	playedCards := []card.Defined{
+		card.Defined{
+			ColorSuit:     testColor,
+			SequenceIndex: possibleIndices[0],
+		},
 		topmostCard,
 	}
 
 	for _, possibleIndex := range standardRuleset.DistinctPossibleIndices() {
-		candidateCard := card.NewReadonly(testColor, possibleIndex)
+		candidateCard :=
+			card.Defined{
+				ColorSuit:     testColor,
+				SequenceIndex: possibleIndex,
+			}
+
 		isPlayable := standardRuleset.IsCardPlayable(candidateCard, playedCards)
-		if isPlayable && (possibleIndex != (topmostCard.SequenceIndex() + 1)) {
+		if isPlayable && (possibleIndex != (topmostCard.SequenceIndex + 1)) {
 			unitTest.Fatalf(
 				"standard ruleset allows %v to be played onto %v",
 				candidateCard,
@@ -332,25 +347,41 @@ func TestColorHintInRulesetsWithSimpleSuits(unitTest *testing.T) {
 		otherColor := possibleColors[3]
 		noiseColor := possibleColors[1]
 
-		readonlyHinted := card.NewReadonly(hintedColor, testIndex)
-		readonlyOther := card.NewReadonly(otherColor, testIndex)
+		readonlyHinted :=
+			card.Defined{
+				ColorSuit:     hintedColor,
+				SequenceIndex: testIndex,
+			}
+		readonlyOther :=
+			card.Defined{
+				ColorSuit:     otherColor,
+				SequenceIndex: testIndex,
+			}
 
 		inferredKnownAsHinted :=
-			card.NewInferred([]string{hintedColor}, []int{testIndex})
+			card.Inferred{
+				PossibleColors:  []string{hintedColor},
+				PossibleIndices: []int{testIndex},
+			}
 		inferredKnownAsOther :=
-			card.NewInferred([]string{otherColor}, []int{testIndex})
+			card.Inferred{
+				PossibleColors:  []string{otherColor},
+				PossibleIndices: []int{testIndex},
+			}
 
 		inferredUnknown :=
-			card.NewInferred(
-				[]string{noiseColor, hintedColor, otherColor},
-				[]int{testIndex})
+			card.Inferred{
+				PossibleColors:  []string{noiseColor, hintedColor, otherColor},
+				PossibleIndices: []int{testIndex},
+			}
 		inferredKnownAsNotHinted :=
-			card.NewInferred(
-				[]string{noiseColor, otherColor},
-				[]int{testIndex})
+			card.Inferred{
+				PossibleColors:  []string{noiseColor, otherColor},
+				PossibleIndices: []int{testIndex},
+			}
 
 		cardsInHand :=
-			[]card.Readonly{
+			[]card.Defined{
 				readonlyHinted,
 				readonlyHinted,
 				readonlyOther,
@@ -399,8 +430,8 @@ func TestColorHintInRulesetsWithSimpleSuits(unitTest *testing.T) {
 				testIdentifier,
 				unitTest,
 				actualKnowledgeAfterHint[indexInHand],
-				expectedKnowledgeAfterHint[indexInHand].PossibleColors(),
-				expectedKnowledgeAfterHint[indexInHand].PossibleIndices())
+				expectedKnowledgeAfterHint[indexInHand].PossibleColors,
+				expectedKnowledgeAfterHint[indexInHand].PossibleIndices)
 		}
 	}
 }
@@ -424,36 +455,61 @@ func TestColorHintWhenRainbowMatchesAllColorHints(unitTest *testing.T) {
 		noiseColor = possibleColors[0]
 	}
 
-	readonlyHinted := card.NewReadonly(hintedColor, testIndex)
-	readonlyOther := card.NewReadonly(otherColor, testIndex)
-	readonlyRainbow := card.NewReadonly(rainbowColor, testIndex)
+	readonlyHinted :=
+		card.Defined{
+			ColorSuit:     hintedColor,
+			SequenceIndex: testIndex,
+		}
+	readonlyOther :=
+		card.Defined{
+			ColorSuit:     otherColor,
+			SequenceIndex: testIndex,
+		}
+	readonlyRainbow :=
+		card.Defined{
+			ColorSuit:     rainbowColor,
+			SequenceIndex: testIndex,
+		}
 
 	inferredKnownAsHinted :=
-		card.NewInferred([]string{hintedColor}, []int{testIndex})
+		card.Inferred{
+			PossibleColors:  []string{hintedColor},
+			PossibleIndices: []int{testIndex},
+		}
 	inferredKnownAsOther :=
-		card.NewInferred([]string{otherColor}, []int{testIndex})
+		card.Inferred{
+			PossibleColors:  []string{otherColor},
+			PossibleIndices: []int{testIndex},
+		}
 	inferredKnownAsRainbow :=
-		card.NewInferred([]string{rainbowColor}, []int{testIndex})
+		card.Inferred{
+			PossibleColors:  []string{rainbowColor},
+			PossibleIndices: []int{testIndex},
+		}
 
 	inferredUnknown :=
-		card.NewInferred(
-			[]string{noiseColor, hintedColor, otherColor, rainbowColor},
-			[]int{testIndex})
+		card.Inferred{
+			PossibleColors:  []string{noiseColor, hintedColor, otherColor, rainbowColor},
+			PossibleIndices: []int{testIndex},
+		}
 	inferredKnownAsNotHinted :=
-		card.NewInferred(
-			[]string{noiseColor, otherColor},
-			[]int{testIndex})
+		card.Inferred{
+			PossibleColors:  []string{noiseColor, otherColor},
+			PossibleIndices: []int{testIndex},
+		}
 	inferredKnownAsRainbowOrHinted :=
-		card.NewInferred(
-			[]string{rainbowColor, hintedColor},
-			[]int{testIndex})
+		card.Inferred{
+			PossibleColors:  []string{rainbowColor, hintedColor},
+			PossibleIndices: []int{testIndex},
+		}
 	inferredKnownAsRainbowOrOther :=
-		card.NewInferred(
-			[]string{rainbowColor, otherColor},
-			[]int{testIndex})
+		card.Inferred{
+			PossibleColors:  []string{rainbowColor, otherColor},
+			PossibleIndices: []int{testIndex},
+		}
 
 	cardsInHand :=
-		[]card.Readonly{
+		[]card.Defined{
 			readonlyHinted,
 			readonlyHinted,
 			readonlyHinted,
@@ -520,8 +576,8 @@ func TestColorHintWhenRainbowMatchesAllColorHints(unitTest *testing.T) {
 			testIdentifier,
 			unitTest,
 			actualKnowledgeAfterHint[indexInHand],
-			expectedKnowledgeAfterHint[indexInHand].PossibleColors(),
-			expectedKnowledgeAfterHint[indexInHand].PossibleIndices())
+			expectedKnowledgeAfterHint[indexInHand].PossibleColors,
+			expectedKnowledgeAfterHint[indexInHand].PossibleIndices)
 	}
 }
 
@@ -541,25 +597,41 @@ func TestIndexHintInRulesetsFollowingStandard(unitTest *testing.T) {
 		otherIndex := possibleIndices[3]
 		noiseIndex := possibleIndices[1]
 
-		readonlyHinted := card.NewReadonly(testColor, hintedIndex)
-		readonlyOther := card.NewReadonly(testColor, otherIndex)
+		readonlyHinted :=
+			card.Defined{
+				ColorSuit:     testColor,
+				SequenceIndex: hintedIndex,
+			}
+		readonlyOther :=
+			card.Defined{
+				ColorSuit:     testColor,
+				SequenceIndex: otherIndex,
+			}
 
 		inferredKnownAsHinted :=
-			card.NewInferred([]string{testColor}, []int{hintedIndex})
+			card.Inferred{
+				PossibleColors:  []string{testColor},
+				PossibleIndices: []int{hintedIndex},
+			}
 		inferredKnownAsOther :=
-			card.NewInferred([]string{testColor}, []int{otherIndex})
+			card.Inferred{
+				PossibleColors:  []string{testColor},
+				PossibleIndices: []int{otherIndex},
+			}
 
 		inferredUnknown :=
-			card.NewInferred(
-				[]string{testColor},
-				[]int{noiseIndex, hintedIndex, otherIndex})
+			card.Inferred{
+				PossibleColors:  []string{testColor},
+				PossibleIndices: []int{noiseIndex, hintedIndex, otherIndex},
+			}
 		inferredKnownAsNotHinted :=
-			card.NewInferred(
-				[]string{testColor},
-				[]int{noiseIndex, otherIndex})
+			card.Inferred{
+				PossibleColors:  []string{testColor},
+				PossibleIndices: []int{noiseIndex, otherIndex},
+			}
 
 		cardsInHand :=
-			[]card.Readonly{
+			[]card.Defined{
 				readonlyHinted,
 				readonlyHinted,
 				readonlyOther,
@@ -608,8 +680,8 @@ func TestIndexHintInRulesetsFollowingStandard(unitTest *testing.T) {
 				testIdentifier,
 				unitTest,
 				actualKnowledgeAfterHint[indexInHand],
-				expectedKnowledgeAfterHint[indexInHand].PossibleColors(),
-				expectedKnowledgeAfterHint[indexInHand].PossibleIndices())
+				expectedKnowledgeAfterHint[indexInHand].PossibleColors,
+				expectedKnowledgeAfterHint[indexInHand].PossibleIndices)
 		}
 	}
 }

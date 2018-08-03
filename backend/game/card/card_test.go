@@ -6,116 +6,21 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/game/card"
 )
 
-func TestNewValidReadonly(unitTest *testing.T) {
-	testColor := "test color"
-	testIndex := 16
-	validReadonly := card.NewReadonly(testColor, testIndex)
-
-	if (validReadonly.ColorSuit() != testColor) ||
-		(validReadonly.SequenceIndex() != testIndex) {
-		unitTest.Fatalf(
-			"NewReadonly(%v, %v) produced unexpected %+v",
-			testColor,
-			testIndex,
-			validReadonly)
-	}
-}
-
-func TestNewErrorReadonly(unitTest *testing.T) {
-	errorReadonly := card.ErrorReadonly()
-
-	if (errorReadonly.ColorSuit() != "error") ||
-		(errorReadonly.SequenceIndex() != -1) {
-		unitTest.Fatalf(
-			"ErrorReadonly() produced unexpected %+v",
-			errorReadonly)
-	}
-}
-
-func TestNewValidInferred(unitTest *testing.T) {
-	testColors :=
-		[]string{
-			"test color",
-			"another color",
-		}
-
-	testIndices := []int{
-		16,
-		23,
-		0,
-	}
-
-	validInferred := card.NewInferred(testColors, testIndices)
-
-	cardColors := validInferred.PossibleColors()
-	numberOfExpectedColors := len(testColors)
-
-	if len(cardColors) != numberOfExpectedColors {
-		unitTest.Fatalf(
-			"NewInferred(%v, %v) produced unexpected %+v",
-			testColors,
-			testIndices,
-			validInferred)
-	}
-
-	for colorIndex := 0; colorIndex < numberOfExpectedColors; colorIndex++ {
-		if cardColors[colorIndex] != testColors[colorIndex] {
-			unitTest.Fatalf(
-				"NewInferred(%v, %v) produced unexpected %+v",
-				testColors,
-				testIndices,
-				validInferred)
-		}
-	}
-
-	cardIndices := validInferred.PossibleIndices()
-	numberOfExpectedIndices := len(testIndices)
-
-	if len(cardIndices) != numberOfExpectedIndices {
-		unitTest.Fatalf(
-			"NewInferred(%v, %v) produced unexpected %+v",
-			testColors,
-			testIndices,
-			validInferred)
-	}
-
-	for indexIndex := 0; indexIndex < numberOfExpectedIndices; indexIndex++ {
-		if cardIndices[indexIndex] != testIndices[indexIndex] {
-			unitTest.Fatalf(
-				"NewInferred(%v, %v) produced unexpected %+v",
-				testColors,
-				testIndices,
-				validInferred)
-		}
-	}
-}
-
-func TestNewErrorInferred(unitTest *testing.T) {
-	errorInferred := card.ErrorInferred()
-
-	if (errorInferred.PossibleColors() != nil) ||
-		(errorInferred.PossibleIndices() != nil) {
-		unitTest.Fatalf(
-			"ErrorInferred() produced unexpected %+v",
-			errorInferred)
-	}
-}
-
 func TestShuffleReordersAndKeepsCorrectCards(unitTest *testing.T) {
 	comparisonDeck :=
-		[]card.Readonly{
-			card.NewReadonly("a", 6),
-			card.NewReadonly("b", 5),
-			card.NewReadonly("c", 4),
-			card.NewReadonly("d", 3),
-			card.NewReadonly("e", 2),
-			card.NewReadonly("f", 1),
+		[]card.Defined{
+			card.Defined{ColorSuit: "a", SequenceIndex: 6},
+			card.Defined{ColorSuit: "b", SequenceIndex: 5},
+			card.Defined{ColorSuit: "c", SequenceIndex: 4},
+			card.Defined{ColorSuit: "d", SequenceIndex: 3},
+			card.Defined{ColorSuit: "e", SequenceIndex: 2},
+			card.Defined{ColorSuit: "f", SequenceIndex: 1},
 		}
 
 	expectedNumberOfCards := len(comparisonDeck)
 
-	comparisonMap := make(map[card.Readonly]bool, expectedNumberOfCards)
-	shuffledDeck := make([]card.Readonly, 0, expectedNumberOfCards)
+	comparisonMap := make(map[card.Defined]bool, expectedNumberOfCards)
+	shuffledDeck := make([]card.Defined, 0, expectedNumberOfCards)
 
 	for _, cardInDeck := range comparisonDeck {
 		shuffledDeck = append(shuffledDeck, cardInDeck)

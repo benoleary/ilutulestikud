@@ -71,15 +71,16 @@ func (actionExecutor *ActionExecutor) TakeTurnByDiscarding(indexInHand int) erro
 	gameReadState := actionExecutor.gameState.Read()
 	gameRuleset := gameReadState.Ruleset()
 	replacementCard :=
-		card.NewInferred(
-			gameRuleset.ColorSuits(),
-			gameRuleset.DistinctPossibleIndices())
+		card.Inferred{
+			PossibleColors:  gameRuleset.ColorSuits(),
+			PossibleIndices: gameRuleset.DistinctPossibleIndices(),
+		}
 
 	actionMessage :=
 		fmt.Sprintf(
 			"discards card %v %v",
-			discardedCard.ColorSuit(),
-			discardedCard.SequenceIndex())
+			discardedCard.ColorSuit,
+			discardedCard.SequenceIndex)
 
 	// The logic for determining how many hints to provide per discarded card could be
 	// given over to the ruleset, but it's not much of an issue.
@@ -112,18 +113,19 @@ func (actionExecutor *ActionExecutor) TakeTurnByPlaying(indexInHand int) error {
 	gameReadState := actionExecutor.gameState.Read()
 	gameRuleset := gameReadState.Ruleset()
 	replacementCard :=
-		card.NewInferred(
-			gameRuleset.ColorSuits(),
-			gameRuleset.DistinctPossibleIndices())
+		card.Inferred{
+			PossibleColors:  gameRuleset.ColorSuits(),
+			PossibleIndices: gameRuleset.DistinctPossibleIndices(),
+		}
 
-	playedCards := gameReadState.PlayedForColor(selectedCard.ColorSuit())
+	playedCards := gameReadState.PlayedForColor(selectedCard.ColorSuit)
 
 	if !gameRuleset.IsCardPlayable(selectedCard, playedCards) {
 		actionMessage :=
 			fmt.Sprintf(
 				"mistakenly tries to play card %v %v",
-				selectedCard.ColorSuit(),
-				selectedCard.SequenceIndex())
+				selectedCard.ColorSuit,
+				selectedCard.SequenceIndex)
 
 		return actionExecutor.gameState.EnactTurnByDiscardingAndReplacing(
 			actionMessage,
@@ -137,8 +139,8 @@ func (actionExecutor *ActionExecutor) TakeTurnByPlaying(indexInHand int) error {
 	actionMessage :=
 		fmt.Sprintf(
 			"successfully plays card %v %v",
-			selectedCard.ColorSuit(),
-			selectedCard.SequenceIndex())
+			selectedCard.ColorSuit,
+			selectedCard.SequenceIndex)
 
 	numberOfHintsToAdd := gameRuleset.HintsForPlayingCard(selectedCard)
 	maximumNumberOfHintsWhichCouldBeAdded :=
@@ -222,7 +224,7 @@ func (actionExecutor *ActionExecutor) TakeTurnByHintingIndex(
 }
 
 func (actionExecutor *ActionExecutor) handOfHintReceiver(
-	receivingPlayer string) ([]card.Readonly, []card.Inferred, error) {
+	receivingPlayer string) ([]card.Defined, []card.Inferred, error) {
 	if receivingPlayer == actionExecutor.actingPlayer.Name() {
 		errorToReturn :=
 			fmt.Errorf(
@@ -262,7 +264,7 @@ func (actionExecutor *ActionExecutor) handOfHintReceiver(
 	return visibleHandOfReceiver, receiverKnowledgeOfOwnHand, nil
 }
 
-func (actionExecutor *ActionExecutor) playerHandIfTurnElseError() ([]card.Readonly, error) {
+func (actionExecutor *ActionExecutor) playerHandIfTurnElseError() ([]card.Defined, error) {
 	gameReadState := actionExecutor.gameState.Read()
 	if IsFinished(gameReadState) {
 		return nil, fmt.Errorf("Game is finished, cannot take turn")
@@ -300,22 +302,24 @@ func (actionExecutor *ActionExecutor) playerHandIfTurnElseError() ([]card.Readon
 }
 
 func (actionExecutor *ActionExecutor) cardFromHandIfTurnElseError(
-	indexInHand int) (card.Readonly, error) {
+	indexInHand int) (card.Defined, error) {
 	playerHand, errorFromGettingHand := actionExecutor.playerHandIfTurnElseError()
 
 	if errorFromGettingHand != nil {
-		return card.ErrorReadonly(), errorFromGettingHand
+		invalidCard := card.Defined{ColorSuit: errorFromGettingHand.Error(), SequenceIndex: -1}
+		return invalidCard, errorFromGettingHand
 	}
 
 	handSize := len(playerHand)
 	if (indexInHand < 0) || (indexInHand >= handSize) {
-		errorToReturn := fmt.Errorf(
+		errorFromOutOfRange := fmt.Errorf(
 			"Index %v is out of the acceptable range %v to %v of the player's hand",
 			indexInHand,
 			0,
 			handSize)
 
-		return card.ErrorReadonly(), errorToReturn
+		invalidCard := card.Defined{ColorSuit: errorFromOutOfRange.Error(), SequenceIndex: -1}
+		return invalidCard, errorFromOutOfRange
 	}
 
 	return playerHand[indexInHand], nil

@@ -25,10 +25,10 @@ type mockViewForPlayer struct {
 	MockPlayerTurnIndex           int
 	MockScore                     int
 	ErrorForVisibleHand           error
-	ReturnForVisibleHand          []card.Readonly
+	ReturnForVisibleHand          []card.Defined
 	ErrorMapForKnowledgeOfOwnHand map[string]error
 	ReturnForKnowledgeOfOwnHand   []card.Inferred
-	ReturnForPlayedCards          [][]card.Readonly
+	ReturnForPlayedCards          [][]card.Defined
 }
 
 func NewMockView() *mockViewForPlayer {
@@ -122,18 +122,18 @@ func (mockView *mockViewForPlayer) DeckSize() int {
 }
 
 // PlayedCards gets mocked.
-func (mockView *mockViewForPlayer) PlayedCards() [][]card.Readonly {
+func (mockView *mockViewForPlayer) PlayedCards() [][]card.Defined {
 	return mockView.ReturnForPlayedCards
 }
 
 // DiscardedCards gets mocked.
-func (mockView *mockViewForPlayer) DiscardedCards() []card.Readonly {
-	return []card.Readonly{}
+func (mockView *mockViewForPlayer) DiscardedCards() []card.Defined {
+	return []card.Defined{}
 }
 
 // VisibleHand gets mocked.
 func (mockView *mockViewForPlayer) VisibleHand(
-	playerName string) ([]card.Readonly, string, error) {
+	playerName string) ([]card.Defined, string, error) {
 	return mockView.ReturnForVisibleHand, "not tested", mockView.ErrorForVisibleHand
 }
 
