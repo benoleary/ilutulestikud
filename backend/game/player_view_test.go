@@ -59,17 +59,17 @@ func TestWrapperFunctions(unitTest *testing.T) {
 	mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
 
 	testChatLog :=
-		[]message.Readonly{
-			message.NewReadonly(testPlayersInOriginalOrder[1], "a color", "Several words"),
-			message.NewReadonly(testPlayersInOriginalOrder[1], "a color", "More words"),
+		[]message.FromPlayer{
+			message.NewFromPlayer(testPlayersInOriginalOrder[1], "a color", "Several words"),
+			message.NewFromPlayer(testPlayersInOriginalOrder[1], "a color", "More words"),
 		}
 	mockReadAndWriteState.ReturnForChatLog = testChatLog
 
 	testActionLog :=
-		[]message.Readonly{
-			message.NewReadonly(testPlayersInOriginalOrder[1], "a color", "An action"),
-			message.NewReadonly(testPlayersInOriginalOrder[2], "different color", "Different action"),
-			message.NewReadonly(testPlayersInOriginalOrder[3], "another color", "Another action"),
+		[]message.FromPlayer{
+			message.NewFromPlayer(testPlayersInOriginalOrder[1], "a color", "An action"),
+			message.NewFromPlayer(testPlayersInOriginalOrder[2], "different color", "Different action"),
+			message.NewFromPlayer(testPlayersInOriginalOrder[3], "another color", "Another action"),
 		}
 	mockReadAndWriteState.ReturnForActionLog = testActionLog
 

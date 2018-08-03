@@ -719,9 +719,9 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 	chatColor := "some valid color"
 
 	expectedChatLog :=
-		[]message.Readonly{
-			message.NewReadonly(playerName, chatColor, "first message"),
-			message.NewReadonly(playerName, chatColor, "second message"),
+		[]message.FromPlayer{
+			message.NewFromPlayer(playerName, chatColor, "first message"),
+			message.NewFromPlayer(playerName, chatColor, "second message"),
 		}
 
 	testView := NewMockView()

@@ -104,10 +104,10 @@ type ViewForPlayer interface {
 	RulesetDescription() string
 
 	// ChatLog should return the chat log of the read-only game state.
-	ChatLog() []message.Readonly
+	ChatLog() []message.FromPlayer
 
 	// ActionLog should return the action log of the read-only game state.
-	ActionLog() []message.Readonly
+	ActionLog() []message.FromPlayer
 
 	// GameIsFinished should return true if the game is finished.
 	GameIsFinished() bool

@@ -15,10 +15,10 @@ func TestSetUpInitialMetadataCorrectly(unitTest *testing.T) {
 
 	// For this test, it is most convenient to check that both
 	// logs have empty messages.
-	initialActionLog := []message.Readonly{
-		message.NewReadonly("", "", ""),
-		message.NewReadonly("", "", ""),
-		message.NewReadonly("", "", ""),
+	initialActionLog := []message.FromPlayer{
+		message.NewFromPlayer("", "", ""),
+		message.NewFromPlayer("", "", ""),
+		message.NewFromPlayer("", "", ""),
 	}
 
 	gamesAndDescriptions :=
@@ -204,7 +204,7 @@ func TestSetUpInitialMetadataCorrectly(unitTest *testing.T) {
 func assertLogIsEmpty(
 	testIdentifier string,
 	unitTest *testing.T,
-	actualLog []message.Readonly,
+	actualLog []message.FromPlayer,
 	expectedLogLength int) {
 	if actualLog == nil {
 		unitTest.Fatalf("log was nil")
@@ -218,9 +218,9 @@ func assertLogIsEmpty(
 	}
 
 	for messageIndex := 0; messageIndex < expectedLogLength; messageIndex++ {
-		if (actualLog[messageIndex].PlayerName() != "") ||
-			(actualLog[messageIndex].TextColor() != "") ||
-			(actualLog[messageIndex].MessageText() != "") {
+		if (actualLog[messageIndex].PlayerName != "") ||
+			(actualLog[messageIndex].TextColor != "") ||
+			(actualLog[messageIndex].MessageText != "") {
 			unitTest.Errorf(
 				testIdentifier+"/log %+v had non-empty message",
 				actualLog)

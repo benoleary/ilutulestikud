@@ -192,8 +192,8 @@ type mockGameState struct {
 	ReturnForRuleset                               game.Ruleset
 	ReturnForPlayerNames                           []string
 	ReturnForCreationTime                          time.Time
-	ReturnForChatLog                               []message.Readonly
-	ReturnForActionLog                             []message.Readonly
+	ReturnForChatLog                               []message.FromPlayer
+	ReturnForActionLog                             []message.FromPlayer
 	ReturnForGameIsFinished                        bool
 	ReturnForTurn                                  int
 	ReturnForTurnsTakenWithEmptyDeck               int
@@ -271,12 +271,12 @@ func (mockGame *mockGameState) CreationTime() time.Time {
 }
 
 // ActionLog gets mocked.
-func (mockGame *mockGameState) ActionLog() []message.Readonly {
+func (mockGame *mockGameState) ActionLog() []message.FromPlayer {
 	return mockGame.ReturnForActionLog
 }
 
 // ChatLog gets mocked.
-func (mockGame *mockGameState) ChatLog() []message.Readonly {
+func (mockGame *mockGameState) ChatLog() []message.FromPlayer {
 	return mockGame.ReturnForChatLog
 }
 
@@ -560,7 +560,7 @@ func (mockImplementation *mockGamePersister) ReadAllWithPlayer(
 func (mockImplementation *mockGamePersister) AddGame(
 	gameName string,
 	chatLogLength int,
-	initialActionLog []message.Readonly,
+	initialActionLog []message.FromPlayer,
 	gameRuleset game.Ruleset,
 	playersInTurnOrderWithInitialHands []game.PlayerNameWithHand,
 	initialDeck []card.Defined) error {

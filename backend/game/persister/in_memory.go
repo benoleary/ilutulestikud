@@ -78,7 +78,7 @@ func (gamePersister *inMemoryPersister) ReadAllWithPlayer(
 func (gamePersister *inMemoryPersister) AddGame(
 	gameName string,
 	chatLogLength int,
-	initialActionLog []message.Readonly,
+	initialActionLog []message.FromPlayer,
 	gameRuleset game.Ruleset,
 	playersInTurnOrderWithInitialHands []game.PlayerNameWithHand,
 	initialDeck []card.Defined) error {
@@ -225,7 +225,7 @@ type inMemoryState struct {
 func newInMemoryState(
 	gameName string,
 	chatLogLength int,
-	initialActionLog []message.Readonly,
+	initialActionLog []message.FromPlayer,
 	gameRuleset game.Ruleset,
 	playersInTurnOrderWithInitialHands []game.PlayerNameWithHand,
 	shuffledDeck []card.Defined) game.ReadAndWriteState {
@@ -282,12 +282,12 @@ func (gameState *inMemoryState) CreationTime() time.Time {
 }
 
 // ChatLog returns the chat log of the game at the current moment.
-func (gameState *inMemoryState) ChatLog() []message.Readonly {
+func (gameState *inMemoryState) ChatLog() []message.FromPlayer {
 	return gameState.chatLog.sortedCopyOfMessages()
 }
 
 // ActionLog returns the action log of the game at the current moment.
-func (gameState *inMemoryState) ActionLog() []message.Readonly {
+func (gameState *inMemoryState) ActionLog() []message.FromPlayer {
 	return gameState.actionLog.sortedCopyOfMessages()
 }
 
@@ -638,7 +638,7 @@ func (gameState *inMemoryState) updatePlayerHand(
 // oldest when appending a new one.
 type rollingMessageAppender struct {
 	listLength      int
-	messageList     []message.Readonly
+	messageList     []message.FromPlayer
 	indexOfOldest   int
 	mutualExclusion sync.Mutex
 }
@@ -646,10 +646,10 @@ type rollingMessageAppender struct {
 // newEmptyRollingMessageAppender makes a new rollingMessageAppender with a
 // fixed message capacity, initially filled with empty messages
 func newEmptyRollingMessageAppender(listLength int) *rollingMessageAppender {
-	messageList := make([]message.Readonly, listLength)
+	messageList := make([]message.FromPlayer, listLength)
 
 	for messageIndex := 0; messageIndex < listLength; messageIndex++ {
-		messageList[messageIndex] = message.NewReadonly("", "", "")
+		messageList[messageIndex] = message.NewFromPlayer("", "", "")
 	}
 
 	return &rollingMessageAppender{
@@ -663,9 +663,9 @@ func newEmptyRollingMessageAppender(listLength int) *rollingMessageAppender {
 // message capacity equal to the length of the given list of messages, with
 // those messages as its initial messages.
 func newRollingMessageAppender(
-	initialMessages []message.Readonly) *rollingMessageAppender {
+	initialMessages []message.FromPlayer) *rollingMessageAppender {
 	listLength := len(initialMessages)
-	messageList := make([]message.Readonly, listLength)
+	messageList := make([]message.FromPlayer, listLength)
 
 	for messageIndex := 0; messageIndex < listLength; messageIndex++ {
 		messageList[messageIndex] = initialMessages[messageIndex]
@@ -680,9 +680,9 @@ func newRollingMessageAppender(
 
 // sortedCopyOfMessages returns the messages in the log starting with the
 // oldest in a simple array, in order by timestamp.
-func (rollingAppender *rollingMessageAppender) sortedCopyOfMessages() []message.Readonly {
+func (rollingAppender *rollingMessageAppender) sortedCopyOfMessages() []message.FromPlayer {
 	logLength := rollingAppender.listLength
-	sortedMessages := make([]message.Readonly, logLength)
+	sortedMessages := make([]message.FromPlayer, logLength)
 	for messageIndex := 0; messageIndex < logLength; messageIndex++ {
 		// We take the relevant message indexed with the oldest message at 0,
 		// wrapping around if newer messages occupy earlier spots in the
@@ -706,7 +706,7 @@ func (rollingAppender *rollingMessageAppender) appendNewMessage(
 
 	// We over-write the oldest message.
 	rollingAppender.messageList[rollingAppender.indexOfOldest] =
-		message.NewReadonly(playerName, textColor, messageText)
+		message.NewFromPlayer(playerName, textColor, messageText)
 
 	// Now we mark the next-oldest message as the oldest, thus implicitly
 	// marking the updated message as the newest message.

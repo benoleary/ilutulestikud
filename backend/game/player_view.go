@@ -88,12 +88,12 @@ func (playerView *PlayerView) RulesetDescription() string {
 }
 
 // ChatLog just wraps around the read-only game state's ChatLog function.
-func (playerView *PlayerView) ChatLog() []message.Readonly {
+func (playerView *PlayerView) ChatLog() []message.FromPlayer {
 	return playerView.gameState.ChatLog()
 }
 
 // ActionLog just wraps around the read-only game state's ActionLog function.
-func (playerView *PlayerView) ActionLog() []message.Readonly {
+func (playerView *PlayerView) ActionLog() []message.FromPlayer {
 	return playerView.gameState.ActionLog()
 }
 

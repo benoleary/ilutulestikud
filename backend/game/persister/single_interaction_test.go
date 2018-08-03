@@ -96,8 +96,8 @@ func TestRecordAndRetrieveSingleChatMessage(unitTest *testing.T) {
 	testStartTime := time.Now()
 	initialDeck := defaultTestRuleset.CopyOfFullCardset()
 
-	// Default message.Readonly structs should have empty strings as expected.
-	initialChatLog := make([]message.Readonly, logLengthForTest)
+	// Default message.FromPlayer structs should have empty strings as expected.
+	initialChatLog := make([]message.FromPlayer, logLengthForTest)
 
 	gamesAndDescriptions :=
 		prepareGameStates(
@@ -297,7 +297,7 @@ func TestValidDiscardOfCardWhenDeckNotYetEmpty(unitTest *testing.T) {
 	knowledgeOfNewCard := testDefaultInferred
 
 	actionMessage := "action message"
-	comparisonActionLog := make([]message.Readonly, 3)
+	comparisonActionLog := make([]message.FromPlayer, 3)
 	numberOfCopiedMessages :=
 		copy(comparisonActionLog, initialActionLogForDefaultThreePlayers)
 	if numberOfCopiedMessages != 3 {
@@ -366,7 +366,7 @@ func TestValidDiscardOfCardWhenDeckNotYetEmpty(unitTest *testing.T) {
 			// There should have been the following changes:
 			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
 			pristineState.ActionLog[len(pristineState.ActionLog)-1] =
-				message.NewReadonly(testPlayer.Name(), testPlayer.Color(), actionMessage)
+				message.NewFromPlayer(testPlayer.Name(), testPlayer.Color(), actionMessage)
 			pristineState.DeckSize = initialDeckSize - 1
 			pristineState.NumberOfReadyHints += numberOfHintsToAdd
 			pristineState.NumberOfMistakesMade += numberOfMistakesToAdd
@@ -400,7 +400,7 @@ func TestValidDiscardOfCardWhichEmptiesDeck(unitTest *testing.T) {
 	knowledgeOfNewCard := testDefaultInferred
 
 	actionMessage := "action message"
-	comparisonActionLog := make([]message.Readonly, 3)
+	comparisonActionLog := make([]message.FromPlayer, 3)
 	numberOfCopiedMessages :=
 		copy(comparisonActionLog, initialActionLogForDefaultThreePlayers)
 	if numberOfCopiedMessages != 3 {
@@ -469,7 +469,7 @@ func TestValidDiscardOfCardWhichEmptiesDeck(unitTest *testing.T) {
 			// There should have been the following changes:
 			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
 			pristineState.ActionLog[len(pristineState.ActionLog)-1] =
-				message.NewReadonly(testPlayer.Name(), testPlayer.Color(), actionMessage)
+				message.NewFromPlayer(testPlayer.Name(), testPlayer.Color(), actionMessage)
 			pristineState.DeckSize = initialDeckSize - 1
 			pristineState.NumberOfReadyHints += numberOfHintsToAdd
 			pristineState.NumberOfMistakesMade += numberOfMistakesToAdd
@@ -495,7 +495,7 @@ func TestValidDiscardOfCardWhenDeckAlreadyEmpty(unitTest *testing.T) {
 	knowledgeOfNewCard := testDefaultInferred
 
 	actionMessage := "action message"
-	comparisonActionLog := make([]message.Readonly, 3)
+	comparisonActionLog := make([]message.FromPlayer, 3)
 	numberOfCopiedMessages :=
 		copy(comparisonActionLog, initialActionLogForDefaultThreePlayers)
 	if numberOfCopiedMessages != 3 {
@@ -564,7 +564,7 @@ func TestValidDiscardOfCardWhenDeckAlreadyEmpty(unitTest *testing.T) {
 			// There should have been the following changes:
 			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
 			pristineState.ActionLog[len(pristineState.ActionLog)-1] =
-				message.NewReadonly(testPlayer.Name(), testPlayer.Color(), actionMessage)
+				message.NewFromPlayer(testPlayer.Name(), testPlayer.Color(), actionMessage)
 			pristineState.DeckSize = initialDeckSize
 			pristineState.NumberOfReadyHints += numberOfHintsToAdd
 			pristineState.NumberOfMistakesMade += numberOfMistakesToAdd
@@ -610,7 +610,7 @@ func TestValidPlayOfCardWhenDeckNotYetEmpty(unitTest *testing.T) {
 	knowledgeOfNewCard := testDefaultInferred
 
 	actionMessage := "action message"
-	comparisonActionLog := make([]message.Readonly, 3)
+	comparisonActionLog := make([]message.FromPlayer, 3)
 	numberOfCopiedMessages :=
 		copy(comparisonActionLog, initialActionLogForDefaultThreePlayers)
 	if numberOfCopiedMessages != 3 {
@@ -677,7 +677,7 @@ func TestValidPlayOfCardWhenDeckNotYetEmpty(unitTest *testing.T) {
 			// There should have been no other changes.
 			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
 			pristineState.ActionLog[len(pristineState.ActionLog)-1] =
-				message.NewReadonly(testPlayer.Name(), testPlayer.Color(), actionMessage)
+				message.NewFromPlayer(testPlayer.Name(), testPlayer.Color(), actionMessage)
 			pristineState.DeckSize = initialDeckSize - 1
 			pristineState.NumberOfReadyHints += numberOfHintsToAdd
 			pristineState.Turn += 1
@@ -710,7 +710,7 @@ func TestValidPlayOfCardWhichEmptiesDeck(unitTest *testing.T) {
 	knowledgeOfNewCard := testDefaultInferred
 
 	actionMessage := "action message"
-	comparisonActionLog := make([]message.Readonly, 3)
+	comparisonActionLog := make([]message.FromPlayer, 3)
 	numberOfCopiedMessages :=
 		copy(comparisonActionLog, initialActionLogForDefaultThreePlayers)
 	if numberOfCopiedMessages != 3 {
@@ -777,7 +777,7 @@ func TestValidPlayOfCardWhichEmptiesDeck(unitTest *testing.T) {
 			// There should have been no other changes.
 			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
 			pristineState.ActionLog[len(pristineState.ActionLog)-1] =
-				message.NewReadonly(testPlayer.Name(), testPlayer.Color(), actionMessage)
+				message.NewFromPlayer(testPlayer.Name(), testPlayer.Color(), actionMessage)
 			pristineState.DeckSize = initialDeckSize - 1
 			pristineState.NumberOfReadyHints += numberOfHintsToAdd
 			pristineState.Turn += 1
@@ -802,7 +802,7 @@ func TestValidPlayOfCardWhenDeckAlreadyEmpty(unitTest *testing.T) {
 	knowledgeOfNewCard := testDefaultInferred
 
 	actionMessage := "action message"
-	comparisonActionLog := make([]message.Readonly, 3)
+	comparisonActionLog := make([]message.FromPlayer, 3)
 	numberOfCopiedMessages :=
 		copy(comparisonActionLog, initialActionLogForDefaultThreePlayers)
 	if numberOfCopiedMessages != 3 {
@@ -869,7 +869,7 @@ func TestValidPlayOfCardWhenDeckAlreadyEmpty(unitTest *testing.T) {
 			// There should have been the following changes:
 			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
 			pristineState.ActionLog[len(pristineState.ActionLog)-1] =
-				message.NewReadonly(testPlayer.Name(), testPlayer.Color(), actionMessage)
+				message.NewFromPlayer(testPlayer.Name(), testPlayer.Color(), actionMessage)
 			pristineState.DeckSize = initialDeckSize
 			pristineState.NumberOfReadyHints += numberOfHintsToAdd
 			pristineState.Turn += 1
@@ -1097,7 +1097,7 @@ func TestValidHintWhenDeckAlreadyEmpty(unitTest *testing.T) {
 	initialDeckSize := len(initialDeck)
 
 	actionMessage := "action message"
-	comparisonActionLog := make([]message.Readonly, 3)
+	comparisonActionLog := make([]message.FromPlayer, 3)
 	numberOfCopiedMessages :=
 		copy(comparisonActionLog, initialActionLogForDefaultThreePlayers)
 	if numberOfCopiedMessages != 3 {
@@ -1178,7 +1178,7 @@ func TestValidHintWhenDeckAlreadyEmpty(unitTest *testing.T) {
 			// There should have been the following changes:
 			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
 			pristineState.ActionLog[len(pristineState.ActionLog)-1] =
-				message.NewReadonly(actingPlayer.Name(), actingPlayer.Color(), actionMessage)
+				message.NewFromPlayer(actingPlayer.Name(), actingPlayer.Color(), actionMessage)
 			pristineState.DeckSize = initialDeckSize
 			pristineState.NumberOfReadyHints -= numberOfHintsToSubtract
 			pristineState.Turn += 1
@@ -1213,7 +1213,7 @@ func TestValidHintWhenDeckNotYetEmpty(unitTest *testing.T) {
 	initialDeckSize := len(initialDeck)
 
 	actionMessage := "action message"
-	comparisonActionLog := make([]message.Readonly, 3)
+	comparisonActionLog := make([]message.FromPlayer, 3)
 	numberOfCopiedMessages :=
 		copy(comparisonActionLog, initialActionLogForDefaultThreePlayers)
 	if numberOfCopiedMessages != 3 {
@@ -1294,7 +1294,7 @@ func TestValidHintWhenDeckNotYetEmpty(unitTest *testing.T) {
 			// There should have been the following changes:
 			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
 			pristineState.ActionLog[len(pristineState.ActionLog)-1] =
-				message.NewReadonly(actingPlayer.Name(), actingPlayer.Color(), actionMessage)
+				message.NewFromPlayer(actingPlayer.Name(), actingPlayer.Color(), actionMessage)
 			pristineState.DeckSize = initialDeckSize
 			pristineState.NumberOfReadyHints -= numberOfHintsToSubtract
 			pristineState.Turn += 1
@@ -1311,12 +1311,12 @@ func TestValidHintWhenDeckNotYetEmpty(unitTest *testing.T) {
 func assertLogWithSingleMessageIsCorrect(
 	testIdentifier string,
 	unitTest *testing.T,
-	logMessages []message.Readonly,
+	logMessages []message.FromPlayer,
 	expectedLogLength int,
 	expectedPlayerName string,
 	expectedTextColor string,
 	expectedSingleMessage string,
-	expectedInitialMessages []message.Readonly,
+	expectedInitialMessages []message.FromPlayer,
 	earliestTimeForMessage time.Time,
 	latestTimeForMessage time.Time) {
 
@@ -1330,9 +1330,9 @@ func assertLogWithSingleMessageIsCorrect(
 	// The first message starts at the end of the log, since there
 	// have been no other messages.
 	firstMessage := logMessages[expectedLogLength-1]
-	if (firstMessage.PlayerName() != expectedPlayerName) ||
-		(firstMessage.TextColor() != expectedTextColor) ||
-		(firstMessage.MessageText() != expectedSingleMessage) {
+	if (firstMessage.PlayerName != expectedPlayerName) ||
+		(firstMessage.TextColor != expectedTextColor) ||
+		(firstMessage.MessageText != expectedSingleMessage) {
 		unitTest.Fatalf(
 			testIdentifier+
 				"/first message %+v was not as expected: player name %v, text color %v, message %v",
@@ -1342,7 +1342,7 @@ func assertLogWithSingleMessageIsCorrect(
 			expectedSingleMessage)
 	}
 
-	recordingTime := firstMessage.CreationTime()
+	recordingTime := firstMessage.CreationTime
 
 	if (recordingTime.Before(earliestTimeForMessage)) ||
 		(recordingTime.After(latestTimeForMessage)) {
@@ -1357,9 +1357,9 @@ func assertLogWithSingleMessageIsCorrect(
 	for messageIndex := 0; messageIndex < expectedLogLength-1; messageIndex++ {
 		expectedMessage := expectedInitialMessages[messageIndex]
 		actualMessage := logMessages[messageIndex]
-		if (actualMessage.PlayerName() != expectedMessage.PlayerName()) ||
-			(actualMessage.TextColor() != expectedMessage.TextColor()) ||
-			(actualMessage.MessageText() != expectedMessage.MessageText()) {
+		if (actualMessage.PlayerName != expectedMessage.PlayerName) ||
+			(actualMessage.TextColor != expectedMessage.TextColor) ||
+			(actualMessage.MessageText != expectedMessage.MessageText) {
 			unitTest.Errorf(
 				testIdentifier+
 					"/log\n %+v\n did not have expected other messages\n %+v\n",

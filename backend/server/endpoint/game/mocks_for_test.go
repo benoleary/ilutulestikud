@@ -21,7 +21,7 @@ import (
 type mockViewForPlayer struct {
 	MockGameName                  string
 	MockPlayers                   []string
-	MockChatLog                   []message.Readonly
+	MockChatLog                   []message.FromPlayer
 	MockPlayerTurnIndex           int
 	MockScore                     int
 	ErrorForVisibleHand           error
@@ -57,13 +57,13 @@ func (mockView *mockViewForPlayer) RulesetDescription() string {
 }
 
 // ChatLog gets mocked.
-func (mockView *mockViewForPlayer) ChatLog() []message.Readonly {
+func (mockView *mockViewForPlayer) ChatLog() []message.FromPlayer {
 	return mockView.MockChatLog
 }
 
 // ActionLog gets mocked.
-func (mockView *mockViewForPlayer) ActionLog() []message.Readonly {
-	return make([]message.Readonly, logLengthForTest)
+func (mockView *mockViewForPlayer) ActionLog() []message.FromPlayer {
+	return make([]message.FromPlayer, logLengthForTest)
 }
 
 // GameIsFinished gets mocked.

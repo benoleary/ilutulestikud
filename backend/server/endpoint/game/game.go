@@ -470,16 +470,16 @@ func (handler *Handler) parseGameAndPlayer(
 }
 
 func (handler *Handler) logForFrontend(
-	backendMessages []message.Readonly) []parsing.LogMessage {
+	backendMessages []message.FromPlayer) []parsing.LogMessage {
 	numberOfMessages := len(backendMessages)
 	logForFrontend := make([]parsing.LogMessage, numberOfMessages)
 	for messageIndex := 0; messageIndex < numberOfMessages; messageIndex++ {
 		backendMessage := backendMessages[messageIndex]
 		logForFrontend[messageIndex] = parsing.LogMessage{
-			TimestampInSeconds: backendMessage.CreationTime().Unix(),
-			PlayerName:         backendMessage.PlayerName(),
-			TextColor:          backendMessage.TextColor(),
-			MessageText:        backendMessage.MessageText(),
+			TimestampInSeconds: backendMessage.CreationTime.Unix(),
+			PlayerName:         backendMessage.PlayerName,
+			TextColor:          backendMessage.TextColor,
+			MessageText:        backendMessage.MessageText,
 		}
 	}
 

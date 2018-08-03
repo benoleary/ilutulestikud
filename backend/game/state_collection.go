@@ -191,7 +191,7 @@ func (gameCollection *StateCollection) createPlayerHands(
 	initialDeck []card.Defined) (
 	[]PlayerNameWithHand,
 	[]card.Defined,
-	[]message.Readonly,
+	[]message.FromPlayer,
 	error) {
 	// A nil slice still has a length of 0, so this is OK.
 	numberOfPlayers := len(playerNames)
@@ -224,7 +224,7 @@ func (gameCollection *StateCollection) createPlayerHands(
 	}
 
 	namesWithHands := make([]PlayerNameWithHand, numberOfPlayers)
-	actionLog := make([]message.Readonly, numberOfPlayers)
+	actionLog := make([]message.FromPlayer, numberOfPlayers)
 	uniquePlayerNames := make(map[string]bool, numberOfPlayers)
 
 	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
@@ -268,7 +268,10 @@ func (gameCollection *StateCollection) createPlayerHands(
 		}
 
 		actionLog[playerIndex] =
-			message.NewReadonly(playerName, playerState.Color(), "receieved initial hand")
+			message.NewFromPlayer(
+				playerName,
+				playerState.Color(),
+				"receieved initial hand")
 
 		// Now we ensure that the cards just dealt out are no longer part of the deck.
 		initialDeck = initialDeck[handSize:]

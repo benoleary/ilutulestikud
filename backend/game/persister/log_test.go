@@ -12,13 +12,13 @@ const logSizeForTest = 8
 func PrepareMessages(
 	numberOfMessages int,
 	playerNames []string,
-	textColors []string) []message.Readonly {
+	textColors []string) []message.FromPlayer {
 	numberOfPlayers := len(playerNames)
 	numberOfColors := len(textColors)
-	preparedMessages := make([]message.Readonly, numberOfMessages)
+	preparedMessages := make([]message.FromPlayer, numberOfMessages)
 	for messageIndex := 0; messageIndex < numberOfMessages; messageIndex++ {
 		preparedMessages[messageIndex] =
-			message.NewReadonly(
+			message.NewFromPlayer(
 				playerNames[messageIndex%numberOfPlayers],
 				textColors[messageIndex%numberOfColors],
 				fmt.Sprintf("Test message %v", messageIndex))
@@ -45,11 +45,11 @@ func TestSortedLogAfterAppending(unitTest *testing.T) {
 
 	testCases := []struct {
 		testName         string
-		messagesToAppend []message.Readonly
+		messagesToAppend []message.FromPlayer
 	}{
 		{
 			testName:         "No messages",
-			messagesToAppend: []message.Readonly{},
+			messagesToAppend: []message.FromPlayer{},
 		},
 		{
 			testName:         "One message",
@@ -87,13 +87,13 @@ func TestSortedLogAfterAppending(unitTest *testing.T) {
 				for _, chatMessage := range testCase.messagesToAppend {
 					playerState :=
 						&mockPlayerState{
-							mockName:  chatMessage.PlayerName(),
-							mockColor: chatMessage.TextColor(),
+							mockName:  chatMessage.PlayerName,
+							mockColor: chatMessage.TextColor,
 						}
 
 					gameAndDescription.GameState.RecordChatMessage(
 						playerState,
-						chatMessage.MessageText())
+						chatMessage.MessageText)
 				}
 
 				loggedMessages := gameAndDescription.GameState.Read().ChatLog()
@@ -115,8 +115,8 @@ func TestSortedLogAfterAppending(unitTest *testing.T) {
 func assertLogIsCorrect(
 	unitTest *testing.T,
 	testIdentifier string,
-	expectedWithoutEmpties []message.Readonly,
-	actualWithEmpties []message.Readonly) {
+	expectedWithoutEmpties []message.FromPlayer,
+	actualWithEmpties []message.FromPlayer) {
 	if len(actualWithEmpties) != logSizeForTest {
 		unitTest.Fatalf(
 			testIdentifier+" - log did not have correct size: expected %v messages, but log was %+v",
@@ -131,9 +131,9 @@ func assertLogIsCorrect(
 		loggedMessage := actualWithEmpties[logSizeForTest-reverseIndex]
 
 		if reverseIndex > numberOfSentMessages {
-			if (loggedMessage.PlayerName() != "") ||
-				(loggedMessage.TextColor() != "") ||
-				(loggedMessage.MessageText() != "") {
+			if (loggedMessage.PlayerName != "") ||
+				(loggedMessage.TextColor != "") ||
+				(loggedMessage.MessageText != "") {
 				unitTest.Errorf(
 					"Expected empty message with index %+v, but log was %+v",
 					logSizeForTest-reverseIndex,
@@ -142,9 +142,9 @@ func assertLogIsCorrect(
 		} else {
 			expectedMessage :=
 				expectedWithoutEmpties[numberOfSentMessages-reverseIndex]
-			if (loggedMessage.PlayerName() != expectedMessage.PlayerName()) ||
-				(loggedMessage.TextColor() != expectedMessage.TextColor()) ||
-				(loggedMessage.MessageText() != expectedMessage.MessageText()) {
+			if (loggedMessage.PlayerName != expectedMessage.PlayerName) ||
+				(loggedMessage.TextColor != expectedMessage.TextColor) ||
+				(loggedMessage.MessageText != expectedMessage.MessageText) {
 				unitTest.Errorf(
 					"For log index %v, expected %+v, but log was %+v",
 					logSizeForTest-reverseIndex,

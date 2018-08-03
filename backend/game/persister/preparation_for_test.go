@@ -225,16 +225,16 @@ var initialActionMessagesForDefaultThreePlayers = []string{
 
 var defaultTestColor = "default test color"
 
-var initialActionLogForDefaultThreePlayers = []message.Readonly{
-	message.NewReadonly(
+var initialActionLogForDefaultThreePlayers = []message.FromPlayer{
+	message.NewFromPlayer(
 		threePlayersWithHands[0].PlayerName,
 		defaultTestColor,
 		initialActionMessagesForDefaultThreePlayers[0]),
-	message.NewReadonly(
+	message.NewFromPlayer(
 		threePlayersWithHands[1].PlayerName,
 		defaultTestColor,
 		initialActionMessagesForDefaultThreePlayers[1]),
-	message.NewReadonly(
+	message.NewFromPlayer(
 		threePlayersWithHands[2].PlayerName,
 		defaultTestColor,
 		initialActionMessagesForDefaultThreePlayers[2]),
@@ -264,7 +264,7 @@ func prepareGameStates(
 	gameRuleset game.Ruleset,
 	playersInTurnOrderWithInitialHands []game.PlayerNameWithHand,
 	initialDeck []card.Defined,
-	initialActionLog []message.Readonly) []gameAndDescription {
+	initialActionLog []message.FromPlayer) []gameAndDescription {
 	statePersisters := preparePersisters()
 
 	numberOfPersisters := len(statePersisters)
@@ -309,8 +309,8 @@ type expectedState struct {
 	Ruleset                 game.Ruleset
 	PlayerNames             []string
 	CreationTime            time.Time
-	ChatLog                 []message.Readonly
-	ActionLog               []message.Readonly
+	ChatLog                 []message.FromPlayer
+	ActionLog               []message.FromPlayer
 	Turn                    int
 	TurnsTakenWithEmptyDeck int
 	Score                   int
@@ -397,9 +397,9 @@ func prepareExpected(
 
 func copyLog(
 	unitTest *testing.T,
-	sourceLog []message.Readonly) []message.Readonly {
+	sourceLog []message.FromPlayer) []message.FromPlayer {
 	numberOfMessages := len(sourceLog)
-	copiedLog := make([]message.Readonly, numberOfMessages)
+	copiedLog := make([]message.FromPlayer, numberOfMessages)
 	numberOfMessagesCopied := copy(copiedLog, sourceLog)
 
 	if numberOfMessagesCopied != numberOfMessages {

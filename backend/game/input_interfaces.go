@@ -32,10 +32,10 @@ type ReadonlyState interface {
 	CreationTime() time.Time
 
 	// ChatLog should return the chat log of the game at the current moment.
-	ChatLog() []message.Readonly
+	ChatLog() []message.FromPlayer
 
 	// ActionLog should return the action log of the game at the current moment.
-	ActionLog() []message.Readonly
+	ActionLog() []message.FromPlayer
 
 	// Turn should given the number of the turn (with the first turn being 1 rather
 	// than 0) which is the current turn in the game (assuming 1 turn per player,
@@ -157,7 +157,7 @@ type StatePersister interface {
 	AddGame(
 		gameName string,
 		chatLogLength int,
-		initialActionLog []message.Readonly,
+		initialActionLog []message.FromPlayer,
 		gameRuleset Ruleset,
 		playersInTurnOrderWithInitialHands []PlayerNameWithHand,
 		initialDeck []card.Defined) error

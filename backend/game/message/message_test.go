@@ -7,18 +7,18 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/game/message"
 )
 
-func TestNewValidReadonly(unitTest *testing.T) {
+func TestConstructor(unitTest *testing.T) {
 	testStartTime := time.Now()
 	testPlayerName := "Test Player"
 	testTextColor := "test color"
 	testMessageText := "test message"
 
 	validReadonly :=
-		message.NewReadonly(testPlayerName, testTextColor, testMessageText)
+		message.NewFromPlayer(testPlayerName, testTextColor, testMessageText)
 
-	if (validReadonly.PlayerName() != testPlayerName) ||
-		(validReadonly.TextColor() != testTextColor) ||
-		(validReadonly.MessageText() != testMessageText) {
+	if (validReadonly.PlayerName != testPlayerName) ||
+		(validReadonly.TextColor != testTextColor) ||
+		(validReadonly.MessageText != testMessageText) {
 		unitTest.Fatalf(
 			"NewReadonly(%v, %v, %v) produced unexpected %+v",
 			testPlayerName,
@@ -27,8 +27,8 @@ func TestNewValidReadonly(unitTest *testing.T) {
 			validReadonly)
 	}
 
-	if testStartTime.After(validReadonly.CreationTime()) ||
-		time.Now().Before(validReadonly.CreationTime()) {
+	if testStartTime.After(validReadonly.CreationTime) ||
+		time.Now().Before(validReadonly.CreationTime) {
 		unitTest.Fatalf(
 			"NewReadonly(%v, %v, %v) produced %+v which has creation time outside valid range",
 			testPlayerName,

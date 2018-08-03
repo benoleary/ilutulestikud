@@ -274,16 +274,16 @@ func assertGameStateAsExpected(
 }
 
 func doMessagesMatchwithinTimeTolerance(
-	actualMessage message.Readonly,
-	expectedMessage message.Readonly,
+	actualMessage message.FromPlayer,
+	expectedMessage message.FromPlayer,
 	toleranceInNanoseconds int) bool {
-	if (actualMessage.PlayerName() != expectedMessage.PlayerName()) ||
-		(actualMessage.TextColor() != expectedMessage.TextColor()) ||
-		(actualMessage.MessageText() != expectedMessage.MessageText()) {
+	if (actualMessage.PlayerName != expectedMessage.PlayerName) ||
+		(actualMessage.TextColor != expectedMessage.TextColor) ||
+		(actualMessage.MessageText != expectedMessage.MessageText) {
 		return false
 	}
 
-	timeDifference := actualMessage.CreationTime().Sub(expectedMessage.CreationTime())
+	timeDifference := actualMessage.CreationTime.Sub(expectedMessage.CreationTime)
 	if timeDifference < 0 {
 		timeDifference = -timeDifference
 	}
