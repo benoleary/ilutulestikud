@@ -409,6 +409,11 @@ func invalidCardAndErrorFromOutOfRange(indexOutOfRange int) (card.Defined, error
 // first in the given array into the position before it (thus eliminating
 // the original first message of the array) and over-writes the last
 // message in the array with the given message.
+// I originally had a different structure which would only over-write the
+// oldest message, and kept track of which was the oldest with an index,
+// and rolled over from the end of the array back to the start when
+// reading the log, but that would have been too much faff to serialize
+// for totally negligible performance differences.
 func appendNewMessageInPlaceDiscardingFirst(
 	messageSlice []message.FromPlayer,
 	playerName string,
