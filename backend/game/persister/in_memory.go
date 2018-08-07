@@ -203,21 +203,8 @@ func (gamePersister *inMemoryPersister) Delete(gameName string) error {
 // inMemoryState is a struct meant to encapsulate all the state required for a
 // single game to function.
 type inMemoryState struct {
-	mutualExclusion             sync.Mutex
-	gameName                    string
-	gameRuleset                 game.Ruleset
-	creationTime                time.Time
-	participantNamesInTurnOrder []string
-	chatLog                     *rollingMessageAppender
-	actionLog                   *rollingMessageAppender
-	turnNumber                  int
-	turnsTakenWithEmptyDeck     int
-	numberOfReadyHints          int
-	numberOfMistakesMade        int
-	undrawnDeck                 []card.Defined
-	playedCardsForColor         map[string][]card.Defined
-	discardedCards              map[card.Defined]int
-	playerHands                 map[string][]card.InHand
+	mutualExclusion sync.Mutex
+	SerializableState
 }
 
 // newInMemoryState creates a new game given the required information, using the
@@ -229,165 +216,71 @@ func newInMemoryState(
 	gameRuleset game.Ruleset,
 	playersInTurnOrderWithInitialHands []game.PlayerNameWithHand,
 	shuffledDeck []card.Defined) game.ReadAndWriteState {
-	numberOfParticipants := len(playersInTurnOrderWithInitialHands)
-	participantNamesInTurnOrder := make([]string, numberOfParticipants)
-	playerHands := make(map[string][]card.InHand, numberOfParticipants)
-	for playerIndex := 0; playerIndex < numberOfParticipants; playerIndex++ {
-		playerName := playersInTurnOrderWithInitialHands[playerIndex].PlayerName
-		participantNamesInTurnOrder[playerIndex] = playerName
-		playerHands[playerName] =
-			playersInTurnOrderWithInitialHands[playerIndex].InitialHand
-	}
+	serializableState := NewSerializableState(gameName,
+		chatLogLength,
+		initialActionLog,
+		gameRuleset,
+		playersInTurnOrderWithInitialHands,
+		shuffledDeck)
 
-	// We could already set up the capacity for the maps by getting slices from
-	// the ruleset and counting, but that is a lot of effort for very little gain.
 	return &inMemoryState{
-		mutualExclusion:             sync.Mutex{},
-		gameName:                    gameName,
-		gameRuleset:                 gameRuleset,
-		creationTime:                time.Now(),
-		participantNamesInTurnOrder: participantNamesInTurnOrder,
-		chatLog:                     newEmptyRollingMessageAppender(chatLogLength),
-		actionLog:                   newRollingMessageAppender(initialActionLog),
-		turnNumber:                  1,
-		turnsTakenWithEmptyDeck:     0,
-		numberOfReadyHints:          gameRuleset.MaximumNumberOfHints(),
-		numberOfMistakesMade:        0,
-		undrawnDeck:                 shuffledDeck,
-		playedCardsForColor:         make(map[string][]card.Defined, 0),
-		discardedCards:              make(map[card.Defined]int, 0),
-		playerHands:                 playerHands,
+		mutualExclusion:   sync.Mutex{},
+		SerializableState: serializableState,
 	}
 }
 
 // Name returns the value of the private gameName string.
 func (gameState *inMemoryState) Name() string {
-	return gameState.gameName
+	return gameState.SerializableState.GameName
 }
 
 // Ruleset returns the ruleset for the game.
 func (gameState *inMemoryState) Ruleset() game.Ruleset {
-	return gameState.gameRuleset
+	return gameState.SerializableState.GameRuleset
 }
 
 // Players returns a slice of the private participantNames array.
 func (gameState *inMemoryState) PlayerNames() []string {
-	return gameState.participantNamesInTurnOrder
+	return gameState.SerializableState.ParticipantNamesInTurnOrder
 }
 
 // CreationTime returns the value of the private time object describing the time at
 // which the state was created.
 func (gameState *inMemoryState) CreationTime() time.Time {
-	return gameState.creationTime
+	return gameState.SerializableState.CreationTime
 }
 
 // ChatLog returns the chat log of the game at the current moment.
 func (gameState *inMemoryState) ChatLog() []message.FromPlayer {
-	return gameState.chatLog.sortedCopyOfMessages()
+	return gameState.SerializableState.ChatLog
 }
 
 // ActionLog returns the action log of the game at the current moment.
 func (gameState *inMemoryState) ActionLog() []message.FromPlayer {
-	return gameState.actionLog.sortedCopyOfMessages()
+	return gameState.SerializableState.ActionLog
 }
 
 // Turn returns the value of the private turnNumber int.
 func (gameState *inMemoryState) Turn() int {
-	return gameState.turnNumber
+	return gameState.SerializableState.TurnNumber
 }
 
 // TurnsTakenWithEmptyDeck returns the number of turns which have been taken
 // since the turn which drew the last card from the deck.
 func (gameState *inMemoryState) TurnsTakenWithEmptyDeck() int {
-	return gameState.turnsTakenWithEmptyDeck
+	return gameState.SerializableState.TurnsTakenWithEmptyDeck
 }
 
 // NumberOfReadyHints returns the total number of hints which are available to be
 // played.
 func (gameState *inMemoryState) NumberOfReadyHints() int {
-	return gameState.numberOfReadyHints
+	return gameState.SerializableState.NumberOfReadyHints
 }
 
 // NumberOfMistakesMade returns the total number of cards which have been played
 // incorrectly.
 func (gameState *inMemoryState) NumberOfMistakesMade() int {
-	return gameState.numberOfMistakesMade
-}
-
-// DeckSize returns the number of cards left to draw from the deck.
-func (gameState *inMemoryState) DeckSize() int {
-	return len(gameState.undrawnDeck)
-}
-
-// PlayedForColor returns the cards, in order, which have been played
-// correctly for the given color suit.
-func (gameState *inMemoryState) PlayedForColor(
-	colorSuit string) []card.Defined {
-	playedCards, _ :=
-		gameState.playedCardsForColor[colorSuit]
-
-	if playedCards == nil {
-		return []card.Defined{}
-	}
-
-	return playedCards
-}
-
-// NumberOfDiscardedCards returns the number of cards with the given suit and index
-// which were discarded or played incorrectly.
-func (gameState *inMemoryState) NumberOfDiscardedCards(
-	colorSuit string,
-	sequenceIndex int) int {
-	mapKey :=
-		card.Defined{
-			ColorSuit:     colorSuit,
-			SequenceIndex: sequenceIndex,
-		}
-
-	// We ignore the bool about whether it was found, as the default 0 for an int in
-	// Go is the correct value to return.
-	numberOfCopies, _ := gameState.discardedCards[mapKey]
-
-	return numberOfCopies
-}
-
-// VisibleCardInHand returns the card held by the given player in the given position.
-func (gameState *inMemoryState) VisibleHand(holdingPlayerName string) ([]card.Defined, error) {
-	playerHand, hasHand := gameState.playerHands[holdingPlayerName]
-
-	if !hasHand {
-		return nil, fmt.Errorf("Player has no hand")
-	}
-
-	handSize := len(playerHand)
-
-	visibleHand := make([]card.Defined, handSize)
-
-	for indexInHand := 0; indexInHand < handSize; indexInHand++ {
-		visibleHand[indexInHand] = playerHand[indexInHand].Defined
-	}
-
-	return visibleHand, nil
-}
-
-// InferredCardInHand returns the inferred information about the card held by the given
-// player in the given position.
-func (gameState *inMemoryState) InferredHand(holdingPlayerName string) ([]card.Inferred, error) {
-	playerHand, hasHand := gameState.playerHands[holdingPlayerName]
-
-	if !hasHand {
-		return nil, fmt.Errorf("Player has no hand")
-	}
-
-	handSize := len(playerHand)
-
-	inferredHand := make([]card.Inferred, handSize)
-
-	for indexInHand := 0; indexInHand < handSize; indexInHand++ {
-		inferredHand[indexInHand] = playerHand[indexInHand].Inferred
-	}
-
-	return inferredHand, nil
+	return gameState.SerializableState.NumberOfMistakesMade
 }
 
 // Read returns the gameState itself as a read-only object for the purposes of reading
@@ -400,11 +293,12 @@ func (gameState *inMemoryState) Read() game.ReadonlyState {
 func (gameState *inMemoryState) RecordChatMessage(
 	actingPlayer player.ReadonlyState,
 	chatMessage string) error {
-	gameState.chatLog.appendNewMessage(
-		actingPlayer.Name(),
-		actingPlayer.Color(),
+	gameState.mutualExclusion.Lock()
+	defer gameState.mutualExclusion.Unlock()
+
+	return gameState.SerializableState.RecordChatMessage(
+		actingPlayer,
 		chatMessage)
-	return nil
 }
 
 // EnactTurnByDiscardingAndReplacing increments the turn number and moves the
@@ -423,34 +317,16 @@ func (gameState *inMemoryState) EnactTurnByDiscardingAndReplacing(
 	knowledgeOfDrawnCard card.Inferred,
 	numberOfReadyHintsToAdd int,
 	numberOfMistakesMadeToAdd int) error {
-	// We need to check if the deck was empty at the start of the turn so that
-	// we do not mistakenly increment the number of turns with an empty deck
-	// on a turn which empties the deck, but we cannot increment the turn counts
-	// until we have checked that we generate no errors.
-	deckAlreadyEmptyAtStartOfTurn := gameState.DeckSize() <= 0
+	gameState.mutualExclusion.Lock()
+	defer gameState.mutualExclusion.Unlock()
 
-	discardedCard, errorFromTakingCard :=
-		gameState.takeCardFromHandReplacingIfPossible(
-			actingPlayer.Name(),
-			indexInHand,
-			knowledgeOfDrawnCard)
-
-	if errorFromTakingCard != nil {
-		return errorFromTakingCard
-	}
-
-	discardedCopiesUntilNow, _ := gameState.discardedCards[discardedCard]
-	gameState.discardedCards[discardedCard] = discardedCopiesUntilNow + 1
-
-	gameState.numberOfReadyHints += numberOfReadyHintsToAdd
-	gameState.numberOfMistakesMade += numberOfMistakesMadeToAdd
-	gameState.incrementTurnNumbers(deckAlreadyEmptyAtStartOfTurn)
-
-	gameState.recordActionMessage(
+	return gameState.SerializableState.EnactTurnByDiscardingAndReplacing(
+		actionMessage,
 		actingPlayer,
-		actionMessage)
-
-	return nil
+		indexInHand,
+		knowledgeOfDrawnCard,
+		numberOfReadyHintsToAdd,
+		numberOfMistakesMadeToAdd)
 }
 
 // EnactTurnByPlayingAndReplacing increments the turn number and moves the card
@@ -468,34 +344,15 @@ func (gameState *inMemoryState) EnactTurnByPlayingAndReplacing(
 	indexInHand int,
 	knowledgeOfDrawnCard card.Inferred,
 	numberOfReadyHintsToAdd int) error {
-	// We need to check if the deck was empty at the start of the turn so that
-	// we do not mistakenly increment the number of turns with an empty deck
-	// on a turn which empties the deck, but we cannot increment the turn counts
-	// until we have checked that we generate no errors.
-	deckAlreadyEmptyAtStartOfTurn := gameState.DeckSize() <= 0
+	gameState.mutualExclusion.Lock()
+	defer gameState.mutualExclusion.Unlock()
 
-	playedCard, errorFromTakingCard :=
-		gameState.takeCardFromHandReplacingIfPossible(
-			actingPlayer.Name(),
-			indexInHand,
-			knowledgeOfDrawnCard)
-
-	if errorFromTakingCard != nil {
-		return errorFromTakingCard
-	}
-
-	playedSuit := playedCard.ColorSuit
-	sequenceBeforeNow := gameState.playedCardsForColor[playedSuit]
-	gameState.playedCardsForColor[playedSuit] = append(sequenceBeforeNow, playedCard)
-
-	gameState.numberOfReadyHints += numberOfReadyHintsToAdd
-	gameState.incrementTurnNumbers(deckAlreadyEmptyAtStartOfTurn)
-
-	gameState.recordActionMessage(
+	return gameState.SerializableState.EnactTurnByPlayingAndReplacing(
+		actionMessage,
 		actingPlayer,
-		actionMessage)
-
-	return nil
+		indexInHand,
+		knowledgeOfDrawnCard,
+		numberOfReadyHintsToAdd)
 }
 
 // EnactTurnByUpdatingHandWithHint increments the turn number and replaces the
@@ -509,219 +366,13 @@ func (gameState *inMemoryState) EnactTurnByUpdatingHandWithHint(
 	receivingPlayerName string,
 	updatedReceiverKnowledgeOfOwnHand []card.Inferred,
 	numberOfReadyHintsToSubtract int) error {
-	receiverHand, hasHand := gameState.playerHands[receivingPlayerName]
+	gameState.mutualExclusion.Lock()
+	defer gameState.mutualExclusion.Unlock()
 
-	if !hasHand {
-		return fmt.Errorf("Player %v has no hand", receivingPlayerName)
-	}
-
-	handSize := len(receiverHand)
-
-	if len(updatedReceiverKnowledgeOfOwnHand) != handSize {
-		return fmt.Errorf(
-			"Updated hand knowledge %+v does not match hand size %v",
-			updatedReceiverKnowledgeOfOwnHand,
-			handSize)
-	}
-
-	for indexInHand := 0; indexInHand < handSize; indexInHand++ {
-		receiverHand[indexInHand].Inferred =
-			updatedReceiverKnowledgeOfOwnHand[indexInHand]
-	}
-
-	gameState.numberOfReadyHints -= numberOfReadyHintsToSubtract
-
-	// It is not a problem to take the deck size now as giving a hint does
-	// not involve drawing from the deck.
-	gameState.incrementTurnNumbers(gameState.DeckSize() <= 0)
-
-	gameState.recordActionMessage(
+	return gameState.SerializableState.EnactTurnByUpdatingHandWithHint(
+		actionMessage,
 		actingPlayer,
-		actionMessage)
-
-	return nil
-}
-
-func (gameState *inMemoryState) incrementTurnNumbers(
-	deckAlreadyEmptyAtStartOfTurn bool) {
-	gameState.turnNumber++
-
-	if deckAlreadyEmptyAtStartOfTurn {
-		gameState.turnsTakenWithEmptyDeck++
-	}
-}
-
-func (gameState *inMemoryState) recordActionMessage(
-	actingPlayer player.ReadonlyState,
-	actionMessage string) {
-	gameState.actionLog.appendNewMessage(
-		actingPlayer.Name(),
-		actingPlayer.Color(),
-		actionMessage)
-}
-
-// ReplaceCardInHand replaces the card at the given index in the hand of the given
-// player with the given replacement card, and returns the card which has just been
-// replaced.
-func (gameState *inMemoryState) takeCardFromHandReplacingIfPossible(
-	holdingPlayerName string,
-	indexInHand int,
-	knowledgeOfDrawnCard card.Inferred) (card.Defined, error) {
-	if indexInHand < 0 {
-		return invalidCardAndErrorFromOutOfRange(indexInHand)
-	}
-
-	playerHand, hasHand := gameState.playerHands[holdingPlayerName]
-
-	if !hasHand {
-		errorFromNoHand := fmt.Errorf("Player has no hand")
-		invalidCard :=
-			card.Defined{
-				ColorSuit:     errorFromNoHand.Error(),
-				SequenceIndex: -1,
-			}
-		return invalidCard, errorFromNoHand
-	}
-
-	if indexInHand >= len(playerHand) {
-		return invalidCardAndErrorFromOutOfRange(indexInHand)
-	}
-
-	cardBeingReplaced := playerHand[indexInHand]
-
-	gameState.updatePlayerHand(
-		holdingPlayerName,
-		indexInHand,
-		knowledgeOfDrawnCard,
-		playerHand)
-
-	return cardBeingReplaced.Defined, nil
-}
-
-func (gameState *inMemoryState) updatePlayerHand(
-	holdingPlayerName string,
-	indexInHand int,
-	knowledgeOfDrawnCard card.Inferred,
-	playerHand []card.InHand) {
-	if len(gameState.undrawnDeck) <= 0 {
-		// If we have run out of replacement cards, we just reduce the size of the
-		// player's hand. We could do this in a slightly faster way as we do not
-		// strictly need to preserve order, but it is probably less confusing for
-		// the player to see the order of the cards in the hand stay unchanged.
-		// We also do not worry about the card at the end of the array which is no
-		// longer visible to the slice, as it can only ever be one card per player
-		// before the game ends.
-		gameState.playerHands[holdingPlayerName] =
-			append(playerHand[:indexInHand], playerHand[indexInHand+1:]...)
-	} else {
-		// If we have a replacement card, we bundle it with the information about it
-		// which the player should have.
-		playerHand[indexInHand] =
-			card.InHand{
-				Defined:  gameState.undrawnDeck[0],
-				Inferred: knowledgeOfDrawnCard,
-			}
-
-		// We should not ever re-visit this card, but in case we do somehow, we ensure
-		// that this element represents an error.
-		gameState.undrawnDeck[0] =
-			card.Defined{
-				ColorSuit:     "error: already removed from deck",
-				SequenceIndex: -1,
-			}
-
-		gameState.undrawnDeck = gameState.undrawnDeck[1:]
-	}
-}
-
-// rollingMessageAppender holds a fixed number of messages, discarding the
-// oldest when appending a new one.
-type rollingMessageAppender struct {
-	listLength      int
-	messageList     []message.FromPlayer
-	indexOfOldest   int
-	mutualExclusion sync.Mutex
-}
-
-// newEmptyRollingMessageAppender makes a new rollingMessageAppender with a
-// fixed message capacity, initially filled with empty messages
-func newEmptyRollingMessageAppender(listLength int) *rollingMessageAppender {
-	messageList := make([]message.FromPlayer, listLength)
-
-	for messageIndex := 0; messageIndex < listLength; messageIndex++ {
-		messageList[messageIndex] = message.NewFromPlayer("", "", "")
-	}
-
-	return &rollingMessageAppender{
-		listLength:    listLength,
-		messageList:   messageList,
-		indexOfOldest: 0,
-	}
-}
-
-// newRollingMessageAppender makes a new ollingMessageAppender with a fixed
-// message capacity equal to the length of the given list of messages, with
-// those messages as its initial messages.
-func newRollingMessageAppender(
-	initialMessages []message.FromPlayer) *rollingMessageAppender {
-	listLength := len(initialMessages)
-	messageList := make([]message.FromPlayer, listLength)
-
-	for messageIndex := 0; messageIndex < listLength; messageIndex++ {
-		messageList[messageIndex] = initialMessages[messageIndex]
-	}
-
-	return &rollingMessageAppender{
-		listLength:    listLength,
-		messageList:   messageList,
-		indexOfOldest: 0,
-	}
-}
-
-// sortedCopyOfMessages returns the messages in the log starting with the
-// oldest in a simple array, in order by timestamp.
-func (rollingAppender *rollingMessageAppender) sortedCopyOfMessages() []message.FromPlayer {
-	logLength := rollingAppender.listLength
-	sortedMessages := make([]message.FromPlayer, logLength)
-	for messageIndex := 0; messageIndex < logLength; messageIndex++ {
-		// We take the relevant message indexed with the oldest message at 0,
-		// wrapping around if newer messages occupy earlier spots in the
-		// actual array.
-		adjustedIndex :=
-			(messageIndex + rollingAppender.indexOfOldest) % logLength
-		sortedMessages[messageIndex] = rollingAppender.messageList[adjustedIndex]
-	}
-
-	return sortedMessages
-}
-
-// appendNewMessage adds the given message as the newest message, over-writing
-// the oldest message and increasing the offset of the index to the oldest
-// message.
-func (rollingAppender *rollingMessageAppender) appendNewMessage(
-	playerName string,
-	textColor string,
-	messageText string) {
-	rollingAppender.mutualExclusion.Lock()
-
-	// We over-write the oldest message.
-	rollingAppender.messageList[rollingAppender.indexOfOldest] =
-		message.NewFromPlayer(playerName, textColor, messageText)
-
-	// Now we mark the next-oldest message as the oldest, thus implicitly
-	// marking the updated message as the newest message.
-	rollingAppender.indexOfOldest =
-		(rollingAppender.indexOfOldest + 1) % rollingAppender.listLength
-
-	rollingAppender.mutualExclusion.Unlock()
-}
-
-func invalidCardAndErrorFromOutOfRange(indexOutOfRange int) (card.Defined, error) {
-	errorFromOutOfRange := fmt.Errorf("Index %v is out of allowed range", indexOutOfRange)
-	invalidCard :=
-		card.Defined{
-			ColorSuit:     errorFromOutOfRange.Error(),
-			SequenceIndex: -1,
-		}
-	return invalidCard, errorFromOutOfRange
+		receivingPlayerName,
+		updatedReceiverKnowledgeOfOwnHand,
+		numberOfReadyHintsToSubtract)
 }
