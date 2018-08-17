@@ -56,7 +56,7 @@ func (gamePersister *inMemoryPersister) ReadAndWriteGame(
 // ReadAllWithPlayer returns a slice of all the game.ReadonlyState instances in the
 // collection which have the given player as a participant.
 func (gamePersister *inMemoryPersister) ReadAllWithPlayer(
-	playerName string) []game.ReadonlyState {
+	playerName string) ([]game.ReadonlyState, error) {
 	// We do not care if there was no entry for the player, as the default in this
 	// case is nil, and we are going to explicitly check for nil to ensure that we
 	// return an empty list instead anyway (in case the player was mapped to nil
@@ -64,10 +64,10 @@ func (gamePersister *inMemoryPersister) ReadAllWithPlayer(
 	gameStates, _ := gamePersister.gamesWithPlayers[playerName]
 
 	if gameStates == nil {
-		return []game.ReadonlyState{}
+		return []game.ReadonlyState{}, nil
 	}
 
-	return gameStates
+	return gameStates, nil
 }
 
 // AddGame adds an element to the collection which is a new object implementing
@@ -92,14 +92,18 @@ func (gamePersister *inMemoryPersister) AddGame(
 		return fmt.Errorf("Game %v already exists", gameName)
 	}
 
-	newGame :=
-		newInMemoryState(
-			gameName,
+	serializableState :=
+		NewSerializableState(gameName,
 			chatLogLength,
 			initialActionLog,
 			gameRuleset,
 			playersInTurnOrderWithInitialHands,
 			initialDeck)
+
+	newGame := &inMemoryState{
+		mutualExclusion:   sync.Mutex{},
+		SerializableState: serializableState,
+	}
 
 	gamePersister.mutualExclusion.Lock()
 
@@ -205,88 +209,6 @@ func (gamePersister *inMemoryPersister) Delete(gameName string) error {
 type inMemoryState struct {
 	mutualExclusion sync.Mutex
 	SerializableState
-}
-
-// newInMemoryState creates a new game given the required information, using the
-// given shuffled deck.
-func newInMemoryState(
-	gameName string,
-	chatLogLength int,
-	initialActionLog []message.FromPlayer,
-	gameRuleset game.Ruleset,
-	playersInTurnOrderWithInitialHands []game.PlayerNameWithHand,
-	shuffledDeck []card.Defined) game.ReadAndWriteState {
-	serializableState := NewSerializableState(gameName,
-		chatLogLength,
-		initialActionLog,
-		gameRuleset,
-		playersInTurnOrderWithInitialHands,
-		shuffledDeck)
-
-	return &inMemoryState{
-		mutualExclusion:   sync.Mutex{},
-		SerializableState: serializableState,
-	}
-}
-
-// Name returns the value of the private gameName string.
-func (gameState *inMemoryState) Name() string {
-	return gameState.SerializableState.GameName
-}
-
-// Ruleset returns the ruleset for the game.
-func (gameState *inMemoryState) Ruleset() game.Ruleset {
-	return gameState.SerializableState.GameRuleset
-}
-
-// Players returns a slice of the private participantNames array.
-func (gameState *inMemoryState) PlayerNames() []string {
-	return gameState.SerializableState.ParticipantNamesInTurnOrder
-}
-
-// CreationTime returns the value of the private time object describing the time at
-// which the state was created.
-func (gameState *inMemoryState) CreationTime() time.Time {
-	return gameState.SerializableState.CreationTime
-}
-
-// ChatLog returns the chat log of the game at the current moment.
-func (gameState *inMemoryState) ChatLog() []message.FromPlayer {
-	return gameState.SerializableState.ChatLog
-}
-
-// ActionLog returns the action log of the game at the current moment.
-func (gameState *inMemoryState) ActionLog() []message.FromPlayer {
-	return gameState.SerializableState.ActionLog
-}
-
-// Turn returns the value of the private turnNumber int.
-func (gameState *inMemoryState) Turn() int {
-	return gameState.SerializableState.TurnNumber
-}
-
-// TurnsTakenWithEmptyDeck returns the number of turns which have been taken
-// since the turn which drew the last card from the deck.
-func (gameState *inMemoryState) TurnsTakenWithEmptyDeck() int {
-	return gameState.SerializableState.TurnsTakenWithEmptyDeck
-}
-
-// NumberOfReadyHints returns the total number of hints which are available to be
-// played.
-func (gameState *inMemoryState) NumberOfReadyHints() int {
-	return gameState.SerializableState.NumberOfReadyHints
-}
-
-// NumberOfMistakesMade returns the total number of cards which have been played
-// incorrectly.
-func (gameState *inMemoryState) NumberOfMistakesMade() int {
-	return gameState.SerializableState.NumberOfMistakesMade
-}
-
-// Read returns the gameState itself as a read-only object for the purposes of reading
-// properties.
-func (gameState *inMemoryState) Read() game.ReadonlyState {
-	return gameState
 }
 
 // RecordChatMessage records a chat message from the given player.

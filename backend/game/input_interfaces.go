@@ -149,7 +149,7 @@ type StatePersister interface {
 	// The order is not mandated, and may even change with repeated calls to the same
 	// unchanged persister (analogously to the entry set of a standard Golang map, for
 	// example), though of course an implementation may order the slice consistently.
-	ReadAllWithPlayer(playerName string) []ReadonlyState
+	ReadAllWithPlayer(playerName string) ([]ReadonlyState, error)
 
 	// AddGame should add an element to the collection which is a new object implementing
 	// the ReadAndWriteState interface from the given argument. It should return an error

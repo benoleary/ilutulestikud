@@ -59,7 +59,11 @@ func (gameCollection *StateCollection) ViewState(
 // The views are ordered by creation timestamp, oldest first.
 func (gameCollection *StateCollection) ViewAllWithPlayer(
 	playerName string) ([]ViewForPlayer, error) {
-	gameStates := gameCollection.statePersister.ReadAllWithPlayer(playerName)
+	gameStates, errorFromReadAll := gameCollection.statePersister.ReadAllWithPlayer(playerName)
+	if errorFromReadAll != nil {
+		return nil, errorFromReadAll
+	}
+
 	numberOfGames := len(gameStates)
 
 	sort.Sort(ByCreationTime(gameStates))

@@ -13,20 +13,20 @@ import (
 // SerializableState is a struct meant to encapsulate all the state required
 // for a single game to function, in a form which is simple to serialize.
 type SerializableState struct {
-	GameName                    string
-	GameRuleset                 game.Ruleset
-	CreationTime                time.Time
-	ParticipantNamesInTurnOrder []string
-	ChatLog                     []message.FromPlayer
-	ActionLog                   []message.FromPlayer
-	TurnNumber                  int
-	TurnsTakenWithEmptyDeck     int
-	NumberOfReadyHints          int
-	NumberOfMistakesMade        int
-	UndrawnDeck                 []card.Defined
-	PlayedCardsForColor         map[string][]card.Defined
-	DiscardedCards              map[card.Defined]int
-	PlayerHands                 map[string][]card.InHand
+	GameName                        string
+	GameRuleset                     game.Ruleset
+	TimeOfCreation                  time.Time
+	ParticipantNamesInTurnOrder     []string
+	ChatMessageLog                  []message.FromPlayer
+	ActionMessageLog                []message.FromPlayer
+	TurnNumber                      int
+	NumberOfTurnsTakenWithEmptyDeck int
+	NumberOfHintsAvailable          int
+	NumberOfMistakesMadeSoFar       int
+	UndrawnDeck                     []card.Defined
+	PlayedCardsForColor             map[string][]card.Defined
+	DiscardedCards                  map[card.Defined]int
+	PlayerHands                     map[string][]card.InHand
 }
 
 // NewSerializableState creates a new game given the required information, using the
@@ -57,21 +57,81 @@ func NewSerializableState(
 	// We could already set up the capacity for the maps by getting slices from
 	// the ruleset and counting, but that is a lot of effort for very little gain.
 	return SerializableState{
-		GameName:                    gameName,
-		GameRuleset:                 gameRuleset,
-		CreationTime:                time.Now(),
-		ParticipantNamesInTurnOrder: participantNamesInTurnOrder,
-		ChatLog:                     initialChatLog,
-		ActionLog:                   initialActionLog,
-		TurnNumber:                  1,
-		TurnsTakenWithEmptyDeck:     0,
-		NumberOfReadyHints:          gameRuleset.MaximumNumberOfHints(),
-		NumberOfMistakesMade:        0,
-		UndrawnDeck:                 shuffledDeck,
-		PlayedCardsForColor:         make(map[string][]card.Defined, 0),
-		DiscardedCards:              make(map[card.Defined]int, 0),
-		PlayerHands:                 playerHands,
+		GameName:                        gameName,
+		GameRuleset:                     gameRuleset,
+		TimeOfCreation:                  time.Now(),
+		ParticipantNamesInTurnOrder:     participantNamesInTurnOrder,
+		ChatMessageLog:                  initialChatLog,
+		ActionMessageLog:                initialActionLog,
+		TurnNumber:                      1,
+		NumberOfTurnsTakenWithEmptyDeck: 0,
+		NumberOfHintsAvailable:          gameRuleset.MaximumNumberOfHints(),
+		NumberOfMistakesMadeSoFar:       0,
+		UndrawnDeck:                     shuffledDeck,
+		PlayedCardsForColor:             make(map[string][]card.Defined, 0),
+		DiscardedCards:                  make(map[card.Defined]int, 0),
+		PlayerHands:                     playerHands,
 	}
+}
+
+// Name returns the value of the private gameName string.
+func (serializableState *SerializableState) Name() string {
+	return serializableState.GameName
+}
+
+// Ruleset returns the ruleset for the game.
+func (serializableState *SerializableState) Ruleset() game.Ruleset {
+	return serializableState.GameRuleset
+}
+
+// PlayerNames returns a slice of the private participantNames array.
+func (serializableState *SerializableState) PlayerNames() []string {
+	return serializableState.ParticipantNamesInTurnOrder
+}
+
+// CreationTime returns the value of the private time object describing the time at
+// which the state was created.
+func (serializableState *SerializableState) CreationTime() time.Time {
+	return serializableState.TimeOfCreation
+}
+
+// ChatLog returns the chat log of the game at the current moment.
+func (serializableState *SerializableState) ChatLog() []message.FromPlayer {
+	return serializableState.ChatMessageLog
+}
+
+// ActionLog returns the action log of the game at the current moment.
+func (serializableState *SerializableState) ActionLog() []message.FromPlayer {
+	return serializableState.ActionMessageLog
+}
+
+// Turn returns the value of the private turnNumber int.
+func (serializableState *SerializableState) Turn() int {
+	return serializableState.TurnNumber
+}
+
+// TurnsTakenWithEmptyDeck returns the number of turns which have been taken
+// since the turn which drew the last card from the deck.
+func (serializableState *SerializableState) TurnsTakenWithEmptyDeck() int {
+	return serializableState.NumberOfTurnsTakenWithEmptyDeck
+}
+
+// NumberOfReadyHints returns the total number of hints which are available to be
+// played.
+func (serializableState *SerializableState) NumberOfReadyHints() int {
+	return serializableState.NumberOfHintsAvailable
+}
+
+// NumberOfMistakesMade returns the total number of cards which have been played
+// incorrectly.
+func (serializableState *SerializableState) NumberOfMistakesMade() int {
+	return serializableState.NumberOfMistakesMadeSoFar
+}
+
+// Read returns the gameState itself as a read-only object for the purposes of reading
+// properties.
+func (serializableState *SerializableState) Read() game.ReadonlyState {
+	return serializableState
 }
 
 // DeckSize returns the number of cards left to draw from the deck.
@@ -157,7 +217,7 @@ func (serializableState *SerializableState) RecordChatMessage(
 	actingPlayer player.ReadonlyState,
 	chatMessage string) error {
 	appendNewMessageInPlaceDiscardingFirst(
-		serializableState.ChatLog,
+		serializableState.ChatMessageLog,
 		actingPlayer.Name(),
 		actingPlayer.Color(),
 		chatMessage)
@@ -199,8 +259,8 @@ func (serializableState *SerializableState) EnactTurnByDiscardingAndReplacing(
 	discardedCopiesUntilNow, _ := serializableState.DiscardedCards[discardedCard]
 	serializableState.DiscardedCards[discardedCard] = discardedCopiesUntilNow + 1
 
-	serializableState.NumberOfReadyHints += numberOfReadyHintsToAdd
-	serializableState.NumberOfMistakesMade += numberOfMistakesMadeToAdd
+	serializableState.NumberOfHintsAvailable += numberOfReadyHintsToAdd
+	serializableState.NumberOfMistakesMadeSoFar += numberOfMistakesMadeToAdd
 	serializableState.incrementTurnNumbers(deckAlreadyEmptyAtStartOfTurn)
 
 	serializableState.recordActionMessage(
@@ -246,7 +306,7 @@ func (serializableState *SerializableState) EnactTurnByPlayingAndReplacing(
 	serializableState.PlayedCardsForColor[playedSuit] =
 		append(sequenceBeforeNow, playedCard)
 
-	serializableState.NumberOfReadyHints += numberOfReadyHintsToAdd
+	serializableState.NumberOfHintsAvailable += numberOfReadyHintsToAdd
 	serializableState.incrementTurnNumbers(deckAlreadyEmptyAtStartOfTurn)
 
 	serializableState.recordActionMessage(
@@ -287,7 +347,7 @@ func (serializableState *SerializableState) EnactTurnByUpdatingHandWithHint(
 			updatedReceiverKnowledgeOfOwnHand[indexInHand]
 	}
 
-	serializableState.NumberOfReadyHints -= numberOfReadyHintsToSubtract
+	serializableState.NumberOfHintsAvailable -= numberOfReadyHintsToSubtract
 
 	// It is not a problem to take the deck size now as giving a hint does
 	// not involve drawing from the deck.
@@ -305,7 +365,7 @@ func (serializableState *SerializableState) incrementTurnNumbers(
 	serializableState.TurnNumber++
 
 	if deckAlreadyEmptyAtStartOfTurn {
-		serializableState.TurnsTakenWithEmptyDeck++
+		serializableState.NumberOfTurnsTakenWithEmptyDeck++
 	}
 }
 
@@ -313,7 +373,7 @@ func (serializableState *SerializableState) recordActionMessage(
 	actingPlayer player.ReadonlyState,
 	actionMessage string) {
 	appendNewMessageInPlaceDiscardingFirst(
-		serializableState.ActionLog,
+		serializableState.ActionMessageLog,
 		actingPlayer.Name(),
 		actingPlayer.Color(),
 		actionMessage)

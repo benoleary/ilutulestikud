@@ -51,8 +51,15 @@ func TestReturnEmptyListWhenPlayerHasNoGames(unitTest *testing.T) {
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
 			invalidName := "Not A. Participant"
-			gameStates :=
+			gameStates, errorFromReadAll :=
 				statePersister.GamePersister.ReadAllWithPlayer(invalidName)
+
+			if errorFromReadAll != nil {
+				unitTest.Fatalf(
+					"ReadAllWithPlayer(unknown player name %v) produced error %v",
+					invalidName,
+					errorFromReadAll)
+			}
 
 			if gameStates == nil {
 				unitTest.Fatalf(
@@ -860,7 +867,15 @@ func assertReadAllWithPlayerGameNamesCorrect(
 	playerName string,
 	expectedGameNames map[string]bool,
 	gamePersister game.StatePersister) {
-	statesFromAllWithPlayer := gamePersister.ReadAllWithPlayer(playerName)
+	statesFromAllWithPlayer, errorFromReadAll :=
+		gamePersister.ReadAllWithPlayer(playerName)
+
+	if errorFromReadAll != nil {
+		unitTest.Fatalf(
+			"ReadAllWithPlayer(player name %v) produced error %v",
+			playerName,
+			errorFromReadAll)
+	}
 
 	if len(statesFromAllWithPlayer) != len(expectedGameNames) {
 		unitTest.Fatalf(

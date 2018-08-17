@@ -546,7 +546,7 @@ func (mockImplementation *mockGamePersister) ReadAndWriteGame(
 }
 
 func (mockImplementation *mockGamePersister) ReadAllWithPlayer(
-	playerName string) []game.ReadonlyState {
+	playerName string) ([]game.ReadonlyState, error) {
 	if mockImplementation.TestErrorForReadAllWithPlayer != nil {
 		mockImplementation.TestReference.Fatalf(
 			"ReadAllWithPlayer(%v): %v",
@@ -554,7 +554,7 @@ func (mockImplementation *mockGamePersister) ReadAllWithPlayer(
 			mockImplementation.TestErrorForReadAllWithPlayer)
 	}
 
-	return mockImplementation.ReturnForReadAllWithPlayer
+	return mockImplementation.ReturnForReadAllWithPlayer, nil
 }
 
 func (mockImplementation *mockGamePersister) AddGame(
