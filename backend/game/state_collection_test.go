@@ -101,6 +101,40 @@ func TestViewCorrectWhenPersisterGivesValidGame(unitTest *testing.T) {
 	}
 }
 
+func TestViewErrorWhenPersisterGivesErrorOnAll(unitTest *testing.T) {
+	gameName := "Mock with specified player"
+	playerName := "Test Player"
+	gameCollection, mockPersister, _ :=
+		prepareCollection(unitTest, playerNamesAvailableInTest)
+
+	mockGameWithPlayer := NewMockGameState(unitTest)
+	mockGameWithPlayer.ReturnForName = gameName
+	mockGameWithPlayer.ReturnForCreationTime = time.Now().Add(-2 * time.Second)
+	mockGameWithPlayer.ReturnForRuleset = testRuleset
+	mockGameWithPlayer.ReturnForPlayerNames = playerNamesAvailableInTest
+
+	mockGameWithoutPlayer := NewMockGameState(unitTest)
+	mockGameWithoutPlayer.ReturnForName = "Mock without specified player"
+	mockGameWithoutPlayer.ReturnForCreationTime = time.Now().Add(-1 * time.Second)
+	mockGameWithoutPlayer.ReturnForPlayerNames = []string{
+		playerNamesAvailableInTest[1],
+		playerNamesAvailableInTest[2],
+	}
+
+	mockPersister.TestErrorForReadAllWithPlayer = nil
+	mockPersister.ReturnForNontestError = fmt.Errorf("Expected error for test")
+
+	viewsForPlayer, errorFromViewAll :=
+		gameCollection.ViewAllWithPlayer(playerName)
+
+	if errorFromViewAll == nil {
+		unitTest.Fatalf(
+			"ViewAllWithPlayer(%v) did not produce expected error, instead produced %v",
+			playerName,
+			viewsForPlayer)
+	}
+}
+
 func TestErrorWhenViewErrorOnStateFromAll(unitTest *testing.T) {
 	gameName := "Mock with specified player"
 	playerName := "Test Player"

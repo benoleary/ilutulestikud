@@ -554,7 +554,7 @@ func (mockImplementation *mockGamePersister) ReadAllWithPlayer(
 			mockImplementation.TestErrorForReadAllWithPlayer)
 	}
 
-	return mockImplementation.ReturnForReadAllWithPlayer, nil
+	return mockImplementation.ReturnForReadAllWithPlayer, mockImplementation.ReturnForNontestError
 }
 
 func (mockImplementation *mockGamePersister) AddGame(
