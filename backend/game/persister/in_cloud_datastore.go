@@ -56,15 +56,7 @@ func (gamePersister *inCloudDatastorePersister) RandomSeed() int64 {
 // game name, or nil with an error if it does not exist.
 func (gamePersister *inCloudDatastorePersister) ReadAndWriteGame(
 	gameName string) (game.ReadAndWriteState, error) {
-	gameKey := datastore.NameKey(keyKind, gameName, nil)
-	serializablePart := SerializableState{}
-
-	errorFromGet :=
-		gamePersister.datastoreClient.Get(
-			gamePersister.contextForRequests,
-			gameKey,
-			&serializablePart)
-
+	serializablePart, errorFromGet := gamePersister.serializedPart(gameName)
 	return newInCloudDatastoreState(serializablePart), errorFromGet
 }
 
@@ -104,7 +96,17 @@ func (gamePersister *inCloudDatastorePersister) ReadAllWithPlayer(
 			return nil, errorFromNext
 		}
 
-		gameStates = append(gameStates, &matchedGame)
+		hasLeftGame := false
+		for _, playerWhoHasLeft := range matchedGame.ParticipantsWhoHaveLeft {
+			if playerWhoHasLeft == playerName {
+				hasLeftGame = true
+				break
+			}
+		}
+
+		if !hasLeftGame {
+			gameStates = append(gameStates, &matchedGame)
+		}
 	}
 
 	return gameStates, nil
@@ -135,7 +137,7 @@ func (gamePersister *inCloudDatastorePersister) AddGame(
 			queryForGameNameAlreadyExists)
 
 	// If there is no game already with the given name, the iterator
-	// should immediately return a iterator.Done "error".
+	// should immediately return an iterator.Done "error".
 	var keyOfExistingGame datastore.Key
 	_, errorFromNext := resultIterator.Next(&keyOfExistingGame)
 
@@ -176,19 +178,49 @@ func (gamePersister *inCloudDatastorePersister) AddGame(
 func (gamePersister *inCloudDatastorePersister) RemoveGameFromListForPlayer(
 	gameName string,
 	playerName string) error {
-	// Implementation yet to come.
-	return fmt.Errorf(
-		"Player %v is not a participant of game %v",
-		playerName,
-		gameName)
+	serializablePart, errorFromGet := gamePersister.serializedPart(gameName)
+
+	if errorFromGet != nil {
+		return errorFromGet
+	}
+
+	playersWhoLeft := serializablePart.ParticipantsWhoHaveLeft
+
+	for _, playerWhoHasLeft := range playersWhoLeft {
+		if playerWhoHasLeft == playerName {
+			return fmt.Errorf(
+				"Player %v has already left game %v",
+				playerName,
+				gameName)
+		}
+	}
+
+	isParticipant := false
+	for _, participantName := range serializablePart.ParticipantNamesInTurnOrder {
+		if participantName == playerName {
+			isParticipant = true
+		}
+	}
+
+	if !isParticipant {
+		return fmt.Errorf(
+			"Player %v is not a participant of game %v",
+			playerName,
+			gameName)
+	}
+
+	serializablePart.ParticipantsWhoHaveLeft =
+		append(playersWhoLeft, playerName)
+
+	return nil
 }
 
 // Delete deletes the given game from the collection. It returns an error
-// if the game does not exist before the deletion attempt, or if there is
-// an error while trying to remove the game from the list for any player.
+// if the Cloud Datastore API returns an error.
 func (gamePersister *inCloudDatastorePersister) Delete(gameName string) error {
-	// Implementation yet to come.
-	return nil
+	return gamePersister.datastoreClient.Delete(
+		gamePersister.contextForRequests,
+		datastore.NameKey(keyKind, gameName, nil))
 }
 
 // inCloudDatastoreState is a struct meant to encapsulate all the state
@@ -294,4 +326,18 @@ func (gameState *inCloudDatastoreState) EnactTurnByUpdatingHandWithHint(
 		receivingPlayerName,
 		updatedReceiverKnowledgeOfOwnHand,
 		numberOfReadyHintsToSubtract)
+}
+
+func (gamePersister *inCloudDatastorePersister) serializedPart(
+	gameName string) (SerializableState, error) {
+	gameKey := datastore.NameKey(keyKind, gameName, nil)
+	serializablePart := SerializableState{}
+
+	errorFromGet :=
+		gamePersister.datastoreClient.Get(
+			gamePersister.contextForRequests,
+			gameKey,
+			&serializablePart)
+
+	return serializablePart, errorFromGet
 }

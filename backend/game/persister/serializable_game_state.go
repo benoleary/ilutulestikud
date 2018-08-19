@@ -17,6 +17,7 @@ type SerializableState struct {
 	GameRuleset                     game.Ruleset
 	TimeOfCreation                  time.Time
 	ParticipantNamesInTurnOrder     []string
+	ParticipantsWhoHaveLeft         []string
 	ChatMessageLog                  []message.FromPlayer
 	ActionMessageLog                []message.FromPlayer
 	TurnNumber                      int
@@ -61,6 +62,7 @@ func NewSerializableState(
 		GameRuleset:                     gameRuleset,
 		TimeOfCreation:                  time.Now(),
 		ParticipantNamesInTurnOrder:     participantNamesInTurnOrder,
+		ParticipantsWhoHaveLeft:         []string{},
 		ChatMessageLog:                  initialChatLog,
 		ActionMessageLog:                initialActionLog,
 		TurnNumber:                      1,
