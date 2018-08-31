@@ -11,10 +11,13 @@ import (
 )
 
 // SerializableState is a struct meant to encapsulate all the state required
-// for a single game to function, in a form which is simple to serialize.
+// for a single game to function, in a form which is simple to serialize. It
+// implements almost all of the ReadAndWriteState interface, but for the
+// Ruleset() function, which should be taken care of by some wrapper around
+// an instance of this struct.
 type SerializableState struct {
 	GameName                        string
-	GameRuleset                     game.Ruleset
+	RulesetIdentifier               int
 	TimeOfCreation                  time.Time
 	ParticipantNamesInTurnOrder     []string
 	ParticipantsWhoHaveLeft         []string
@@ -59,7 +62,7 @@ func NewSerializableState(
 	// the ruleset and counting, but that is a lot of effort for very little gain.
 	return SerializableState{
 		GameName:                        gameName,
-		GameRuleset:                     gameRuleset,
+		RulesetIdentifier:               gameRuleset.BackendIdentifier(),
 		TimeOfCreation:                  time.Now(),
 		ParticipantNamesInTurnOrder:     participantNamesInTurnOrder,
 		ParticipantsWhoHaveLeft:         []string{},
@@ -79,11 +82,6 @@ func NewSerializableState(
 // Name returns the value of the private gameName string.
 func (serializableState *SerializableState) Name() string {
 	return serializableState.GameName
-}
-
-// Ruleset returns the ruleset for the game.
-func (serializableState *SerializableState) Ruleset() game.Ruleset {
-	return serializableState.GameRuleset
 }
 
 // PlayerNames returns a slice of the private participantNames array.
@@ -128,12 +126,6 @@ func (serializableState *SerializableState) NumberOfReadyHints() int {
 // incorrectly.
 func (serializableState *SerializableState) NumberOfMistakesMade() int {
 	return serializableState.NumberOfMistakesMadeSoFar
-}
-
-// Read returns the gameState itself as a read-only object for the purposes of reading
-// properties.
-func (serializableState *SerializableState) Read() game.ReadonlyState {
-	return serializableState
 }
 
 // DeckSize returns the number of cards left to draw from the deck.

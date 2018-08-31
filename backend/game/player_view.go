@@ -36,6 +36,7 @@ func ViewOnStateForPlayer(
 		if gameParticipant == nameOfPlayer {
 			numberOfPlayers := len(participantsInGame)
 			rulesetOfGame := stateOfGame.Ruleset()
+
 			gameColorSuits := rulesetOfGame.ColorSuits()
 			distinctPossibleIndices := rulesetOfGame.DistinctPossibleIndices()
 
@@ -84,7 +85,7 @@ func (playerView *PlayerView) GameName() string {
 
 // RulesetDescription returns the description given by the ruleset of the game.
 func (playerView *PlayerView) RulesetDescription() string {
-	return playerView.gameState.Ruleset().FrontendDescription()
+	return playerView.gameRuleset.FrontendDescription()
 }
 
 // ChatLog just wraps around the read-only game state's ChatLog function.

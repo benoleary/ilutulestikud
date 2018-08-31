@@ -1,6 +1,7 @@
 package persister_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -245,11 +246,24 @@ type persisterAndDescription struct {
 	PersisterDescription string
 }
 
-func preparePersisters() []persisterAndDescription {
+func preparePersisters(unitTest *testing.T) []persisterAndDescription {
+	inCloudDatastore, errorFromNewInCloudDatastore :=
+		persister.NewInCloudDatastore(context.Background())
+
+	if errorFromNewInCloudDatastore != nil {
+		unitTest.Fatalf(
+			"Error when creating persister for Cloud Datastore: %v",
+			errorFromNewInCloudDatastore)
+	}
+
 	return []persisterAndDescription{
 		persisterAndDescription{
 			GamePersister:        persister.NewInMemory(),
 			PersisterDescription: "in-memory persister",
+		},
+		persisterAndDescription{
+			GamePersister:        inCloudDatastore,
+			PersisterDescription: "in-Cloud-Datastore persister",
 		},
 	}
 }
@@ -265,7 +279,7 @@ func prepareGameStates(
 	playersInTurnOrderWithInitialHands []game.PlayerNameWithHand,
 	initialDeck []card.Defined,
 	initialActionLog []message.FromPlayer) []gameAndDescription {
-	statePersisters := preparePersisters()
+	statePersisters := preparePersisters(unitTest)
 
 	numberOfPersisters := len(statePersisters)
 

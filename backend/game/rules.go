@@ -92,6 +92,11 @@ func createStandardWithoutRainbow() standardWithoutRainbowRuleset {
 	}
 }
 
+// BackendIdentifier returns the identifier for the standard ruleset.
+func (standardRuleset *standardWithoutRainbowRuleset) BackendIdentifier() int {
+	return StandardWithoutRainbowIdentifier
+}
+
 // FrontendDescription describes the standard ruleset.
 func (standardRuleset *standardWithoutRainbowRuleset) FrontendDescription() string {
 	return "standard (without rainbow cards)"
@@ -318,6 +323,12 @@ func NewRainbowAsSeparateSuit() *RainbowAsSeparateSuitRuleset {
 	}
 }
 
+// BackendIdentifier returns the identifier for the ruleset with rainbow cards which
+// are a separate suit which behaves like the standard suits.
+func (separateRainbow *RainbowAsSeparateSuitRuleset) BackendIdentifier() int {
+	return WithRainbowAsSeparateIdentifier
+}
+
 // FrontendDescription describes the ruleset with rainbow cards which are a separate
 // suit which behaves like the standard suits.
 func (separateRainbow *RainbowAsSeparateSuitRuleset) FrontendDescription() string {
@@ -367,6 +378,14 @@ func NewRainbowAsCompoundSuit() *RainbowAsCompoundSuitRuleset {
 			standardWithoutRainbowRuleset: createStandardWithoutRainbow(),
 		},
 	}
+}
+
+// BackendIdentifier returns the identifier for the ruleset with rainbow cards which are a
+// separate suit which behaves differently from the standard suits, in the sense that it is
+// not directly a color which can be given as a hint, but rather every hint for a standard
+// color will also identify a rainbow card as a card of that standard color.
+func (compoundRainbow *RainbowAsCompoundSuitRuleset) BackendIdentifier() int {
+	return WithRainbowAsCompoundIdentifier
 }
 
 // FrontendDescription describes the ruleset with rainbow cards which are a separate suit

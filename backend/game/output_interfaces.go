@@ -7,6 +7,11 @@ import (
 
 // Ruleset should encapsulate the set of rules for a game as functions.
 type Ruleset interface {
+	// BackendIdentifier should return the integer corresponding to the ruleset which
+	// should appear in ValidRulesetIdentifiers() and should be a valid input for
+	// RulesetFromIdentifier(...) to return the ruleset.
+	BackendIdentifier() int
+
 	// FrontendDescription should describe the ruleset succintly enough for the frontend.
 	FrontendDescription() string
 

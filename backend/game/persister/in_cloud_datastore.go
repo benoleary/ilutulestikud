@@ -57,7 +57,11 @@ func (gamePersister *inCloudDatastorePersister) RandomSeed() int64 {
 func (gamePersister *inCloudDatastorePersister) ReadAndWriteGame(
 	gameName string) (game.ReadAndWriteState, error) {
 	serializablePart, errorFromGet := gamePersister.serializedPart(gameName)
-	return newInCloudDatastoreState(serializablePart), errorFromGet
+	if errorFromGet != nil {
+		return nil, errorFromGet
+	}
+
+	return newInCloudDatastoreState(serializablePart)
 }
 
 // ReadAllWithPlayer returns a slice of all the game.ReadonlyState instances in the
@@ -105,7 +109,14 @@ func (gamePersister *inCloudDatastorePersister) ReadAllWithPlayer(
 		}
 
 		if !hasLeftGame {
-			gameStates = append(gameStates, &matchedGame)
+			deserializedState, errorFromDeserialization :=
+				newInCloudDatastoreState(matchedGame)
+
+			if errorFromDeserialization != nil {
+				return nil, errorFromDeserialization
+			}
+
+			gameStates = append(gameStates, deserializedState.Read())
 		}
 	}
 
@@ -128,8 +139,10 @@ func (gamePersister *inCloudDatastorePersister) AddGame(
 		return fmt.Errorf("Game must have a name")
 	}
 
+	gameKey := datastore.NameKey(keyKind, gameName, nil)
+
 	queryForGameNameAlreadyExists :=
-		datastore.NewQuery("").Filter("__key__ =", gameName).KeysOnly()
+		datastore.NewQuery("").Filter("__key__ =", gameKey).KeysOnly()
 
 	resultIterator :=
 		gamePersister.datastoreClient.Run(
@@ -159,8 +172,6 @@ func (gamePersister *inCloudDatastorePersister) AddGame(
 			gameRuleset,
 			playersInTurnOrderWithInitialHands,
 			initialDeck)
-
-	gameKey := datastore.NameKey(keyKind, gameName, nil)
 
 	_, errorFromPut :=
 		gamePersister.datastoreClient.Put(
@@ -228,16 +239,37 @@ func (gamePersister *inCloudDatastorePersister) Delete(gameName string) error {
 // Google Cloud Datastore.
 type inCloudDatastoreState struct {
 	mutualExclusion sync.Mutex
-	SerializableState
+	DeserializedState
 }
 
-// newinCloudDatastoreState creates a new game given the required information, using the
-// given shuffled deck.
-func newInCloudDatastoreState(serializablePart SerializableState) game.ReadAndWriteState {
-	return &inCloudDatastoreState{
-		mutualExclusion:   sync.Mutex{},
-		SerializableState: serializablePart,
+// newInCloudDatastoreState creates a new game given the required information,
+// using the given shuffled deck.
+func newInCloudDatastoreState(
+	serializablePart SerializableState) (game.ReadAndWriteState, error) {
+	deserializedState, errorFromDeserialization :=
+		NewDeserializedState(serializablePart)
+
+	if errorFromDeserialization != nil {
+		return nil, errorFromDeserialization
 	}
+
+	newState := &inCloudDatastoreState{
+		mutualExclusion:   sync.Mutex{},
+		DeserializedState: deserializedState,
+	}
+
+	return newState, nil
+}
+
+// Ruleset returns the ruleset for the game.
+func (gameState *inCloudDatastoreState) Ruleset() game.Ruleset {
+	return gameState.deserializedRuleset
+}
+
+// Read returns the gameState itself as a read-only object for the
+// purposes of reading properties.
+func (gameState *inCloudDatastoreState) Read() game.ReadonlyState {
+	return gameState
 }
 
 // RecordChatMessage records a chat message from the given player.

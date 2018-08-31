@@ -8,7 +8,7 @@ import (
 )
 
 func TestRandomSeedCausesNoPanic(unitTest *testing.T) {
-	statePersisters := preparePersisters()
+	statePersisters := preparePersisters(unitTest)
 
 	for _, statePersister := range statePersisters {
 		testIdentifier := "Positive seed/" + statePersister.PersisterDescription
@@ -21,7 +21,7 @@ func TestRandomSeedCausesNoPanic(unitTest *testing.T) {
 }
 
 func TestReturnErrorWhenGameDoesNotExist(unitTest *testing.T) {
-	statePersisters := preparePersisters()
+	statePersisters := preparePersisters(unitTest)
 
 	for _, statePersister := range statePersisters {
 		testIdentifier :=
@@ -43,7 +43,7 @@ func TestReturnErrorWhenGameDoesNotExist(unitTest *testing.T) {
 }
 
 func TestReturnEmptyListWhenPlayerHasNoGames(unitTest *testing.T) {
-	statePersisters := preparePersisters()
+	statePersisters := preparePersisters(unitTest)
 
 	for _, statePersister := range statePersisters {
 		testIdentifier :=
@@ -78,7 +78,7 @@ func TestReturnEmptyListWhenPlayerHasNoGames(unitTest *testing.T) {
 }
 
 func TestRejectAddGameWithNoName(unitTest *testing.T) {
-	statePersisters := preparePersisters()
+	statePersisters := preparePersisters(unitTest)
 
 	threePlayersWithNilHands :=
 		[]game.PlayerNameWithHand{
@@ -123,7 +123,7 @@ func TestRejectAddGameWithNoName(unitTest *testing.T) {
 }
 
 func TestRejectAddGameWithExistingName(unitTest *testing.T) {
-	statePersisters := preparePersisters()
+	statePersisters := preparePersisters(unitTest)
 
 	twoPlayersWithNilHands :=
 		[]game.PlayerNameWithHand{
@@ -250,7 +250,7 @@ func TestRejectAddGameWithExistingName(unitTest *testing.T) {
 }
 
 func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
-	statePersisters := preparePersisters()
+	statePersisters := preparePersisters(unitTest)
 	leavingPlayer := defaultTestPlayers[0]
 	stayingPlayer := defaultTestPlayers[2]
 
@@ -287,7 +287,7 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 			"Add games then leave games/" + statePersister.PersisterDescription
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			firstGameName := "A game"
+			firstGameName := "Normal name"
 			errorFromFirstAdd :=
 				statePersister.GamePersister.AddGame(
 					firstGameName,
@@ -329,7 +329,7 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 				justFirstGameName,
 				statePersister.GamePersister)
 
-			secondGameName := "Another game"
+			secondGameName := "Name with SQL injection'-- including this"
 			errorFromSecondAdd :=
 				statePersister.GamePersister.AddGame(
 					secondGameName,
