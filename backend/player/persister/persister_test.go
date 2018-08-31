@@ -208,6 +208,10 @@ func TestAddPlayerWithValidColorAndTestGet(unitTest *testing.T) {
 			testName:   "Slashes",
 			playerName: testPrefix + "/Slashes/are/reserved/for/parsing/URI/segments/",
 		},
+		{
+			testName:   "SQL injection",
+			playerName: testPrefix + "'; --",
+		},
 	}
 
 	for _, statePersister := range statePersisters {
