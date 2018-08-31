@@ -82,6 +82,38 @@ func assertIntSlicesMatch(
 	}
 }
 
+func assertGameStateAsExpectedLocallyAndRetrieved(
+	testIdentifier string,
+	unitTest *testing.T,
+	actualGameAndPersister gameAndDescription,
+	expectedGame expectedState) {
+	// We check that the local copy of the game state is as expected.
+	actualLocal := actualGameAndPersister.GameState.Read()
+	assertGameStateAsExpected(
+		testIdentifier+"/local state",
+		unitTest,
+		actualLocal,
+		expectedGame)
+
+	// We check that the version of the game state retrieved from the
+	// persister is as expected.
+	actualRetrieved, errorFromRetrieval :=
+		actualGameAndPersister.GamePersister.ReadAndWriteGame(actualLocal.Name())
+
+	if errorFromRetrieval != nil {
+		unitTest.Fatalf(
+			"%v/Unable to retrieve actual game state: %v",
+			testIdentifier,
+			errorFromRetrieval)
+	}
+
+	assertGameStateAsExpected(
+		testIdentifier+"/local state",
+		unitTest,
+		actualRetrieved.Read(),
+		expectedGame)
+}
+
 func assertGameStateAsExpected(
 	testIdentifier string,
 	unitTest *testing.T,

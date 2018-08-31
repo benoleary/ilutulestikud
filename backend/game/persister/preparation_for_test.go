@@ -1,7 +1,6 @@
 package persister_test
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -247,30 +246,30 @@ type persisterAndDescription struct {
 }
 
 func preparePersisters(unitTest *testing.T) []persisterAndDescription {
-	inCloudDatastore, errorFromNewInCloudDatastore :=
-		persister.NewInCloudDatastore(context.Background())
-
-	if errorFromNewInCloudDatastore != nil {
-		unitTest.Fatalf(
-			"Error when creating persister for Cloud Datastore: %v",
-			errorFromNewInCloudDatastore)
-	}
+	//	inCloudDatastore, errorFromNewInCloudDatastore :=
+	//		persister.NewInCloudDatastore(context.Background())
+	//
+	//	if errorFromNewInCloudDatastore != nil {
+	//		unitTest.Fatalf(
+	//			"Error when creating persister for Cloud Datastore: %v",
+	//			errorFromNewInCloudDatastore)
+	//	}
 
 	return []persisterAndDescription{
 		persisterAndDescription{
 			GamePersister:        persister.NewInMemory(),
 			PersisterDescription: "in-memory persister",
 		},
-		persisterAndDescription{
-			GamePersister:        inCloudDatastore,
-			PersisterDescription: "in-Cloud-Datastore persister",
-		},
+		//		persisterAndDescription{
+		//			GamePersister:        inCloudDatastore,
+		//			PersisterDescription: "in-Cloud-Datastore persister",
+		//		},
 	}
 }
 
 type gameAndDescription struct {
-	GameState            game.ReadAndWriteState
-	PersisterDescription string
+	persisterAndDescription
+	GameState game.ReadAndWriteState
 }
 
 func prepareGameStates(
@@ -310,8 +309,8 @@ func prepareGameStates(
 
 		gamesAndDescriptions[persisterIndex] =
 			gameAndDescription{
-				GameState:            gameState,
-				PersisterDescription: statePersister.PersisterDescription,
+				persisterAndDescription: statePersister,
+				GameState:               gameState,
 			}
 	}
 

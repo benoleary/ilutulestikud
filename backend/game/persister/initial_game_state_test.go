@@ -47,7 +47,10 @@ func TestSetUpInitialMetadataCorrectly(unitTest *testing.T) {
 					testGameName)
 			}
 
-			if readonlyState.Ruleset() != defaultTestRuleset {
+			stateRulesetIdentifier := readonlyState.Ruleset().BackendIdentifier()
+			testRulesetIdentifier := defaultTestRuleset.BackendIdentifier()
+
+			if stateRulesetIdentifier != testRulesetIdentifier {
 				unitTest.Fatalf(
 					"Ruleset() %v was not expected %v",
 					readonlyState.Ruleset(),

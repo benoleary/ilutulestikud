@@ -44,10 +44,10 @@ func TestErrorFromInvalidPlayerVisibleHand(unitTest *testing.T) {
 			}
 
 			// There should have been no visible side-effects at all.
-			assertGameStateAsExpected(
+			assertGameStateAsExpectedLocallyAndRetrieved(
 				testIdentifier,
 				unitTest,
-				gameAndDescription.GameState.Read(),
+				gameAndDescription,
 				pristineState)
 		})
 	}
@@ -83,10 +83,10 @@ func TestErrorFromInvalidPlayerInferredHand(unitTest *testing.T) {
 			}
 
 			// There should have been no visible side-effects at all.
-			assertGameStateAsExpected(
+			assertGameStateAsExpectedLocallyAndRetrieved(
 				testIdentifier,
 				unitTest,
-				gameAndDescription.GameState.Read(),
+				gameAndDescription,
 				pristineState)
 		})
 	}
@@ -146,10 +146,10 @@ func TestRecordAndRetrieveSingleChatMessage(unitTest *testing.T) {
 
 			// There should have been no other changes.
 			pristineState.ChatLog = gameAndDescription.GameState.Read().ChatLog()
-			assertGameStateAsExpected(
+			assertGameStateAsExpectedLocallyAndRetrieved(
 				testIdentifier,
 				unitTest,
-				gameAndDescription.GameState.Read(),
+				gameAndDescription,
 				pristineState)
 		})
 	}
@@ -235,10 +235,10 @@ func TestErrorFromActionsInvalidlyTakingCardFromHand(unitTest *testing.T) {
 
 				// There should have been no visible side-effects apart from a change in the action log.
 				pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
-				assertGameStateAsExpected(
+				assertGameStateAsExpectedLocallyAndRetrieved(
 					testIdentifier,
 					unitTest,
-					gameAndDescription.GameState.Read(),
+					gameAndDescription,
 					pristineState)
 
 				errorFromPlayingCard :=
@@ -262,10 +262,10 @@ func TestErrorFromActionsInvalidlyTakingCardFromHand(unitTest *testing.T) {
 
 				// There should have been no visible side-effects apart from a change in the action log.
 				pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
-				assertGameStateAsExpected(
+				assertGameStateAsExpectedLocallyAndRetrieved(
 					testIdentifier,
 					unitTest,
-					gameAndDescription.GameState.Read(),
+					gameAndDescription,
 					pristineState)
 			})
 		}
@@ -374,10 +374,10 @@ func TestValidDiscardOfCardWhenDeckNotYetEmpty(unitTest *testing.T) {
 			pristineState.VisibleCardInHand[playerName][indexInHand] = expectedReplacementCard
 			pristineState.InferredCardInHand[playerName][indexInHand] = knowledgeOfNewCard
 			pristineState.NumberOfDiscardedCards[expectedDiscardedCard.Defined] = 1
-			assertGameStateAsExpected(
+			assertGameStateAsExpectedLocallyAndRetrieved(
 				testIdentifier,
 				unitTest,
-				gameAndDescription.GameState.Read(),
+				gameAndDescription,
 				pristineState)
 		})
 	}
@@ -477,10 +477,10 @@ func TestValidDiscardOfCardWhichEmptiesDeck(unitTest *testing.T) {
 			pristineState.VisibleCardInHand[playerName][indexInHand] = expectedReplacementCard
 			pristineState.InferredCardInHand[playerName][indexInHand] = knowledgeOfNewCard
 			pristineState.NumberOfDiscardedCards[expectedDiscardedCard.Defined] = 1
-			assertGameStateAsExpected(
+			assertGameStateAsExpectedLocallyAndRetrieved(
 				testIdentifier,
 				unitTest,
-				gameAndDescription.GameState.Read(),
+				gameAndDescription,
 				pristineState)
 		})
 	}
@@ -577,10 +577,10 @@ func TestValidDiscardOfCardWhenDeckAlreadyEmpty(unitTest *testing.T) {
 			pristineState.InferredCardInHand[playerName] =
 				append(pristineInferredHand[:indexInHand], pristineInferredHand[indexInHand+1:]...)
 			pristineState.NumberOfDiscardedCards[expectedDiscardedCard.Defined] = 1
-			assertGameStateAsExpected(
+			assertGameStateAsExpectedLocallyAndRetrieved(
 				testIdentifier,
 				unitTest,
-				gameAndDescription.GameState.Read(),
+				gameAndDescription,
 				pristineState)
 		})
 	}
@@ -685,10 +685,10 @@ func TestValidPlayOfCardWhenDeckNotYetEmpty(unitTest *testing.T) {
 			pristineState.InferredCardInHand[playerName][indexInHand] = knowledgeOfNewCard
 			pristineState.PlayedForColor[expectedPlayedCard.ColorSuit] =
 				[]card.Defined{expectedPlayedCard.Defined}
-			assertGameStateAsExpected(
+			assertGameStateAsExpectedLocallyAndRetrieved(
 				testIdentifier,
 				unitTest,
-				gameAndDescription.GameState.Read(),
+				gameAndDescription,
 				pristineState)
 		})
 	}
@@ -785,10 +785,10 @@ func TestValidPlayOfCardWhichEmptiesDeck(unitTest *testing.T) {
 			pristineState.InferredCardInHand[playerName][indexInHand] = knowledgeOfNewCard
 			pristineState.PlayedForColor[expectedPlayedCard.ColorSuit] =
 				[]card.Defined{expectedPlayedCard.Defined}
-			assertGameStateAsExpected(
+			assertGameStateAsExpectedLocallyAndRetrieved(
 				testIdentifier,
 				unitTest,
-				gameAndDescription.GameState.Read(),
+				gameAndDescription,
 				pristineState)
 		})
 	}
@@ -882,10 +882,10 @@ func TestValidPlayOfCardWhenDeckAlreadyEmpty(unitTest *testing.T) {
 				append(pristineInferredHand[:indexInHand], pristineInferredHand[indexInHand+1:]...)
 			pristineState.PlayedForColor[expectedPlayedCard.ColorSuit] =
 				[]card.Defined{expectedPlayedCard.Defined}
-			assertGameStateAsExpected(
+			assertGameStateAsExpectedLocallyAndRetrieved(
 				testIdentifier,
 				unitTest,
-				gameAndDescription.GameState.Read(),
+				gameAndDescription,
 				pristineState)
 		})
 	}
@@ -948,10 +948,10 @@ func TestErrorFromHintToInvalidPlayer(unitTest *testing.T) {
 
 			// There should have been no visible side-effects apart from a change in the action log.
 			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
-			assertGameStateAsExpected(
+			assertGameStateAsExpectedLocallyAndRetrieved(
 				testIdentifier,
 				unitTest,
-				gameAndDescription.GameState.Read(),
+				gameAndDescription,
 				pristineState)
 		})
 	}
@@ -1015,10 +1015,10 @@ func TestErrorFromHintWithTooSmallInferredHand(unitTest *testing.T) {
 
 			// There should have been no visible side-effects apart from a change in the action log.
 			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
-			assertGameStateAsExpected(
+			assertGameStateAsExpectedLocallyAndRetrieved(
 				testIdentifier,
 				unitTest,
-				gameAndDescription.GameState.Read(),
+				gameAndDescription,
 				pristineState)
 		})
 	}
@@ -1082,10 +1082,10 @@ func TestErrorFromHintWithTooLargeInferredHand(unitTest *testing.T) {
 
 			// There should have been no visible side-effects apart from a change in the action log.
 			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
-			assertGameStateAsExpected(
+			assertGameStateAsExpectedLocallyAndRetrieved(
 				testIdentifier,
 				unitTest,
-				gameAndDescription.GameState.Read(),
+				gameAndDescription,
 				pristineState)
 		})
 	}
@@ -1184,10 +1184,10 @@ func TestValidHintWhenDeckAlreadyEmpty(unitTest *testing.T) {
 			pristineState.Turn += 1
 			pristineState.TurnsTakenWithEmptyDeck += 1
 			pristineState.InferredCardInHand[receivingPlayerName] = updatedInferredHand
-			assertGameStateAsExpected(
+			assertGameStateAsExpectedLocallyAndRetrieved(
 				testIdentifier,
 				unitTest,
-				gameAndDescription.GameState.Read(),
+				gameAndDescription,
 				pristineState)
 		})
 	}
@@ -1299,10 +1299,10 @@ func TestValidHintWhenDeckNotYetEmpty(unitTest *testing.T) {
 			pristineState.NumberOfReadyHints -= numberOfHintsToSubtract
 			pristineState.Turn += 1
 			pristineState.InferredCardInHand[receivingPlayerName] = updatedInferredHand
-			assertGameStateAsExpected(
+			assertGameStateAsExpectedLocallyAndRetrieved(
 				testIdentifier,
 				unitTest,
-				gameAndDescription.GameState.Read(),
+				gameAndDescription,
 				pristineState)
 		})
 	}

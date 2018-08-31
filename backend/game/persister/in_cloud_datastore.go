@@ -237,6 +237,8 @@ func (gamePersister *inCloudDatastorePersister) Delete(gameName string) error {
 // inCloudDatastoreState is a struct meant to encapsulate all the state
 // required for a single game to function, and also to persist itself in
 // Google Cloud Datastore.
+// THIS NEEDS TO HAVE REFERENCES TO STRUCTS WHICH CAN BE USED TO PERSIST
+// THE SERIALIZABLE PART!
 type inCloudDatastoreState struct {
 	mutualExclusion sync.Mutex
 	DeserializedState
@@ -246,16 +248,18 @@ type inCloudDatastoreState struct {
 // using the given shuffled deck.
 func newInCloudDatastoreState(
 	serializablePart SerializableState) (game.ReadAndWriteState, error) {
-	deserializedState, errorFromDeserialization :=
-		NewDeserializedState(serializablePart)
-
-	if errorFromDeserialization != nil {
-		return nil, errorFromDeserialization
+	deserializedRuleset, errorFromRuleset :=
+		game.RulesetFromIdentifier(serializablePart.RulesetIdentifier)
+	if errorFromRuleset != nil {
+		return nil, errorFromRuleset
 	}
 
 	newState := &inCloudDatastoreState{
-		mutualExclusion:   sync.Mutex{},
-		DeserializedState: deserializedState,
+		mutualExclusion: sync.Mutex{},
+		DeserializedState: DeserializedState{
+			SerializableState:   serializablePart,
+			deserializedRuleset: deserializedRuleset,
+		},
 	}
 
 	return newState, nil

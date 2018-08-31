@@ -68,6 +68,11 @@ type mockRuleset struct {
 	ReturnForInferredHandAfterHint              []card.Inferred
 }
 
+// BackendIdentifier gets mocked.
+func (mockedRuleset *mockRuleset) BackendIdentifier() int {
+	return -1
+}
+
 // FrontendDescription gets mocked.
 func (mockedRuleset *mockRuleset) FrontendDescription() string {
 	return "mock"

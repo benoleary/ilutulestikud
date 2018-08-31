@@ -100,14 +100,12 @@ func (gamePersister *inMemoryPersister) AddGame(
 			playersInTurnOrderWithInitialHands,
 			initialDeck)
 
-	newGame, errorFromRuleset :=
-		newInMemoryState(serializableState)
-
-	if errorFromRuleset != nil {
-		return fmt.Errorf(
-			"Error when trying to create game with name %v: %v",
-			gameName,
-			errorFromRuleset)
+	newGame := &inMemoryState{
+		mutualExclusion: sync.Mutex{},
+		DeserializedState: DeserializedState{
+			SerializableState:   serializableState,
+			deserializedRuleset: gameRuleset,
+		},
 	}
 
 	gamePersister.mutualExclusion.Lock()
@@ -214,36 +212,6 @@ func (gamePersister *inMemoryPersister) Delete(gameName string) error {
 type inMemoryState struct {
 	mutualExclusion sync.Mutex
 	DeserializedState
-}
-
-// newInMemoryState creates a new game given the required information, using the
-// given shuffled deck.
-func newInMemoryState(
-	serializablePart SerializableState) (game.ReadAndWriteState, error) {
-	deserializedState, errorFromDeserialization :=
-		NewDeserializedState(serializablePart)
-
-	if errorFromDeserialization != nil {
-		return nil, errorFromDeserialization
-	}
-
-	newState := &inMemoryState{
-		mutualExclusion:   sync.Mutex{},
-		DeserializedState: deserializedState,
-	}
-
-	return newState, nil
-}
-
-// Ruleset returns the ruleset for the game.
-func (gameState *inMemoryState) Ruleset() game.Ruleset {
-	return gameState.deserializedRuleset
-}
-
-// Read returns the gameState itself as a read-only object for the
-// purposes of reading properties.
-func (gameState *inMemoryState) Read() game.ReadonlyState {
-	return gameState
 }
 
 // RecordChatMessage records a chat message from the given player.

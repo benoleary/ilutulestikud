@@ -12,25 +12,6 @@ type DeserializedState struct {
 	deserializedRuleset game.Ruleset
 }
 
-// NewDeserializedState creates a new game given the required information,
-// using the given shuffled deck.
-func NewDeserializedState(
-	serializablePart SerializableState) (DeserializedState, error) {
-	deserializedRuleset, errorFromRuleset :=
-		game.RulesetFromIdentifier(serializablePart.RulesetIdentifier)
-
-	if errorFromRuleset != nil {
-		return DeserializedState{}, errorFromRuleset
-	}
-
-	newState := DeserializedState{
-		SerializableState:   serializablePart,
-		deserializedRuleset: deserializedRuleset,
-	}
-
-	return newState, nil
-}
-
 // Ruleset returns the ruleset for the game.
 func (gameState *DeserializedState) Ruleset() game.Ruleset {
 	return gameState.deserializedRuleset
