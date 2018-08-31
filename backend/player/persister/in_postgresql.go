@@ -1,6 +1,7 @@
 package persister
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 
@@ -30,11 +31,13 @@ type MetadataAsResult interface {
 type LimitedExecutor interface {
 	// ExecuteQuery should execute a query and return the resulting rows.
 	ExecuteQuery(
+		executionContext context.Context,
 		queryStatement string,
 		argumentsForStatement ...interface{}) (RowsAsResult, error)
 
 	// ExecuteStatement should execute a statement and return metadata about the operation.
 	ExecuteStatement(
+		executionContext context.Context,
 		statementWithoutRowsAsResult string,
 		argumentsForStatement ...interface{}) (MetadataAsResult, error)
 }
@@ -44,17 +47,21 @@ type wrappingLimitedExecutor struct {
 }
 
 func (wrappingExecutor *wrappingLimitedExecutor) ExecuteQuery(
+	executionContext context.Context,
 	statementWithoutRowsAsResult string,
 	argumentsForStatement ...interface{}) (RowsAsResult, error) {
-	return wrappingExecutor.wrappedInterface.Query(
+	return wrappingExecutor.wrappedInterface.QueryContext(
+		executionContext,
 		statementWithoutRowsAsResult,
 		argumentsForStatement...)
 }
 
 func (wrappingExecutor *wrappingLimitedExecutor) ExecuteStatement(
+	executionContext context.Context,
 	statementWithoutRowsAsResult string,
 	argumentsForStatement ...interface{}) (MetadataAsResult, error) {
-	return wrappingExecutor.wrappedInterface.Exec(
+	return wrappingExecutor.wrappedInterface.ExecContext(
+		executionContext,
 		statementWithoutRowsAsResult,
 		argumentsForStatement...)
 }
@@ -66,7 +73,9 @@ type inPostgresqlPersister struct {
 
 // NewInPostgresql creates a player state persister which connects to a
 // PostgreSQL database by the given connection string.
-func NewInPostgresql(connectionArguments string) (player.StatePersister, error) {
+func NewInPostgresql(
+	executionContext context.Context,
+	connectionArguments string) (player.StatePersister, error) {
 	postgresqlDatabase, errorFromConnection :=
 		sql.Open("postgres", connectionArguments)
 
@@ -90,6 +99,7 @@ func NewInPostgresql(connectionArguments string) (player.StatePersister, error) 
 		)`
 
 	return NewInPostgresqlWithInitialStatements(
+		executionContext,
 		&wrappingLimitedExecutor{wrappedInterface: postgresqlDatabase},
 		tableCreationStatement)
 }
@@ -97,11 +107,12 @@ func NewInPostgresql(connectionArguments string) (player.StatePersister, error) 
 // NewInPostgresqlWithInitialStatements runs the given SQL statements on the
 // given executor, then wraps it into an inPostgresqlPersister.
 func NewInPostgresqlWithInitialStatements(
+	executionContext context.Context,
 	connectionToDatabase LimitedExecutor,
 	initialStatements ...string) (player.StatePersister, error) {
 	for _, initialStatement := range initialStatements {
 		_, errorFromExecution :=
-			connectionToDatabase.ExecuteStatement(initialStatement)
+			connectionToDatabase.ExecuteStatement(executionContext, initialStatement)
 		if errorFromExecution != nil {
 			return nil, errorFromExecution
 		}
@@ -117,6 +128,7 @@ func NewInPostgresqlWithInitialStatements(
 
 // Add inserts the given name and color as a row in the database.
 func (playerPersister *inPostgresqlPersister) Add(
+	executionContext context.Context,
 	playerName string,
 	chatColor string) error {
 	playerCreationStatement := "INSERT INTO player (name, color) VALUES ($1, $2)"
@@ -132,6 +144,7 @@ func (playerPersister *inPostgresqlPersister) Add(
 // UpdateColor updates the given player to have the given chat color. It
 // relies on the PostgreSQL driver to ensure thread safety.
 func (playerPersister *inPostgresqlPersister) UpdateColor(
+	executionContext context.Context,
 	playerName string,
 	chatColor string) error {
 	playerUpdateStatement := "UPDATE player SET color = $1 WHERE name = $2"
@@ -149,6 +162,7 @@ func (playerPersister *inPostgresqlPersister) UpdateColor(
 
 // Get returns the ReadOnly corresponding to the given player name if it exists.
 func (playerPersister *inPostgresqlPersister) Get(
+	executionContext context.Context,
 	playerName string) (player.ReadonlyState, error) {
 	playerSelectStatement :=
 		"SELECT color FROM player WHERE name = $1"
@@ -176,6 +190,7 @@ func (playerPersister *inPostgresqlPersister) Get(
 			PlayerName: playerName,
 			ChatColor:  "error: not read in from DB correctly",
 		}
+
 	errorFromScan := playerRows.Scan(&playerState.ChatColor)
 	if errorFromScan != nil {
 		return nil, errorFromScan
@@ -195,7 +210,8 @@ func (playerPersister *inPostgresqlPersister) Get(
 
 // All returns a slice of all the players in the collection as ReadonlyState
 // instances, ordered as given by the database.
-func (playerPersister *inPostgresqlPersister) All() ([]player.ReadonlyState, error) {
+func (playerPersister *inPostgresqlPersister) All(
+	executionContext context.Context) ([]player.ReadonlyState, error) {
 	playerSelectStatement := "SELECT name, color FROM player"
 	playerRows, errorFromExecution :=
 		playerPersister.connectionToDatabase.ExecuteQuery(playerSelectStatement)
@@ -222,7 +238,9 @@ func (playerPersister *inPostgresqlPersister) All() ([]player.ReadonlyState, err
 
 // Delete deletes the given player from the collection. It returns an error
 // if the player does not exist before the deletion attempt.
-func (playerPersister *inPostgresqlPersister) Delete(playerName string) error {
+func (playerPersister *inPostgresqlPersister) Delete(
+	executionContext context.Context,
+	playerName string) error {
 	playerDeletionStatement := "DELETE FROM player WHERE name = $1"
 	resultFromExecution, errorFromExecution :=
 		playerPersister.connectionToDatabase.ExecuteStatement(

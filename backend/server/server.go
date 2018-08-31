@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -10,8 +11,17 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/server/endpoint/player"
 )
 
+// ContextProvider is a means to provide context.Context objects from
+// the HTTP request without having to know about things such as how
+// Google App Engine has its own static function for providing one.
+type ContextProvider interface {
+	// FromRequest should provide a context from the request.
+	FromRequest(httpRequest *http.Request) context.Context
+}
+
 // State contains all the state to allow the backend to function.
 type State struct {
+	contextProvider            ContextProvider
 	accessControlAllowedOrigin string
 	playerHandler              httpGetAndPostHandler
 	gameHandler                httpGetAndPostHandler
@@ -20,11 +30,13 @@ type State struct {
 // New creates a new State object with handlers built around the given
 // state collections.
 func New(
+	contextProvider ContextProvider,
 	accessControlAllowedOrigin string,
 	segmentTranslator parsing.SegmentTranslator,
 	playerStateCollection player.StateCollection,
 	gameStateCollection game.StateCollection) *State {
 	return NewWithGivenHandlers(
+		contextProvider,
 		accessControlAllowedOrigin,
 		segmentTranslator,
 		player.New(playerStateCollection, segmentTranslator),
@@ -34,11 +46,13 @@ func New(
 // NewWithGivenHandlers creates a new State object and returns a pointer to it,
 // assuming that the given handlers are consistent.
 func NewWithGivenHandlers(
+	contextProvider ContextProvider,
 	accessControlAllowedOrigin string,
 	segmentTranslator parsing.SegmentTranslator,
 	handlerForPlayer httpGetAndPostHandler,
 	handlerForGame httpGetAndPostHandler) *State {
 	return &State{
+		contextProvider:            contextProvider,
 		accessControlAllowedOrigin: accessControlAllowedOrigin,
 		playerHandler:              handlerForPlayer,
 		gameHandler:                handlerForGame,
@@ -94,7 +108,10 @@ func (state *State) HandleBackend(
 	case http.MethodOptions:
 		return
 	case http.MethodGet:
-		objectForBody, httpStatus = requestHandler.HandleGet(pathSegments[2:])
+		objectForBody, httpStatus =
+			requestHandler.HandleGet(
+				state.contextProvider.FromRequest(httpRequest),
+				pathSegments[2:])
 	case http.MethodPost:
 		{
 			if httpRequest.Body == nil {
@@ -103,7 +120,10 @@ func (state *State) HandleBackend(
 			}
 
 			objectForBody, httpStatus =
-				requestHandler.HandlePost(json.NewDecoder(httpRequest.Body), pathSegments[2:])
+				requestHandler.HandlePost(
+					state.contextProvider.FromRequest(httpRequest),
+					json.NewDecoder(httpRequest.Body),
+					pathSegments[2:])
 		}
 	default:
 		http.Error(httpResponseWriter, "Method not GET or POST: "+httpRequest.Method, http.StatusBadRequest)

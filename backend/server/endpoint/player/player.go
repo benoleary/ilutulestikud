@@ -3,6 +3,7 @@ package player
 // This package is exported as player and yet also imports a different package as player.
 // This is not a problem as imported package names are local to the file.
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -32,6 +33,7 @@ func New(
 // HandleGet parses an HTTP GET request and responds with the appropriate function.
 // This implements part of github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
 func (handler *Handler) HandleGet(
+	requestContext context.Context,
 	relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 1 {
 		return "Not enough segments in URI to determine what to do", http.StatusBadRequest
@@ -50,6 +52,7 @@ func (handler *Handler) HandleGet(
 // HandlePost parses an HTTP POST request and responds with the appropriate function.
 // This implements part of github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
 func (handler *Handler) HandlePost(
+	requestContext context.Context,
 	httpBodyDecoder *json.Decoder,
 	relevantSegments []string) (interface{}, int) {
 	if len(relevantSegments) < 1 {

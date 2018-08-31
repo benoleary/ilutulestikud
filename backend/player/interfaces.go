@@ -1,5 +1,7 @@
 package player
 
+import "context"
+
 // ReadonlyState defines the interface for structs which should encapsulate the state
 // of a player which can be read but not written.
 type ReadonlyState interface {
@@ -36,25 +38,25 @@ type StatePersister interface {
 	// unchanged persistence store (analogously to the entry set of a standard Golang
 	// map, for example), though of course an implementation may order the slice
 	// consistently.
-	All() ([]ReadonlyState, error)
+	All(executionContext context.Context) ([]ReadonlyState, error)
 
 	// Get should return the read-only state corresponding to the given player name if it
 	// exists already along with an error which of course should be nil if there was no
 	// problem. If the player does not exist, a non-nil error should be returned along with
 	// nil for the read-only state.
-	Get(playerName string) (ReadonlyState, error)
+	Get(executionContext context.Context, playerName string) (ReadonlyState, error)
 
 	// Add should add an element to the persistence store which is a new object
 	// implementing the ReadonlyState interface with information given by the arguments. If
 	// there was no problem, the returned error should be nil. It should return an error if
 	// the player already exists.
-	Add(playerName string, chatColor string) error
+	Add(executionContext context.Context, playerName string, chatColor string) error
 
 	// UpdateColor should update the given player to have the given chat color.
 	// This should be thread-safe. It should return an error if there was a problem,
 	// including if the player is not registered.
-	UpdateColor(playerName string, chatColor string) error
+	UpdateColor(executionContext context.Context, playerName string, chatColor string) error
 
 	// Delete should delete the given player from the persistence store.
-	Delete(playerName string) error
+	Delete(executionContext context.Context, playerName string) error
 }
