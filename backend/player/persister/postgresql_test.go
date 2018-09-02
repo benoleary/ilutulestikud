@@ -61,7 +61,7 @@ func (mockExecutor *mockStatementExecutor) ExecuteStatement(
 func TestReturnErrorFromInvalidConnectionString(unitTest *testing.T) {
 	invalidConnection := "user=INVALID password=WRONG dbname=DOES_NOT_EXIST"
 	postgresqlPersister, errorFromPostgresql :=
-		persister.NewInPostgresql(invalidConnection)
+		persister.NewInPostgresql(context.Background(), invalidConnection)
 
 	if errorFromPostgresql == nil {
 		unitTest.Fatalf(

@@ -1,6 +1,7 @@
 package persister_test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -47,7 +48,10 @@ func preparePersisters(unitTest *testing.T) []persisterAndDescription {
 			postgresqlPlayerdb,
 			postgresqlLocation)
 
-	postgresqlPersister, errorFromPostgresql := persister.NewInPostgresql(connectionString)
+	postgresqlPersister, errorFromPostgresql :=
+		persister.NewInPostgresql(
+			context.Background(),
+			connectionString)
 
 	if errorFromPostgresql != nil {
 		unitTest.Fatalf(
@@ -74,7 +78,10 @@ func TestReturnErrorWhenPlayerNotFoundWithGet(unitTest *testing.T) {
 		testIdentifier := "Get(unknown player)/" + statePersister.PersisterDescription
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			playerState, errorFromGet := statePersister.PlayerPersister.Get(invalidName)
+			playerState, errorFromGet :=
+				statePersister.PlayerPersister.Get(
+					context.Background(),
+					invalidName)
 
 			if errorFromGet == nil {
 				unitTest.Fatalf(
@@ -93,7 +100,10 @@ func TestReturnErrorWhenPlayerNotFoundForDelete(unitTest *testing.T) {
 		testIdentifier := "Delete(unknown player)/" + statePersister.PersisterDescription
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			errorFromDelete := statePersister.PlayerPersister.Delete(invalidName)
+			errorFromDelete :=
+				statePersister.PlayerPersister.Delete(
+					context.Background(),
+					invalidName)
 
 			if errorFromDelete == nil {
 				unitTest.Fatalf(
@@ -114,7 +124,10 @@ func TestRejectAddPlayerWithExistingName(unitTest *testing.T) {
 
 			unitTest.Run(testIdentifier, func(unitTest *testing.T) {
 				errorFromInitialAdd :=
-					statePersister.PlayerPersister.Add(playerName, colorsAvailableInTest[0])
+					statePersister.PlayerPersister.Add(
+						context.Background(),
+						playerName,
+						colorsAvailableInTest[0])
 
 				if errorFromInitialAdd != nil {
 					unitTest.Fatalf(
@@ -139,7 +152,10 @@ func TestRejectAddPlayerWithExistingName(unitTest *testing.T) {
 						statePersister.PlayerPersister)
 
 				errorFromSecondAdd :=
-					statePersister.PlayerPersister.Add(playerName, colorsAvailableInTest[1])
+					statePersister.PlayerPersister.Add(
+						context.Background(),
+						playerName,
+						colorsAvailableInTest[1])
 
 				// We check that the persister still produces valid states.
 				assertPlayerNamesAreCorrectAndGetIsConsistentWithAll(
@@ -175,7 +191,10 @@ func TestRejectAddPlayerWithExistingName(unitTest *testing.T) {
 				}
 
 				// We also clean up afterwards, but report any error as a test failure.
-				errorFromDelete := statePersister.PlayerPersister.Delete(playerName)
+				errorFromDelete :=
+					statePersister.PlayerPersister.Delete(
+						context.Background(),
+						playerName)
 				if errorFromDelete != nil {
 					unitTest.Fatalf(
 						"Delete(%v) produced error %v",
@@ -221,7 +240,11 @@ func TestAddPlayerWithValidColorAndTestGet(unitTest *testing.T) {
 					"/Add(" + testCase.playerName + ", with valid color) and Get(same player)"
 
 			unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-				errorFromAdd := statePersister.PlayerPersister.Add(testCase.playerName, chatColor)
+				errorFromAdd :=
+					statePersister.PlayerPersister.Add(
+						context.Background(),
+						testCase.playerName,
+						chatColor)
 
 				if errorFromAdd != nil {
 					unitTest.Fatalf(
@@ -257,7 +280,10 @@ func TestAddPlayerWithValidColorAndTestGet(unitTest *testing.T) {
 				}
 
 				// We also clean up afterwards, but report any error as a test failure.
-				errorFromDelete := statePersister.PlayerPersister.Delete(testCase.playerName)
+				errorFromDelete :=
+					statePersister.PlayerPersister.Delete(
+						context.Background(),
+						testCase.playerName)
 				if errorFromDelete != nil {
 					unitTest.Fatalf(
 						"Delete(%v) produced error %v",
@@ -284,7 +310,7 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
 			preexistingPlayers, errorFromPreexistingAll :=
-				statePersister.PlayerPersister.All()
+				statePersister.PlayerPersister.All(context.Background())
 			if errorFromPreexistingAll != nil {
 				unitTest.Fatalf(
 					"All() produced an error %v",
@@ -294,7 +320,10 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 			numberOfPreexistingPlayers := len(preexistingPlayers)
 
 			errorFromFirstAdd :=
-				statePersister.PlayerPersister.Add(firstPlayer, firstColor)
+				statePersister.PlayerPersister.Add(
+					context.Background(),
+					firstPlayer,
+					firstColor)
 			if errorFromFirstAdd != nil {
 				unitTest.Fatalf(
 					"Add(%v, %v) produced an error %v",
@@ -304,7 +333,7 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 			}
 
 			statesFromAllAfterFirstAdd, errorFromAllAfterFirstAdd :=
-				statePersister.PlayerPersister.All()
+				statePersister.PlayerPersister.All(context.Background())
 			if errorFromAllAfterFirstAdd != nil {
 				unitTest.Fatalf(
 					"All() after first Add(%v, %v) produced an error %v",
@@ -345,7 +374,10 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 			}
 
 			errorFromSecondAdd :=
-				statePersister.PlayerPersister.Add(secondPlayer, secondColor)
+				statePersister.PlayerPersister.Add(
+					context.Background(),
+					secondPlayer,
+					secondColor)
 
 			if errorFromSecondAdd != nil {
 				unitTest.Fatalf(
@@ -356,7 +388,7 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 			}
 
 			statesFromAllAfterSecondAdd, errorFromAllAfterSecondAdd :=
-				statePersister.PlayerPersister.All()
+				statePersister.PlayerPersister.All(context.Background())
 			if errorFromAllAfterSecondAdd != nil {
 				unitTest.Fatalf(
 					"All() after second Add(%v, %v) produced an error %v",
@@ -412,7 +444,10 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 					secondStateBeforeFirstDelete)
 			}
 
-			errorFromFirstDelete := statePersister.PlayerPersister.Delete(firstPlayer)
+			errorFromFirstDelete :=
+				statePersister.PlayerPersister.Delete(
+					context.Background(),
+					firstPlayer)
 
 			if errorFromFirstDelete != nil {
 				unitTest.Fatalf(
@@ -422,7 +457,7 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 			}
 
 			statesFromAllAfterFirstDelete, errorFromAllAfterFirstDelete :=
-				statePersister.PlayerPersister.All()
+				statePersister.PlayerPersister.All(context.Background())
 			if errorFromAllAfterFirstDelete != nil {
 				unitTest.Fatalf(
 					"All() after first Delete(%v) produced an error %v",
@@ -452,7 +487,10 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 					secondColor)
 			}
 
-			errorFromSecondDelete := statePersister.PlayerPersister.Delete(secondPlayer)
+			errorFromSecondDelete :=
+				statePersister.PlayerPersister.Delete(
+					context.Background(),
+					secondPlayer)
 
 			if errorFromSecondDelete != nil {
 				unitTest.Fatalf(
@@ -462,7 +500,7 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 			}
 
 			statesFromAllAfterSecondDelete, errorFromAllAfterSecondDelete :=
-				statePersister.PlayerPersister.All()
+				statePersister.PlayerPersister.All(context.Background())
 			if errorFromAllAfterSecondDelete != nil {
 				unitTest.Fatalf(
 					"All() after second Delete(%v) produced an error %v",
@@ -491,7 +529,10 @@ func TestRejectUpdateInvalidPlayer(unitTest *testing.T) {
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
 			errorFromUpdate :=
-				statePersister.PlayerPersister.UpdateColor(invalidName, chatColor)
+				statePersister.PlayerPersister.UpdateColor(
+					context.Background(),
+					invalidName,
+					chatColor)
 
 			if errorFromUpdate == nil {
 				unitTest.Fatalf(
@@ -508,7 +549,10 @@ func TestRejectUpdateInvalidPlayer(unitTest *testing.T) {
 				statePersister.PlayerPersister)
 
 			// We check that the player was not added.
-			playerState, errorFromGet := statePersister.PlayerPersister.Get(invalidName)
+			playerState, errorFromGet :=
+				statePersister.PlayerPersister.Get(
+					context.Background(),
+					invalidName)
 
 			// If there was no error, then something went wrong.
 			if errorFromGet == nil {
@@ -534,7 +578,11 @@ func TestUpdateAllPlayersToNewColor(unitTest *testing.T) {
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
 			// First we have to add all the required players.
 			for _, playerName := range defaultTestPlayerNames {
-				errorFromAdd := statePersister.PlayerPersister.Add(playerName, initialColor)
+				errorFromAdd :=
+					statePersister.PlayerPersister.Add(
+						context.Background(),
+						playerName,
+						initialColor)
 
 				if errorFromAdd != nil {
 					unitTest.Fatalf(
@@ -547,7 +595,10 @@ func TestUpdateAllPlayersToNewColor(unitTest *testing.T) {
 
 			for _, playerName := range defaultTestPlayerNames {
 				errorFromUpdateColor :=
-					statePersister.PlayerPersister.UpdateColor(playerName, newColor)
+					statePersister.PlayerPersister.UpdateColor(
+						context.Background(),
+						playerName,
+						newColor)
 
 				if errorFromUpdateColor != nil {
 					unitTest.Fatalf(
@@ -585,7 +636,10 @@ func TestUpdateAllPlayersToNewColor(unitTest *testing.T) {
 
 			// Finally, we have to clean up the added test players.
 			for _, playerName := range defaultTestPlayerNames {
-				errorFromDelete := statePersister.PlayerPersister.Delete(playerName)
+				errorFromDelete :=
+					statePersister.PlayerPersister.Delete(
+						context.Background(),
+						playerName)
 
 				if errorFromDelete != nil {
 					unitTest.Fatalf(
@@ -605,7 +659,8 @@ func assertPlayerNamesAreCorrectAndGetIsConsistentWithAll(
 	playerPersister player.StatePersister) {
 	numberOfPlayerNames := len(playerNames)
 
-	statesFromAll, errorFromAll := playerPersister.All()
+	statesFromAll, errorFromAll :=
+		playerPersister.All(context.Background())
 	if errorFromAll != nil {
 		unitTest.Fatalf(
 			testIdentifier+
@@ -645,7 +700,10 @@ func assertPlayerNamesAreCorrectAndGetIsConsistentWithAll(
 	for _, stateFromAll := range statesFromAll {
 		// At this point we can be sure that there are no nils in statesFromAll.
 		nameFromAll := stateFromAll.Name()
-		stateFromGet, errorFromGet := playerPersister.Get(nameFromAll)
+		stateFromGet, errorFromGet :=
+			playerPersister.Get(
+				context.Background(),
+				nameFromAll)
 		if errorFromGet != nil {
 			unitTest.Fatalf(
 				testIdentifier+"/Get(%v) produced error %v",
@@ -674,7 +732,10 @@ func getStateAndAssertNoError(
 	unitTest *testing.T,
 	playerName string,
 	playerPersister player.StatePersister) player.ReadonlyState {
-	playerState, errorGettingState := playerPersister.Get(playerName)
+	playerState, errorGettingState :=
+		playerPersister.Get(
+			context.Background(),
+			playerName)
 	if errorGettingState != nil {
 		unitTest.Fatalf(
 			testIdentifier+"/Get(%v) produced an error %v",

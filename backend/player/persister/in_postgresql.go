@@ -134,6 +134,7 @@ func (playerPersister *inPostgresqlPersister) Add(
 	playerCreationStatement := "INSERT INTO player (name, color) VALUES ($1, $2)"
 	_, errorFromExecution :=
 		playerPersister.connectionToDatabase.ExecuteStatement(
+			executionContext,
 			playerCreationStatement,
 			playerName,
 			chatColor)
@@ -150,6 +151,7 @@ func (playerPersister *inPostgresqlPersister) UpdateColor(
 	playerUpdateStatement := "UPDATE player SET color = $1 WHERE name = $2"
 	resultFromExecution, errorFromExecution :=
 		playerPersister.connectionToDatabase.ExecuteStatement(
+			executionContext,
 			playerUpdateStatement,
 			chatColor,
 			playerName)
@@ -168,6 +170,7 @@ func (playerPersister *inPostgresqlPersister) Get(
 		"SELECT color FROM player WHERE name = $1"
 	playerRows, errorFromExecution :=
 		playerPersister.connectionToDatabase.ExecuteQuery(
+			executionContext,
 			playerSelectStatement,
 			playerName)
 	if errorFromExecution != nil {
@@ -214,7 +217,9 @@ func (playerPersister *inPostgresqlPersister) All(
 	executionContext context.Context) ([]player.ReadonlyState, error) {
 	playerSelectStatement := "SELECT name, color FROM player"
 	playerRows, errorFromExecution :=
-		playerPersister.connectionToDatabase.ExecuteQuery(playerSelectStatement)
+		playerPersister.connectionToDatabase.ExecuteQuery(
+			executionContext,
+			playerSelectStatement)
 	if errorFromExecution != nil {
 		return nil, errorFromExecution
 	}
@@ -244,6 +249,7 @@ func (playerPersister *inPostgresqlPersister) Delete(
 	playerDeletionStatement := "DELETE FROM player WHERE name = $1"
 	resultFromExecution, errorFromExecution :=
 		playerPersister.connectionToDatabase.ExecuteStatement(
+			executionContext,
 			playerDeletionStatement,
 			playerName)
 
