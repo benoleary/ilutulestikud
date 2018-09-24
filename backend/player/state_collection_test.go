@@ -1,6 +1,7 @@
 package player_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -50,7 +51,8 @@ func NewMockPersister(testReference *testing.T, testError error) *mockPersister 
 	}
 }
 
-func (mockImplementation *mockPersister) All() ([]player.ReadonlyState, error) {
+func (mockImplementation *mockPersister) All(
+	executionContext context.Context) ([]player.ReadonlyState, error) {
 	if mockImplementation.TestErrorForAll != nil {
 		mockImplementation.testReference.Errorf(
 			"All(): %v",
@@ -60,7 +62,9 @@ func (mockImplementation *mockPersister) All() ([]player.ReadonlyState, error) {
 	return mockImplementation.ReturnForAll, mockImplementation.ReturnForNontestError
 }
 
-func (mockImplementation *mockPersister) Get(playerName string) (player.ReadonlyState, error) {
+func (mockImplementation *mockPersister) Get(
+	executionContext context.Context,
+	playerName string) (player.ReadonlyState, error) {
 	if mockImplementation.TestErrorForGet != nil {
 		mockImplementation.testReference.Errorf(
 			"Get(%v): %v",
@@ -71,7 +75,10 @@ func (mockImplementation *mockPersister) Get(playerName string) (player.Readonly
 	return mockImplementation.ReturnForGet, mockImplementation.ReturnForNontestError
 }
 
-func (mockImplementation *mockPersister) Add(playerName string, chatColor string) error {
+func (mockImplementation *mockPersister) Add(
+	executionContext context.Context,
+	playerName string,
+	chatColor string) error {
 	if mockImplementation.TestErrorForAdd != nil {
 		mockImplementation.testReference.Errorf(
 			"Add(%v, %v): %v",
@@ -92,7 +99,10 @@ func (mockImplementation *mockPersister) Add(playerName string, chatColor string
 	return mockImplementation.ReturnForAdd
 }
 
-func (mockImplementation *mockPersister) UpdateColor(playerName string, chatColor string) error {
+func (mockImplementation *mockPersister) UpdateColor(
+	executionContext context.Context,
+	playerName string,
+	chatColor string) error {
 	if mockImplementation.TestErrorForUpdateColor != nil {
 		mockImplementation.testReference.Errorf(
 			"UpdateColor(%v, %v): %v",
@@ -104,7 +114,9 @@ func (mockImplementation *mockPersister) UpdateColor(playerName string, chatColo
 	return mockImplementation.ReturnForNontestError
 }
 
-func (mockImplementation *mockPersister) Delete(playerName string) error {
+func (mockImplementation *mockPersister) Delete(
+	executionContext context.Context,
+	playerName string) error {
 	if mockImplementation.TestErrorForDelete != nil {
 		mockImplementation.testReference.Errorf(
 			"Delete(%v): %v",
@@ -152,6 +164,7 @@ func prepareCollectionWithoutAdjustingMock(
 	mockImplementation *mockPersister) (*player.StateCollection, map[string]bool) {
 	stateCollection, errorFromCreation :=
 		player.NewCollection(
+			context.Background(),
 			mockImplementation,
 			initialPlayerNames,
 			colorsAvailableInTest)
@@ -191,6 +204,7 @@ func TestFactoryMethodRejectsInvalidColorLists(unitTest *testing.T) {
 				NewMockPersister(unitTest, fmt.Errorf("No functions should be called"))
 			stateCollection, errorFromCreation :=
 				player.NewCollection(
+					context.Background(),
 					mockImplementation,
 					defaultTestPlayerNames,
 					testCase.chatColors)
@@ -216,6 +230,7 @@ func TestFactoryMethodPropagatesErrorFromPersisterAll(unitTest *testing.T) {
 	mockImplementation.ReturnForNontestError = fmt.Errorf("expected error")
 	stateCollection, errorFromCreation :=
 		player.NewCollection(
+			context.Background(),
 			mockImplementation,
 			defaultTestPlayerNames,
 			colorsAvailableInTest)
@@ -238,6 +253,7 @@ func TestFactoryMethodPropagatesErrorFromPersisterAdd(unitTest *testing.T) {
 	mockImplementation.ReturnForAdd = fmt.Errorf("expected error")
 	stateCollection, errorFromCreation :=
 		player.NewCollection(
+			context.Background(),
 			mockImplementation,
 			defaultTestPlayerNames,
 			colorsAvailableInTest)
@@ -404,7 +420,8 @@ func TestReturnFromAllIsCorrect(unitTest *testing.T) {
 					colorsAvailableInTest,
 					mockImplementation)
 
-			actualReturnFromAll, errorFromAll := stateCollection.All()
+			actualReturnFromAll, errorFromAll :=
+				stateCollection.All(context.Background())
 			if errorFromAll != nil {
 				unitTest.Fatalf(
 					"All() %+v produced error %v",
@@ -477,7 +494,7 @@ func TestReturnFromGetIsCorrect(unitTest *testing.T) {
 			irrelevantPlayerName := "Does not matter for the mock"
 
 			actualReturn, actualError :=
-				stateCollection.Get(irrelevantPlayerName)
+				stateCollection.Get(context.Background(), irrelevantPlayerName)
 
 			if actualError != testCase.expectedError {
 				unitTest.Errorf(
@@ -524,7 +541,7 @@ func TestAvailableColorsIsCorrectAndFreshCopy(unitTest *testing.T) {
 			colorsAvailableInTest,
 			mockImplementation)
 
-	firstColors := stateCollection.AvailableChatColors()
+	firstColors := stateCollection.AvailableChatColors(context.Background())
 
 	assertColorsAreCorrect(
 		"First slice from AvailableChatColors()",
@@ -540,7 +557,7 @@ func TestAvailableColorsIsCorrectAndFreshCopy(unitTest *testing.T) {
 			validColors)
 	}
 
-	secondColors := stateCollection.AvailableChatColors()
+	secondColors := stateCollection.AvailableChatColors(context.Background())
 
 	assertColorsAreCorrect(
 		"Second slice from AvailableChatColors()",
@@ -560,7 +577,8 @@ func TestRejectAddWithEmptyPlayerName(unitTest *testing.T) {
 			colorsAvailableInTest,
 			mockImplementation)
 
-	actualError := stateCollection.Add("", colorsAvailableInTest[0])
+	actualError :=
+		stateCollection.Add(context.Background(), "", colorsAvailableInTest[0])
 
 	if actualError == nil {
 		unitTest.Fatalf(
@@ -590,7 +608,8 @@ func TestRejectAddWithInvalidColor(unitTest *testing.T) {
 			validColors)
 	}
 
-	actualError := stateCollection.Add(playerName, invalidColor)
+	actualError :=
+		stateCollection.Add(context.Background(), playerName, invalidColor)
 
 	if actualError == nil {
 		unitTest.Fatalf(
@@ -645,7 +664,8 @@ func TestReturnErrorFromPersisterAdd(unitTest *testing.T) {
 			// from Add(...) if required.
 			chatColor := ""
 
-			actualError := stateCollection.Add(playerName, chatColor)
+			actualError :=
+				stateCollection.Add(context.Background(), playerName, chatColor)
 
 			if (testCase.expectedErrorFromAll != nil) &&
 				(actualError != testCase.expectedErrorFromAll) {
@@ -685,7 +705,7 @@ func TestAddPlayerWithNoColorGetsValidColor(unitTest *testing.T) {
 
 	playerName := "Mock Player"
 
-	errorFromAdd := stateCollection.Add(playerName, "")
+	errorFromAdd := stateCollection.Add(context.Background(), playerName, "")
 
 	if errorFromAdd != nil {
 		unitTest.Fatalf(
@@ -731,7 +751,8 @@ func TestRejectUpdateWithInvalidColor(unitTest *testing.T) {
 			validColors)
 	}
 
-	errorFromUpdateColor := stateCollection.UpdateColor(playerName, invalidColor)
+	errorFromUpdateColor :=
+		stateCollection.UpdateColor(context.Background(), playerName, invalidColor)
 
 	if errorFromUpdateColor == nil {
 		unitTest.Fatalf(
@@ -773,7 +794,8 @@ func TestReturnErrorFromPersisterUpdateColor(unitTest *testing.T) {
 			playerName := "Mock Player"
 			chatColor := colorsAvailableInTest[0]
 
-			actualError := stateCollection.UpdateColor(playerName, chatColor)
+			actualError :=
+				stateCollection.UpdateColor(context.Background(), playerName, chatColor)
 
 			if actualError != testCase.expectedError {
 				unitTest.Errorf(
@@ -818,7 +840,7 @@ func TestReturnErrorFromPersisterDelete(unitTest *testing.T) {
 
 			playerName := "Mock Player"
 
-			actualError := stateCollection.Delete(playerName)
+			actualError := stateCollection.Delete(context.Background(), playerName)
 
 			if actualError != testCase.expectedError {
 				unitTest.Errorf(
@@ -911,7 +933,7 @@ func assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
 
 	numberOfPlayerNames := len(playerNames)
 
-	statesFromAll, errorFromAll := playerCollection.All()
+	statesFromAll, errorFromAll := playerCollection.All(context.Background())
 	if errorFromAll != nil {
 		unitTest.Fatalf(
 			"All() %+v produced error %v",
@@ -952,7 +974,8 @@ func assertPlayerNamesAreCorrectAndColorsAreValidAndGetIsConsistentWithAll(
 	// Now we check that Get(...) is consistent with each player from All().
 	for _, stateFromAll := range statesFromAll {
 		nameFromAll := stateFromAll.Name()
-		stateFromGet, errorFromGet := playerCollection.Get(nameFromAll)
+		stateFromGet, errorFromGet :=
+			playerCollection.Get(context.Background(), nameFromAll)
 		if errorFromGet != nil {
 			unitTest.Fatalf(
 				testIdentifier+"/Get(%v) produced error %v",
@@ -976,7 +999,7 @@ func getStateAndAssertNoError(
 	playerName string,
 	playerCollection *player.StateCollection) player.ReadonlyState {
 	playerState, errorGettingState :=
-		playerCollection.Get(playerName)
+		playerCollection.Get(context.Background(), playerName)
 	if errorGettingState != nil {
 		unitTest.Fatalf(
 			testIdentifier+"/Get(%v) produced an error %v",

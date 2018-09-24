@@ -1,6 +1,7 @@
 package server_test
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -32,6 +33,7 @@ func ErrorEndpointHandler(unitTest *testing.T) *mockEndpointHandler {
 // HandleGet parses an HTTP GET request and responds with the appropriate function.
 // This implements part of github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
 func (mockHandler *mockEndpointHandler) HandleGet(
+	requestContext context.Context,
 	relevantSegments []string) (interface{}, int) {
 	if mockHandler.TestErrorForGet != nil {
 		mockHandler.TestReference.Fatalf(
@@ -46,6 +48,7 @@ func (mockHandler *mockEndpointHandler) HandleGet(
 // HandlePost parses an HTTP POST request and responds with the appropriate function.
 // This implements part of github.com/benoleary/ilutulestikud/server.httpGetAndPostHandler.
 func (mockHandler *mockEndpointHandler) HandlePost(
+	requestContext context.Context,
 	httpBodyDecoder *json.Decoder,
 	relevantSegments []string) (interface{}, int) {
 	if mockHandler.TestErrorForPost != nil {
@@ -153,7 +156,8 @@ func TestRejectInvalidRequestsBeforeCallingHandler(unitTest *testing.T) {
 			// It is OK to set the player and game handlers to nil as this file just tests
 			// endpoints which are not covered by requests which would get validly redirected
 			// to either of the endpoint handlers.
-			serverState := server.New("irrelevant to tests", nil, nil, nil)
+			serverState :=
+				server.New(&mockContextProvider{}, "irrelevant to tests", nil, nil, nil)
 
 			// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 			responseRecorder := httptest.NewRecorder()
@@ -228,6 +232,7 @@ func TestSelectCorrectHandlerForValidRequest(unitTest *testing.T) {
 
 			serverState :=
 				server.NewWithGivenHandlers(
+					&mockContextProvider{},
 					"irrelevant to tests",
 					nil,
 					testCase.playerHandler,
@@ -263,6 +268,7 @@ func TestWrapReturnedError(unitTest *testing.T) {
 
 	serverState :=
 		server.NewWithGivenHandlers(
+			&mockContextProvider{},
 			"irrelevant to tests",
 			nil,
 			testHandler,

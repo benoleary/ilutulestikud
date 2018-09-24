@@ -2,6 +2,7 @@ package player_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -150,7 +151,8 @@ func newPlayerCollectionAndHandlerForTranslator(
 	*mockPlayerCollection, *player_endpoint.Handler) {
 	mockCollection := &mockPlayerCollection{}
 
-	handlerForPlayer := player_endpoint.New(mockCollection, segmentTranslator)
+	handlerForPlayer :=
+		player_endpoint.New(mockCollection, segmentTranslator)
 
 	return mockCollection, handlerForPlayer
 }
@@ -158,7 +160,7 @@ func newPlayerCollectionAndHandlerForTranslator(
 func TestGetPlayerNilFutherSegmentSliceBadRequest(unitTest *testing.T) {
 	testIdentifier := "GET with nil segment slice after player"
 	mockCollection, testHandler := newPlayerCollectionAndHandler()
-	_, responseCode := testHandler.HandleGet(nil)
+	_, responseCode := testHandler.HandleGet(context.Background(), nil)
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -176,7 +178,7 @@ func TestGetPlayerNilFutherSegmentSliceBadRequest(unitTest *testing.T) {
 func TestGetPlayerEmptyFutherSegmentSliceBadRequest(unitTest *testing.T) {
 	testIdentifier := "GET with empty segment slice after player"
 	mockCollection, testHandler := newPlayerCollectionAndHandler()
-	_, responseCode := testHandler.HandleGet([]string{})
+	_, responseCode := testHandler.HandleGet(context.Background(), []string{})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -196,7 +198,7 @@ func TestGetPlayerInvalidSegmentNotFound(unitTest *testing.T) {
 	mockCollection, testHandler := newPlayerCollectionAndHandler()
 
 	_, responseCode :=
-		testHandler.HandleGet([]string{"invalid-segment"})
+		testHandler.HandleGet(context.Background(), []string{"invalid-segment"})
 
 	if responseCode != http.StatusNotFound {
 		unitTest.Fatalf(
@@ -216,7 +218,10 @@ func TestPostPlayerNilFutherSegmentSliceBadRequest(unitTest *testing.T) {
 	mockCollection, testHandler := newPlayerCollectionAndHandler()
 
 	_, responseCode :=
-		testHandler.HandlePost(decoderAroundDefaultPlayer(unitTest, testIdentifier), nil)
+		testHandler.HandlePost(
+			context.Background(),
+			decoderAroundDefaultPlayer(unitTest, testIdentifier),
+			nil)
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -237,6 +242,7 @@ func TestPostPlayerEmptyFutherSegmentSliceBadRequest(unitTest *testing.T) {
 
 	_, responseCode :=
 		testHandler.HandlePost(
+			context.Background(),
 			decoderAroundDefaultPlayer(unitTest, testIdentifier),
 			[]string{})
 
@@ -259,6 +265,7 @@ func TestPostPlayerInvalidSegmentNotFound(unitTest *testing.T) {
 
 	_, responseCode :=
 		testHandler.HandlePost(
+			context.Background(),
 			decoderAroundDefaultPlayer(unitTest, testIdentifier),
 			[]string{"invalid-segment"})
 
@@ -281,7 +288,7 @@ func TestErrorFromPlayerListDelivered(unitTest *testing.T) {
 	mockCollection.ErrorToReturn = fmt.Errorf("expected error")
 
 	_, responseCode :=
-		testHandler.HandleGet([]string{"registered-players"})
+		testHandler.HandleGet(context.Background(), []string{"registered-players"})
 
 	if responseCode != http.StatusInternalServerError {
 		unitTest.Fatalf(
@@ -311,7 +318,7 @@ func TestPlayerListDelivered(unitTest *testing.T) {
 	mockCollection.ReturnForAll = testPlayerStates
 
 	returnedInterface, responseCode :=
-		testHandler.HandleGet([]string{"registered-players"})
+		testHandler.HandleGet(context.Background(), []string{"registered-players"})
 
 	if returnedInterface == nil {
 		unitTest.Fatalf(
@@ -403,7 +410,7 @@ func TestAvailableColorsCorrectlyDelivered(unitTest *testing.T) {
 	mockCollection.ReturnForAll = testPlayerStates
 
 	returnedInterface, responseCode :=
-		testHandler.HandleGet([]string{"available-colors"})
+		testHandler.HandleGet(context.Background(), []string{"available-colors"})
 
 	if returnedInterface == nil {
 		unitTest.Fatalf(
@@ -491,7 +498,7 @@ func TestRejectInvalidNewPlayerWithMalformedRequest(unitTest *testing.T) {
 	bodyDecoder := json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"new-player"})
+		testHandler.HandlePost(context.Background(), bodyDecoder, []string{"new-player"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -521,7 +528,7 @@ func TestRejectNewPlayerIfCollectionRejectsIt(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"new-player"})
+		testHandler.HandlePost(context.Background(), bodyDecoder, []string{"new-player"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -569,7 +576,7 @@ func TestRejectNewPlayerIfIdentifierHasSegmentDelimiter(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"new-player"})
+		testHandler.HandlePost(context.Background(), bodyDecoder, []string{"new-player"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -607,7 +614,7 @@ func TestAcceptValidNewPlayer(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"new-player"})
+		testHandler.HandlePost(context.Background(), bodyDecoder, []string{"new-player"})
 
 	if responseCode != http.StatusOK {
 		unitTest.Fatalf(
@@ -648,7 +655,8 @@ func TestRejectInvalidUpdatePlayerWithMalformedRequest(unitTest *testing.T) {
 
 	bodyDecoder := json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
 
-	_, responseCode := testHandler.HandlePost(bodyDecoder, []string{"update-player"})
+	_, responseCode :=
+		testHandler.HandlePost(context.Background(), bodyDecoder, []string{"update-player"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -677,7 +685,7 @@ func TestRejectUpdatePlayerIfCollectionRejectsIt(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"update-player"})
+		testHandler.HandlePost(context.Background(), bodyDecoder, []string{"update-player"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -715,7 +723,7 @@ func TestAcceptValidUpdatePlayer(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"update-player"})
+		testHandler.HandlePost(context.Background(), bodyDecoder, []string{"update-player"})
 
 	if responseCode != http.StatusOK {
 		unitTest.Fatalf(
@@ -755,7 +763,8 @@ func TestRejectInvalidDeletePlayerWithMalformedRequest(unitTest *testing.T) {
 
 	bodyDecoder := json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
 
-	_, responseCode := testHandler.HandlePost(bodyDecoder, []string{"delete-player"})
+	_, responseCode :=
+		testHandler.HandlePost(context.Background(), bodyDecoder, []string{"delete-player"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -784,7 +793,7 @@ func TestRejectDeletePlayerIfCollectionRejectsIt(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"delete-player"})
+		testHandler.HandlePost(context.Background(), bodyDecoder, []string{"delete-player"})
 
 	if responseCode != http.StatusInternalServerError {
 		unitTest.Fatalf(
@@ -821,7 +830,7 @@ func TestAcceptValidDeletePlayer(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"delete-player"})
+		testHandler.HandlePost(context.Background(), bodyDecoder, []string{"delete-player"})
 
 	if responseCode != http.StatusOK {
 		unitTest.Fatalf(
