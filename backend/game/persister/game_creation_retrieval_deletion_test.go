@@ -1,6 +1,7 @@
 package persister_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -30,7 +31,9 @@ func TestReturnErrorWhenGameDoesNotExist(unitTest *testing.T) {
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
 			invalidName := "Not a valid game"
 			gameState, errorFromGet :=
-				statePersister.GamePersister.ReadAndWriteGame(invalidName)
+				statePersister.GamePersister.ReadAndWriteGame(
+					context.Background(),
+					invalidName)
 
 			if errorFromGet == nil {
 				unitTest.Fatalf(
@@ -52,7 +55,9 @@ func TestReturnEmptyListWhenPlayerHasNoGames(unitTest *testing.T) {
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
 			invalidName := "Not A. Participant"
 			gameStates, errorFromReadAll :=
-				statePersister.GamePersister.ReadAllWithPlayer(invalidName)
+				statePersister.GamePersister.ReadAllWithPlayer(
+					context.Background(),
+					invalidName)
 
 			if errorFromReadAll != nil {
 				unitTest.Fatalf(
@@ -103,6 +108,7 @@ func TestRejectAddGameWithNoName(unitTest *testing.T) {
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
 			errorFromInvalidAdd :=
 				statePersister.GamePersister.AddGame(
+					context.Background(),
 					"",
 					logLengthForTest,
 					nil,
@@ -166,6 +172,7 @@ func TestRejectAddGameWithExistingName(unitTest *testing.T) {
 
 				errorFromInitialAdd :=
 					statePersister.GamePersister.AddGame(
+						context.Background(),
 						gameName,
 						logLengthForTest,
 						nil,
@@ -199,6 +206,7 @@ func TestRejectAddGameWithExistingName(unitTest *testing.T) {
 
 				errorFromSecondAdd :=
 					statePersister.GamePersister.AddGame(
+						context.Background(),
 						gameName,
 						logLengthForTest,
 						nil,
@@ -290,6 +298,7 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 			firstGameName := "Normal name"
 			errorFromFirstAdd :=
 				statePersister.GamePersister.AddGame(
+					context.Background(),
 					firstGameName,
 					logLengthForTest,
 					nil,
@@ -332,6 +341,7 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 			secondGameName := "Name with SQL injection'-- including this"
 			errorFromSecondAdd :=
 				statePersister.GamePersister.AddGame(
+					context.Background(),
 					secondGameName,
 					logLengthForTest,
 					nil,
@@ -375,6 +385,7 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 			thirdGameName := "Yet another game"
 			errorFromThirdAdd :=
 				statePersister.GamePersister.AddGame(
+					context.Background(),
 					thirdGameName,
 					logLengthForTest,
 					nil,
@@ -418,6 +429,7 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 
 			errorFromLeavingFirstGame :=
 				statePersister.GamePersister.RemoveGameFromListForPlayer(
+					context.Background(),
 					firstGameName,
 					leavingPlayer)
 
@@ -462,6 +474,7 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 
 			errorFromLeavingThirdGame :=
 				statePersister.GamePersister.RemoveGameFromListForPlayer(
+					context.Background(),
 					thirdGameName,
 					leavingPlayer)
 
@@ -505,6 +518,7 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 
 			errorFromLeavingSecondGame :=
 				statePersister.GamePersister.RemoveGameFromListForPlayer(
+					context.Background(),
 					secondGameName,
 					leavingPlayer)
 
@@ -547,6 +561,7 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 
 			errorFromLeavingSecondGameAgain :=
 				statePersister.GamePersister.RemoveGameFromListForPlayer(
+					context.Background(),
 					secondGameName,
 					leavingPlayer)
 
@@ -558,7 +573,9 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 			}
 
 			errorFromDeletingSecondGame :=
-				statePersister.GamePersister.Delete(secondGameName)
+				statePersister.GamePersister.Delete(
+					context.Background(),
+					secondGameName)
 			errorExpectedFromDeletingSecondGame :=
 				fmt.Errorf(
 					"errors %v while removing game %v from player lists, game still deleted",
@@ -597,7 +614,9 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 				statePersister.GamePersister)
 
 			secondGame, errorFromGetDeletedSecond :=
-				statePersister.GamePersister.ReadAndWriteGame(secondGameName)
+				statePersister.GamePersister.ReadAndWriteGame(
+					context.Background(),
+					secondGameName)
 			if errorFromGetDeletedSecond == nil {
 				unitTest.Fatalf(
 					"ReadAndWriteGame(deleted game %v) produced state %v and nil error",
@@ -606,7 +625,9 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 			}
 
 			errorFromDeletingThirdGame :=
-				statePersister.GamePersister.Delete(thirdGameName)
+				statePersister.GamePersister.Delete(
+					context.Background(),
+					thirdGameName)
 			errorExpectedFromDeletingThirdGame :=
 				fmt.Errorf(
 					"errors %v while removing game %v from player lists, game still deleted",
@@ -641,7 +662,9 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 				statePersister.GamePersister)
 
 			thirdGame, errorFromGetDeletedThird :=
-				statePersister.GamePersister.ReadAndWriteGame(thirdGameName)
+				statePersister.GamePersister.ReadAndWriteGame(
+					context.Background(),
+					thirdGameName)
 			if errorFromGetDeletedThird == nil {
 				unitTest.Fatalf(
 					"ReadAndWriteGame(deleted game %v) produced state %v and nil error",
@@ -650,7 +673,7 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 			}
 
 			errorFromDeletingThirdGameAgain :=
-				statePersister.GamePersister.Delete(thirdGameName)
+				statePersister.GamePersister.Delete(context.Background(), thirdGameName)
 
 			// We have to compare the error strings because of the way that error interface
 			// comparison works. (There are better ways, such as custom error types, or an
@@ -675,7 +698,9 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 				statePersister.GamePersister)
 
 			errorFromDeletingFirstGame :=
-				statePersister.GamePersister.Delete(firstGameName)
+				statePersister.GamePersister.Delete(
+					context.Background(),
+					firstGameName)
 			errorExpectedFromDeletingFirstGame :=
 				fmt.Errorf(
 					"errors %v while removing game %v from player lists, game still deleted",
@@ -710,7 +735,9 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 				statePersister.GamePersister)
 
 			firstGame, errorFromGetDeletedFirst :=
-				statePersister.GamePersister.ReadAndWriteGame(firstGameName)
+				statePersister.GamePersister.ReadAndWriteGame(
+					context.Background(),
+					firstGameName)
 			if errorFromGetDeletedFirst == nil {
 				unitTest.Fatalf(
 					"ReadAndWriteGame(deleted game %v) produced state %v and nil error",
@@ -727,6 +754,7 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 
 			errorFromFirstAddAgain :=
 				statePersister.GamePersister.AddGame(
+					context.Background(),
 					firstGameName,
 					logLengthForTest,
 					nil,
@@ -765,7 +793,7 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 				statePersister.GamePersister)
 
 			errorFromDeletingFirstGameAgain :=
-				statePersister.GamePersister.Delete(firstGameName)
+				statePersister.GamePersister.Delete(context.Background(), firstGameName)
 
 			// This time we expect no error.
 			if errorFromDeletingFirstGameAgain != nil {
@@ -783,7 +811,9 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 				statePersister.GamePersister)
 
 			firstGameAgain, errorFromGetDeletedFirstAgain :=
-				statePersister.GamePersister.ReadAndWriteGame(firstGameName)
+				statePersister.GamePersister.ReadAndWriteGame(
+					context.Background(),
+					firstGameName)
 			if errorFromGetDeletedFirstAgain == nil {
 				unitTest.Fatalf(
 					"ReadAndWriteGame(twice-deleted game %v) produced state %v and nil error",
@@ -821,7 +851,8 @@ func assertReturnedGamesAreConsistent(
 			gameNameSet[expectedGame] = isParticipant
 		}
 
-		actualGame, errorFromGet := gamePersister.ReadAndWriteGame(expectedGame)
+		actualGame, errorFromGet :=
+			gamePersister.ReadAndWriteGame(context.Background(), expectedGame)
 
 		if errorFromGet != nil {
 			unitTest.Fatalf(
@@ -868,7 +899,7 @@ func assertReadAllWithPlayerGameNamesCorrect(
 	expectedGameNames map[string]bool,
 	gamePersister game.StatePersister) {
 	statesFromAllWithPlayer, errorFromReadAll :=
-		gamePersister.ReadAllWithPlayer(playerName)
+		gamePersister.ReadAllWithPlayer(context.Background(), playerName)
 
 	if errorFromReadAll != nil {
 		unitTest.Fatalf(
@@ -923,7 +954,8 @@ func getStateAndAssertNoError(
 	unitTest *testing.T,
 	gameName string,
 	gamePersister game.StatePersister) game.ReadonlyState {
-	actualGame, errorFromGet := gamePersister.ReadAndWriteGame(gameName)
+	actualGame, errorFromGet :=
+		gamePersister.ReadAndWriteGame(context.Background(), gameName)
 
 	if errorFromGet != nil {
 		unitTest.Fatalf(

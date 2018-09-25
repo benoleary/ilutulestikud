@@ -1,10 +1,12 @@
 package game
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/benoleary/ilutulestikud/backend/game/card"
 	"github.com/benoleary/ilutulestikud/backend/game/message"
+	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
 // PlayerView encapsulates the functions on a game's read-only state
@@ -13,7 +15,7 @@ import (
 // construction.
 type PlayerView struct {
 	gameState               ReadonlyState
-	playerProvider          ReadonlyPlayerProvider
+	playerStates            map[string]player.ReadonlyState
 	gameParticipants        []string
 	numberOfParticipants    int
 	playerName              string
@@ -28,54 +30,61 @@ type PlayerView struct {
 // the view. If the player is not a participant, it returns nil
 // along with an error.
 func ViewOnStateForPlayer(
+	creationContext context.Context,
 	stateOfGame ReadonlyState,
 	playerProvider ReadonlyPlayerProvider,
 	nameOfPlayer string) (ViewForPlayer, error) {
 	participantsInGame := stateOfGame.PlayerNames()
-	for _, gameParticipant := range participantsInGame {
-		if gameParticipant == nameOfPlayer {
-			numberOfPlayers := len(participantsInGame)
-			rulesetOfGame := stateOfGame.Ruleset()
 
-			gameColorSuits := rulesetOfGame.ColorSuits()
-			distinctPossibleIndices := rulesetOfGame.DistinctPossibleIndices()
+	numberOfPlayers := len(participantsInGame)
+	playerStates := make(map[string]player.ReadonlyState, numberOfPlayers)
 
-			numberOfSuits := len(gameColorSuits)
-			playedCards := make([][]card.Defined, numberOfSuits)
-			for suitIndex := 0; suitIndex < numberOfSuits; suitIndex++ {
-				suitColor := gameColorSuits[suitIndex]
+	var playerView *PlayerView
 
-				cardsPlayedForSuit := stateOfGame.PlayedForColor(suitColor)
+	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
+		participantName := participantsInGame[playerIndex]
+		participantState, errorFromGet :=
+			playerProvider.Get(creationContext, participantName)
 
-				playedCards[suitIndex] = cardsPlayedForSuit
-			}
+		if errorFromGet != nil {
+			participantGetError :=
+				fmt.Errorf(
+					"Error when retrieving participant %v of game %v",
+					participantName,
+					stateOfGame.Name())
+			return nil, participantGetError
+		}
 
-			playerView :=
-				&PlayerView{
-					gameState:               stateOfGame,
-					playerProvider:          playerProvider,
-					gameParticipants:        participantsInGame,
-					numberOfParticipants:    numberOfPlayers,
-					playerName:              nameOfPlayer,
-					gameRuleset:             rulesetOfGame,
-					colorSuits:              gameColorSuits,
-					distinctPossibleIndices: distinctPossibleIndices,
-					playedCards:             playedCards,
-				}
+		playerStates[participantName] = participantState
 
-			return playerView, nil
+		// If this is the viewing player, then we create the view with an incomplete
+		// player state map.
+		if participantName == nameOfPlayer {
+			playerView =
+				createViewWithoutPlayerMap(
+					stateOfGame,
+					numberOfPlayers,
+					participantsInGame,
+					nameOfPlayer)
 		}
 	}
 
-	// If we have not yet returned a pointer, then the player was not a
-	// participant.
-	notFoundError :=
-		fmt.Errorf(
-			"No player with name %v is a participant in game %v",
-			nameOfPlayer,
-			stateOfGame.Name())
+	// If the view is still nil, then the player was not a participant.
+	if playerView == nil {
+		notFoundError :=
+			fmt.Errorf(
+				"No player with name %v is a participant in game %v",
+				nameOfPlayer,
+				stateOfGame.Name())
 
-	return nil, notFoundError
+		return nil, notFoundError
+	}
+
+	// We can update the player map now that we have fetched the state of every
+	// player.
+	playerView.playerStates = playerStates
+
+	return playerView, nil
 }
 
 // GameName just wraps around the read-only game state's Name function.
@@ -220,14 +229,19 @@ func (playerView *PlayerView) DiscardedCards() []card.Defined {
 // VisibleHand returns the cards held by the given player along with the chat color for
 // that player, or nil and a string which will be ignored and an error if the player
 // cannot see the cards.
-func (playerView *PlayerView) VisibleHand(playerName string) ([]card.Defined, string, error) {
+func (playerView *PlayerView) VisibleHand(
+	playerName string) ([]card.Defined, string, error) {
 	if playerName == playerView.playerName {
-		return nil, "no color because of error", fmt.Errorf("Player is not allowed to view own hand")
+		return nil,
+			"no color because of error",
+			fmt.Errorf("Player is not allowed to view own hand")
 	}
 
-	playerState, errorFromPlayerProvider := playerView.playerProvider.Get(playerName)
-	if errorFromPlayerProvider != nil {
-		return nil, "no color because of error", errorFromPlayerProvider
+	playerState, isParticipant := playerView.playerStates[playerName]
+	if !isParticipant {
+		return nil,
+			"no color because of error",
+			fmt.Errorf("Player %v not found", playerName)
 	}
 
 	visibleCards, errorFromGameState := playerView.gameState.VisibleHand(playerName)
@@ -240,6 +254,39 @@ func (playerView *PlayerView) VisibleHand(playerName string) ([]card.Defined, st
 func (playerView *PlayerView) KnowledgeOfOwnHand(
 	holdingPlayer string) ([]card.Inferred, error) {
 	return playerView.gameState.InferredHand(holdingPlayer)
+}
+
+func createViewWithoutPlayerMap(
+	stateOfGame ReadonlyState,
+	numberOfPlayers int,
+	participantsInGame []string,
+	nameOfPlayer string) *PlayerView {
+	rulesetOfGame := stateOfGame.Ruleset()
+
+	gameColorSuits := rulesetOfGame.ColorSuits()
+	distinctPossibleIndices := rulesetOfGame.DistinctPossibleIndices()
+
+	numberOfSuits := len(gameColorSuits)
+	playedCards := make([][]card.Defined, numberOfSuits)
+	for suitIndex := 0; suitIndex < numberOfSuits; suitIndex++ {
+		suitColor := gameColorSuits[suitIndex]
+
+		cardsPlayedForSuit := stateOfGame.PlayedForColor(suitColor)
+
+		playedCards[suitIndex] = cardsPlayedForSuit
+	}
+
+	return &PlayerView{
+		gameState:               stateOfGame,
+		playerStates:            nil,
+		gameParticipants:        participantsInGame,
+		numberOfParticipants:    numberOfPlayers,
+		playerName:              nameOfPlayer,
+		gameRuleset:             rulesetOfGame,
+		colorSuits:              gameColorSuits,
+		distinctPossibleIndices: distinctPossibleIndices,
+		playedCards:             playedCards,
+	}
 }
 
 func (playerView *PlayerView) playerIndexForTurn(turnsAfterCurrent int) int {

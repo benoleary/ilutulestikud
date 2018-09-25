@@ -1,6 +1,7 @@
 package game_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -53,6 +54,7 @@ func NewMockPlayerProvider(initialPlayers []string) *mockPlayerProvider {
 }
 
 func (mockProvider *mockPlayerProvider) Get(
+	executionContext context.Context,
 	playerName string) (player.ReadonlyState, error) {
 	mockPlayer, isInMap := mockProvider.MockPlayers[playerName]
 
@@ -354,7 +356,9 @@ func (mockGame *mockGameState) Read() game.ReadonlyState {
 
 // RecordChatMessage gets mocked.
 func (mockGame *mockGameState) RecordChatMessage(
-	actingPlayer player.ReadonlyState, chatMessage string) error {
+	executionContext context.Context,
+	actingPlayer player.ReadonlyState,
+	chatMessage string) error {
 	if mockGame.TestErrorForRecordChatMessage != nil {
 		mockGame.testReference.Fatalf(
 			"RecordChatMessage(%v, %v): %v",
@@ -377,6 +381,7 @@ func (mockGame *mockGameState) RecordChatMessage(
 
 // EnactTurnByDiscardingAndReplacing gets mocked.
 func (mockGame *mockGameState) EnactTurnByDiscardingAndReplacing(
+	executionContext context.Context,
 	actionMessage string,
 	actingPlayer player.ReadonlyState,
 	indexInHand int,
@@ -412,6 +417,7 @@ func (mockGame *mockGameState) EnactTurnByDiscardingAndReplacing(
 
 // EnactTurnByPlayingAndReplacing gets mocked.
 func (mockGame *mockGameState) EnactTurnByPlayingAndReplacing(
+	executionContext context.Context,
 	actionMessage string,
 	actingPlayer player.ReadonlyState,
 	indexInHand int,
@@ -445,6 +451,7 @@ func (mockGame *mockGameState) EnactTurnByPlayingAndReplacing(
 
 // EnactTurnByUpdatingHandWithHint gets mocked.
 func (mockGame *mockGameState) EnactTurnByUpdatingHandWithHint(
+	executionContext context.Context,
 	actionMessage string,
 	actingPlayer player.ReadonlyState,
 	receivingPlayerName string,
@@ -537,6 +544,7 @@ func (mockImplementation *mockGamePersister) RandomSeed() int64 {
 }
 
 func (mockImplementation *mockGamePersister) ReadAndWriteGame(
+	executionContext context.Context,
 	gameName string) (game.ReadAndWriteState, error) {
 	if mockImplementation.TestErrorForReadAndWriteGame != nil {
 		mockImplementation.TestReference.Fatalf(
@@ -551,6 +559,7 @@ func (mockImplementation *mockGamePersister) ReadAndWriteGame(
 }
 
 func (mockImplementation *mockGamePersister) ReadAllWithPlayer(
+	executionContext context.Context,
 	playerName string) ([]game.ReadonlyState, error) {
 	if mockImplementation.TestErrorForReadAllWithPlayer != nil {
 		mockImplementation.TestReference.Fatalf(
@@ -563,6 +572,7 @@ func (mockImplementation *mockGamePersister) ReadAllWithPlayer(
 }
 
 func (mockImplementation *mockGamePersister) AddGame(
+	executionContext context.Context,
 	gameName string,
 	chatLogLength int,
 	initialActionLog []message.FromPlayer,
@@ -597,6 +607,7 @@ func (mockImplementation *mockGamePersister) AddGame(
 }
 
 func (mockImplementation *mockGamePersister) RemoveGameFromListForPlayer(
+	executionContext context.Context,
 	playerName string,
 	gameName string) error {
 	if mockImplementation.TestErrorForRemoveGameFromListForPlayer != nil {
@@ -618,7 +629,9 @@ func (mockImplementation *mockGamePersister) RemoveGameFromListForPlayer(
 	return mockImplementation.ReturnForNontestError
 }
 
-func (mockImplementation *mockGamePersister) Delete(gameName string) error {
+func (mockImplementation *mockGamePersister) Delete(
+	executionContext context.Context,
+	gameName string) error {
 	if mockImplementation.TestErrorForDelete != nil {
 		mockImplementation.TestReference.Fatalf(
 			"RemoveDelete(%v): %v",

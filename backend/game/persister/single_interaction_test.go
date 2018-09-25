@@ -1,6 +1,7 @@
 package persister_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -122,7 +123,10 @@ func TestRecordAndRetrieveSingleChatMessage(unitTest *testing.T) {
 			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
 
 			errorFromChat :=
-				gameAndDescription.GameState.RecordChatMessage(testPlayer, testMessage)
+				gameAndDescription.GameState.RecordChatMessage(
+					context.Background(),
+					testPlayer,
+					testMessage)
 
 			if errorFromChat != nil {
 				unitTest.Fatalf(
@@ -214,6 +218,7 @@ func TestErrorFromActionsInvalidlyTakingCardFromHand(unitTest *testing.T) {
 
 				errorFromDiscardingCard :=
 					gameAndDescription.GameState.EnactTurnByDiscardingAndReplacing(
+						context.Background(),
 						actionMessage,
 						testPlayer,
 						testCase.indexInHand,
@@ -243,6 +248,7 @@ func TestErrorFromActionsInvalidlyTakingCardFromHand(unitTest *testing.T) {
 
 				errorFromPlayingCard :=
 					gameAndDescription.GameState.EnactTurnByPlayingAndReplacing(
+						context.Background(),
 						actionMessage,
 						testPlayer,
 						testCase.indexInHand,
@@ -343,6 +349,7 @@ func TestValidDiscardOfCardWhenDeckNotYetEmpty(unitTest *testing.T) {
 
 			errorFromDiscardingCard :=
 				gameAndDescription.GameState.EnactTurnByDiscardingAndReplacing(
+					context.Background(),
 					actionMessage,
 					testPlayer,
 					indexInHand,
@@ -446,6 +453,7 @@ func TestValidDiscardOfCardWhichEmptiesDeck(unitTest *testing.T) {
 
 			errorFromDiscardingCard :=
 				gameAndDescription.GameState.EnactTurnByDiscardingAndReplacing(
+					context.Background(),
 					actionMessage,
 					testPlayer,
 					indexInHand,
@@ -541,6 +549,7 @@ func TestValidDiscardOfCardWhenDeckAlreadyEmpty(unitTest *testing.T) {
 
 			errorFromDiscardingCard :=
 				gameAndDescription.GameState.EnactTurnByDiscardingAndReplacing(
+					context.Background(),
 					actionMessage,
 					testPlayer,
 					indexInHand,
@@ -656,6 +665,7 @@ func TestValidPlayOfCardWhenDeckNotYetEmpty(unitTest *testing.T) {
 
 			errorFromPlayingCard :=
 				gameAndDescription.GameState.EnactTurnByPlayingAndReplacing(
+					context.Background(),
 					actionMessage,
 					testPlayer,
 					indexInHand,
@@ -756,6 +766,7 @@ func TestValidPlayOfCardWhichEmptiesDeck(unitTest *testing.T) {
 
 			errorFromPlayingCard :=
 				gameAndDescription.GameState.EnactTurnByPlayingAndReplacing(
+					context.Background(),
 					actionMessage,
 					testPlayer,
 					indexInHand,
@@ -848,6 +859,7 @@ func TestValidPlayOfCardWhenDeckAlreadyEmpty(unitTest *testing.T) {
 
 			errorFromPlayingCard :=
 				gameAndDescription.GameState.EnactTurnByPlayingAndReplacing(
+					context.Background(),
 					actionMessage,
 					testPlayer,
 					indexInHand,
@@ -929,6 +941,7 @@ func TestErrorFromHintToInvalidPlayer(unitTest *testing.T) {
 
 			errorFromHint :=
 				gameAndDescription.GameState.EnactTurnByUpdatingHandWithHint(
+					context.Background(),
 					actionMessage,
 					actingPlayer,
 					receivingPlayerName,
@@ -996,6 +1009,7 @@ func TestErrorFromHintWithTooSmallInferredHand(unitTest *testing.T) {
 
 			errorFromHint :=
 				gameAndDescription.GameState.EnactTurnByUpdatingHandWithHint(
+					context.Background(),
 					actionMessage,
 					actingPlayer,
 					receivingPlayerName,
@@ -1063,6 +1077,7 @@ func TestErrorFromHintWithTooLargeInferredHand(unitTest *testing.T) {
 
 			errorFromHint :=
 				gameAndDescription.GameState.EnactTurnByUpdatingHandWithHint(
+					context.Background(),
 					actionMessage,
 					actingPlayer,
 					receivingPlayerName,
@@ -1157,6 +1172,7 @@ func TestValidHintWhenDeckAlreadyEmpty(unitTest *testing.T) {
 
 			errorFromHint :=
 				gameAndDescription.GameState.EnactTurnByUpdatingHandWithHint(
+					context.Background(),
 					actionMessage,
 					actingPlayer,
 					receivingPlayerName,
@@ -1273,6 +1289,7 @@ func TestValidHintWhenDeckNotYetEmpty(unitTest *testing.T) {
 
 			errorFromHint :=
 				gameAndDescription.GameState.EnactTurnByUpdatingHandWithHint(
+					context.Background(),
 					actionMessage,
 					actingPlayer,
 					receivingPlayerName,

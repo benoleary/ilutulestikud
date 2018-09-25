@@ -1,6 +1,7 @@
 package persister
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"sync"
@@ -16,7 +17,8 @@ import (
 // saving them as game.ReadAndWriteStates, mapped to by their names.
 // It also maintains a map of player names to slices of game states,
 // where each game state in the slice mapped to by a player includes
-// that player as a participant.
+// that player as a participant. It ignores all context structs passed
+// to its functions.
 type inMemoryPersister struct {
 	mutualExclusion       sync.Mutex
 	randomNumberGenerator *rand.Rand
@@ -41,8 +43,9 @@ func (gamePersister *inMemoryPersister) RandomSeed() int64 {
 }
 
 // ReadAndWriteGame returns the game.ReadAndWriteState corresponding to the given
-// game name, or nil with an error if it does not exist.
+// game name, or nil with an error if it does not exist. The context is ignored.
 func (gamePersister *inMemoryPersister) ReadAndWriteGame(
+	executionContext context.Context,
 	gameName string) (game.ReadAndWriteState, error) {
 	gameState, gameExists := gamePersister.gameStates[gameName]
 
@@ -54,8 +57,9 @@ func (gamePersister *inMemoryPersister) ReadAndWriteGame(
 }
 
 // ReadAllWithPlayer returns a slice of all the game.ReadonlyState instances in the
-// collection which have the given player as a participant.
+// collection which have the given player as a participant. The context is ignored.
 func (gamePersister *inMemoryPersister) ReadAllWithPlayer(
+	executionContext context.Context,
 	playerName string) ([]game.ReadonlyState, error) {
 	// We do not care if there was no entry for the player, as the default in this
 	// case is nil, and we are going to explicitly check for nil to ensure that we
@@ -74,8 +78,9 @@ func (gamePersister *inMemoryPersister) ReadAllWithPlayer(
 // the ReadAndWriteState interface from the given arguments, and returns the
 // identifier of the newly-created game, along with an error which of course is
 // nil if there was no problem. It returns an error if a game with the given name
-// already exists.
+// already exists. The context is ignored.
 func (gamePersister *inMemoryPersister) AddGame(
+	executionContext context.Context,
 	gameName string,
 	chatLogLength int,
 	initialActionLog []message.FromPlayer,
@@ -126,8 +131,9 @@ func (gamePersister *inMemoryPersister) AddGame(
 // RemoveGameFromListForPlayer removes the given player from the given game
 // in the sense that the game will no longer show up in the result of
 // ReadAllWithPlayer(playerName). It returns an error if the player is not a
-// participant.
+// participant. The context is ignored.
 func (gamePersister *inMemoryPersister) RemoveGameFromListForPlayer(
+	executionContext context.Context,
 	gameName string,
 	playerName string) error {
 	// We only remove the player from the look-up map used for
@@ -174,7 +180,10 @@ func (gamePersister *inMemoryPersister) RemoveGameFromListForPlayer(
 // Delete deletes the given game from the collection. It returns an error
 // if the game does not exist before the deletion attempt, or if there is
 // an error while trying to remove the game from the list for any player.
-func (gamePersister *inMemoryPersister) Delete(gameName string) error {
+// The context is ignored.
+func (gamePersister *inMemoryPersister) Delete(
+	executionContext context.Context,
+	gameName string) error {
 	gameToDelete, gameExists := gamePersister.gameStates[gameName]
 
 	if !gameExists {
@@ -185,7 +194,10 @@ func (gamePersister *inMemoryPersister) Delete(gameName string) error {
 
 	for _, participantName := range gameToDelete.Read().PlayerNames() {
 		errorFromRemovalFromListForPlayer :=
-			gamePersister.RemoveGameFromListForPlayer(gameName, participantName)
+			gamePersister.RemoveGameFromListForPlayer(
+				executionContext,
+				gameName,
+				participantName)
 		if errorFromRemovalFromListForPlayer != nil {
 			errorsFromLeaving =
 				append(errorsFromLeaving, errorFromRemovalFromListForPlayer)
@@ -208,14 +220,15 @@ func (gamePersister *inMemoryPersister) Delete(gameName string) error {
 }
 
 // inMemoryState is a struct meant to encapsulate all the state required for a
-// single game to function.
+// single game to function. It ignores all context structs passed to its functions.
 type inMemoryState struct {
 	mutualExclusion sync.Mutex
 	DeserializedState
 }
 
-// RecordChatMessage records a chat message from the given player.
+// RecordChatMessage records a chat message from the given player. The context is ignored.
 func (gameState *inMemoryState) RecordChatMessage(
+	executionContext context.Context,
 	actingPlayer player.ReadonlyState,
 	chatMessage string) error {
 	gameState.mutualExclusion.Lock()
@@ -234,8 +247,10 @@ func (gameState *inMemoryState) RecordChatMessage(
 // and any sequence index is possible). If there is no card to draw from the
 // deck, it increments the number of turns taken with an empty deck of
 // replacing the card in the hand. It also adds the given numbers to the
-// counts of available hints and mistakes made respectively.
+// counts of available hints and mistakes made respectively. The context is
+// ignored.
 func (gameState *inMemoryState) EnactTurnByDiscardingAndReplacing(
+	executionContext context.Context,
 	actionMessage string,
 	actingPlayer player.ReadonlyState,
 	indexInHand int,
@@ -263,7 +278,9 @@ func (gameState *inMemoryState) EnactTurnByDiscardingAndReplacing(
 // it increments the number of turns taken with an empty deck of replacing the
 // card in the hand. It also adds the given number of hints to the count of ready
 // hints available (such as when playing the end of sequence gives a bonus hint).
+// The context is ignored.
 func (gameState *inMemoryState) EnactTurnByPlayingAndReplacing(
+	executionContext context.Context,
 	actionMessage string,
 	actingPlayer player.ReadonlyState,
 	indexInHand int,
@@ -284,8 +301,9 @@ func (gameState *inMemoryState) EnactTurnByPlayingAndReplacing(
 // given player's inferred hand with the given inferred hand, while also
 // decrementing the number of available hints appropriately. If the deck is
 // empty, this function also increments the number of turns taken with an empty
-// deck.
+// deck. The context is ignored.
 func (gameState *inMemoryState) EnactTurnByUpdatingHandWithHint(
+	executionContext context.Context,
 	actionMessage string,
 	actingPlayer player.ReadonlyState,
 	receivingPlayerName string,

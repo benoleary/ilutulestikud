@@ -17,20 +17,24 @@ import (
 
 const keyKind = "Game"
 
+func keyForGame(gameName string) *datastore.Key {
+	return datastore.NameKey(keyKind, gameName, nil)
+}
+
 // inCloudDatastorePersister stores game states by creating
 // inCloudDatastoreStates and saving them as game.ReadAndWriteStates
 // in Google Cloud Datastore.
 type inCloudDatastorePersister struct {
 	mutualExclusion       sync.Mutex
 	randomNumberGenerator *rand.Rand
-	contextForRequests    context.Context
 	datastoreClient       *datastore.Client
 }
 
 // NewInCloudDatastore creates a game state persister.
-func NewInCloudDatastore(contextForRequests context.Context) (game.StatePersister, error) {
+func NewInCloudDatastore(
+	contextForCreation context.Context) (game.StatePersister, error) {
 	datastoreClient, errorFromClient :=
-		datastore.NewClient(contextForRequests, "ilutulestikud-191419")
+		datastore.NewClient(contextForCreation, "ilutulestikud-191419")
 	if errorFromClient != nil {
 		return nil, errorFromClient
 	}
@@ -39,7 +43,6 @@ func NewInCloudDatastore(contextForRequests context.Context) (game.StatePersiste
 		&inCloudDatastorePersister{
 			mutualExclusion:       sync.Mutex{},
 			randomNumberGenerator: rand.New(rand.NewSource(time.Now().Unix())),
-			contextForRequests:    contextForRequests,
 			datastoreClient:       datastoreClient,
 		}
 
@@ -55,18 +58,16 @@ func (gamePersister *inCloudDatastorePersister) RandomSeed() int64 {
 // ReadAndWriteGame returns the game.ReadAndWriteState corresponding to the given
 // game name, or nil with an error if it does not exist.
 func (gamePersister *inCloudDatastorePersister) ReadAndWriteGame(
+	executionContext context.Context,
 	gameName string) (game.ReadAndWriteState, error) {
-	serializablePart, errorFromGet := gamePersister.serializedPart(gameName)
-	if errorFromGet != nil {
-		return nil, errorFromGet
-	}
-
-	return newInCloudDatastoreState(serializablePart)
+	return gamePersister.GetInCloudDatastoreState(executionContext,
+		gameName)
 }
 
 // ReadAllWithPlayer returns a slice of all the game.ReadonlyState instances in the
 // collection which have the given player as a participant.
 func (gamePersister *inCloudDatastorePersister) ReadAllWithPlayer(
+	executionContext context.Context,
 	playerName string) ([]game.ReadonlyState, error) {
 	gamePersister.mutualExclusion.Lock()
 	defer gamePersister.mutualExclusion.Unlock()
@@ -82,9 +83,7 @@ func (gamePersister *inCloudDatastorePersister) ReadAllWithPlayer(
 			playerName)
 
 	resultIterator :=
-		gamePersister.datastoreClient.Run(
-			gamePersister.contextForRequests,
-			queryOnPlayerName)
+		gamePersister.datastoreClient.Run(executionContext, queryOnPlayerName)
 
 	gameStates := []game.ReadonlyState{}
 
@@ -110,7 +109,10 @@ func (gamePersister *inCloudDatastorePersister) ReadAllWithPlayer(
 
 		if !hasLeftGame {
 			deserializedState, errorFromDeserialization :=
-				newInCloudDatastoreState(matchedGame)
+				newInCloudDatastoreState(
+					gamePersister.datastoreClient,
+					keyForGame(matchedGame.GameName),
+					matchedGame)
 
 			if errorFromDeserialization != nil {
 				return nil, errorFromDeserialization
@@ -129,6 +131,7 @@ func (gamePersister *inCloudDatastorePersister) ReadAllWithPlayer(
 // nil if there was no problem. It returns an error if a game with the given name
 // already exists.
 func (gamePersister *inCloudDatastorePersister) AddGame(
+	executionContext context.Context,
 	gameName string,
 	chatLogLength int,
 	initialActionLog []message.FromPlayer,
@@ -139,14 +142,14 @@ func (gamePersister *inCloudDatastorePersister) AddGame(
 		return fmt.Errorf("Game must have a name")
 	}
 
-	gameKey := datastore.NameKey(keyKind, gameName, nil)
+	gameKey := keyForGame(gameName)
 
 	queryForGameNameAlreadyExists :=
 		datastore.NewQuery("").Filter("__key__ =", gameKey).KeysOnly()
 
 	resultIterator :=
 		gamePersister.datastoreClient.Run(
-			gamePersister.contextForRequests,
+			executionContext,
 			queryForGameNameAlreadyExists)
 
 	// If there is no game already with the given name, the iterator
@@ -166,7 +169,8 @@ func (gamePersister *inCloudDatastorePersister) AddGame(
 	}
 
 	serializableState :=
-		NewSerializableState(gameName,
+		NewSerializableState(
+			gameName,
 			chatLogLength,
 			initialActionLog,
 			gameRuleset,
@@ -175,7 +179,7 @@ func (gamePersister *inCloudDatastorePersister) AddGame(
 
 	_, errorFromPut :=
 		gamePersister.datastoreClient.Put(
-			gamePersister.contextForRequests,
+			executionContext,
 			gameKey,
 			&serializableState)
 
@@ -187,67 +191,69 @@ func (gamePersister *inCloudDatastorePersister) AddGame(
 // ReadAllWithPlayer(playerName). It returns an error if the player is not a
 // participant.
 func (gamePersister *inCloudDatastorePersister) RemoveGameFromListForPlayer(
+	executionContext context.Context,
 	gameName string,
 	playerName string) error {
-	serializablePart, errorFromGet := gamePersister.serializedPart(gameName)
+	gameToUpdate, errorFromGet :=
+		gamePersister.GetInCloudDatastoreState(executionContext, gameName)
 
 	if errorFromGet != nil {
 		return errorFromGet
 	}
 
-	playersWhoLeft := serializablePart.ParticipantsWhoHaveLeft
-
-	for _, playerWhoHasLeft := range playersWhoLeft {
-		if playerWhoHasLeft == playerName {
-			return fmt.Errorf(
-				"Player %v has already left game %v",
-				playerName,
-				gameName)
-		}
-	}
-
-	isParticipant := false
-	for _, participantName := range serializablePart.ParticipantNamesInTurnOrder {
-		if participantName == playerName {
-			isParticipant = true
-		}
-	}
-
-	if !isParticipant {
-		return fmt.Errorf(
-			"Player %v is not a participant of game %v",
-			playerName,
-			gameName)
-	}
-
-	serializablePart.ParticipantsWhoHaveLeft =
-		append(playersWhoLeft, playerName)
-
-	return nil
+	return gameToUpdate.RemovePlayerFromParticipantList(
+		executionContext,
+		playerName)
 }
 
 // Delete deletes the given game from the collection. It returns an error
 // if the Cloud Datastore API returns an error.
-func (gamePersister *inCloudDatastorePersister) Delete(gameName string) error {
+func (gamePersister *inCloudDatastorePersister) Delete(
+	executionContext context.Context,
+	gameName string) error {
 	return gamePersister.datastoreClient.Delete(
-		gamePersister.contextForRequests,
+		executionContext,
 		datastore.NameKey(keyKind, gameName, nil))
+}
+
+func (gamePersister *inCloudDatastorePersister) GetInCloudDatastoreState(
+	executionContext context.Context,
+	gameName string) (*inCloudDatastoreState, error) {
+	gameKey := keyForGame(gameName)
+	serializablePart := SerializableState{}
+
+	errorFromGet :=
+		gamePersister.datastoreClient.Get(
+			executionContext,
+			gameKey,
+			&serializablePart)
+
+	if errorFromGet != nil {
+		return nil, errorFromGet
+	}
+
+	return newInCloudDatastoreState(
+		gamePersister.datastoreClient,
+		gameKey,
+		serializablePart)
 }
 
 // inCloudDatastoreState is a struct meant to encapsulate all the state
 // required for a single game to function, and also to persist itself in
 // Google Cloud Datastore.
-// THIS NEEDS TO HAVE REFERENCES TO STRUCTS WHICH CAN BE USED TO PERSIST
-// THE SERIALIZABLE PART!
 type inCloudDatastoreState struct {
 	mutualExclusion sync.Mutex
+	datastoreClient *datastore.Client
+	keyInDatastore  *datastore.Key
 	DeserializedState
 }
 
 // newInCloudDatastoreState creates a new game given the required information,
 // using the given shuffled deck.
 func newInCloudDatastoreState(
-	serializablePart SerializableState) (game.ReadAndWriteState, error) {
+	datastoreClient *datastore.Client,
+	keyInDatastore *datastore.Key,
+	serializablePart SerializableState) (*inCloudDatastoreState, error) {
 	deserializedRuleset, errorFromRuleset :=
 		game.RulesetFromIdentifier(serializablePart.RulesetIdentifier)
 	if errorFromRuleset != nil {
@@ -256,6 +262,8 @@ func newInCloudDatastoreState(
 
 	newState := &inCloudDatastoreState{
 		mutualExclusion: sync.Mutex{},
+		datastoreClient: datastoreClient,
+		keyInDatastore:  keyInDatastore,
 		DeserializedState: DeserializedState{
 			SerializableState:   serializablePart,
 			deserializedRuleset: deserializedRuleset,
@@ -278,14 +286,15 @@ func (gameState *inCloudDatastoreState) Read() game.ReadonlyState {
 
 // RecordChatMessage records a chat message from the given player.
 func (gameState *inCloudDatastoreState) RecordChatMessage(
+	executionContext context.Context,
 	actingPlayer player.ReadonlyState,
 	chatMessage string) error {
 	gameState.mutualExclusion.Lock()
 	defer gameState.mutualExclusion.Unlock()
 
-	return gameState.SerializableState.RecordChatMessage(
-		actingPlayer,
-		chatMessage)
+	return gameState.uploadSerializablePartIfNoError(
+		executionContext,
+		gameState.SerializableState.RecordChatMessage(actingPlayer, chatMessage))
 }
 
 // EnactTurnByDiscardingAndReplacing increments the turn number and moves the
@@ -298,6 +307,7 @@ func (gameState *inCloudDatastoreState) RecordChatMessage(
 // replacing the card in the hand. It also adds the given numbers to the
 // counts of available hints and mistakes made respectively.
 func (gameState *inCloudDatastoreState) EnactTurnByDiscardingAndReplacing(
+	executionContext context.Context,
 	actionMessage string,
 	actingPlayer player.ReadonlyState,
 	indexInHand int,
@@ -307,13 +317,15 @@ func (gameState *inCloudDatastoreState) EnactTurnByDiscardingAndReplacing(
 	gameState.mutualExclusion.Lock()
 	defer gameState.mutualExclusion.Unlock()
 
-	return gameState.SerializableState.EnactTurnByDiscardingAndReplacing(
-		actionMessage,
-		actingPlayer,
-		indexInHand,
-		knowledgeOfDrawnCard,
-		numberOfReadyHintsToAdd,
-		numberOfMistakesMadeToAdd)
+	return gameState.uploadSerializablePartIfNoError(
+		executionContext,
+		gameState.SerializableState.EnactTurnByDiscardingAndReplacing(
+			actionMessage,
+			actingPlayer,
+			indexInHand,
+			knowledgeOfDrawnCard,
+			numberOfReadyHintsToAdd,
+			numberOfMistakesMadeToAdd))
 }
 
 // EnactTurnByPlayingAndReplacing increments the turn number and moves the card
@@ -326,6 +338,7 @@ func (gameState *inCloudDatastoreState) EnactTurnByDiscardingAndReplacing(
 // card in the hand. It also adds the given number of hints to the count of ready
 // hints available (such as when playing the end of sequence gives a bonus hint).
 func (gameState *inCloudDatastoreState) EnactTurnByPlayingAndReplacing(
+	executionContext context.Context,
 	actionMessage string,
 	actingPlayer player.ReadonlyState,
 	indexInHand int,
@@ -334,12 +347,14 @@ func (gameState *inCloudDatastoreState) EnactTurnByPlayingAndReplacing(
 	gameState.mutualExclusion.Lock()
 	defer gameState.mutualExclusion.Unlock()
 
-	return gameState.SerializableState.EnactTurnByPlayingAndReplacing(
-		actionMessage,
-		actingPlayer,
-		indexInHand,
-		knowledgeOfDrawnCard,
-		numberOfReadyHintsToAdd)
+	return gameState.uploadSerializablePartIfNoError(
+		executionContext,
+		gameState.SerializableState.EnactTurnByPlayingAndReplacing(
+			actionMessage,
+			actingPlayer,
+			indexInHand,
+			knowledgeOfDrawnCard,
+			numberOfReadyHintsToAdd))
 }
 
 // EnactTurnByUpdatingHandWithHint increments the turn number and replaces the
@@ -348,6 +363,7 @@ func (gameState *inCloudDatastoreState) EnactTurnByPlayingAndReplacing(
 // empty, this function also increments the number of turns taken with an empty
 // deck.
 func (gameState *inCloudDatastoreState) EnactTurnByUpdatingHandWithHint(
+	executionContext context.Context,
 	actionMessage string,
 	actingPlayer player.ReadonlyState,
 	receivingPlayerName string,
@@ -356,24 +372,67 @@ func (gameState *inCloudDatastoreState) EnactTurnByUpdatingHandWithHint(
 	gameState.mutualExclusion.Lock()
 	defer gameState.mutualExclusion.Unlock()
 
-	return gameState.SerializableState.EnactTurnByUpdatingHandWithHint(
-		actionMessage,
-		actingPlayer,
-		receivingPlayerName,
-		updatedReceiverKnowledgeOfOwnHand,
-		numberOfReadyHintsToSubtract)
+	return gameState.uploadSerializablePartIfNoError(
+		executionContext,
+		gameState.SerializableState.EnactTurnByUpdatingHandWithHint(
+			actionMessage,
+			actingPlayer,
+			receivingPlayerName,
+			updatedReceiverKnowledgeOfOwnHand,
+			numberOfReadyHintsToSubtract))
 }
 
-func (gamePersister *inCloudDatastorePersister) serializedPart(
-	gameName string) (SerializableState, error) {
-	gameKey := datastore.NameKey(keyKind, gameName, nil)
-	serializablePart := SerializableState{}
+// RemovePlayerFromParticipantList marks the player as no longer being a
+// participant of the given game.
+func (gameState *inCloudDatastoreState) RemovePlayerFromParticipantList(
+	executionContext context.Context,
+	playerName string) error {
+	gameState.mutualExclusion.Lock()
+	defer gameState.mutualExclusion.Unlock()
 
-	errorFromGet :=
-		gamePersister.datastoreClient.Get(
-			gamePersister.contextForRequests,
-			gameKey,
-			&serializablePart)
+	playersWhoHaveLeft := gameState.ParticipantsWhoHaveLeft
 
-	return serializablePart, errorFromGet
+	for _, playerWhoHasLeft := range playersWhoHaveLeft {
+		if playerWhoHasLeft == playerName {
+			return fmt.Errorf(
+				"Player %v has already left game %v",
+				playerName,
+				gameState.GameName)
+		}
+	}
+
+	for _, participantName := range gameState.ParticipantNamesInTurnOrder {
+		if participantName == playerName {
+			gameState.ParticipantsWhoHaveLeft =
+				append(playersWhoHaveLeft, playerName)
+
+			return gameState.uploadSerializablePart(executionContext)
+		}
+	}
+
+	return fmt.Errorf(
+		"Player %v is not a participant of game %v",
+		playerName,
+		gameState.GameName)
+}
+
+func (gameState *inCloudDatastoreState) uploadSerializablePartIfNoError(
+	executionContext context.Context,
+	errorFromUpdatingSerializablePart error) error {
+	if errorFromUpdatingSerializablePart != nil {
+		return errorFromUpdatingSerializablePart
+	}
+
+	return gameState.uploadSerializablePart(executionContext)
+}
+
+func (gameState *inCloudDatastoreState) uploadSerializablePart(
+	executionContext context.Context) error {
+	_, errorFromPut :=
+		gameState.datastoreClient.Put(
+			executionContext,
+			gameState.keyInDatastore,
+			&gameState.SerializableState)
+
+	return errorFromPut
 }

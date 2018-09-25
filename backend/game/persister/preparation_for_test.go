@@ -1,6 +1,7 @@
 package persister_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -289,6 +290,7 @@ func prepareGameStates(
 
 		errorFromAdd :=
 			statePersister.GamePersister.AddGame(
+				context.Background(),
 				testGameName,
 				logLengthForTest,
 				initialActionLog,
@@ -301,7 +303,9 @@ func prepareGameStates(
 		}
 
 		gameState, errorFromGet :=
-			statePersister.GamePersister.ReadAndWriteGame(testGameName)
+			statePersister.GamePersister.ReadAndWriteGame(
+				context.Background(),
+				testGameName)
 
 		if errorFromGet != nil {
 			unitTest.Fatalf("Error when getting game: %v", errorFromGet)

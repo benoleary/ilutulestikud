@@ -1,6 +1,7 @@
 package persister_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -98,7 +99,9 @@ func assertGameStateAsExpectedLocallyAndRetrieved(
 	// We check that the version of the game state retrieved from the
 	// persister is as expected.
 	actualRetrieved, errorFromRetrieval :=
-		actualGameAndPersister.GamePersister.ReadAndWriteGame(actualLocal.Name())
+		actualGameAndPersister.GamePersister.ReadAndWriteGame(
+			context.Background(),
+			actualLocal.Name())
 
 	if errorFromRetrieval != nil {
 		unitTest.Fatalf(

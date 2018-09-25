@@ -1,6 +1,7 @@
 package game
 
 import (
+	"context"
 	"fmt"
 	"sort"
 
@@ -33,10 +34,11 @@ func NewCollection(
 // given name as seen by the given player. If the game does not exist or the
 // player is not a participant, it returns an error.
 func (gameCollection *StateCollection) ViewState(
+	executionContext context.Context,
 	gameName string,
 	playerName string) (ViewForPlayer, error) {
 	gameState, errorFromGet :=
-		gameCollection.statePersister.ReadAndWriteGame(gameName)
+		gameCollection.statePersister.ReadAndWriteGame(executionContext, gameName)
 
 	if errorFromGet != nil {
 		gameDoesNotExistError :=
@@ -49,6 +51,7 @@ func (gameCollection *StateCollection) ViewState(
 	}
 
 	return ViewOnStateForPlayer(
+		executionContext,
 		gameState.Read(),
 		gameCollection.playerProvider,
 		playerName)
@@ -58,8 +61,10 @@ func (gameCollection *StateCollection) ViewState(
 // in a view. It returns an error if there is an error in creating any of the player views.
 // The views are ordered by creation timestamp, oldest first.
 func (gameCollection *StateCollection) ViewAllWithPlayer(
+	executionContext context.Context,
 	playerName string) ([]ViewForPlayer, error) {
-	gameStates, errorFromReadAll := gameCollection.statePersister.ReadAllWithPlayer(playerName)
+	gameStates, errorFromReadAll :=
+		gameCollection.statePersister.ReadAllWithPlayer(executionContext, playerName)
 	if errorFromReadAll != nil {
 		return nil, errorFromReadAll
 	}
@@ -73,6 +78,7 @@ func (gameCollection *StateCollection) ViewAllWithPlayer(
 	for gameIndex := 0; gameIndex < numberOfGames; gameIndex++ {
 		playerView, participantError :=
 			ViewOnStateForPlayer(
+				executionContext,
 				gameStates[gameIndex],
 				gameCollection.playerProvider,
 				playerName)
@@ -96,6 +102,7 @@ func (gameCollection *StateCollection) ViewAllWithPlayer(
 // given definition. It returns an error if a game with the given name already
 // exists, or if the definition includes invalid players.
 func (gameCollection *StateCollection) AddNew(
+	executionContext context.Context,
 	gameName string,
 	gameRuleset Ruleset,
 	playerNames []string) error {
@@ -104,6 +111,7 @@ func (gameCollection *StateCollection) AddNew(
 	card.ShuffleInPlace(initialDeck, gameCollection.statePersister.RandomSeed())
 
 	return gameCollection.AddNewWithGivenDeck(
+		executionContext,
 		gameName,
 		gameRuleset,
 		playerNames,
@@ -114,6 +122,7 @@ func (gameCollection *StateCollection) AddNew(
 // definition and the given deck. It returns an error if a game with the given name
 // already exists, or if the definition includes invalid players.
 func (gameCollection *StateCollection) AddNewWithGivenDeck(
+	executionContext context.Context,
 	gameName string,
 	gameRuleset Ruleset,
 	playerNames []string,
@@ -124,6 +133,7 @@ func (gameCollection *StateCollection) AddNewWithGivenDeck(
 
 	namesWithHands, initialDeck, initialActionLog, errorFromHands :=
 		gameCollection.createPlayerHands(
+			executionContext,
 			playerNames,
 			gameRuleset,
 			initialDeck)
@@ -133,6 +143,7 @@ func (gameCollection *StateCollection) AddNewWithGivenDeck(
 	}
 
 	return gameCollection.statePersister.AddGame(
+		executionContext,
 		gameName,
 		gameCollection.chatLogLength,
 		initialActionLog,
@@ -144,17 +155,18 @@ func (gameCollection *StateCollection) AddNewWithGivenDeck(
 // ExecuteAction finds the given game and wraps it in an executor for the given
 // player, or returns an error.
 func (gameCollection *StateCollection) ExecuteAction(
+	executionContext context.Context,
 	gameName string,
 	playerName string) (ExecutorForPlayer, error) {
 	actingPlayer, playerIdentificationError :=
-		gameCollection.playerProvider.Get(playerName)
+		gameCollection.playerProvider.Get(executionContext, playerName)
 
 	if playerIdentificationError != nil {
 		return nil, playerIdentificationError
 	}
 
 	gameState, errorFromGet :=
-		gameCollection.statePersister.ReadAndWriteGame(gameName)
+		gameCollection.statePersister.ReadAndWriteGame(executionContext, gameName)
 
 	if errorFromGet != nil {
 		errorWrappingErrorFromGet :=
@@ -167,22 +179,26 @@ func (gameCollection *StateCollection) ExecuteAction(
 		return nil, errorWrappingErrorFromGet
 	}
 
-	return ExecutorOfActionsForPlayer(gameState, actingPlayer)
+	return ExecutorOfActionsForPlayer(executionContext, gameState, actingPlayer)
 }
 
 // RemoveGameFromListForPlayer calls the RemoveGameFromListForPlayer of the
 // internal persistence store.
 func (gameCollection *StateCollection) RemoveGameFromListForPlayer(
+	executionContext context.Context,
 	gameName string,
 	playerName string) error {
 	return gameCollection.statePersister.RemoveGameFromListForPlayer(
+		executionContext,
 		gameName,
 		playerName)
 }
 
 // Delete calls the Delete of the internal persistence store.
-func (gameCollection *StateCollection) Delete(gameName string) error {
-	return gameCollection.statePersister.Delete(gameName)
+func (gameCollection *StateCollection) Delete(
+	executionContext context.Context,
+	gameName string) error {
+	return gameCollection.statePersister.Delete(executionContext, gameName)
 }
 
 // createPlayerHands deals out each player's hand (a full hand per player rather
@@ -190,6 +206,7 @@ func (gameCollection *StateCollection) Delete(gameName string) error {
 // paired with their initial hands, the remaining deck, the initial action log, and
 // a possible error.
 func (gameCollection *StateCollection) createPlayerHands(
+	executionContext context.Context,
 	playerNames []string,
 	gameRuleset Ruleset,
 	initialDeck []card.Defined) (
@@ -234,7 +251,8 @@ func (gameCollection *StateCollection) createPlayerHands(
 	for playerIndex := 0; playerIndex < numberOfPlayers; playerIndex++ {
 		playerName := playerNames[playerIndex]
 
-		playerState, errorFromPlayerProvider := gameCollection.playerProvider.Get(playerName)
+		playerState, errorFromPlayerProvider :=
+			gameCollection.playerProvider.Get(executionContext, playerName)
 
 		if errorFromPlayerProvider != nil {
 			return nil, nil, nil, errorFromPlayerProvider

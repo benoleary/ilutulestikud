@@ -1,6 +1,7 @@
 package game_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -78,6 +79,7 @@ func TestWrapperFunctions(unitTest *testing.T) {
 
 	viewForPlayer, errorFromViewState :=
 		gameCollection.ViewState(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -266,6 +268,7 @@ func TestGameIsFinishedWhenEnoughMistakes(unitTest *testing.T) {
 
 	viewForPlayer, errorFromViewState :=
 		gameCollection.ViewState(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -319,6 +322,7 @@ func TestGameIsNotFinishedWhenDeckNotEmpty(unitTest *testing.T) {
 
 	viewForPlayer, errorFromViewState :=
 		gameCollection.ViewState(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -362,6 +366,7 @@ func TestGameIsFinishedWhenTurnsWithEmptyDeckTooLarge(unitTest *testing.T) {
 
 	viewForPlayer, errorFromViewState :=
 		gameCollection.ViewState(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -456,6 +461,7 @@ func TestPlayedSequencesWhenSomeAreEmpty(unitTest *testing.T) {
 
 	viewForPlayer, errorFromViewState :=
 		gameCollection.ViewState(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -611,6 +617,7 @@ func TestPlayedSequencesWhenAllAreNonempty(unitTest *testing.T) {
 
 	viewForPlayer, errorFromViewState :=
 		gameCollection.ViewState(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -737,6 +744,7 @@ func TestDiscardedCards(unitTest *testing.T) {
 
 	viewForPlayer, errorFromViewState :=
 		gameCollection.ViewState(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -787,6 +795,7 @@ func TestPlayerIsForbiddenFromSeeingOwnHand(unitTest *testing.T) {
 
 	viewForPlayer, errorFromViewState :=
 		gameCollection.ViewState(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -833,6 +842,7 @@ func TestErrorFromPlayerProviderAffectsVisibleHandCorrectly(unitTest *testing.T)
 
 	viewForPlayer, errorFromViewState :=
 		gameCollection.ViewState(
+			context.Background(),
 			gameName,
 			viewingPlayer)
 
@@ -947,6 +957,7 @@ func TestPlayerSeesOtherHandCorrectly(unitTest *testing.T) {
 
 	viewForPlayer, errorFromViewState :=
 		gameCollection.ViewState(
+			context.Background(),
 			gameName,
 			viewingPlayer)
 
@@ -1042,6 +1053,7 @@ func TestPlayerSeesOwnInferredHandCorrectly(unitTest *testing.T) {
 
 	viewForPlayer, errorFromViewState :=
 		gameCollection.ViewState(
+			context.Background(),
 			gameName,
 			viewingPlayer)
 

@@ -1,6 +1,7 @@
 package persister_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -92,6 +93,7 @@ func TestSortedLogAfterAppending(unitTest *testing.T) {
 						}
 
 					gameAndDescription.GameState.RecordChatMessage(
+						context.Background(),
 						playerState,
 						chatMessage.MessageText)
 				}

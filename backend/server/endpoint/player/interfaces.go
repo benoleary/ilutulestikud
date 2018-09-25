@@ -1,6 +1,8 @@
 package player
 
 import (
+	"context"
+
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
@@ -12,20 +14,20 @@ type StateCollection interface {
 	// mandated, and may even change with repeated calls to the same unchanged collection
 	// (analogously to the entry set of a standard Golang map, for example), though of
 	// course an implementation may order the slice consistently.
-	All() ([]player.ReadonlyState, error)
+	All(executionContext context.Context) ([]player.ReadonlyState, error)
 
 	// Get should return a read-only state for the given player.
-	Get(playerName string) (player.ReadonlyState, error)
+	Get(executionContext context.Context, playerName string) (player.ReadonlyState, error)
 
 	// AvailableChatColors should return the chat colors available to the collection.
-	AvailableChatColors() []string
+	AvailableChatColors(executionContext context.Context) []string
 
 	// Add should add a new player to the collection, defined by the given arguments.
-	Add(playerName string, chatColor string) error
+	Add(executionContext context.Context, playerName string, chatColor string) error
 
 	// UpdateColor should update the given player with the given chat color.
-	UpdateColor(playerName string, chatColor string) error
+	UpdateColor(executionContext context.Context, playerName string, chatColor string) error
 
 	// Delete should delete the given player from the collection.
-	Delete(playerName string) error
+	Delete(executionContext context.Context, playerName string) error
 }

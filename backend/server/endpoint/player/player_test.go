@@ -84,6 +84,7 @@ func (mockCollection *mockPlayerCollection) getFirstAndEnsureOnly(
 
 // Add gets mocked.
 func (mockCollection *mockPlayerCollection) Add(
+	executionContext context.Context,
 	playerName string,
 	chatColor string) error {
 	mockCollection.recordFunctionAndArgument(
@@ -94,6 +95,7 @@ func (mockCollection *mockPlayerCollection) Add(
 
 // UpdateColor gets mocked.
 func (mockCollection *mockPlayerCollection) UpdateColor(
+	executionContext context.Context,
 	playerName string,
 	chatColor string) error {
 	mockCollection.recordFunctionAndArgument(
@@ -103,7 +105,8 @@ func (mockCollection *mockPlayerCollection) UpdateColor(
 }
 
 // All gets mocked.
-func (mockCollection *mockPlayerCollection) All() ([]player_state.ReadonlyState, error) {
+func (mockCollection *mockPlayerCollection) All(
+	executionContext context.Context) ([]player_state.ReadonlyState, error) {
 	mockCollection.recordFunctionAndArgument(
 		"All",
 		nil)
@@ -111,7 +114,9 @@ func (mockCollection *mockPlayerCollection) All() ([]player_state.ReadonlyState,
 }
 
 // Get gets mocked.
-func (mockCollection *mockPlayerCollection) Get(playerIdentifier string) (player_state.ReadonlyState, error) {
+func (mockCollection *mockPlayerCollection) Get(
+	executionContext context.Context,
+	playerIdentifier string) (player_state.ReadonlyState, error) {
 	mockCollection.recordFunctionAndArgument(
 		"playerIdentifier",
 		playerIdentifier)
@@ -119,7 +124,9 @@ func (mockCollection *mockPlayerCollection) Get(playerIdentifier string) (player
 }
 
 // Delete gets mocked.
-func (mockCollection *mockPlayerCollection) Delete(playerName string) error {
+func (mockCollection *mockPlayerCollection) Delete(
+	executionContext context.Context,
+	playerName string) error {
 	mockCollection.recordFunctionAndArgument(
 		"Delete",
 		playerName)
@@ -127,7 +134,8 @@ func (mockCollection *mockPlayerCollection) Delete(playerName string) error {
 }
 
 // AvailableChatColors gets mocked.
-func (mockCollection *mockPlayerCollection) AvailableChatColors() []string {
+func (mockCollection *mockPlayerCollection) AvailableChatColors(
+	executionContext context.Context) []string {
 	mockCollection.recordFunctionAndArgument(
 		"AvailableChatColors",
 		nil)

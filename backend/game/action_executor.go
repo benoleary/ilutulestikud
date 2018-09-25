@@ -1,6 +1,7 @@
 package game
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/benoleary/ilutulestikud/backend/game/card"
@@ -22,6 +23,7 @@ type ActionExecutor struct {
 // pointer to the executor. If the player is not a participant, it
 // returns nil along with an error.
 func ExecutorOfActionsForPlayer(
+	creationContext context.Context,
 	stateOfGame ReadAndWriteState,
 	actingPlayer player.ReadonlyState) (ExecutorForPlayer, error) {
 	gameParticipants := stateOfGame.Read().PlayerNames()
@@ -53,13 +55,20 @@ func ExecutorOfActionsForPlayer(
 
 // RecordChatMessage records the given chat message from the acting player,
 // or returns an error.
-func (actionExecutor *ActionExecutor) RecordChatMessage(chatMessage string) error {
-	return actionExecutor.gameState.RecordChatMessage(actionExecutor.actingPlayer, chatMessage)
+func (actionExecutor *ActionExecutor) RecordChatMessage(
+	executionContext context.Context,
+	chatMessage string) error {
+	return actionExecutor.gameState.RecordChatMessage(
+		executionContext,
+		actionExecutor.actingPlayer,
+		chatMessage)
 }
 
 // TakeTurnByDiscarding enacts a turn by discarding the indicated card from the hand
 // of the acting player, or returns an error if it was not possible.
-func (actionExecutor *ActionExecutor) TakeTurnByDiscarding(indexInHand int) error {
+func (actionExecutor *ActionExecutor) TakeTurnByDiscarding(
+	executionContext context.Context,
+	indexInHand int) error {
 	// First we must determine if the player is allowed to take an action.
 	discardedCard, errorFromHand :=
 		actionExecutor.cardFromHandIfTurnElseError(indexInHand)
@@ -90,6 +99,7 @@ func (actionExecutor *ActionExecutor) TakeTurnByDiscarding(indexInHand int) erro
 	}
 
 	return actionExecutor.gameState.EnactTurnByDiscardingAndReplacing(
+		executionContext,
 		actionMessage,
 		actionExecutor.actingPlayer,
 		indexInHand,
@@ -101,7 +111,9 @@ func (actionExecutor *ActionExecutor) TakeTurnByDiscarding(indexInHand int) erro
 // TakeTurnByPlaying enacts a turn by attempting to play the indicated card from the hand
 // of the acting player, resulting in the card going into the played area or into the
 // discard pile while causing a mistake, or returns an error if it was not possible.
-func (actionExecutor *ActionExecutor) TakeTurnByPlaying(indexInHand int) error {
+func (actionExecutor *ActionExecutor) TakeTurnByPlaying(
+	executionContext context.Context,
+	indexInHand int) error {
 	// First we must determine if the player is allowed to take an action.
 	selectedCard, errorFromHand :=
 		actionExecutor.cardFromHandIfTurnElseError(indexInHand)
@@ -128,6 +140,7 @@ func (actionExecutor *ActionExecutor) TakeTurnByPlaying(indexInHand int) error {
 				selectedCard.SequenceIndex)
 
 		return actionExecutor.gameState.EnactTurnByDiscardingAndReplacing(
+			executionContext,
 			actionMessage,
 			actionExecutor.actingPlayer,
 			indexInHand,
@@ -150,6 +163,7 @@ func (actionExecutor *ActionExecutor) TakeTurnByPlaying(indexInHand int) error {
 	}
 
 	return actionExecutor.gameState.EnactTurnByPlayingAndReplacing(
+		executionContext,
 		actionMessage,
 		actionExecutor.actingPlayer,
 		indexInHand,
@@ -161,6 +175,7 @@ func (actionExecutor *ActionExecutor) TakeTurnByPlaying(indexInHand int) error {
 // about a color suit with respect to the receiver's hand, or return an error if
 // it was not possible.
 func (actionExecutor *ActionExecutor) TakeTurnByHintingColor(
+	executionContext context.Context,
 	receivingPlayer string,
 	hintedColor string) error {
 	visibleHandOfReceiver, inferredHandOfReceiverBeforeHint, errorFromHand :=
@@ -183,6 +198,7 @@ func (actionExecutor *ActionExecutor) TakeTurnByHintingColor(
 			hintedColor)
 
 	return actionExecutor.gameState.EnactTurnByUpdatingHandWithHint(
+		executionContext,
 		actionMessage,
 		actionExecutor.actingPlayer,
 		receivingPlayer,
@@ -194,6 +210,7 @@ func (actionExecutor *ActionExecutor) TakeTurnByHintingColor(
 // about a sequence index with respect to the receiver's hand, or return an error
 // if it was not possible.
 func (actionExecutor *ActionExecutor) TakeTurnByHintingIndex(
+	executionContext context.Context,
 	receivingPlayer string,
 	hintedIndex int) error {
 	visibleHandOfReceiver, inferredHandOfReceiverBeforeHint, errorFromHand :=
@@ -216,6 +233,7 @@ func (actionExecutor *ActionExecutor) TakeTurnByHintingIndex(
 			hintedIndex)
 
 	return actionExecutor.gameState.EnactTurnByUpdatingHandWithHint(
+		executionContext,
 		actionMessage,
 		actionExecutor.actingPlayer,
 		receivingPlayer,

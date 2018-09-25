@@ -1,6 +1,8 @@
 package game
 
 import (
+	"context"
+
 	"github.com/benoleary/ilutulestikud/backend/game/card"
 	"github.com/benoleary/ilutulestikud/backend/game/message"
 )
@@ -177,27 +179,39 @@ type ViewForPlayer interface {
 type ExecutorForPlayer interface {
 	// RecordChatMessage should record the given chat message from the acting player, or
 	// return an error if it was not possible.
-	RecordChatMessage(chatMessage string) error
+	RecordChatMessage(
+		executionContext context.Context,
+		chatMessage string) error
 
 	// TakeTurnByDiscarding should enact a turn by discarding the indicated card from the
 	// hand of the acting player, or return an error if it was not possible.
-	TakeTurnByDiscarding(indexInHand int) error
+	TakeTurnByDiscarding(
+		executionContext context.Context,
+		indexInHand int) error
 
 	// TakeTurnByPlaying should enact a turn by attempting to play the indicated card from
 	// the hand of the acting player, resulting in the card going into the played area or
 	// into the discard pile while causing a mistake, or return an error if it was not
 	// possible.
-	TakeTurnByPlaying(indexInHand int) error
+	TakeTurnByPlaying(
+		executionContext context.Context,
+		indexInHand int) error
 
 	// TakeTurnByHintingColor should enact a turn by giving a hint to the receiving player
 	// about a color suit with respect to the receiver's hand, or return an error if it was
 	// not possible.
-	TakeTurnByHintingColor(receivingPlayer string, hintedColor string) error
+	TakeTurnByHintingColor(
+		executionContext context.Context,
+		receivingPlayer string,
+		hintedColor string) error
 
 	// TakeTurnByHintingIndex should enact a turn by giving a hint to the receiving player
 	// about a sequence index with respect to the receiver's hand, or return an error if it
 	// was not possible.
-	TakeTurnByHintingIndex(receivingPlayer string, hintedIndex int) error
+	TakeTurnByHintingIndex(
+		executionContext context.Context,
+		receivingPlayer string,
+		hintedIndex int) error
 }
 
 // PlayerNameWithHand is a struct to keep the initial hand of a player with the name,

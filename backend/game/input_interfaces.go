@@ -1,6 +1,7 @@
 package game
 
 import (
+	"context"
 	"time"
 
 	"github.com/benoleary/ilutulestikud/backend/game/card"
@@ -11,7 +12,9 @@ import (
 // ReadonlyPlayerProvider defines an interface for structs to provide
 // player.ReadonlyStates for given player names.
 type ReadonlyPlayerProvider interface {
-	Get(playerName string) (player.ReadonlyState, error)
+	Get(
+		executionContext context.Context,
+		playerName string) (player.ReadonlyState, error)
 }
 
 // ReadonlyState defines the interface for structs which should provide read-only
@@ -82,7 +85,10 @@ type ReadAndWriteState interface {
 	Read() ReadonlyState
 
 	// RecordChatMessage should record a chat message from the given player.
-	RecordChatMessage(actingPlayer player.ReadonlyState, chatMessage string) error
+	RecordChatMessage(
+		executionContext context.Context,
+		actingPlayer player.ReadonlyState,
+		chatMessage string) error
 
 	// EnactTurnByDiscardingAndReplacing should increment the turn number and move the
 	// card in the acting player's hand at the given index into the discard pile, and
@@ -94,6 +100,7 @@ type ReadAndWriteState interface {
 	// the hand. It should also add the given numbers to the counts of available hints
 	// and mistakes made respectively.
 	EnactTurnByDiscardingAndReplacing(
+		executionContext context.Context,
 		actionMessage string,
 		actingPlayer player.ReadonlyState,
 		indexInHand int,
@@ -112,6 +119,7 @@ type ReadAndWriteState interface {
 	// ready hints available (such as when playing the end of sequence gives a bonus
 	// hint).
 	EnactTurnByPlayingAndReplacing(
+		executionContext context.Context,
 		actionMessage string,
 		actingPlayer player.ReadonlyState,
 		indexInHand int,
@@ -124,6 +132,7 @@ type ReadAndWriteState interface {
 	// this function should also increment the number of turns taken with an empty
 	// deck.
 	EnactTurnByUpdatingHandWithHint(
+		executionContext context.Context,
 		actionMessage string,
 		actingPlayer player.ReadonlyState,
 		receivingPlayerName string,
@@ -141,7 +150,9 @@ type StatePersister interface {
 
 	// ReadAndWriteGame should return the ReadAndWriteState corresponding to the given
 	// game name, or nil with an error if it does not exist.
-	ReadAndWriteGame(gameName string) (ReadAndWriteState, error)
+	ReadAndWriteGame(
+		executionContext context.Context,
+		gameName string) (ReadAndWriteState, error)
 
 	// ReadAllWithPlayer should return a slice of all the games in the collection which
 	// have the given player as a participant, where each game is given as a
@@ -149,12 +160,15 @@ type StatePersister interface {
 	// The order is not mandated, and may even change with repeated calls to the same
 	// unchanged persister (analogously to the entry set of a standard Golang map, for
 	// example), though of course an implementation may order the slice consistently.
-	ReadAllWithPlayer(playerName string) ([]ReadonlyState, error)
+	ReadAllWithPlayer(
+		executionContext context.Context,
+		playerName string) ([]ReadonlyState, error)
 
 	// AddGame should add an element to the collection which is a new object implementing
 	// the ReadAndWriteState interface from the given argument. It should return an error
 	// if a game with the given name already exists.
 	AddGame(
+		executionContext context.Context,
 		gameName string,
 		chatLogLength int,
 		initialActionLog []message.FromPlayer,
@@ -166,8 +180,11 @@ type StatePersister interface {
 	// the sense that the game will no longer show up in the result of
 	// ReadAllWithPlayer(playerName). It should return an error if the player is not a
 	// participant of the game, as well as in general I/O errors and so on.
-	RemoveGameFromListForPlayer(gameName string, playerName string) error
+	RemoveGameFromListForPlayer(
+		executionContext context.Context,
+		gameName string,
+		playerName string) error
 
 	// Delete should delete the given game from the persistence store.
-	Delete(gameName string) error
+	Delete(executionContext context.Context, gameName string) error
 }

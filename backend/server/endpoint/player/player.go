@@ -41,9 +41,9 @@ func (handler *Handler) HandleGet(
 
 	switch relevantSegments[0] {
 	case "registered-players":
-		return handler.writeRegisteredPlayers()
+		return handler.writeRegisteredPlayers(requestContext)
 	case "available-colors":
-		return handler.writeAvailableColors()
+		return handler.writeAvailableColors(requestContext)
 	default:
 		return "URI segment " + relevantSegments[0] + " not valid", http.StatusNotFound
 	}
@@ -61,11 +61,11 @@ func (handler *Handler) HandlePost(
 
 	switch relevantSegments[0] {
 	case "new-player":
-		return handler.handleNewPlayer(httpBodyDecoder)
+		return handler.handleNewPlayer(requestContext, httpBodyDecoder)
 	case "update-player":
-		return handler.handleUpdatePlayer(httpBodyDecoder)
+		return handler.handleUpdatePlayer(requestContext, httpBodyDecoder)
 	case "delete-player":
-		return handler.handleDeletePlayer(httpBodyDecoder)
+		return handler.handleDeletePlayer(requestContext, httpBodyDecoder)
 	default:
 		return "URI segment " + relevantSegments[0] + " not valid", http.StatusNotFound
 	}
@@ -74,8 +74,9 @@ func (handler *Handler) HandlePost(
 // writeRegisteredPlayers writes a JSON object into the HTTP response which has
 // the list of player objects as its "Players" attribute. The order of the players
 // may not consistent with repeated calls as ForEndpoint does not guarantee it.
-func (handler *Handler) writeRegisteredPlayers() (interface{}, int) {
-	playerStates, errorFromAll := handler.stateCollection.All()
+func (handler *Handler) writeRegisteredPlayers(
+	requestContext context.Context) (interface{}, int) {
+	playerStates, errorFromAll := handler.stateCollection.All(requestContext)
 	if errorFromAll != nil {
 		return errorFromAll, http.StatusInternalServerError
 	}
@@ -99,9 +100,10 @@ func (handler *Handler) writeRegisteredPlayers() (interface{}, int) {
 
 // writeAvailableColors writes a JSON object into the HTTP response which has
 // the list of strings as its "Colors" attribute.
-func (handler *Handler) writeAvailableColors() (interface{}, int) {
+func (handler *Handler) writeAvailableColors(
+	requestContext context.Context) (interface{}, int) {
 	endpointObject := parsing.ChatColorList{
-		Colors: handler.stateCollection.AvailableChatColors(),
+		Colors: handler.stateCollection.AvailableChatColors(requestContext),
 	}
 
 	return endpointObject, http.StatusOK
@@ -111,6 +113,7 @@ func (handler *Handler) writeAvailableColors() (interface{}, int) {
 // of registered players, and returns the updated list as writeRegisteredPlayerNameListJson
 // would.
 func (handler *Handler) handleNewPlayer(
+	requestContext context.Context,
 	httpBodyDecoder *json.Decoder) (interface{}, int) {
 	var endpointPlayer parsing.PlayerState
 	errorFromParse := httpBodyDecoder.Decode(&endpointPlayer)
@@ -118,7 +121,8 @@ func (handler *Handler) handleNewPlayer(
 		return "Error parsing JSON: " + errorFromParse.Error(), http.StatusBadRequest
 	}
 
-	errorFromAdd := handler.stateCollection.Add(endpointPlayer.Name, endpointPlayer.Color)
+	errorFromAdd :=
+		handler.stateCollection.Add(requestContext, endpointPlayer.Name, endpointPlayer.Color)
 
 	if errorFromAdd != nil {
 		return errorFromAdd, http.StatusBadRequest
@@ -133,13 +137,14 @@ func (handler *Handler) handleNewPlayer(
 		return errorMessage, http.StatusBadRequest
 	}
 
-	return handler.writeRegisteredPlayers()
+	return handler.writeRegisteredPlayers(requestContext)
 }
 
 // handleUpdatePlayer updates the player defined by the JSON of the request's body, taking
 // the "Name" attribute as the key, and returns the updated list as writeRegisteredPlayers
 // would. Attributes which are present are updated, those which are missing remain unchanged.
 func (handler *Handler) handleUpdatePlayer(
+	requestContext context.Context,
 	httpBodyDecoder *json.Decoder) (interface{}, int) {
 	var playerUpdate parsing.PlayerState
 	errorFromParse := httpBodyDecoder.Decode(&playerUpdate)
@@ -148,19 +153,23 @@ func (handler *Handler) handleUpdatePlayer(
 	}
 
 	updateError :=
-		handler.stateCollection.UpdateColor(playerUpdate.Name, playerUpdate.Color)
+		handler.stateCollection.UpdateColor(
+			requestContext,
+			playerUpdate.Name,
+			playerUpdate.Color)
 
 	if updateError != nil {
 		return updateError, http.StatusBadRequest
 	}
 
-	return handler.writeRegisteredPlayers()
+	return handler.writeRegisteredPlayers(requestContext)
 }
 
 // handleUpdatePlayer updates the player defined by the JSON of the request's body, taking
 // the "Name" attribute as the key, and returns the updated list as writeRegisteredPlayers
 // would. Attributes which are present are updated, those which are missing remain unchanged.
 func (handler *Handler) handleDeletePlayer(
+	requestContext context.Context,
 	httpBodyDecoder *json.Decoder) (interface{}, int) {
 	var playerToDelete parsing.PlayerState
 	errorFromParse := httpBodyDecoder.Decode(&playerToDelete)
@@ -168,10 +177,11 @@ func (handler *Handler) handleDeletePlayer(
 		return "Error parsing JSON: " + errorFromParse.Error(), http.StatusBadRequest
 	}
 
-	deleteError := handler.stateCollection.Delete(playerToDelete.Name)
+	deleteError :=
+		handler.stateCollection.Delete(requestContext, playerToDelete.Name)
 	if deleteError != nil {
 		return deleteError, http.StatusInternalServerError
 	}
 
-	return handler.writeRegisteredPlayers()
+	return handler.writeRegisteredPlayers(requestContext)
 }

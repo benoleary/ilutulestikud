@@ -1,6 +1,7 @@
 package game_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -20,6 +21,7 @@ func TestViewErrorWhenPersisterGivesError(unitTest *testing.T) {
 
 	viewForPlayer, errorFromViewState :=
 		gameCollection.ViewState(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -51,6 +53,7 @@ func TestViewErrorWhenPlayerNotParticipant(unitTest *testing.T) {
 
 	viewForPlayer, errorFromViewState :=
 		gameCollection.ViewState(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -79,6 +82,7 @@ func TestViewCorrectWhenPersisterGivesValidGame(unitTest *testing.T) {
 
 	viewForPlayer, errorFromViewState :=
 		gameCollection.ViewState(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -125,7 +129,7 @@ func TestViewErrorWhenPersisterGivesErrorOnAll(unitTest *testing.T) {
 	mockPersister.ReturnForNontestError = fmt.Errorf("Expected error for test")
 
 	viewsForPlayer, errorFromViewAll :=
-		gameCollection.ViewAllWithPlayer(playerName)
+		gameCollection.ViewAllWithPlayer(context.Background(), playerName)
 
 	if errorFromViewAll == nil {
 		unitTest.Fatalf(
@@ -162,7 +166,7 @@ func TestErrorWhenViewErrorOnStateFromAll(unitTest *testing.T) {
 	}
 
 	viewsForPlayer, errorFromViewAll :=
-		gameCollection.ViewAllWithPlayer(playerName)
+		gameCollection.ViewAllWithPlayer(context.Background(), playerName)
 
 	if errorFromViewAll == nil {
 		unitTest.Fatalf(
@@ -219,7 +223,7 @@ func TestViewsCorrectFromAllForPlayer(unitTest *testing.T) {
 	}
 
 	viewsForPlayer, errorFromViewAll :=
-		gameCollection.ViewAllWithPlayer(playerName)
+		gameCollection.ViewAllWithPlayer(context.Background(), playerName)
 
 	if errorFromViewAll != nil {
 		unitTest.Fatalf(
@@ -354,6 +358,7 @@ func TestRejectAddNewWhenInvalid(unitTest *testing.T) {
 
 			errorFromAddNew :=
 				gameCollection.AddNewWithGivenDeck(
+					context.Background(),
 					testCase.gameName,
 					testRuleset,
 					testCase.playerNames,
@@ -480,6 +485,7 @@ func TestAddNewWithGivenShuffle(unitTest *testing.T) {
 
 	errorFromAddNew :=
 		gameCollection.AddNewWithGivenDeck(
+			context.Background(),
 			gameName,
 			testRuleset,
 			gameParticipants,
@@ -597,6 +603,7 @@ func TestAddNewWithDefaultShuffle(unitTest *testing.T) {
 
 	errorFromAddNew :=
 		gameCollection.AddNew(
+			context.Background(),
 			gameName,
 			testRuleset,
 			gameParticipants)
@@ -712,6 +719,7 @@ func TestExecutorErrorWhenPersisterGivesError(unitTest *testing.T) {
 
 	executorForPlayer, errorFromExecuteAction :=
 		gameCollection.ExecuteAction(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -744,6 +752,7 @@ func TestExecutorErrorWhenPlayerNotRegistered(unitTest *testing.T) {
 
 	executorForPlayer, errorFromExecuteAction :=
 		gameCollection.ExecuteAction(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -775,6 +784,7 @@ func TestExecutorErrorWhenPlayerNotParticipant(unitTest *testing.T) {
 
 	executorForPlayer, errorFromExecuteAction :=
 		gameCollection.ExecuteAction(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -803,6 +813,7 @@ func TestExecutorCorrectWhenPersisterGivesValidGame(unitTest *testing.T) {
 
 	executorForPlayer, errorFromExecuteAction :=
 		gameCollection.ExecuteAction(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -822,7 +833,7 @@ func TestExecutorCorrectWhenPersisterGivesValidGame(unitTest *testing.T) {
 	mockReadAndWriteState.TestErrorForRecordChatMessage = nil
 
 	errorFromRecordChatMessage :=
-		executorForPlayer.RecordChatMessage(testMessage)
+		executorForPlayer.RecordChatMessage(context.Background(), testMessage)
 
 	if errorFromRecordChatMessage != expectedError {
 		unitTest.Fatalf(
@@ -885,7 +896,10 @@ func TestReturnErrorFromPersisterRemoveFromGame(unitTest *testing.T) {
 			playerName := "Mock Player"
 
 			actualError :=
-				gameCollection.RemoveGameFromListForPlayer(gameName, playerName)
+				gameCollection.RemoveGameFromListForPlayer(
+					context.Background(),
+					gameName,
+					playerName)
 
 			if actualError != testCase.expectedError {
 				unitTest.Errorf(
@@ -924,7 +938,7 @@ func TestReturnErrorFromPersisterDelete(unitTest *testing.T) {
 		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
 			gameName := "mock game"
 
-			actualError := gameCollection.Delete(gameName)
+			actualError := gameCollection.Delete(context.Background(), gameName)
 
 			if actualError != testCase.expectedError {
 				unitTest.Errorf(

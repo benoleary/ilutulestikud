@@ -1,6 +1,7 @@
 package game_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/benoleary/ilutulestikud/backend/game"
@@ -161,22 +162,29 @@ type mockActionExecutor struct {
 }
 
 // RecordChatMessage gets mocked.
-func (mockExecutor *mockActionExecutor) RecordChatMessage(chatMessage string) error {
+func (mockExecutor *mockActionExecutor) RecordChatMessage(
+	executionContext context.Context,
+	chatMessage string) error {
 	return mockExecutor.ErrorToReturn
 }
 
 // TakeTurnByDiscarding gets mocked.
-func (mockExecutor *mockActionExecutor) TakeTurnByDiscarding(indexInHandToDiscard int) error {
+func (mockExecutor *mockActionExecutor) TakeTurnByDiscarding(
+	executionContext context.Context,
+	indexInHandToDiscard int) error {
 	return mockExecutor.ErrorToReturn
 }
 
 // TakeTurnByPlaying gets mocked.
-func (mockExecutor *mockActionExecutor) TakeTurnByPlaying(indexInHandToDiscard int) error {
+func (mockExecutor *mockActionExecutor) TakeTurnByPlaying(
+	executionContext context.Context,
+	indexInHandToDiscard int) error {
 	return mockExecutor.ErrorToReturn
 }
 
 // TakeTurnByHintingColor gets mocked.
 func (mockExecutor *mockActionExecutor) TakeTurnByHintingColor(
+	executionContext context.Context,
 	receivingPlayer string,
 	hintedColor string) error {
 	return mockExecutor.ErrorToReturn
@@ -184,6 +192,7 @@ func (mockExecutor *mockActionExecutor) TakeTurnByHintingColor(
 
 // TakeTurnByHintingIndex gets mocked.
 func (mockExecutor *mockActionExecutor) TakeTurnByHintingIndex(
+	executionContext context.Context,
 	receivingPlayer string,
 	hintedIndex int) error {
 	return mockExecutor.ErrorToReturn
@@ -224,6 +233,7 @@ func (mockCollection *mockGameCollection) getFirstAndEnsureOnly(
 
 // ViewState gets mocked.
 func (mockCollection *mockGameCollection) ViewState(
+	executionContext context.Context,
 	gameName string,
 	playerName string) (game.ViewForPlayer, error) {
 	mockCollection.recordFunctionAndArgument(
@@ -234,6 +244,7 @@ func (mockCollection *mockGameCollection) ViewState(
 
 // ViewAllWithPlayer gets mocked.
 func (mockCollection *mockGameCollection) ViewAllWithPlayer(
+	executionContext context.Context,
 	playerName string) ([]game.ViewForPlayer, error) {
 	mockCollection.recordFunctionAndArgument(
 		"ViewAllWithPlayer",
@@ -243,6 +254,7 @@ func (mockCollection *mockGameCollection) ViewAllWithPlayer(
 
 // ExecuteAction gets mocked.
 func (mockCollection *mockGameCollection) ExecuteAction(
+	executionContext context.Context,
 	gameName string,
 	playerName string) (game.ExecutorForPlayer, error) {
 	mockCollection.recordFunctionAndArgument(
@@ -253,6 +265,7 @@ func (mockCollection *mockGameCollection) ExecuteAction(
 
 // AddNew gets mocked.
 func (mockCollection *mockGameCollection) AddNew(
+	executionContext context.Context,
 	gameName string,
 	gameRuleset game.Ruleset,
 	playerNames []string) error {
@@ -290,6 +303,7 @@ func (mockCollection *mockGameCollection) AddNew(
 
 // RemoveGameFromListForPlayer gets mocked.
 func (mockCollection *mockGameCollection) RemoveGameFromListForPlayer(
+	executionContext context.Context,
 	gameName string,
 	playerName string) error {
 	mockCollection.recordFunctionAndArgument(
@@ -299,7 +313,9 @@ func (mockCollection *mockGameCollection) RemoveGameFromListForPlayer(
 }
 
 // Delete gets mocked.
-func (mockCollection *mockGameCollection) Delete(gameName string) error {
+func (mockCollection *mockGameCollection) Delete(
+	executionContext context.Context,
+	gameName string) error {
 	mockCollection.recordFunctionAndArgument(
 		"Delete",
 		gameName)

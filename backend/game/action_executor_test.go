@@ -1,6 +1,7 @@
 package game_test
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -31,6 +32,7 @@ func TestRecordChatMessageReturnsErrorIfStateProducesError(unitTest *testing.T) 
 
 	executorForPlayer, errorFromExecuteAction :=
 		gameCollection.ExecuteAction(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -43,7 +45,8 @@ func TestRecordChatMessageReturnsErrorIfStateProducesError(unitTest *testing.T) 
 	}
 
 	chatMessage := "Some irrelevant text"
-	errorFromRecordChatMessage := executorForPlayer.RecordChatMessage(chatMessage)
+	errorFromRecordChatMessage :=
+		executorForPlayer.RecordChatMessage(context.Background(), chatMessage)
 
 	if errorFromRecordChatMessage == nil {
 		unitTest.Fatalf(
@@ -76,6 +79,7 @@ func TestRecordChatMessageReturnsNoErrorIfStateProducesNoError(unitTest *testing
 
 	executorForPlayer, errorFromExecuteAction :=
 		gameCollection.ExecuteAction(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -89,7 +93,7 @@ func TestRecordChatMessageReturnsNoErrorIfStateProducesNoError(unitTest *testing
 
 	chatMessage := "Some irrelevant text"
 	errorFromRecordChatMessage :=
-		executorForPlayer.RecordChatMessage(chatMessage)
+		executorForPlayer.RecordChatMessage(context.Background(), chatMessage)
 
 	if errorFromRecordChatMessage != nil {
 		unitTest.Fatalf(
@@ -123,6 +127,7 @@ func TestRejectTakeTurnByDiscardingIfTooManyMistakesMade(unitTest *testing.T) {
 
 	executorForPlayer, errorFromExecuteAction :=
 		gameCollection.ExecuteAction(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -136,7 +141,7 @@ func TestRejectTakeTurnByDiscardingIfTooManyMistakesMade(unitTest *testing.T) {
 
 	indexInHandToDiscard := 1
 	errorFromTakeTurnByDiscarding :=
-		executorForPlayer.TakeTurnByDiscarding(indexInHandToDiscard)
+		executorForPlayer.TakeTurnByDiscarding(context.Background(), indexInHandToDiscard)
 
 	if errorFromTakeTurnByDiscarding == nil {
 		unitTest.Fatalf(
@@ -168,6 +173,7 @@ func TestRejectTakeTurnByDiscardingIfNotPlayerTurn(unitTest *testing.T) {
 
 	executorForPlayer, errorFromExecuteAction :=
 		gameCollection.ExecuteAction(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -181,7 +187,7 @@ func TestRejectTakeTurnByDiscardingIfNotPlayerTurn(unitTest *testing.T) {
 
 	indexInHandToDiscard := 1
 	errorFromTakeTurnByDiscarding :=
-		executorForPlayer.TakeTurnByDiscarding(indexInHandToDiscard)
+		executorForPlayer.TakeTurnByDiscarding(context.Background(), indexInHandToDiscard)
 
 	if errorFromTakeTurnByDiscarding == nil {
 		unitTest.Fatalf(
@@ -214,6 +220,7 @@ func TestRejectTakeTurnByDiscardingIfErrorGettingHand(unitTest *testing.T) {
 
 	executorForPlayer, errorFromExecuteAction :=
 		gameCollection.ExecuteAction(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -227,7 +234,7 @@ func TestRejectTakeTurnByDiscardingIfErrorGettingHand(unitTest *testing.T) {
 
 	indexInHandToDiscard := 1
 	errorFromTakeTurnByDiscarding :=
-		executorForPlayer.TakeTurnByDiscarding(indexInHandToDiscard)
+		executorForPlayer.TakeTurnByDiscarding(context.Background(), indexInHandToDiscard)
 
 	if errorFromTakeTurnByDiscarding == nil {
 		unitTest.Fatalf(
@@ -262,6 +269,7 @@ func TestRejectTakeTurnByDiscardingIfPlayerHandAlreadyTooSmall(unitTest *testing
 
 	executorForPlayer, errorFromExecuteAction :=
 		gameCollection.ExecuteAction(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -275,7 +283,7 @@ func TestRejectTakeTurnByDiscardingIfPlayerHandAlreadyTooSmall(unitTest *testing
 
 	indexInHandToDiscard := 1
 	errorFromTakeTurnByDiscarding :=
-		executorForPlayer.TakeTurnByDiscarding(indexInHandToDiscard)
+		executorForPlayer.TakeTurnByDiscarding(context.Background(), indexInHandToDiscard)
 
 	if errorFromTakeTurnByDiscarding == nil {
 		unitTest.Fatalf(
@@ -315,6 +323,7 @@ func TestRejectTakeTurnByDiscardingIfIndexNegative(unitTest *testing.T) {
 
 	executorForPlayer, errorFromExecuteAction :=
 		gameCollection.ExecuteAction(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -328,7 +337,7 @@ func TestRejectTakeTurnByDiscardingIfIndexNegative(unitTest *testing.T) {
 
 	indexInHandToDiscard := -1
 	errorFromTakeTurnByDiscarding :=
-		executorForPlayer.TakeTurnByDiscarding(indexInHandToDiscard)
+		executorForPlayer.TakeTurnByDiscarding(context.Background(), indexInHandToDiscard)
 
 	if errorFromTakeTurnByDiscarding == nil {
 		unitTest.Fatalf(
@@ -368,6 +377,7 @@ func TestRejectTakeTurnByDiscardingIfIndexTooLarge(unitTest *testing.T) {
 
 	executorForPlayer, errorFromExecuteAction :=
 		gameCollection.ExecuteAction(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -381,7 +391,7 @@ func TestRejectTakeTurnByDiscardingIfIndexTooLarge(unitTest *testing.T) {
 
 	indexInHandToDiscard := correctHandSize
 	errorFromTakeTurnByDiscarding :=
-		executorForPlayer.TakeTurnByDiscarding(indexInHandToDiscard)
+		executorForPlayer.TakeTurnByDiscarding(context.Background(), indexInHandToDiscard)
 
 	if errorFromTakeTurnByDiscarding == nil {
 		unitTest.Fatalf(
@@ -433,6 +443,7 @@ func TestTakeTurnByDiscardingWhenAlreadyMaximumHints(unitTest *testing.T) {
 
 	executorForPlayer, errorFromExecuteAction :=
 		gameCollection.ExecuteAction(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -445,7 +456,7 @@ func TestTakeTurnByDiscardingWhenAlreadyMaximumHints(unitTest *testing.T) {
 	}
 
 	errorFromTakeTurnByDiscarding :=
-		executorForPlayer.TakeTurnByDiscarding(indexInHandToDiscard)
+		executorForPlayer.TakeTurnByDiscarding(context.Background(), indexInHandToDiscard)
 
 	if errorFromTakeTurnByDiscarding != nil {
 		unitTest.Fatalf(
@@ -463,7 +474,8 @@ func TestTakeTurnByDiscardingWhenAlreadyMaximumHints(unitTest *testing.T) {
 			actualArguments)
 	}
 
-	expectedPlayerState, errorFromGetPlayer := playerProvider.Get(playerName)
+	expectedPlayerState, errorFromGetPlayer :=
+		playerProvider.Get(context.Background(), playerName)
 	if errorFromGetPlayer != nil {
 		unitTest.Fatalf(
 			"mock player provider's Get(%v) produced unexpected error %v",
@@ -540,6 +552,7 @@ func TestTakeTurnByDiscardingWhenLessThanMaximumHints(unitTest *testing.T) {
 
 	executorForPlayer, errorFromExecuteAction :=
 		gameCollection.ExecuteAction(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -552,7 +565,7 @@ func TestTakeTurnByDiscardingWhenLessThanMaximumHints(unitTest *testing.T) {
 	}
 
 	errorFromTakeTurnByDiscarding :=
-		executorForPlayer.TakeTurnByDiscarding(indexInHandToDiscard)
+		executorForPlayer.TakeTurnByDiscarding(context.Background(), indexInHandToDiscard)
 
 	if errorFromTakeTurnByDiscarding != nil {
 		unitTest.Fatalf(
@@ -570,7 +583,8 @@ func TestTakeTurnByDiscardingWhenLessThanMaximumHints(unitTest *testing.T) {
 			actualArguments)
 	}
 
-	expectedPlayerState, errorFromGetPlayer := playerProvider.Get(playerName)
+	expectedPlayerState, errorFromGetPlayer :=
+		playerProvider.Get(context.Background(), playerName)
 	if errorFromGetPlayer != nil {
 		unitTest.Fatalf(
 			"mock player provider's Get(%v) produced unexpected error %v",
@@ -628,6 +642,7 @@ func TestRejectTakeTurnByPlayingIfTooManyMistakesMade(unitTest *testing.T) {
 
 	executorForPlayer, errorFromExecuteAction :=
 		gameCollection.ExecuteAction(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -641,7 +656,7 @@ func TestRejectTakeTurnByPlayingIfTooManyMistakesMade(unitTest *testing.T) {
 
 	indexInHandToPlay := 1
 	errorFromTakeTurnByPlaying :=
-		executorForPlayer.TakeTurnByPlaying(indexInHandToPlay)
+		executorForPlayer.TakeTurnByPlaying(context.Background(), indexInHandToPlay)
 
 	if errorFromTakeTurnByPlaying == nil {
 		unitTest.Fatalf(
@@ -673,6 +688,7 @@ func TestRejectTakeTurnByPlayingIfNotPlayerTurn(unitTest *testing.T) {
 
 	executorForPlayer, errorFromExecuteAction :=
 		gameCollection.ExecuteAction(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -686,7 +702,7 @@ func TestRejectTakeTurnByPlayingIfNotPlayerTurn(unitTest *testing.T) {
 
 	indexInHandToPlay := 1
 	errorFromTakeTurnByPlaying :=
-		executorForPlayer.TakeTurnByPlaying(indexInHandToPlay)
+		executorForPlayer.TakeTurnByPlaying(context.Background(), indexInHandToPlay)
 
 	if errorFromTakeTurnByPlaying == nil {
 		unitTest.Fatalf(
@@ -719,6 +735,7 @@ func TestRejectTakeTurnByPlayingIfErrorGettingHand(unitTest *testing.T) {
 
 	executorForPlayer, errorFromExecuteAction :=
 		gameCollection.ExecuteAction(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -732,7 +749,7 @@ func TestRejectTakeTurnByPlayingIfErrorGettingHand(unitTest *testing.T) {
 
 	indexInHandToPlay := 1
 	errorFromTakeTurnByPlaying :=
-		executorForPlayer.TakeTurnByPlaying(indexInHandToPlay)
+		executorForPlayer.TakeTurnByPlaying(context.Background(), indexInHandToPlay)
 
 	if errorFromTakeTurnByPlaying == nil {
 		unitTest.Fatalf(
@@ -767,6 +784,7 @@ func TestRejectTakeTurnByPlayingIfPlayerHandAlreadyTooSmall(unitTest *testing.T)
 
 	executorForPlayer, errorFromExecuteAction :=
 		gameCollection.ExecuteAction(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -780,7 +798,7 @@ func TestRejectTakeTurnByPlayingIfPlayerHandAlreadyTooSmall(unitTest *testing.T)
 
 	indexInHandToPlay := 1
 	errorFromTakeTurnByPlaying :=
-		executorForPlayer.TakeTurnByPlaying(indexInHandToPlay)
+		executorForPlayer.TakeTurnByPlaying(context.Background(), indexInHandToPlay)
 
 	if errorFromTakeTurnByPlaying == nil {
 		unitTest.Fatalf(
@@ -820,6 +838,7 @@ func TestRejectTakeTurnByPlayingIfIndexNegative(unitTest *testing.T) {
 
 	executorForPlayer, errorFromExecuteAction :=
 		gameCollection.ExecuteAction(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -833,7 +852,7 @@ func TestRejectTakeTurnByPlayingIfIndexNegative(unitTest *testing.T) {
 
 	indexInHandToPlay := -1
 	errorFromTakeTurnByPlaying :=
-		executorForPlayer.TakeTurnByPlaying(indexInHandToPlay)
+		executorForPlayer.TakeTurnByPlaying(context.Background(), indexInHandToPlay)
 
 	if errorFromTakeTurnByPlaying == nil {
 		unitTest.Fatalf(
@@ -873,6 +892,7 @@ func TestRejectTakeTurnByPlayingIfIndexTooLarge(unitTest *testing.T) {
 
 	executorForPlayer, errorFromExecuteAction :=
 		gameCollection.ExecuteAction(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -886,7 +906,7 @@ func TestRejectTakeTurnByPlayingIfIndexTooLarge(unitTest *testing.T) {
 
 	indexInHandToPlay := correctHandSize
 	errorFromTakeTurnByPlaying :=
-		executorForPlayer.TakeTurnByPlaying(indexInHandToPlay)
+		executorForPlayer.TakeTurnByPlaying(context.Background(), indexInHandToPlay)
 
 	if errorFromTakeTurnByPlaying == nil {
 		unitTest.Fatalf(
@@ -949,6 +969,7 @@ func TestMistakeWhenTakingTurnByPlaying(unitTest *testing.T) {
 
 	executorForPlayer, errorFromExecuteAction :=
 		gameCollection.ExecuteAction(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -961,7 +982,7 @@ func TestMistakeWhenTakingTurnByPlaying(unitTest *testing.T) {
 	}
 
 	errorFromTakeTurnByPlaying :=
-		executorForPlayer.TakeTurnByPlaying(indexInHandToAttemptToPlay)
+		executorForPlayer.TakeTurnByPlaying(context.Background(), indexInHandToAttemptToPlay)
 
 	if errorFromTakeTurnByPlaying != nil {
 		unitTest.Fatalf(
@@ -979,7 +1000,8 @@ func TestMistakeWhenTakingTurnByPlaying(unitTest *testing.T) {
 			actualArguments)
 	}
 
-	expectedPlayerState, errorFromGetPlayer := playerProvider.Get(playerName)
+	expectedPlayerState, errorFromGetPlayer :=
+		playerProvider.Get(context.Background(), playerName)
 	if errorFromGetPlayer != nil {
 		unitTest.Fatalf(
 			"mock player provider's Get(%v) produced unexpected error %v",
@@ -1070,6 +1092,7 @@ func TestTakeTurnByPlayingWithNoBonusHintWhenLessThanMaximumHints(unitTest *test
 
 	executorForPlayer, errorFromExecuteAction :=
 		gameCollection.ExecuteAction(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -1082,7 +1105,7 @@ func TestTakeTurnByPlayingWithNoBonusHintWhenLessThanMaximumHints(unitTest *test
 	}
 
 	errorFromTakeTurnByPlaying :=
-		executorForPlayer.TakeTurnByPlaying(indexInHandToPlay)
+		executorForPlayer.TakeTurnByPlaying(context.Background(), indexInHandToPlay)
 
 	if errorFromTakeTurnByPlaying != nil {
 		unitTest.Fatalf(
@@ -1100,7 +1123,8 @@ func TestTakeTurnByPlayingWithNoBonusHintWhenLessThanMaximumHints(unitTest *test
 			actualArguments)
 	}
 
-	expectedPlayerState, errorFromGetPlayer := playerProvider.Get(playerName)
+	expectedPlayerState, errorFromGetPlayer :=
+		playerProvider.Get(context.Background(), playerName)
 	if errorFromGetPlayer != nil {
 		unitTest.Fatalf(
 			"mock player provider's Get(%v) produced unexpected error %v",
@@ -1191,6 +1215,7 @@ func TestTakeTurnByPlayingWithBonusHintWhenAlreadyAtMaximumHints(unitTest *testi
 
 	executorForPlayer, errorFromExecuteAction :=
 		gameCollection.ExecuteAction(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -1203,7 +1228,7 @@ func TestTakeTurnByPlayingWithBonusHintWhenAlreadyAtMaximumHints(unitTest *testi
 	}
 
 	errorFromTakeTurnByPlaying :=
-		executorForPlayer.TakeTurnByPlaying(indexInHandToPlay)
+		executorForPlayer.TakeTurnByPlaying(context.Background(), indexInHandToPlay)
 
 	if errorFromTakeTurnByPlaying != nil {
 		unitTest.Fatalf(
@@ -1221,7 +1246,8 @@ func TestTakeTurnByPlayingWithBonusHintWhenAlreadyAtMaximumHints(unitTest *testi
 			actualArguments)
 	}
 
-	expectedPlayerState, errorFromGetPlayer := playerProvider.Get(playerName)
+	expectedPlayerState, errorFromGetPlayer :=
+		playerProvider.Get(context.Background(), playerName)
 	if errorFromGetPlayer != nil {
 		unitTest.Fatalf(
 			"mock player provider's Get(%v) produced unexpected error %v",
@@ -1312,6 +1338,7 @@ func TestTakeTurnByPlayingWithBonusHintWhenLessThanMaximumHints(unitTest *testin
 
 	executorForPlayer, errorFromExecuteAction :=
 		gameCollection.ExecuteAction(
+			context.Background(),
 			gameName,
 			playerName)
 
@@ -1324,7 +1351,7 @@ func TestTakeTurnByPlayingWithBonusHintWhenLessThanMaximumHints(unitTest *testin
 	}
 
 	errorFromTakeTurnByPlaying :=
-		executorForPlayer.TakeTurnByPlaying(indexInHandToPlay)
+		executorForPlayer.TakeTurnByPlaying(context.Background(), indexInHandToPlay)
 
 	if errorFromTakeTurnByPlaying != nil {
 		unitTest.Fatalf(
@@ -1342,7 +1369,8 @@ func TestTakeTurnByPlayingWithBonusHintWhenLessThanMaximumHints(unitTest *testin
 			actualArguments)
 	}
 
-	expectedPlayerState, errorFromGetPlayer := playerProvider.Get(playerName)
+	expectedPlayerState, errorFromGetPlayer :=
+		playerProvider.Get(context.Background(), playerName)
 	if errorFromGetPlayer != nil {
 		unitTest.Fatalf(
 			"mock player provider's Get(%v) produced unexpected error %v",
@@ -1484,6 +1512,7 @@ func TestRejectTakeTurnByHintWithoutCallingPersisterWriteFunction(unitTest *test
 
 			executorForPlayer, errorFromExecuteAction :=
 				gameCollection.ExecuteAction(
+					context.Background(),
 					gameName,
 					hintingPlayer)
 			if errorFromExecuteAction != nil {
@@ -1495,7 +1524,10 @@ func TestRejectTakeTurnByHintWithoutCallingPersisterWriteFunction(unitTest *test
 			}
 
 			errorFromColorHint :=
-				executorForPlayer.TakeTurnByHintingColor(testCase.receiverName, testColor)
+				executorForPlayer.TakeTurnByHintingColor(
+					context.Background(),
+					testCase.receiverName,
+					testColor)
 
 			if errorFromColorHint == nil {
 				unitTest.Fatalf(
@@ -1505,7 +1537,10 @@ func TestRejectTakeTurnByHintWithoutCallingPersisterWriteFunction(unitTest *test
 			}
 
 			errorFromIndexHint :=
-				executorForPlayer.TakeTurnByHintingIndex(testCase.receiverName, testIndex)
+				executorForPlayer.TakeTurnByHintingIndex(
+					context.Background(),
+					testCase.receiverName,
+					testIndex)
 
 			if errorFromIndexHint == nil {
 				unitTest.Fatalf(
@@ -1584,6 +1619,7 @@ func TestPropagateErrorFromTakeTurnByHintFromCallingPersisterWriteFunction(unitT
 
 			executorForPlayer, errorFromExecuteAction :=
 				gameCollection.ExecuteAction(
+					context.Background(),
 					gameName,
 					hintingPlayer)
 			if errorFromExecuteAction != nil {
@@ -1595,7 +1631,10 @@ func TestPropagateErrorFromTakeTurnByHintFromCallingPersisterWriteFunction(unitT
 			}
 
 			errorFromColorHint :=
-				executorForPlayer.TakeTurnByHintingColor(receivingPlayer, testColor)
+				executorForPlayer.TakeTurnByHintingColor(
+					context.Background(),
+					receivingPlayer,
+					testColor)
 
 			if errorFromColorHint != testCase.errorForEnactTurn {
 				unitTest.Fatalf(
@@ -1648,7 +1687,10 @@ func TestPropagateErrorFromTakeTurnByHintFromCallingPersisterWriteFunction(unitT
 			mockReadAndWriteState.ArgumentsFromEnactTurnByUpdatingHandWithHint =
 				[]argumentsForEnactTurnByHint{}
 			errorFromIndexHint :=
-				executorForPlayer.TakeTurnByHintingIndex(receivingPlayer, testIndex)
+				executorForPlayer.TakeTurnByHintingIndex(
+					context.Background(),
+					receivingPlayer,
+					testIndex)
 
 			if errorFromIndexHint != testCase.errorForEnactTurn {
 				unitTest.Fatalf(
