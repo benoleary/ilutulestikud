@@ -21,10 +21,35 @@ func TestInvalidIdentifierProducesError(unitTest *testing.T) {
 	}
 }
 
-func TestAvailableRulesetsHaveUniqueDescriptions(unitTest *testing.T) {
+func TestAvailableRulesetsIdentifierProducesError(unitTest *testing.T) {
+	invalidIdentifier := -1
+	invalidRuleset, errorFromGet :=
+		game.RulesetFromIdentifier(invalidIdentifier)
+
+	if errorFromGet == nil {
+		unitTest.Fatalf(
+			"RulesetFromIdentifier(%v) %+v produced nil error",
+			invalidIdentifier,
+			invalidRuleset)
+	}
+}
+
+func TestAvailableRulesetsHaveUniqueIdentifiersAndDescriptions(unitTest *testing.T) {
+	identifierMap := make(map[int]bool, 0)
 	descriptionMap := make(map[string]bool, 0)
 
-	for _, validIdentifier := range game.ValidRulesetIdentifiers() {
+	validIdentifiers := game.ValidRulesetIdentifiers()
+
+	for _, validIdentifier := range validIdentifiers {
+		if identifierMap[validIdentifier] {
+			unitTest.Fatalf(
+				"ValidRulesetIdentifiers() %v had previously-seen identifier %v",
+				game.ValidRulesetIdentifiers(),
+				validIdentifier)
+		}
+
+		identifierMap[validIdentifier] = true
+
 		validRuleset, errorFromGet :=
 			game.RulesetFromIdentifier(validIdentifier)
 
@@ -33,6 +58,15 @@ func TestAvailableRulesetsHaveUniqueDescriptions(unitTest *testing.T) {
 				"RulesetFromIdentifier(%v) produced error %v",
 				validIdentifier,
 				errorFromGet)
+		}
+
+		backendIdentifier := validRuleset.BackendIdentifier()
+
+		if backendIdentifier != validIdentifier {
+			unitTest.Fatalf(
+				"BackendIdentifier() %v did not match retrieval identifier %v",
+				backendIdentifier,
+				validIdentifier)
 		}
 
 		frontendDescription := validRuleset.FrontendDescription()

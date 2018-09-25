@@ -9,6 +9,42 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/game/message"
 )
 
+func TestNoViewWhenErrorFromPlayerProvider(unitTest *testing.T) {
+	gameName := "Test game"
+	testPlayersInOriginalOrder :=
+		[]string{
+			playerNamesAvailableInTest[0],
+			playerNamesAvailableInTest[1],
+			playerNamesAvailableInTest[2],
+		}
+	viewingPlayer := testPlayersInOriginalOrder[1]
+	gameCollection, mockPersister, mockPlayerProvider :=
+		prepareCollection(unitTest, testPlayersInOriginalOrder)
+
+	mockPlayerProvider.MockPlayers = make(map[string]*mockPlayerState, 0)
+
+	mockReadAndWriteState := NewMockGameState(unitTest)
+	mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
+	mockReadAndWriteState.ReturnForRuleset = testRuleset
+
+	mockPersister.TestErrorForReadAndWriteGame = nil
+	mockPersister.ReturnForReadAndWriteGame = mockReadAndWriteState
+
+	viewForPlayer, errorFromViewState :=
+		gameCollection.ViewState(
+			context.Background(),
+			gameName,
+			viewingPlayer)
+
+	if errorFromViewState == nil {
+		unitTest.Fatalf(
+			"ViewState(%v, %v) did not produce expected error, instead produced %+v",
+			gameName,
+			viewingPlayer,
+			viewForPlayer)
+	}
+}
+
 func TestWrapperFunctions(unitTest *testing.T) {
 	gameName := "Test game"
 	testPlayersInOriginalOrder :=
@@ -818,7 +854,7 @@ func TestPlayerIsForbiddenFromSeeingOwnHand(unitTest *testing.T) {
 	}
 }
 
-func TestErrorFromPlayerProviderAffectsVisibleHandCorrectly(unitTest *testing.T) {
+func TestMissingPlayerAffectsVisibleHandCorrectly(unitTest *testing.T) {
 	gameName := "Test game"
 	testPlayersInOriginalOrder :=
 		[]string{
@@ -827,11 +863,8 @@ func TestErrorFromPlayerProviderAffectsVisibleHandCorrectly(unitTest *testing.T)
 			playerNamesAvailableInTest[2],
 		}
 	viewingPlayer := testPlayersInOriginalOrder[1]
-	playerWithVisibleHand := testPlayersInOriginalOrder[0]
-	gameCollection, mockPersister, mockPlayerProvider :=
+	gameCollection, mockPersister, _ :=
 		prepareCollection(unitTest, testPlayersInOriginalOrder)
-
-	mockPlayerProvider.MockPlayers = make(map[string]*mockPlayerState, 0)
 
 	mockReadAndWriteState := NewMockGameState(unitTest)
 	mockReadAndWriteState.ReturnForPlayerNames = testPlayersInOriginalOrder
@@ -854,13 +887,14 @@ func TestErrorFromPlayerProviderAffectsVisibleHandCorrectly(unitTest *testing.T)
 			errorFromViewState)
 	}
 
+	invalidPlayer := "Not A. Participant"
 	actualVisibleHand, actualPlayerColor, errorFromVisibleHand :=
-		viewForPlayer.VisibleHand(playerWithVisibleHand)
+		viewForPlayer.VisibleHand(invalidPlayer)
 
 	if errorFromVisibleHand == nil {
 		unitTest.Fatalf(
-			"VisibleHand(%v) from player view %+v did not produced expected error, instead produced %+v with color %v",
-			playerWithVisibleHand,
+			"VisibleHand(%v) from player view %+v did not produce expected error, instead produced %+v with color %v",
+			invalidPlayer,
 			viewForPlayer,
 			actualVisibleHand,
 			actualPlayerColor)
