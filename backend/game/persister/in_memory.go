@@ -106,11 +106,8 @@ func (gamePersister *inMemoryPersister) AddGame(
 			initialDeck)
 
 	newGame := &inMemoryState{
-		mutualExclusion: sync.Mutex{},
-		DeserializedState: DeserializedState{
-			SerializableState:   serializableState,
-			deserializedRuleset: gameRuleset,
-		},
+		mutualExclusion:   sync.Mutex{},
+		DeserializedState: CreateDeserializedState(serializableState, gameRuleset),
 	}
 
 	gamePersister.mutualExclusion.Lock()
@@ -260,7 +257,7 @@ func (gameState *inMemoryState) EnactTurnByDiscardingAndReplacing(
 	gameState.mutualExclusion.Lock()
 	defer gameState.mutualExclusion.Unlock()
 
-	return gameState.SerializableState.EnactTurnByDiscardingAndReplacing(
+	return gameState.DeserializedState.EnactTurnByDiscardingAndReplacing(
 		actionMessage,
 		actingPlayer,
 		indexInHand,
@@ -289,7 +286,7 @@ func (gameState *inMemoryState) EnactTurnByPlayingAndReplacing(
 	gameState.mutualExclusion.Lock()
 	defer gameState.mutualExclusion.Unlock()
 
-	return gameState.SerializableState.EnactTurnByPlayingAndReplacing(
+	return gameState.DeserializedState.EnactTurnByPlayingAndReplacing(
 		actionMessage,
 		actingPlayer,
 		indexInHand,
@@ -312,7 +309,7 @@ func (gameState *inMemoryState) EnactTurnByUpdatingHandWithHint(
 	gameState.mutualExclusion.Lock()
 	defer gameState.mutualExclusion.Unlock()
 
-	return gameState.SerializableState.EnactTurnByUpdatingHandWithHint(
+	return gameState.DeserializedState.EnactTurnByUpdatingHandWithHint(
 		actionMessage,
 		actingPlayer,
 		receivingPlayerName,

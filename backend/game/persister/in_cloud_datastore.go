@@ -261,13 +261,10 @@ func newInCloudDatastoreState(
 	}
 
 	newState := &inCloudDatastoreState{
-		mutualExclusion: sync.Mutex{},
-		datastoreClient: datastoreClient,
-		keyInDatastore:  keyInDatastore,
-		DeserializedState: DeserializedState{
-			SerializableState:   serializablePart,
-			deserializedRuleset: deserializedRuleset,
-		},
+		mutualExclusion:   sync.Mutex{},
+		datastoreClient:   datastoreClient,
+		keyInDatastore:    keyInDatastore,
+		DeserializedState: CreateDeserializedState(serializablePart, deserializedRuleset),
 	}
 
 	return newState, nil
@@ -319,7 +316,7 @@ func (gameState *inCloudDatastoreState) EnactTurnByDiscardingAndReplacing(
 
 	return gameState.uploadSerializablePartIfNoError(
 		executionContext,
-		gameState.SerializableState.EnactTurnByDiscardingAndReplacing(
+		gameState.DeserializedState.EnactTurnByDiscardingAndReplacing(
 			actionMessage,
 			actingPlayer,
 			indexInHand,
@@ -349,7 +346,7 @@ func (gameState *inCloudDatastoreState) EnactTurnByPlayingAndReplacing(
 
 	return gameState.uploadSerializablePartIfNoError(
 		executionContext,
-		gameState.SerializableState.EnactTurnByPlayingAndReplacing(
+		gameState.DeserializedState.EnactTurnByPlayingAndReplacing(
 			actionMessage,
 			actingPlayer,
 			indexInHand,
@@ -374,7 +371,7 @@ func (gameState *inCloudDatastoreState) EnactTurnByUpdatingHandWithHint(
 
 	return gameState.uploadSerializablePartIfNoError(
 		executionContext,
-		gameState.SerializableState.EnactTurnByUpdatingHandWithHint(
+		gameState.DeserializedState.EnactTurnByUpdatingHandWithHint(
 			actionMessage,
 			actingPlayer,
 			receivingPlayerName,
