@@ -7,6 +7,7 @@ package game_test
 // comparisons within the tests.
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -62,7 +63,7 @@ func TestGetGameNilFutherSegmentSliceBadRequest(unitTest *testing.T) {
 	testIdentifier := "GET with nil segment slice after game"
 	mockCollection, testHandler := newGameCollectionAndHandler()
 
-	_, responseCode := testHandler.HandleGet(nil)
+	_, responseCode := testHandler.HandleGet(context.Background(), nil)
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -81,7 +82,7 @@ func TestGetGameEmptyFutherSegmentSliceBadRequest(unitTest *testing.T) {
 	testIdentifier := "GET with empty segment slice after game"
 	mockCollection, testHandler := newGameCollectionAndHandler()
 
-	_, responseCode := testHandler.HandleGet([]string{})
+	_, responseCode := testHandler.HandleGet(context.Background(), []string{})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -100,7 +101,7 @@ func TestGetGameInvalidSegmentNotFound(unitTest *testing.T) {
 	testIdentifier := "GET game/invalid-segment"
 	mockCollection, testHandler := newGameCollectionAndHandler()
 
-	_, responseCode := testHandler.HandleGet([]string{"invalid-segment"})
+	_, responseCode := testHandler.HandleGet(context.Background(), []string{"invalid-segment"})
 
 	if responseCode != http.StatusNotFound {
 		unitTest.Fatalf(
@@ -121,6 +122,7 @@ func TestPostGameNilFutherSegmentSliceBadRequest(unitTest *testing.T) {
 
 	_, responseCode :=
 		testHandler.HandlePost(
+			context.Background(),
 			DecoderAroundInterface(
 				unitTest,
 				testIdentifier,
@@ -146,6 +148,7 @@ func TestPostGameEmptyFutherSegmentSliceBadRequest(unitTest *testing.T) {
 
 	_, responseCode :=
 		testHandler.HandlePost(
+			context.Background(),
 			DecoderAroundInterface(
 				unitTest,
 				testIdentifier,
@@ -171,6 +174,7 @@ func TestPostGameInvalidSegmentNotFound(unitTest *testing.T) {
 
 	_, responseCode :=
 		testHandler.HandlePost(
+			context.Background(),
 			DecoderAroundInterface(
 				unitTest,
 				testIdentifier,
@@ -197,7 +201,7 @@ func TestAvailableRulesetsCorrectlyDelivered(unitTest *testing.T) {
 	expectedRulesetIdentifiers := game_state.ValidRulesetIdentifiers()
 
 	returnedInterface, responseCode :=
-		testHandler.HandleGet([]string{"available-rulesets"})
+		testHandler.HandleGet(context.Background(), []string{"available-rulesets"})
 
 	if responseCode != http.StatusOK {
 		unitTest.Fatalf(
@@ -273,7 +277,8 @@ func TestGetAllGamesWithPlayerNoFurtherSegmentBadRequest(unitTest *testing.T) {
 	testIdentifier := "GET with no segments after all-games-with-player"
 	mockCollection, testHandler := newGameCollectionAndHandler()
 
-	_, responseCode := testHandler.HandleGet([]string{"all-games-with-player"})
+	_, responseCode :=
+		testHandler.HandleGet(context.Background(), []string{"all-games-with-player"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -293,7 +298,8 @@ func TestGetAllGamesWithPlayerInvalidPlayerIdentifierBadRequest(unitTest *testin
 	mockCollection, testHandler := newGameCollectionAndHandler()
 
 	// The character '+' is not a valid base-32 character.
-	_, responseCode := testHandler.HandleGet([]string{"all-games-with-player", "++++"})
+	_, responseCode :=
+		testHandler.HandleGet(context.Background(), []string{"all-games-with-player", "++++"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -317,7 +323,9 @@ func TestGetAllGamesWithPlayerRejectedIfCollectionRejectsIt(unitTest *testing.T)
 	mockPlayerIdentifier := segmentTranslatorForTest().ToSegment(mockPlayerName)
 
 	_, responseCode :=
-		testHandler.HandleGet([]string{"all-games-with-player", mockPlayerIdentifier})
+		testHandler.HandleGet(
+			context.Background(),
+			[]string{"all-games-with-player", mockPlayerIdentifier})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -350,7 +358,9 @@ func TestGetAllGamesWithPlayerWhenEmptyList(unitTest *testing.T) {
 	mockPlayerIdentifier := segmentTranslatorForTest().ToSegment(mockPlayerName)
 
 	returnedInterface, responseCode :=
-		testHandler.HandleGet([]string{"all-games-with-player", mockPlayerIdentifier})
+		testHandler.HandleGet(
+			context.Background(),
+			[]string{"all-games-with-player", mockPlayerIdentifier})
 
 	if responseCode != http.StatusOK {
 		unitTest.Fatalf(
@@ -426,7 +436,9 @@ func TestGetAllGamesWithPlayerWhenThreeGames(unitTest *testing.T) {
 	mockPlayerIdentifier := segmentTranslatorForTest().ToSegment(mockPlayerName)
 
 	returnedInterface, responseCode :=
-		testHandler.HandleGet([]string{"all-games-with-player", mockPlayerIdentifier})
+		testHandler.HandleGet(
+			context.Background(),
+			[]string{"all-games-with-player", mockPlayerIdentifier})
 
 	if responseCode != http.StatusOK {
 		unitTest.Fatalf(
@@ -498,7 +510,7 @@ func TestGetGameForPlayerNoFurtherSegmentBadRequest(unitTest *testing.T) {
 	mockCollection, testHandler := newGameCollectionAndHandler()
 
 	_, responseCode :=
-		testHandler.HandleGet([]string{"game-as-seen-by-player"})
+		testHandler.HandleGet(context.Background(), []string{"game-as-seen-by-player"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -521,7 +533,9 @@ func TestGetGameForPlayerOnlyGameSegmentBadRequest(unitTest *testing.T) {
 	mockGameIdentifier := segmentTranslatorForTest().ToSegment(mockGameName)
 
 	_, responseCode :=
-		testHandler.HandleGet([]string{"game-as-seen-by-player", mockGameIdentifier})
+		testHandler.HandleGet(
+			context.Background(),
+			[]string{"game-as-seen-by-player", mockGameIdentifier})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -548,7 +562,7 @@ func TestGetGameForPlayerInvalidGameIdentifierBadRequest(unitTest *testing.T) {
 
 	segmentSlice :=
 		[]string{"game-as-seen-by-player", mockGameIdentifier, mockPlayerIdentifier}
-	_, responseCode := testHandler.HandleGet(segmentSlice)
+	_, responseCode := testHandler.HandleGet(context.Background(), segmentSlice)
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -575,7 +589,7 @@ func TestGetGameForPlayerInvalidPlayerIdentifierBadRequest(unitTest *testing.T) 
 
 	segmentSlice :=
 		[]string{"game-as-seen-by-player", mockGameIdentifier, mockPlayerIdentifier}
-	_, responseCode := testHandler.HandleGet(segmentSlice)
+	_, responseCode := testHandler.HandleGet(context.Background(), segmentSlice)
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -603,7 +617,7 @@ func TestGetGameForPlayerRejectedIfCollectionRejectsIt(unitTest *testing.T) {
 
 	segmentSlice :=
 		[]string{"game-as-seen-by-player", mockGameIdentifier, mockPlayerIdentifier}
-	_, responseCode := testHandler.HandleGet(segmentSlice)
+	_, responseCode := testHandler.HandleGet(context.Background(), segmentSlice)
 
 	if responseCode != http.StatusInternalServerError {
 		unitTest.Fatalf(
@@ -685,7 +699,7 @@ func TestGetGameForPlayerRejectedIfViewStateYieldsError(unitTest *testing.T) {
 
 			segmentSlice :=
 				[]string{"game-as-seen-by-player", mockGameIdentifier, mockPlayerIdentifier}
-			_, responseCode := testHandler.HandleGet(segmentSlice)
+			_, responseCode := testHandler.HandleGet(context.Background(), segmentSlice)
 
 			if responseCode != http.StatusInternalServerError {
 				unitTest.Fatalf(
@@ -794,7 +808,8 @@ func TestGetGameForPlayer(unitTest *testing.T) {
 
 	segmentSlice :=
 		[]string{"game-as-seen-by-player", mockGameIdentifier, mockPlayerIdentifier}
-	returnedInterface, responseCode := testHandler.HandleGet(segmentSlice)
+	returnedInterface, responseCode :=
+		testHandler.HandleGet(context.Background(), segmentSlice)
 
 	if responseCode != http.StatusOK {
 		unitTest.Fatalf(
@@ -924,7 +939,8 @@ func TestRejectInvalidNewGameWithMalformedRequest(unitTest *testing.T) {
 
 	bodyDecoder := json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
 
-	_, responseCode := testHandler.HandlePost(bodyDecoder, []string{"create-new-game"})
+	_, responseCode :=
+		testHandler.HandlePost(context.Background(), bodyDecoder, []string{"create-new-game"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -954,7 +970,10 @@ func TestRejectNewGameWithInvalidRulesetIdentifier(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"create-new-game"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"create-new-game"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -984,7 +1003,10 @@ func TestRejectNewGameIfCollectionRejectsIt(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"create-new-game"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"create-new-game"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -1041,7 +1063,10 @@ func TestRejectNewGameIfIdentifierIncludesSegmentDelimiter(unitTest *testing.T) 
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"create-new-game"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"create-new-game"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -1096,7 +1121,10 @@ func TestAcceptValidNewGame(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"create-new-game"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"create-new-game"})
 
 	if responseCode != http.StatusOK {
 		unitTest.Fatalf(
@@ -1152,7 +1180,11 @@ func TestRejectInvalidLeaveGameWithMalformedRequest(unitTest *testing.T) {
 
 	bodyDecoder := json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
 
-	_, responseCode := testHandler.HandlePost(bodyDecoder, []string{"leave-game"})
+	_, responseCode :=
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"leave-game"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -1181,7 +1213,10 @@ func TestRejectLeaveGameIfCollectionRejectsIt(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"leave-game"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"leave-game"})
 
 	if responseCode != http.StatusInternalServerError {
 		unitTest.Fatalf(
@@ -1224,7 +1259,10 @@ func TestAcceptValidLeaveGame(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"leave-game"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"leave-game"})
 
 	if responseCode != http.StatusOK {
 		unitTest.Fatalf(
@@ -1269,7 +1307,11 @@ func TestRejectInvalidDeleteGameWithMalformedRequest(unitTest *testing.T) {
 
 	bodyDecoder := json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
 
-	_, responseCode := testHandler.HandlePost(bodyDecoder, []string{"delete-game"})
+	_, responseCode :=
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"delete-game"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -1297,7 +1339,10 @@ func TestRejectDeleteGameIfCollectionRejectsIt(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"delete-game"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"delete-game"})
 
 	if responseCode != http.StatusInternalServerError {
 		unitTest.Fatalf(
@@ -1335,7 +1380,10 @@ func TestAcceptValidDeleteGame(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"delete-game"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"delete-game"})
 
 	if responseCode != http.StatusOK {
 		unitTest.Fatalf(
@@ -1378,7 +1426,10 @@ func TestRejectInvalidChatWithMalformedRequest(unitTest *testing.T) {
 		json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"record-chat-message"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"record-chat-message"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -1411,7 +1462,10 @@ func TestRejectChatIfCollectionRejectsIt(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"record-chat-message"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"record-chat-message"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -1455,7 +1509,10 @@ func TestPropagateErrorFromChat(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"record-chat-message"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"record-chat-message"})
 
 	if responseCode != http.StatusInternalServerError {
 		unitTest.Fatalf(
@@ -1497,7 +1554,10 @@ func TestAcceptValidChat(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"record-chat-message"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"record-chat-message"})
 
 	if responseCode != http.StatusOK {
 		unitTest.Fatalf(
@@ -1538,7 +1598,10 @@ func TestRejectInvalidDiscardWithMalformedRequest(unitTest *testing.T) {
 		json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-discarding"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"take-turn-by-discarding"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -1571,7 +1634,10 @@ func TestRejectDiscardIfCollectionRejectsIt(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-discarding"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"take-turn-by-discarding"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -1615,7 +1681,10 @@ func TestPropagateErrorFromDiscard(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-discarding"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"take-turn-by-discarding"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -1656,7 +1725,10 @@ func TestAcceptValidDiscard(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-discarding"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"take-turn-by-discarding"})
 
 	if responseCode != http.StatusOK {
 		unitTest.Fatalf(
@@ -1697,7 +1769,10 @@ func TestRejectInvalidPlayWithMalformedRequest(unitTest *testing.T) {
 		json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-attempting-to-play"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"take-turn-by-attempting-to-play"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -1730,7 +1805,10 @@ func TestRejectPlayIfCollectionRejectsIt(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-attempting-to-play"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"take-turn-by-attempting-to-play"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -1773,7 +1851,10 @@ func TestPropagateErrorFromPlay(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-attempting-to-play"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"take-turn-by-attempting-to-play"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -1814,7 +1895,10 @@ func TestAcceptValidPlay(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-attempting-to-play"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"take-turn-by-attempting-to-play"})
 
 	if responseCode != http.StatusOK {
 		unitTest.Fatalf(
@@ -1855,7 +1939,10 @@ func TestRejectInvalidColorHintWithMalformedRequest(unitTest *testing.T) {
 		json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-hinting-color"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"take-turn-by-hinting-color"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -1885,7 +1972,10 @@ func TestRejectColorHintIfCollectionRejectsIt(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-hinting-color"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"take-turn-by-hinting-color"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -1926,7 +2016,10 @@ func TestPropagateErrorFromColorHint(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-hinting-color"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"take-turn-by-hinting-color"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -1964,7 +2057,10 @@ func TestAcceptValidColorHint(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-hinting-color"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"take-turn-by-hinting-color"})
 
 	if responseCode != http.StatusOK {
 		unitTest.Fatalf(
@@ -2005,7 +2101,10 @@ func TestRejectInvalidIndexHintWithMalformedRequest(unitTest *testing.T) {
 		json.NewDecoder(bytes.NewReader(bytes.NewBufferString(bodyString).Bytes()))
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-hinting-number"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"take-turn-by-hinting-number"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -2035,7 +2134,10 @@ func TestRejectIndexHintIfCollectionRejectsIt(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-hinting-number"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"take-turn-by-hinting-number"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -2076,7 +2178,10 @@ func TestPropagateErrorFromIndexHint(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-hinting-number"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"take-turn-by-hinting-number"})
 
 	if responseCode != http.StatusBadRequest {
 		unitTest.Fatalf(
@@ -2114,7 +2219,10 @@ func TestAcceptValidIndexHint(unitTest *testing.T) {
 	bodyDecoder := DecoderAroundInterface(unitTest, testIdentifier, bodyObject)
 
 	_, responseCode :=
-		testHandler.HandlePost(bodyDecoder, []string{"take-turn-by-hinting-number"})
+		testHandler.HandlePost(
+			context.Background(),
+			bodyDecoder,
+			[]string{"take-turn-by-hinting-number"})
 
 	if responseCode != http.StatusOK {
 		unitTest.Fatalf(
