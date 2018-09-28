@@ -10,6 +10,14 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
+// PlayerNameAndHand is a struct to contain a player's name and current
+// hand, mainly to get around Google Cloud Datastore not allowing lists
+// of lists directly.
+type PlayerNameAndHand struct {
+	Name string
+	Hand []card.InHand
+}
+
 // SerializableState is a struct meant to encapsulate all the state required
 // for a single game to function, in a form which is simple to serialize. It
 // implements almost all of the ReadAndWriteState interface, but for the
@@ -34,7 +42,7 @@ type SerializableState struct {
 	UndrawnDeck                     []card.Defined
 	PlayedCards                     []card.Defined
 	DiscardedCards                  []card.Defined
-	PlayerHandsInTurnOrder          [][]card.InHand
+	PlayerHandsInTurnOrder          []PlayerNameAndHand
 }
 
 // NewSerializableState creates a new game given the required information, using the
@@ -48,12 +56,15 @@ func NewSerializableState(
 	shuffledDeck []card.Defined) SerializableState {
 	numberOfParticipants := len(playersInTurnOrderWithInitialHands)
 	participantNamesInTurnOrder := make([]string, numberOfParticipants)
-	playerHands := make([][]card.InHand, numberOfParticipants)
+	playerHands := make([]PlayerNameAndHand, numberOfParticipants)
 	for playerIndex := 0; playerIndex < numberOfParticipants; playerIndex++ {
 		playerName := playersInTurnOrderWithInitialHands[playerIndex].PlayerName
 		participantNamesInTurnOrder[playerIndex] = playerName
 		playerHands[playerIndex] =
-			playersInTurnOrderWithInitialHands[playerIndex].InitialHand
+			PlayerNameAndHand{
+				Name: playerName,
+				Hand: playersInTurnOrderWithInitialHands[playerIndex].InitialHand,
+			}
 	}
 
 	initialChatLog := make([]message.FromPlayer, chatLogLength)

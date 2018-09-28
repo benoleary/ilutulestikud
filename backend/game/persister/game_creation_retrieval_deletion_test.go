@@ -29,7 +29,7 @@ func TestReturnErrorWhenGameDoesNotExist(unitTest *testing.T) {
 			"ReadAndWriteGame(unknown game)/" + statePersister.PersisterDescription
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			invalidName := "Not a valid game"
+			invalidName := testGameNamePrefix + "Not a valid game"
 			gameState, errorFromGet :=
 				statePersister.GamePersister.ReadAndWriteGame(
 					context.Background(),
@@ -162,7 +162,8 @@ func TestRejectAddGameWithExistingName(unitTest *testing.T) {
 	expectedGamesMappedToPlayers := make(map[string]map[string]bool, 0)
 
 	for _, statePersister := range statePersisters {
-		for _, gameName := range []string{"A valid game", "Another valid game"} {
+		for _, gameBaseName := range []string{"A valid game", "Another valid game"} {
+			gameName := testGameNamePrefix + gameBaseName
 			testIdentifier :=
 				"Reject Add(game with existing name)/" + statePersister.PersisterDescription
 
@@ -295,7 +296,7 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 			"Add games then leave games/" + statePersister.PersisterDescription
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			firstGameName := "Normal name"
+			firstGameName := testGameNamePrefix + "Normal name"
 			errorFromFirstAdd :=
 				statePersister.GamePersister.AddGame(
 					context.Background(),
@@ -338,7 +339,7 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 				justFirstGameName,
 				statePersister.GamePersister)
 
-			secondGameName := "Name with SQL injection'-- including this"
+			secondGameName := testGameNamePrefix + "Name with SQL injection'-- including this"
 			errorFromSecondAdd :=
 				statePersister.GamePersister.AddGame(
 					context.Background(),
@@ -382,7 +383,7 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 				firstTwoGameNames,
 				statePersister.GamePersister)
 
-			thirdGameName := "Yet another game"
+			thirdGameName := testGameNamePrefix + "Yet another game"
 			errorFromThirdAdd :=
 				statePersister.GamePersister.AddGame(
 					context.Background(),

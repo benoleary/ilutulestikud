@@ -11,7 +11,8 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/game/persister"
 )
 
-const testGameName = "test game"
+const testGameNamePrefix = "TOUGH_NO_GAME_CAN_HAVE_A_NAME_WHICH_STARTS_LIKE_THIS:"
+const testGameName = testGameNamePrefix + "test game"
 const logLengthForTest = 8
 
 var defaultTestRuleset game.Ruleset = game.NewStandardWithoutRainbow()
@@ -247,24 +248,24 @@ type persisterAndDescription struct {
 }
 
 func preparePersisters(unitTest *testing.T) []persisterAndDescription {
-	//	inCloudDatastore, errorFromNewInCloudDatastore :=
-	//		persister.NewInCloudDatastore(context.Background())
-	//
-	//	if errorFromNewInCloudDatastore != nil {
-	//		unitTest.Fatalf(
-	//			"Error when creating persister for Cloud Datastore: %v",
-	//			errorFromNewInCloudDatastore)
-	//	}
+	inCloudDatastore, errorFromNewInCloudDatastore :=
+		persister.NewInCloudDatastore(context.Background())
+
+	if errorFromNewInCloudDatastore != nil {
+		unitTest.Fatalf(
+			"Error when creating persister for Cloud Datastore: %v",
+			errorFromNewInCloudDatastore)
+	}
 
 	return []persisterAndDescription{
 		persisterAndDescription{
 			GamePersister:        persister.NewInMemory(),
 			PersisterDescription: "in-memory persister",
 		},
-		//		persisterAndDescription{
-		//			GamePersister:        inCloudDatastore,
-		//			PersisterDescription: "in-Cloud-Datastore persister",
-		//		},
+		persisterAndDescription{
+			GamePersister:        inCloudDatastore,
+			PersisterDescription: "in-Cloud-Datastore persister",
+		},
 	}
 }
 
@@ -287,6 +288,15 @@ func prepareGameStates(
 
 	for persisterIndex := 0; persisterIndex < numberOfPersisters; persisterIndex++ {
 		statePersister := statePersisters[persisterIndex]
+
+		errorFromDeletionOfExisting :=
+			statePersister.GamePersister.Delete(context.Background(), testGameName)
+		unitTest.Logf(
+			"Error from persister %v deleting %v when setting up"+
+				" (to ensure that it does not exist before the test) was %v",
+			statePersister.PersisterDescription,
+			testGameName,
+			errorFromDeletionOfExisting)
 
 		errorFromAdd :=
 			statePersister.GamePersister.AddGame(

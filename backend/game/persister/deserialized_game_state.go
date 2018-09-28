@@ -106,7 +106,7 @@ func (gameState *DeserializedState) VisibleHand(
 		return nil, fmt.Errorf("Player %v has no hand", holdingPlayerName)
 	}
 
-	playerHand := gameState.PlayerHandsInTurnOrder[playerIndex]
+	playerHand := gameState.PlayerHandsInTurnOrder[playerIndex].Hand
 
 	handSize := len(playerHand)
 
@@ -129,7 +129,7 @@ func (gameState *DeserializedState) InferredHand(
 		return nil, fmt.Errorf("Player %v has no hand", holdingPlayerName)
 	}
 
-	playerHand := gameState.PlayerHandsInTurnOrder[playerIndex]
+	playerHand := gameState.PlayerHandsInTurnOrder[playerIndex].Hand
 
 	handSize := len(playerHand)
 
@@ -267,7 +267,7 @@ func (gameState *DeserializedState) EnactTurnByUpdatingHandWithHint(
 		return fmt.Errorf("Player %v has no hand", receivingPlayerName)
 	}
 
-	receiverHand := gameState.PlayerHandsInTurnOrder[recieverIndex]
+	receiverHand := gameState.PlayerHandsInTurnOrder[recieverIndex].Hand
 
 	handSize := len(receiverHand)
 
@@ -320,7 +320,7 @@ func (gameState *DeserializedState) takeCardFromHandReplacingIfPossible(
 		return invalidCard, errorFromNoHand
 	}
 
-	playerHand := gameState.PlayerHandsInTurnOrder[holdingPlayerIndex]
+	playerHand := gameState.PlayerHandsInTurnOrder[holdingPlayerIndex].Hand
 
 	if indexInHand >= len(playerHand) {
 		return invalidCardAndErrorFromOutOfRange(indexInHand)
@@ -350,7 +350,7 @@ func (gameState *DeserializedState) updatePlayerHand(
 		// We also do not worry about the card at the end of the array which is no
 		// longer visible to the slice, as it can only ever be one card per player
 		// before the game ends.
-		gameState.PlayerHandsInTurnOrder[holdingPlayerIndex] =
+		gameState.PlayerHandsInTurnOrder[holdingPlayerIndex].Hand =
 			append(playerHand[:indexInHand], playerHand[indexInHand+1:]...)
 	} else {
 		// If we have a replacement card, we bundle it with the information about it
