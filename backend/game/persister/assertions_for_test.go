@@ -122,21 +122,103 @@ func assertGameStateAsExpected(
 	unitTest *testing.T,
 	actualGame game.ReadonlyState,
 	expectedGame expectedState) {
-	if (actualGame.Name() != expectedGame.Name) ||
-		(actualGame.Ruleset() != expectedGame.Ruleset) ||
-		(actualGame.CreationTime() != expectedGame.CreationTime) ||
-		(actualGame.Turn() != expectedGame.Turn) ||
-		(actualGame.TurnsTakenWithEmptyDeck() != expectedGame.TurnsTakenWithEmptyDeck) ||
-		(actualGame.NumberOfReadyHints() != expectedGame.NumberOfReadyHints) ||
-		(actualGame.NumberOfMistakesMade() != expectedGame.NumberOfMistakesMade) ||
-		(actualGame.DeckSize() != expectedGame.DeckSize) ||
-		(len(actualGame.PlayerNames()) != len(expectedGame.PlayerNames)) ||
-		(len(actualGame.ChatLog()) != len(expectedGame.ChatLog)) ||
-		(len(actualGame.ActionLog()) != len(expectedGame.ActionLog)) {
+	if actualGame.Name() != expectedGame.Name {
 		unitTest.Fatalf(
-			testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin easy comparisons",
+			testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin name - expected %v, actual %v",
 			actualGame,
-			expectedGame)
+			expectedGame,
+			expectedGame.Name,
+			actualGame.Name())
+	}
+
+	if actualGame.Ruleset().BackendIdentifier() != expectedGame.Ruleset.BackendIdentifier() {
+		unitTest.Fatalf(
+			testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin ruleset backend identifier - expected %v, actual %v",
+			actualGame,
+			expectedGame,
+			expectedGame.Ruleset.BackendIdentifier(),
+			actualGame.Ruleset().BackendIdentifier())
+	}
+
+	if actualGame.CreationTime() != expectedGame.CreationTime {
+		unitTest.Fatalf(
+			testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin creation time - expected %v, actual %v",
+			actualGame,
+			expectedGame,
+			expectedGame.CreationTime,
+			actualGame.CreationTime())
+	}
+
+	if actualGame.Turn() != expectedGame.Turn {
+		unitTest.Fatalf(
+			testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin turn - expected %v, actual %v",
+			actualGame,
+			expectedGame,
+			expectedGame.Turn,
+			actualGame.Turn())
+	}
+
+	if actualGame.TurnsTakenWithEmptyDeck() != expectedGame.TurnsTakenWithEmptyDeck {
+		unitTest.Fatalf(
+			testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin turns taken with empty deck - expected %v, actual %v",
+			actualGame,
+			expectedGame,
+			expectedGame.TurnsTakenWithEmptyDeck,
+			actualGame.TurnsTakenWithEmptyDeck())
+	}
+
+	if actualGame.NumberOfReadyHints() != expectedGame.NumberOfReadyHints {
+		unitTest.Fatalf(
+			testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin number of ready hints - expected %v, actual %v",
+			actualGame,
+			expectedGame,
+			expectedGame.NumberOfReadyHints,
+			actualGame.NumberOfReadyHints())
+	}
+
+	if actualGame.NumberOfMistakesMade() != expectedGame.NumberOfMistakesMade {
+		unitTest.Fatalf(
+			testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin number of mistakes made - expected %v, actual %v",
+			actualGame,
+			expectedGame,
+			expectedGame.NumberOfMistakesMade,
+			actualGame.NumberOfMistakesMade())
+	}
+
+	if actualGame.DeckSize() != expectedGame.DeckSize {
+		unitTest.Fatalf(
+			testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin deck size - expected %v, actual %v",
+			actualGame,
+			expectedGame,
+			expectedGame.DeckSize,
+			actualGame.DeckSize())
+	}
+
+	if len(actualGame.PlayerNames()) != len(expectedGame.PlayerNames) {
+		unitTest.Fatalf(
+			testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin number of player names - expected %v, actual %v",
+			actualGame,
+			expectedGame,
+			expectedGame.PlayerNames,
+			actualGame.PlayerNames())
+	}
+
+	if len(actualGame.ChatLog()) != len(expectedGame.ChatLog) {
+		unitTest.Fatalf(
+			testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin length of chat log - expected %v, actual %v",
+			actualGame,
+			expectedGame,
+			expectedGame.ChatLog,
+			actualGame.ChatLog())
+	}
+
+	if len(actualGame.ActionLog()) != len(expectedGame.ActionLog) {
+		unitTest.Fatalf(
+			testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin length of action log - expected %v, actual %v",
+			actualGame,
+			expectedGame,
+			expectedGame.ActionLog,
+			actualGame.ActionLog())
 	}
 
 	toleranceInNanosecondsForLogMessages := 100 * 1000
