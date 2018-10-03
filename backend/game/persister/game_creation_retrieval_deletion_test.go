@@ -2,7 +2,6 @@ package persister_test
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/benoleary/ilutulestikud/backend/game"
@@ -588,37 +587,12 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 				statePersister.GamePersister.Delete(
 					context.Background(),
 					secondGameName)
-			errorExpectedFromDeletingSecondGame :=
-				fmt.Errorf(
-					"errors %v while removing game %v from player lists, game still deleted",
-					[]error{
-						fmt.Errorf(
-							"Player %v is not a participant of game %v",
-							leavingPlayer,
-							secondGameName),
-					},
-					secondGameName)
 
-			if errorFromDeletingSecondGame == nil {
+			if errorFromDeletingSecondGame != nil {
 				unitTest.Fatalf(
-					"Delete(%v) produced nil error instead of expected %v",
+					"Delete(%v) produced error %v",
 					secondGameName,
-					errorExpectedFromDeletingSecondGame)
-			}
-
-			// We have to compare the error strings because of the way that error interface
-			// comparison works. (There are better ways, such as custom error types, or an
-			// implementation which also implements an interface with a function which can
-			// be queried for behavior rather than type, as recommended by
-			// https://dave.cheney.net/2016/04/27/dont-just-check-errors-handle-them-gracefully
-			// but that's more effort than it's worth because the error analysis is only in this
-			// test.)
-			if errorFromDeletingSecondGame.Error() != errorExpectedFromDeletingSecondGame.Error() {
-				unitTest.Fatalf(
-					"Delete(%v) produced unexpected error %v instead of expected %v",
-					secondGameName,
-					errorFromDeletingSecondGame,
-					errorExpectedFromDeletingSecondGame)
+					errorFromDeletingSecondGame)
 			}
 
 			firstAndThirdGameNames := make(map[string]bool, 2)
@@ -647,30 +621,12 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 				statePersister.GamePersister.Delete(
 					context.Background(),
 					thirdGameName)
-			errorExpectedFromDeletingThirdGame :=
-				fmt.Errorf(
-					"errors %v while removing game %v from player lists, game still deleted",
-					[]error{
-						fmt.Errorf(
-							"Player %v is not a participant of game %v",
-							leavingPlayer,
-							thirdGameName),
-					},
-					thirdGameName)
 
-			// We have to compare the error strings because of the way that error interface
-			// comparison works. (There are better ways, such as custom error types, or an
-			// implementation which also implements an interface with a function which can
-			// be queried for behavior rather than type, as recommended by
-			// https://dave.cheney.net/2016/04/27/dont-just-check-errors-handle-them-gracefully
-			// but that's more effort than it's worth because the error analysis is only in this
-			// test.)
-			if errorFromDeletingThirdGame.Error() != errorExpectedFromDeletingThirdGame.Error() {
+			if errorFromDeletingThirdGame != nil {
 				unitTest.Fatalf(
-					"Delete(%v) produced unexpected error %v instead of expected %v",
+					"Delete(%v) produced error %v",
 					thirdGameName,
-					errorFromDeletingThirdGame,
-					errorExpectedFromDeletingThirdGame)
+					errorFromDeletingThirdGame)
 			}
 
 			assertReadAllWithPlayerGameNamesCorrect(
@@ -694,15 +650,7 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 			errorFromDeletingThirdGameAgain :=
 				statePersister.GamePersister.Delete(context.Background(), thirdGameName)
 
-			// We have to compare the error strings because of the way that error interface
-			// comparison works. (There are better ways, such as custom error types, or an
-			// implementation which also implements an interface with a function which can
-			// be queried for behavior rather than type, as recommended by
-			// https://dave.cheney.net/2016/04/27/dont-just-check-errors-handle-them-gracefully
-			// but that's more effort than it's worth because the error analysis is only in this
-			// test.)
-			if (errorFromDeletingThirdGameAgain == nil) ||
-				(errorFromDeletingThirdGame.Error() != errorExpectedFromDeletingThirdGame.Error()) {
+			if errorFromDeletingThirdGameAgain != nil {
 				unitTest.Fatalf(
 					"Delete(%v) a second time produced error %v",
 					thirdGameName,
@@ -720,30 +668,12 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 				statePersister.GamePersister.Delete(
 					context.Background(),
 					firstGameName)
-			errorExpectedFromDeletingFirstGame :=
-				fmt.Errorf(
-					"errors %v while removing game %v from player lists, game still deleted",
-					[]error{
-						fmt.Errorf(
-							"Player %v is not a participant of game %v",
-							leavingPlayer,
-							firstGameName),
-					},
-					firstGameName)
 
-			// We have to compare the error strings because of the way that error interface
-			// comparison works. (There are better ways, such as custom error types, or an
-			// implementation which also implements an interface with a function which can
-			// be queried for behavior rather than type, as recommended by
-			// https://dave.cheney.net/2016/04/27/dont-just-check-errors-handle-them-gracefully
-			// but that's more effort than it's worth because the error analysis is only in this
-			// test.)
-			if errorFromDeletingFirstGame.Error() != errorExpectedFromDeletingFirstGame.Error() {
+			if errorFromDeletingFirstGame != nil {
 				unitTest.Fatalf(
-					"Delete(%v) produced unexpected error %v instead of expected %v",
+					"Delete(%v) produced error %v",
 					firstGameName,
-					errorFromDeletingFirstGame,
-					errorExpectedFromDeletingFirstGame)
+					errorFromDeletingFirstGame)
 			}
 
 			assertReadAllWithPlayerGameNamesCorrect(
