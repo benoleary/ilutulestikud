@@ -170,9 +170,9 @@ func TestRejectAddGameWithExistingName(unitTest *testing.T) {
 			},
 		}
 
-	expectedGamesMappedToPlayers := make(map[string]map[string]bool, 0)
-
 	for _, statePersister := range statePersisters {
+		expectedGamesMappedToPlayers := make(map[string]map[string]bool, 0)
+
 		for _, gameName := range creationRetrievalDeletionTestGameNames[:2] {
 			testIdentifier :=
 				"Reject Add(game with existing name)/" + statePersister.PersisterDescription
@@ -203,14 +203,14 @@ func TestRejectAddGameWithExistingName(unitTest *testing.T) {
 
 				// We check that the persister still produces valid states.
 				assertReturnedGamesAreConsistent(
-					testIdentifier,
+					testIdentifier+"/Consistency check after initial add",
 					unitTest,
 					expectedGamesMappedToPlayers,
 					statePersister.GamePersister)
 
 				initialState :=
 					getStateAndAssertNoError(
-						testIdentifier+"/ReadAndWriteGame(initial game)",
+						testIdentifier+"/ReadAndWriteGame(initial game) after initial add",
 						unitTest,
 						gameName,
 						statePersister.GamePersister)
@@ -226,7 +226,7 @@ func TestRejectAddGameWithExistingName(unitTest *testing.T) {
 						nil)
 
 				assertGameNameAndParticipantsAreCorrect(
-					testIdentifier+"/ReadAndWriteGame(initial game)",
+					testIdentifier+"/Name and participants check of initial state after second add",
 					unitTest,
 					gameName,
 					expectedGamesMappedToPlayers[gameName],
@@ -234,7 +234,7 @@ func TestRejectAddGameWithExistingName(unitTest *testing.T) {
 
 				// We check that the persister still produces valid states.
 				assertReturnedGamesAreConsistent(
-					testIdentifier,
+					testIdentifier+"/Consistency check after second add",
 					unitTest,
 					expectedGamesMappedToPlayers,
 					statePersister.GamePersister)
@@ -252,13 +252,13 @@ func TestRejectAddGameWithExistingName(unitTest *testing.T) {
 				// We check that the player is unchanged.
 				existingStateAfterAddWithNewColor :=
 					getStateAndAssertNoError(
-						testIdentifier+"/ReadAndWriteGame(initial game)",
+						testIdentifier+"/ReadAndWriteGame(retrieved game) after second add",
 						unitTest,
 						gameName,
 						statePersister.GamePersister)
 
 				assertGameNameAndParticipantsAreCorrect(
-					testIdentifier+"/ReadAndWriteGame(initial game)",
+					testIdentifier+"/Name and participants check of retrieved state after second add",
 					unitTest,
 					gameName,
 					expectedGamesMappedToPlayers[gameName],
