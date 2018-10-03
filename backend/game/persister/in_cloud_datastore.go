@@ -15,6 +15,80 @@ import (
 	"google.golang.org/api/iterator"
 )
 
+// LimitedIterator defines the subset of the functions of the
+// datastore.Iterator struct used by the inCloudDatastorePersister
+// struct.
+type LimitedIterator interface {
+	Next(deserializationDestination interface{}) (*datastore.Key, error)
+}
+
+// LimitedClient defines the subset of the functions of the
+// datastore.Client struct used by the inCloudDatastorePersister
+// struct.
+type LimitedClient interface {
+	Run(
+		executionContext context.Context,
+		queryToRun *datastore.Query) LimitedIterator
+
+	Get(
+		executionContext context.Context,
+		searchKey *datastore.Key,
+		deserializationDestination interface{}) (err error)
+
+	Put(
+		executionContext context.Context,
+		searchKey *datastore.Key,
+		deserializationSource interface{}) (*datastore.Key, error)
+
+	Delete(
+		executionContext context.Context,
+		searchKey *datastore.Key) error
+}
+
+type wrappingLimitedClient struct {
+	wrappedInterface *datastore.Client
+}
+
+func (wrappingClient *wrappingLimitedClient) Run(
+	executionContext context.Context,
+	queryToRun *datastore.Query) LimitedIterator {
+	return wrappingClient.wrappedInterface.Run(
+		executionContext,
+		queryToRun)
+}
+
+func (wrappingClient *wrappingLimitedClient) Get(
+	executionContext context.Context,
+	searchKey *datastore.Key,
+	deserializationDestination interface{}) (err error) {
+	return wrappingClient.wrappedInterface.Get(
+		executionContext,
+		searchKey,
+		deserializationDestination)
+}
+
+func (wrappingClient *wrappingLimitedClient) Put(
+	executionContext context.Context,
+	searchKey *datastore.Key,
+	deserializationSource interface{}) (*datastore.Key, error) {
+	return wrappingClient.wrappedInterface.Put(
+		executionContext,
+		searchKey,
+		deserializationSource)
+}
+
+func (wrappingClient *wrappingLimitedClient) Delete(
+	executionContext context.Context,
+	searchKey *datastore.Key) error {
+	return wrappingClient.wrappedInterface.Delete(
+		executionContext,
+		searchKey)
+}
+
+// IlutulestikudIdentifier is the string which identifies the project to the
+// Google App Engine.
+const IlutulestikudIdentifier = "ilutulestikud-191419"
+
 const keyKind = "Game"
 
 func keyForGame(gameName string) *datastore.Key {
@@ -27,26 +101,25 @@ func keyForGame(gameName string) *datastore.Key {
 type inCloudDatastorePersister struct {
 	mutualExclusion       sync.Mutex
 	randomNumberGenerator *rand.Rand
-	datastoreClient       *datastore.Client
+	datastoreClient       LimitedClient
 }
 
 // NewInCloudDatastore creates a game state persister.
 func NewInCloudDatastore(
-	contextForCreation context.Context) (game.StatePersister, error) {
-	datastoreClient, errorFromClient :=
-		datastore.NewClient(contextForCreation, "ilutulestikud-191419")
-	if errorFromClient != nil {
-		return nil, errorFromClient
+	datastoreClient *datastore.Client) game.StatePersister {
+	wrappedClient := &wrappingLimitedClient{wrappedInterface: datastoreClient}
+	return NewInCloudDatastoreAroundLimitedClient(wrappedClient)
+}
+
+// NewInCloudDatastoreAroundLimitedClient creates a game state persister
+// using a given LimitedClient implementation.
+func NewInCloudDatastoreAroundLimitedClient(
+	datastoreClient LimitedClient) game.StatePersister {
+	return &inCloudDatastorePersister{
+		mutualExclusion:       sync.Mutex{},
+		randomNumberGenerator: rand.New(rand.NewSource(time.Now().Unix())),
+		datastoreClient:       datastoreClient,
 	}
-
-	gamePersister :=
-		&inCloudDatastorePersister{
-			mutualExclusion:       sync.Mutex{},
-			randomNumberGenerator: rand.New(rand.NewSource(time.Now().Unix())),
-			datastoreClient:       datastoreClient,
-		}
-
-	return gamePersister, nil
 }
 
 // RandomSeed provides an int64 which can be used as a seed for the
@@ -245,7 +318,7 @@ func (gamePersister *inCloudDatastorePersister) GetInCloudDatastoreState(
 // Google Cloud Datastore.
 type inCloudDatastoreState struct {
 	mutualExclusion sync.Mutex
-	datastoreClient *datastore.Client
+	datastoreClient LimitedClient
 	keyInDatastore  *datastore.Key
 	DeserializedState
 }
@@ -253,7 +326,7 @@ type inCloudDatastoreState struct {
 // newInCloudDatastoreState creates a new game given the required information,
 // using the given shuffled deck.
 func newInCloudDatastoreState(
-	datastoreClient *datastore.Client,
+	datastoreClient LimitedClient,
 	keyInDatastore *datastore.Key,
 	serializablePart SerializableState) (*inCloudDatastoreState, error) {
 	deserializedRuleset, errorFromRuleset :=
