@@ -8,11 +8,16 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/game"
 )
 
+// The last element is here to ensure that the game name used to test
+// interactions in a single game does not contaminate these tests, if
+// the other tests happen first but do not successfully clean up.
+// Conversely, these tests do not have an effect on the other tests
+// even if they fail to clean up.
 var creationRetrievalDeletionTestGameNames = []string{
 	testGameNamePrefix + "A valid game",
 	testGameNamePrefix + "Name with SQL injection'-- including this",
 	testGameNamePrefix + "Another valid game",
-	testGameNamePrefix + "Normal name",
+	singleInteractionTestGameName,
 }
 
 func TestRandomSeedCausesNoPanic(unitTest *testing.T) {

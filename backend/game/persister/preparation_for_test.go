@@ -12,7 +12,7 @@ import (
 )
 
 const testGameNamePrefix = "TOUGH_NO_GAME_CAN_HAVE_A_NAME_WHICH_STARTS_LIKE_THIS:"
-const testGameName = testGameNamePrefix + "test game"
+const singleInteractionTestGameName = testGameNamePrefix + "test game"
 const logLengthForTest = 8
 
 var defaultTestRuleset = game.NewStandardWithoutRainbow()
@@ -297,7 +297,7 @@ func prepareGameStates(
 	playersInTurnOrderWithInitialHands []game.PlayerNameWithHand,
 	initialDeck []card.Defined,
 	initialActionLog []message.FromPlayer) []gameAndDescription {
-	statePersisters := preparePersisters(unitTest, []string{testGameName})
+	statePersisters := preparePersisters(unitTest, []string{singleInteractionTestGameName})
 
 	numberOfPersisters := len(statePersisters)
 
@@ -309,7 +309,7 @@ func prepareGameStates(
 		errorFromAdd :=
 			statePersister.GamePersister.AddGame(
 				context.Background(),
-				testGameName,
+				singleInteractionTestGameName,
 				logLengthForTest,
 				initialActionLog,
 				gameRuleset,
@@ -323,7 +323,7 @@ func prepareGameStates(
 		gameState, errorFromGet :=
 			statePersister.GamePersister.ReadAndWriteGame(
 				context.Background(),
-				testGameName)
+				singleInteractionTestGameName)
 
 		if errorFromGet != nil {
 			unitTest.Fatalf("Error when getting game: %v", errorFromGet)

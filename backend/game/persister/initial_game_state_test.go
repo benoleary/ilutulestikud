@@ -40,11 +40,11 @@ func TestSetUpInitialMetadataCorrectly(unitTest *testing.T) {
 				unitTest.Fatalf("Read() returned nil")
 			}
 
-			if readonlyState.Name() != testGameName {
+			if readonlyState.Name() != singleInteractionTestGameName {
 				unitTest.Fatalf(
 					"Name() %v was not expected %v",
 					readonlyState.Name(),
-					testGameName)
+					singleInteractionTestGameName)
 			}
 
 			stateRulesetIdentifier := readonlyState.Ruleset().BackendIdentifier()
