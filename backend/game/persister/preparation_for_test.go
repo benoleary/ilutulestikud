@@ -15,7 +15,7 @@ const testGameNamePrefix = "TOUGH_NO_GAME_CAN_HAVE_A_NAME_WHICH_STARTS_LIKE_THIS
 const testGameName = testGameNamePrefix + "test game"
 const logLengthForTest = 8
 
-var defaultTestRuleset game.Ruleset = game.NewStandardWithoutRainbow()
+var defaultTestRuleset = game.NewStandardWithoutRainbow()
 var colorsForTest = defaultTestRuleset.ColorSuits()
 var threeColors = []string{colorsForTest[0], colorsForTest[1], colorsForTest[2]}
 var fourColors = []string{colorsForTest[0], colorsForTest[1], colorsForTest[2], colorsForTest[3]}
@@ -247,7 +247,9 @@ type persisterAndDescription struct {
 	PersisterDescription string
 }
 
-func preparePersisters(unitTest *testing.T) []persisterAndDescription {
+func preparePersisters(
+	unitTest *testing.T,
+	gamesToEnsureDoNotExist []string) []persisterAndDescription {
 	inCloudDatastore, errorFromNewInCloudDatastore :=
 		persister.NewInCloudDatastore(context.Background())
 
@@ -257,7 +259,7 @@ func preparePersisters(unitTest *testing.T) []persisterAndDescription {
 			errorFromNewInCloudDatastore)
 	}
 
-	return []persisterAndDescription{
+	persistersAndDescriptions := []persisterAndDescription{
 		persisterAndDescription{
 			GamePersister:        persister.NewInMemory(),
 			PersisterDescription: "in-memory persister",
@@ -267,6 +269,21 @@ func preparePersisters(unitTest *testing.T) []persisterAndDescription {
 			PersisterDescription: "in-Cloud-Datastore persister",
 		},
 	}
+
+	for _, gamePersister := range persistersAndDescriptions {
+		for _, gameName := range gamesToEnsureDoNotExist {
+			errorFromDeletionOfExisting :=
+				gamePersister.GamePersister.Delete(context.Background(), gameName)
+			unitTest.Logf(
+				"Error from persister %v deleting %v when setting up"+
+					" (to ensure that it does not exist before the test) was %v",
+				gamePersister.PersisterDescription,
+				gameName,
+				errorFromDeletionOfExisting)
+		}
+	}
+
+	return persistersAndDescriptions
 }
 
 type gameAndDescription struct {
@@ -280,7 +297,7 @@ func prepareGameStates(
 	playersInTurnOrderWithInitialHands []game.PlayerNameWithHand,
 	initialDeck []card.Defined,
 	initialActionLog []message.FromPlayer) []gameAndDescription {
-	statePersisters := preparePersisters(unitTest)
+	statePersisters := preparePersisters(unitTest, []string{testGameName})
 
 	numberOfPersisters := len(statePersisters)
 
@@ -288,15 +305,6 @@ func prepareGameStates(
 
 	for persisterIndex := 0; persisterIndex < numberOfPersisters; persisterIndex++ {
 		statePersister := statePersisters[persisterIndex]
-
-		errorFromDeletionOfExisting :=
-			statePersister.GamePersister.Delete(context.Background(), testGameName)
-		unitTest.Logf(
-			"Error from persister %v deleting %v when setting up"+
-				" (to ensure that it does not exist before the test) was %v",
-			statePersister.PersisterDescription,
-			testGameName,
-			errorFromDeletionOfExisting)
 
 		errorFromAdd :=
 			statePersister.GamePersister.AddGame(

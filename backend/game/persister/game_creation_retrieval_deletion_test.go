@@ -8,8 +8,15 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/game"
 )
 
+var creationRetrievalDeletionTestGameNames = []string{
+	testGameNamePrefix + "A valid game",
+	testGameNamePrefix + "Name with SQL injection'-- including this",
+	testGameNamePrefix + "Another valid game",
+	testGameNamePrefix + "Normal name",
+}
+
 func TestRandomSeedCausesNoPanic(unitTest *testing.T) {
-	statePersisters := preparePersisters(unitTest)
+	statePersisters := preparePersisters(unitTest, creationRetrievalDeletionTestGameNames)
 
 	for _, statePersister := range statePersisters {
 		testIdentifier := "Positive seed/" + statePersister.PersisterDescription
@@ -22,7 +29,7 @@ func TestRandomSeedCausesNoPanic(unitTest *testing.T) {
 }
 
 func TestReturnErrorWhenGameDoesNotExist(unitTest *testing.T) {
-	statePersisters := preparePersisters(unitTest)
+	statePersisters := preparePersisters(unitTest, creationRetrievalDeletionTestGameNames)
 
 	for _, statePersister := range statePersisters {
 		testIdentifier :=
@@ -46,7 +53,7 @@ func TestReturnErrorWhenGameDoesNotExist(unitTest *testing.T) {
 }
 
 func TestReturnEmptyListWhenPlayerHasNoGames(unitTest *testing.T) {
-	statePersisters := preparePersisters(unitTest)
+	statePersisters := preparePersisters(unitTest, creationRetrievalDeletionTestGameNames)
 
 	for _, statePersister := range statePersisters {
 		testIdentifier :=
@@ -83,7 +90,7 @@ func TestReturnEmptyListWhenPlayerHasNoGames(unitTest *testing.T) {
 }
 
 func TestRejectAddGameWithNoName(unitTest *testing.T) {
-	statePersisters := preparePersisters(unitTest)
+	statePersisters := preparePersisters(unitTest, creationRetrievalDeletionTestGameNames)
 
 	threePlayersWithNilHands :=
 		[]game.PlayerNameWithHand{
@@ -103,7 +110,7 @@ func TestRejectAddGameWithNoName(unitTest *testing.T) {
 
 	for _, statePersister := range statePersisters {
 		testIdentifier :=
-			"Reject Add(game with existing name)/" + statePersister.PersisterDescription
+			"Reject Add(game with no name)/" + statePersister.PersisterDescription
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
 			errorFromInvalidAdd :=
@@ -129,7 +136,7 @@ func TestRejectAddGameWithNoName(unitTest *testing.T) {
 }
 
 func TestRejectAddGameWithExistingName(unitTest *testing.T) {
-	statePersisters := preparePersisters(unitTest)
+	statePersisters := preparePersisters(unitTest, creationRetrievalDeletionTestGameNames)
 
 	twoPlayersWithNilHands :=
 		[]game.PlayerNameWithHand{
@@ -162,8 +169,7 @@ func TestRejectAddGameWithExistingName(unitTest *testing.T) {
 	expectedGamesMappedToPlayers := make(map[string]map[string]bool, 0)
 
 	for _, statePersister := range statePersisters {
-		for _, gameBaseName := range []string{"A valid game", "Another valid game"} {
-			gameName := testGameNamePrefix + gameBaseName
+		for _, gameName := range creationRetrievalDeletionTestGameNames[:2] {
 			testIdentifier :=
 				"Reject Add(game with existing name)/" + statePersister.PersisterDescription
 
@@ -259,7 +265,7 @@ func TestRejectAddGameWithExistingName(unitTest *testing.T) {
 }
 
 func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
-	statePersisters := preparePersisters(unitTest)
+	statePersisters := preparePersisters(unitTest, creationRetrievalDeletionTestGameNames)
 	leavingPlayer := defaultTestPlayers[0]
 	stayingPlayer := defaultTestPlayers[2]
 
@@ -296,7 +302,7 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 			"Add games then leave games/" + statePersister.PersisterDescription
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			firstGameName := testGameNamePrefix + "Normal name"
+			firstGameName := creationRetrievalDeletionTestGameNames[0]
 			errorFromFirstAdd :=
 				statePersister.GamePersister.AddGame(
 					context.Background(),
@@ -339,7 +345,7 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 				justFirstGameName,
 				statePersister.GamePersister)
 
-			secondGameName := testGameNamePrefix + "Name with SQL injection'-- including this"
+			secondGameName := creationRetrievalDeletionTestGameNames[1]
 			errorFromSecondAdd :=
 				statePersister.GamePersister.AddGame(
 					context.Background(),
@@ -383,7 +389,7 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 				firstTwoGameNames,
 				statePersister.GamePersister)
 
-			thirdGameName := testGameNamePrefix + "Yet another game"
+			thirdGameName := creationRetrievalDeletionTestGameNames[2]
 			errorFromThirdAdd :=
 				statePersister.GamePersister.AddGame(
 					context.Background(),
@@ -587,6 +593,13 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 							secondGameName),
 					},
 					secondGameName)
+
+			if errorFromDeletingSecondGame == nil {
+				unitTest.Fatalf(
+					"Delete(%v) produced nil error instead of expected %v",
+					secondGameName,
+					errorExpectedFromDeletingSecondGame)
+			}
 
 			// We have to compare the error strings because of the way that error interface
 			// comparison works. (There are better ways, such as custom error types, or an
@@ -910,6 +923,14 @@ func assertReadAllWithPlayerGameNamesCorrect(
 	}
 
 	if len(statesFromAllWithPlayer) != len(expectedGameNames) {
+		for _, stateFromAllWithPlayer := range statesFromAllWithPlayer {
+			unitTest.Logf(
+				testIdentifier+
+					"/ReadAllWithPlayer(%v) listing states:\n%v\n",
+				playerName,
+				stateFromAllWithPlayer)
+		}
+
 		unitTest.Fatalf(
 			testIdentifier+
 				"/ReadAllWithPlayer(%v) produced %v which did not have the expected game names %v",
