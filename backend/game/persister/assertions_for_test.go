@@ -221,7 +221,8 @@ func assertGameStateAsExpected(
 			actualGame.ActionLog())
 	}
 
-	toleranceInNanosecondsForLogMessages := 100 * 1000
+	// We allow up to half a second of variance in the timestamps.
+	toleranceInNanosecondsForLogMessages := 500 * 1000 * 1000
 
 	for indexInLog, actualMessage := range actualGame.ChatLog() {
 		expectedMessage := expectedGame.ChatLog[indexInLog]
