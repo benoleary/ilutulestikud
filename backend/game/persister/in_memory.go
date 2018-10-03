@@ -15,15 +15,11 @@ import (
 
 // inMemoryPersister stores game states by creating inMemoryStates and
 // saving them as game.ReadAndWriteStates, mapped to by their names.
-// It also maintains a map of player names to slices of game states,
-// where each game state in the slice mapped to by a player includes
-// that player as a participant. It ignores all context structs passed
-// to its functions.
+// It ignores all context structs passed to its functions.
 type inMemoryPersister struct {
 	mutualExclusion       sync.Mutex
 	randomNumberGenerator *rand.Rand
-	gameStates            map[string]game.ReadAndWriteState
-	gamesWithPlayers      map[string][]game.ReadonlyState
+	gameStates            map[string]*inMemoryState
 }
 
 // NewInMemory creates a game state persister around a map of games.
@@ -31,14 +27,15 @@ func NewInMemory() game.StatePersister {
 	return &inMemoryPersister{
 		mutualExclusion:       sync.Mutex{},
 		randomNumberGenerator: rand.New(rand.NewSource(time.Now().Unix())),
-		gameStates:            make(map[string]game.ReadAndWriteState, 1),
-		gamesWithPlayers:      make(map[string][]game.ReadonlyState, 0),
+		gameStates:            make(map[string]*inMemoryState, 1),
 	}
 }
 
 // RandomSeed provides an int64 which can be used as a seed for the
 // rand.NewSource(...) function.
 func (gamePersister *inMemoryPersister) RandomSeed() int64 {
+	gamePersister.mutualExclusion.Lock()
+	defer gamePersister.mutualExclusion.Unlock()
 	return gamePersister.randomNumberGenerator.Int63()
 }
 
@@ -47,13 +44,7 @@ func (gamePersister *inMemoryPersister) RandomSeed() int64 {
 func (gamePersister *inMemoryPersister) ReadAndWriteGame(
 	executionContext context.Context,
 	gameName string) (game.ReadAndWriteState, error) {
-	gameState, gameExists := gamePersister.gameStates[gameName]
-
-	if !gameExists {
-		return nil, fmt.Errorf("Game %v does not exist", gameName)
-	}
-
-	return gameState, nil
+	return gamePersister.GetInMemoryState(gameName)
 }
 
 // ReadAllWithPlayer returns a slice of all the game.ReadonlyState instances in the
@@ -61,17 +52,15 @@ func (gamePersister *inMemoryPersister) ReadAndWriteGame(
 func (gamePersister *inMemoryPersister) ReadAllWithPlayer(
 	executionContext context.Context,
 	playerName string) ([]game.ReadonlyState, error) {
-	// We do not care if there was no entry for the player, as the default in this
-	// case is nil, and we are going to explicitly check for nil to ensure that we
-	// return an empty list instead anyway (in case the player was mapped to nil
-	// somehow).
-	gameStates, _ := gamePersister.gamesWithPlayers[playerName]
+	gamesWithPlayer := make([]game.ReadonlyState, 0)
 
-	if gameStates == nil {
-		return []game.ReadonlyState{}, nil
+	for _, gameState := range gamePersister.gameStates {
+		if gameState.HasCurrentParticipant(playerName) {
+			gamesWithPlayer = append(gamesWithPlayer, gameState)
+		}
 	}
 
-	return gameStates, nil
+	return gamesWithPlayer, nil
 }
 
 // AddGame adds an element to the collection which is a new object implementing
@@ -111,17 +100,9 @@ func (gamePersister *inMemoryPersister) AddGame(
 	}
 
 	gamePersister.mutualExclusion.Lock()
-
 	gamePersister.gameStates[gameName] = newGame
-
-	for _, nameWithHand := range playersInTurnOrderWithInitialHands {
-		playerName := nameWithHand.PlayerName
-		existingGamesWithPlayer := gamePersister.gamesWithPlayers[playerName]
-		gamePersister.gamesWithPlayers[playerName] =
-			append(existingGamesWithPlayer, newGame.Read())
-	}
-
 	gamePersister.mutualExclusion.Unlock()
+
 	return nil
 }
 
@@ -133,45 +114,14 @@ func (gamePersister *inMemoryPersister) RemoveGameFromListForPlayer(
 	executionContext context.Context,
 	gameName string,
 	playerName string) error {
-	// We only remove the player from the look-up map used for
-	// ReadAllWithPlayer(...) rather than changing the internal state of
-	// the game.
-	gameStates, playerHasGames := gamePersister.gamesWithPlayers[playerName]
+	gameToUpdate, errorFromGet :=
+		gamePersister.GetInMemoryState(gameName)
 
-	if playerHasGames {
-		for gameIndex, gameState := range gameStates {
-			if gameName != gameState.Name() {
-				continue
-			}
-
-			for _, participantName := range gameState.PlayerNames() {
-				if participantName != playerName {
-					continue
-				}
-
-				// We make a new array and copy in the elements of the original
-				// list except for the given game, just to let the whole old array
-				// qualify for garbage collection.
-				originalListOfGames := gamePersister.gamesWithPlayers[playerName]
-				reducedListOfGames := make([]game.ReadonlyState, gameIndex)
-				copy(reducedListOfGames, originalListOfGames[:gameIndex])
-
-				// We don't have to worry about gameIndex+1 being out of bounds as
-				// a slice can start at index == length, and in this case just
-				// produces an empty slice. (For gameIndex < length - 1, there is
-				// obviously no problem.)
-				gamePersister.gamesWithPlayers[playerName] =
-					append(reducedListOfGames, originalListOfGames[gameIndex+1:]...)
-
-				return nil
-			}
-		}
+	if errorFromGet != nil {
+		return errorFromGet
 	}
 
-	return fmt.Errorf(
-		"Player %v is not a participant of game %v",
-		playerName,
-		gameName)
+	return gameToUpdate.RemovePlayerFromParticipantList(playerName)
 }
 
 // Delete deletes the given game from the collection. It returns an error
@@ -214,6 +164,18 @@ func (gamePersister *inMemoryPersister) Delete(
 	}
 
 	return nil
+}
+
+// GetInMemoryState returns a pointer to an inMemoryState struct with the given name.
+func (gamePersister *inMemoryPersister) GetInMemoryState(
+	gameName string) (*inMemoryState, error) {
+	gameState, gameExists := gamePersister.gameStates[gameName]
+
+	if !gameExists {
+		return nil, fmt.Errorf("Game %v does not exist", gameName)
+	}
+
+	return gameState, nil
 }
 
 // inMemoryState is a struct meant to encapsulate all the state required for a

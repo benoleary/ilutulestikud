@@ -160,6 +160,77 @@ func (serializableState *SerializableState) RecordChatMessage(
 	return nil
 }
 
+// HasOriginalParticipant returns true if the given player was an original
+// participant regardless of who has left the game.
+func (serializableState *SerializableState) HasOriginalParticipant(
+	playerName string) bool {
+	for _, originalParticipant := range serializableState.ParticipantNamesInTurnOrder {
+		if originalParticipant == playerName {
+			return true
+		}
+	}
+
+	return false
+}
+
+// HasParticipantWhoLeft returns true if the given player has left the game.
+func (serializableState *SerializableState) HasParticipantWhoLeft(
+	playerName string) bool {
+	for _, participantWhoHaveLeft := range serializableState.ParticipantsWhoHaveLeft {
+		if participantWhoHaveLeft == playerName {
+			return true
+		}
+	}
+
+	return false
+}
+
+// HasCurrentParticipant returns true if the given player was an original
+// participant who has not yet left the game.
+func (serializableState *SerializableState) HasCurrentParticipant(
+	playerName string) bool {
+	if !serializableState.HasOriginalParticipant(playerName) {
+		return false
+	}
+
+	return !serializableState.HasParticipantWhoLeft(playerName)
+}
+
+// RemovePlayerFromParticipantList marks the player as no longer being a
+// participant of the given game.
+func (serializableState *SerializableState) RemovePlayerFromParticipantList(
+	playerName string) error {
+	if !serializableState.HasCurrentParticipant(playerName) {
+		return fmt.Errorf(
+			"Player %v is not a participant of game %v",
+			playerName,
+			serializableState.GameName)
+	}
+
+	if serializableState.HasParticipantWhoLeft(playerName) {
+		return fmt.Errorf(
+			"Player %v is not a participant of game %v",
+			playerName,
+			serializableState.GameName)
+	}
+
+	playersWhoHaveLeft := serializableState.ParticipantsWhoHaveLeft
+
+	for _, playerWhoHasLeft := range playersWhoHaveLeft {
+		if playerWhoHasLeft == playerName {
+			return fmt.Errorf(
+				"Player %v has already left game %v",
+				playerName,
+				serializableState.GameName)
+		}
+	}
+
+	serializableState.ParticipantsWhoHaveLeft =
+		append(serializableState.ParticipantsWhoHaveLeft, playerName)
+
+	return nil
+}
+
 func (serializableState *SerializableState) incrementTurnNumbers(
 	deckAlreadyEmptyAtStartOfTurn bool) {
 	serializableState.TurnNumber++

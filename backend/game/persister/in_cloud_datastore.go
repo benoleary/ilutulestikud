@@ -60,8 +60,7 @@ func (gamePersister *inCloudDatastorePersister) RandomSeed() int64 {
 func (gamePersister *inCloudDatastorePersister) ReadAndWriteGame(
 	executionContext context.Context,
 	gameName string) (game.ReadAndWriteState, error) {
-	return gamePersister.GetInCloudDatastoreState(executionContext,
-		gameName)
+	return gamePersister.GetInCloudDatastoreState(executionContext, gameName)
 }
 
 // ReadAllWithPlayer returns a slice of all the game.ReadonlyState instances in the
@@ -189,7 +188,8 @@ func (gamePersister *inCloudDatastorePersister) AddGame(
 // RemoveGameFromListForPlayer removes the given player from the given game
 // in the sense that the game will no longer show up in the result of
 // ReadAllWithPlayer(playerName). It returns an error if the player is not a
-// participant.
+// participant, or if the player has already left, or if there is an error
+// reading the game state from the store.
 func (gamePersister *inCloudDatastorePersister) RemoveGameFromListForPlayer(
 	executionContext context.Context,
 	gameName string,
@@ -216,6 +216,8 @@ func (gamePersister *inCloudDatastorePersister) Delete(
 		datastore.NameKey(keyKind, gameName, nil))
 }
 
+// GetInCloudDatastoreState returns a pointer to an inCloudDatastoreState
+// struct de-serialized from the Google Cloud Datastore with the given name.
 func (gamePersister *inCloudDatastorePersister) GetInCloudDatastoreState(
 	executionContext context.Context,
 	gameName string) (*inCloudDatastoreState, error) {
@@ -384,33 +386,13 @@ func (gameState *inCloudDatastoreState) EnactTurnByUpdatingHandWithHint(
 func (gameState *inCloudDatastoreState) RemovePlayerFromParticipantList(
 	executionContext context.Context,
 	playerName string) error {
-	gameState.mutualExclusion.Lock()
-	defer gameState.mutualExclusion.Unlock()
-
-	playersWhoHaveLeft := gameState.ParticipantsWhoHaveLeft
-
-	for _, playerWhoHasLeft := range playersWhoHaveLeft {
-		if playerWhoHasLeft == playerName {
-			return fmt.Errorf(
-				"Player %v has already left game %v",
-				playerName,
-				gameState.GameName)
-		}
+	errorUpdatingLocally :=
+		gameState.SerializableState.RemovePlayerFromParticipantList(playerName)
+	if errorUpdatingLocally != nil {
+		return errorUpdatingLocally
 	}
 
-	for _, participantName := range gameState.ParticipantNamesInTurnOrder {
-		if participantName == playerName {
-			gameState.ParticipantsWhoHaveLeft =
-				append(playersWhoHaveLeft, playerName)
-
-			return gameState.uploadSerializablePart(executionContext)
-		}
-	}
-
-	return fmt.Errorf(
-		"Player %v is not a participant of game %v",
-		playerName,
-		gameState.GameName)
+	return gameState.uploadSerializablePart(executionContext)
 }
 
 func (gameState *inCloudDatastoreState) uploadSerializablePartIfNoError(
