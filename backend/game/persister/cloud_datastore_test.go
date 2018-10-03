@@ -85,3 +85,30 @@ func TestReadAllWithPlayerPropagatesIteratorError(unitTest *testing.T) {
 			gamesWithPlayer)
 	}
 }
+
+func TestAddGamePropagatesIteratorError(unitTest *testing.T) {
+	mockIterator :=
+		&mockLimitedIterator{
+			KeyToReturn:   nil,
+			ErrorToReturn: fmt.Errorf("Expected error"),
+		}
+
+	mockClient :=
+		&mockLimitedClient{
+			IteratorToReturn: mockIterator,
+			ErrorToReturn:    nil,
+		}
+
+	cloudDatastorePersister :=
+		persister.NewInCloudDatastoreAroundLimitedClient(mockClient)
+
+	gameName := "does not matter"
+	errorFromAddGame :=
+		cloudDatastorePersister.AddGame(nil, gameName, 0, nil, nil, nil, nil)
+
+	if errorFromAddGame == nil {
+		unitTest.Fatalf(
+			"AddGame(nil, %v, 0, nil, nil, nil, nil) produced nil error",
+			gameName)
+	}
+}
