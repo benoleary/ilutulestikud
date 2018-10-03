@@ -56,6 +56,32 @@ func TestReturnErrorWhenGameDoesNotExist(unitTest *testing.T) {
 	}
 }
 
+func TestReturnErrorWhenLeavingNonexistentGame(unitTest *testing.T) {
+	statePersisters := preparePersisters(unitTest, creationRetrievalDeletionTestGameNames)
+	playerName := "Player One"
+	nonexistentGame := testGameNamePrefix + "Non-existent game"
+
+	for _, statePersister := range statePersisters {
+		testIdentifier :=
+			"ReadAndWriteGame(unknown game)/" + statePersister.PersisterDescription
+
+		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			errorFromtLeavingNonexistentGame :=
+				statePersister.GamePersister.RemoveGameFromListForPlayer(
+					context.Background(),
+					nonexistentGame,
+					playerName)
+
+			if errorFromtLeavingNonexistentGame == nil {
+				unitTest.Fatalf(
+					"RemoveGameFromListForPlayer(%v, %v) produced nil error",
+					nonexistentGame,
+					playerName)
+			}
+		})
+	}
+}
+
 func TestReturnEmptyListWhenPlayerHasNoGames(unitTest *testing.T) {
 	statePersisters := preparePersisters(unitTest, creationRetrievalDeletionTestGameNames)
 
@@ -272,6 +298,7 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 	statePersisters := preparePersisters(unitTest, creationRetrievalDeletionTestGameNames)
 	leavingPlayer := defaultTestPlayers[0]
 	stayingPlayer := defaultTestPlayers[2]
+	nonparticipatingPlayer := "Not A. Participant"
 
 	twoPlayersWithNilHands :=
 		[]game.PlayerNameWithHand{
@@ -334,6 +361,7 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 				firstGameName,
 				statePersister.GamePersister)
 
+			noGameNames := make(map[string]bool, 0)
 			justFirstGameName := make(map[string]bool, 1)
 			justFirstGameName[firstGameName] = true
 			assertReadAllWithPlayerGameNamesCorrect(
@@ -348,6 +376,25 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 				stayingPlayer,
 				justFirstGameName,
 				statePersister.GamePersister)
+			assertReadAllWithPlayerGameNamesCorrect(
+				testIdentifier+"/all for non-participant after adding first game",
+				unitTest,
+				nonparticipatingPlayer,
+				noGameNames,
+				statePersister.GamePersister)
+
+			errorFromNonparticipantLeavingFirstGame :=
+				statePersister.GamePersister.RemoveGameFromListForPlayer(
+					context.Background(),
+					firstGameName,
+					nonparticipatingPlayer)
+
+			if errorFromNonparticipantLeavingFirstGame == nil {
+				unitTest.Fatalf(
+					"RemoveGameFromListForPlayer(%v, %v) produced nil error",
+					firstGameName,
+					nonparticipatingPlayer)
+			}
 
 			secondGameName := creationRetrievalDeletionTestGameNames[1]
 			errorFromSecondAdd :=
@@ -556,7 +603,6 @@ func TestAddGamesThenLeaveGamesThenDeleteGames(unitTest *testing.T) {
 				playerNameSet(threePlayersWithNilHands),
 				secondStateAfterLeaving)
 
-			noGameNames := make(map[string]bool, 0)
 			assertReadAllWithPlayerGameNamesCorrect(
 				testIdentifier+"/all for leaver after leaving second game",
 				unitTest,
