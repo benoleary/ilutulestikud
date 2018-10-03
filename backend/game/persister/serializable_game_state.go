@@ -200,7 +200,7 @@ func (serializableState *SerializableState) HasCurrentParticipant(
 // participant of the given game.
 func (serializableState *SerializableState) RemovePlayerFromParticipantList(
 	playerName string) error {
-	if !serializableState.HasCurrentParticipant(playerName) {
+	if !serializableState.HasOriginalParticipant(playerName) {
 		return fmt.Errorf(
 			"Player %v is not a participant of game %v",
 			playerName,
@@ -209,20 +209,9 @@ func (serializableState *SerializableState) RemovePlayerFromParticipantList(
 
 	if serializableState.HasParticipantWhoLeft(playerName) {
 		return fmt.Errorf(
-			"Player %v is not a participant of game %v",
+			"Player %v has already left game %v",
 			playerName,
 			serializableState.GameName)
-	}
-
-	playersWhoHaveLeft := serializableState.ParticipantsWhoHaveLeft
-
-	for _, playerWhoHasLeft := range playersWhoHaveLeft {
-		if playerWhoHasLeft == playerName {
-			return fmt.Errorf(
-				"Player %v has already left game %v",
-				playerName,
-				serializableState.GameName)
-		}
 	}
 
 	serializableState.ParticipantsWhoHaveLeft =
