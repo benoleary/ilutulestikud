@@ -131,37 +131,9 @@ func (gamePersister *inMemoryPersister) RemoveGameFromListForPlayer(
 func (gamePersister *inMemoryPersister) Delete(
 	executionContext context.Context,
 	gameName string) error {
-	gameToDelete, gameExists := gamePersister.gameStates[gameName]
-
-	if !gameExists {
-		return fmt.Errorf("No game %v exists to delete", gameName)
-	}
-
-	errorsFromLeaving := []error{}
-
-	for _, participantName := range gameToDelete.Read().PlayerNames() {
-		errorFromRemovalFromListForPlayer :=
-			gamePersister.RemoveGameFromListForPlayer(
-				executionContext,
-				gameName,
-				participantName)
-		if errorFromRemovalFromListForPlayer != nil {
-			errorsFromLeaving =
-				append(errorsFromLeaving, errorFromRemovalFromListForPlayer)
-		}
-	}
-
+	gamePersister.mutualExclusion.Lock()
 	delete(gamePersister.gameStates, gameName)
-
-	if len(errorsFromLeaving) > 0 {
-		errorAroundRemovalErrors :=
-			fmt.Errorf(
-				"errors %v while removing game %v from player lists, game still deleted",
-				errorsFromLeaving,
-				gameName)
-
-		return errorAroundRemovalErrors
-	}
+	gamePersister.mutualExclusion.Unlock()
 
 	return nil
 }
