@@ -16,6 +16,17 @@ type mockLimitedIterator struct {
 
 func (mockIterator *mockLimitedIterator) Next(
 	deserializationDestination interface{}) (*datastore.Key, error) {
+	serializableState, isSerializableState :=
+		deserializationDestination.(persister.SerializableState)
+
+	if isSerializableState {
+		// The only use case for this is in the test which gives back a
+		// de-serialization error, which can conveniently cover the case
+		// of being unable to de-serialize the ruleset. Hence we use -1,
+		// which should not be a valid ruleset identifier.
+		serializableState.RulesetIdentifier = -1
+	}
+
 	return mockIterator.KeyToReturn, mockIterator.ErrorToReturn
 }
 
@@ -110,5 +121,33 @@ func TestAddGamePropagatesIteratorError(unitTest *testing.T) {
 		unitTest.Fatalf(
 			"AddGame(nil, %v, 0, nil, nil, nil, nil) produced nil error",
 			gameName)
+	}
+}
+
+func TestReadAllWithPlayerPropagatesDeserializationError(unitTest *testing.T) {
+	mockIterator :=
+		&mockLimitedIterator{
+			KeyToReturn:   nil,
+			ErrorToReturn: nil,
+		}
+
+	mockClient :=
+		&mockLimitedClient{
+			IteratorToReturn: mockIterator,
+			ErrorToReturn:    nil,
+		}
+
+	cloudDatastorePersister :=
+		persister.NewInCloudDatastoreAroundLimitedClient(mockClient)
+
+	playerName := "Does Not Matter"
+	gamesWithPlayer, errorFromReadAllWithPlayer :=
+		cloudDatastorePersister.ReadAllWithPlayer(nil, playerName)
+
+	if errorFromReadAllWithPlayer == nil {
+		unitTest.Fatalf(
+			"ReadAllWithPlayer(nil, %v) produced %v with nil error",
+			playerName,
+			gamesWithPlayer)
 	}
 }
