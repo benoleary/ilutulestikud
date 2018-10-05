@@ -1,8 +1,12 @@
 package main
 import (
-	"google.golang.org/appengine"
+	"context"
 	"log"
 	"net/http"
+
+	"google.golang.org/appengine"
+
+	"cloud.google.com/go/datastore"
 
 	"github.com/benoleary/ilutulestikud/backend/defaults"
 	"github.com/benoleary/ilutulestikud/backend/game"
@@ -13,8 +17,23 @@ import (
 	endpoint_parsing "github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
 
+// AppEngineContextProvider provides the context derived from the
+// HTTP request according to the App Engine logic.
+type AppEngineContextProvider struct {
+}
+
+// FromRequest provides the context derived from the HTTP request
+// according to the App Engine logic.
+func (appEngineContextProvider *AppEngineContextProvider) FromRequest(
+	httpRequest *http.Request) context.Context {
+	return appengine.NewContext(httpRequest)
+}
+
 func main() {
 	// This main function just injects hard-coded dependencies.
+	setupContext := context.Background()
+	contextProvider := &AppEngineContextProvider{}
+
 	postgresqlUsername := os.Getenv("POSTGRESQL_USERNAME")
 	postgresqlPassword := os.Getenv("POSTGRESQL_PASSWORD")
 	postgresqlPlayerdb := os.Getenv("POSTGRESQL_PLAYERDB")
@@ -28,19 +47,33 @@ func main() {
 			postgresqlLocation)
 
 	playerPersister, errorFromPersister :=
-		player_persister.NewInPostgresql(connectionString)
+		player_persister.NewInPostgresql(
+			setupContext,
+			connectionString)
 
 	if errorFromPersister != nil {
 		log.Fatalf(
 			"error when creating PostgreSQL persister: %v",
 			errorFromPersister)
 	}
-	
+
 	playerCollection, errorCreatingPlayerCollection :=
 		player.NewCollection(
+			setupContext,
 			playerPersister,
 			defaults.InitialPlayerNames(),
 			defaults.AvailableColors())
+
+	datastoreClient, errorFromCloudDatastore :=
+		datastore.NewClient(
+			setupContext,
+			game_persister.IlutulestikudIdentifier)
+
+	if errorFromCloudDatastore != nil {
+		log.Fatalf(
+			"Error when creating client for Cloud Datastore: %v",
+			errorFromCloudDatastore)
+	}
 
 	if errorCreatingPlayerCollection != nil {
 		log.Fatalf(
@@ -48,7 +81,7 @@ func main() {
 			errorCreatingPlayerCollection)
 	}
 
-	gamePersister := game_persister.NewInMemory()
+	gamePersister := game_persister.NewInCloudDatastore(datastoreClient)
 	gameCollection :=
 		game.NewCollection(
 			gamePersister,
@@ -58,6 +91,7 @@ func main() {
 	// We could load the allowed origin from a file, but this app is very specific to a set of fixed addresses.
 	serverState :=
 	    server.New(
+			contextProvider,
 			"https://storage.googleapis.com",
 			&endpoint_parsing.Base32Translator{},
 			playerCollection,

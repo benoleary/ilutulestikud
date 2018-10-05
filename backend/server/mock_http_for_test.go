@@ -2,7 +2,6 @@ package server_test
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -11,14 +10,6 @@ import (
 
 	"github.com/benoleary/ilutulestikud/backend/server"
 )
-
-type mockContextProvider struct {
-}
-
-func (mockProvider *mockContextProvider) FromRequest(
-	httpRequest *http.Request) context.Context {
-	return context.Background()
-}
 
 // mockGet creates a mock HTTP GET request and sends it to the given
 // server.State and returns an object containing the recorded response.

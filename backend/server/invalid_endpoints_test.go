@@ -12,6 +12,8 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 )
 
+var mockContextProvider = &server.BackgroundContextProvider{}
+
 type mockEndpointHandler struct {
 	TestReference    *testing.T
 	TestErrorForGet  error
@@ -157,7 +159,7 @@ func TestRejectInvalidRequestsBeforeCallingHandler(unitTest *testing.T) {
 			// endpoints which are not covered by requests which would get validly redirected
 			// to either of the endpoint handlers.
 			serverState :=
-				server.New(&mockContextProvider{}, "irrelevant to tests", nil, nil, nil)
+				server.New(mockContextProvider, "irrelevant to tests", nil, nil, nil)
 
 			// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 			responseRecorder := httptest.NewRecorder()
@@ -232,7 +234,7 @@ func TestSelectCorrectHandlerForValidRequest(unitTest *testing.T) {
 
 			serverState :=
 				server.NewWithGivenHandlers(
-					&mockContextProvider{},
+					mockContextProvider,
 					"irrelevant to tests",
 					nil,
 					testCase.playerHandler,
@@ -268,7 +270,7 @@ func TestWrapReturnedError(unitTest *testing.T) {
 
 	serverState :=
 		server.NewWithGivenHandlers(
-			&mockContextProvider{},
+			mockContextProvider,
 			"irrelevant to tests",
 			nil,
 			testHandler,

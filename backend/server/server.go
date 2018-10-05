@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"strings"
@@ -10,14 +9,6 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/server/endpoint/parsing"
 	"github.com/benoleary/ilutulestikud/backend/server/endpoint/player"
 )
-
-// ContextProvider is a means to provide context.Context objects from
-// the HTTP request without having to know about things such as how
-// Google App Engine has its own static function for providing one.
-type ContextProvider interface {
-	// FromRequest should provide a context from the request.
-	FromRequest(httpRequest *http.Request) context.Context
-}
 
 // State contains all the state to allow the backend to function.
 type State struct {
