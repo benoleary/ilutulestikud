@@ -1,7 +1,9 @@
 package main
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"os"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/log"
@@ -46,11 +48,6 @@ func main() {
 			postgresqlPlayerdb,
 			postgresqlLocation)
 
-	log.Infof(
-		setupContext,
-		"Connecting to PostgreSQL with %v",
-		connectionString)
-
 	playerPersister, errorFromPersister :=
 		player_persister.NewInPostgresql(
 			setupContext,
@@ -69,10 +66,6 @@ func main() {
 			playerPersister,
 			defaults.InitialPlayerNames(),
 			defaults.AvailableColors())
-
-	log.Infof(
-		setupContext,
-		"Created player collection successfully")
 
 	if errorCreatingPlayerCollection != nil {
 		log.Fatalf(
@@ -98,10 +91,6 @@ func main() {
 			8,
 			playerCollection)
 
-	log.Infof(
-		setupContext,
-		"Created game collection successfully")
-
 	// We could load the allowed origin from a file, but this app is very specific to a set of fixed addresses.
 	serverState :=
 	    server.New(
@@ -110,10 +99,6 @@ func main() {
 			&endpoint_parsing.Base32Translator{},
 			playerCollection,
 			gameCollection)
-
-	log.Infof(
-		setupContext,
-		"Created server state successfully")
 
 	http.HandleFunc("/backend/", serverState.HandleBackend)
 	http.ListenAndServe(":8080", nil)
