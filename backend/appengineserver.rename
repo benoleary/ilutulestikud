@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"google.golang.org/appengine"
+	"google.golang.org/appengine/log"
 
 	"cloud.google.com/go/datastore"
 
@@ -46,13 +47,19 @@ func main() {
 			postgresqlPlayerdb,
 			postgresqlLocation)
 
+	log.Infof(
+		setupContext,
+		"Connecting to PostgreSQL with %v",
+		connectionString)
+
 	playerPersister, errorFromPersister :=
 		player_persister.NewInPostgresql(
 			setupContext,
 			connectionString)
 
 	if errorFromPersister != nil {
-		log.Fatalf(
+		log.Errorf(
+			setupContext,
 			"error when creating PostgreSQL persister: %v",
 			errorFromPersister)
 	}
@@ -63,6 +70,16 @@ func main() {
 			playerPersister,
 			defaults.InitialPlayerNames(),
 			defaults.AvailableColors())
+
+	log.Infof(
+		setupContext,
+		"Created player collection successfully")
+
+	if errorCreatingPlayerCollection != nil {
+		log.Fatalf(
+			"Error when creating player collection: %v",
+			errorCreatingPlayerCollection)
+	}
 
 	datastoreClient, errorFromCloudDatastore :=
 		datastore.NewClient(
@@ -75,18 +92,16 @@ func main() {
 			errorFromCloudDatastore)
 	}
 
-	if errorCreatingPlayerCollection != nil {
-		log.Fatalf(
-			"Error when creating player collection: %v",
-			errorCreatingPlayerCollection)
-	}
-
 	gamePersister := game_persister.NewInCloudDatastore(datastoreClient)
 	gameCollection :=
 		game.NewCollection(
 			gamePersister,
 			8,
 			playerCollection)
+
+	log.Infof(
+		setupContext,
+		"Created game collection successfully")
 
 	// We could load the allowed origin from a file, but this app is very specific to a set of fixed addresses.
 	serverState :=
@@ -96,6 +111,11 @@ func main() {
 			&endpoint_parsing.Base32Translator{},
 			playerCollection,
 			gameCollection)
+
+	log.Infof(
+		setupContext,
+		"Created server state successfully")
+
 	http.HandleFunc("/backend/", serverState.HandleBackend)
 	http.ListenAndServe(":8080", nil)
 	appengine.Main()
