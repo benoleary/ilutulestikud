@@ -62,35 +62,80 @@ func (mockExecutor *mockStatementExecutor) ExecuteStatement(
 }
 
 func TestReturnErrorFromInvalidConnectionString(unitTest *testing.T) {
-	invalidConnection := "user=INVALID password=WRONG dbname=DOES_NOT_EXIST"
-	postgresqlPersister, errorFromPostgresql :=
-		persister.NewInPostgresql(context.Background(), invalidConnection)
+	invalidConnectionString := "user=INVALID password=WRONG dbname=DOES_NOT_EXIST"
+	postgresqlPersister := persister.NewInPostgresql(invalidConnectionString)
 
-	if errorFromPostgresql == nil {
+	executionContext := context.Background()
+
+	// We test that every kind of request generates an error.
+	playerName := "Should Not Matter"
+	playerColor := "should not matter"
+	errorFromAddRequest :=
+		postgresqlPersister.Add(executionContext, playerName, playerColor)
+
+	if errorFromAddRequest == nil {
 		unitTest.Fatalf(
-			"Successfully created PostgreSQL persister %+v from connection string %v instead producing error",
+			"Successfully created PostgreSQL persister %+v from connection"+
+				" string %v, and got nil err from .Add(%v, %v, %v)",
 			postgresqlPersister,
-			invalidConnection)
+			invalidConnectionString,
+			executionContext,
+			playerName,
+			playerColor)
 	}
-}
 
-func TestReturnErrorFromInvalidInitialStatement(unitTest *testing.T) {
-	mockExecutor := &mockStatementExecutor{}
-	mockExecutor.ReturnForExecuteStatement = nil
-	mockExecutor.ReturnedErrorForExecuteStatement = fmt.Errorf("expected error")
-	invalidStatement := "does not matter as the mock will return an error anyway"
-	postgresqlPersister, errorFromPostgresql :=
-		persister.NewInPostgresqlWithInitialStatements(
-			context.Background(),
-			mockExecutor,
-			invalidStatement)
+	errorFromUpdateColorRequest :=
+		postgresqlPersister.UpdateColor(executionContext, playerName, playerColor)
 
-	if errorFromPostgresql == nil {
+	if errorFromUpdateColorRequest == nil {
 		unitTest.Fatalf(
-			"Successfully created PostgreSQL persister %+v from invalid statement %v"+
-				" instead of producing error",
+			"Successfully created PostgreSQL persister %+v from connection"+
+				" string %v, and got nil error from .UpdateColor(%v, %v, %v)",
 			postgresqlPersister,
-			invalidStatement)
+			invalidConnectionString,
+			executionContext,
+			playerName,
+			playerColor)
+	}
+
+	unexpectedGetResult, errorFromGetRequest :=
+		postgresqlPersister.Get(executionContext, playerName)
+
+	if errorFromGetRequest == nil {
+		unitTest.Fatalf(
+			"Successfully created PostgreSQL persister %+v from connection"+
+				" string %v, and got %v from .All(%v, %v) instead of producing error",
+			postgresqlPersister,
+			invalidConnectionString,
+			unexpectedGetResult,
+			executionContext,
+			playerName)
+	}
+
+	unexpectedAllResult, errorFromAllRequest :=
+		postgresqlPersister.All(executionContext)
+
+	if errorFromAllRequest == nil {
+		unitTest.Fatalf(
+			"Successfully created PostgreSQL persister %+v from connection"+
+				" string %v, and got %v from .All(%v) instead of producing error",
+			postgresqlPersister,
+			invalidConnectionString,
+			unexpectedAllResult,
+			executionContext)
+	}
+
+	errorFromDeleteRequest :=
+		postgresqlPersister.Delete(executionContext, playerName)
+
+	if errorFromDeleteRequest == nil {
+		unitTest.Fatalf(
+			"Successfully created PostgreSQL persister %+v from connection"+
+				" string %v, and got nil error from .Delete(%v, %v)",
+			postgresqlPersister,
+			invalidConnectionString,
+			executionContext,
+			playerName)
 	}
 }
 
@@ -101,15 +146,11 @@ func TestReturnErrorFromQueryDuringGet(unitTest *testing.T) {
 	mockExecutor.ReturnForExecuteQuery = nil
 	mockExecutor.ReturnedErrorForExecuteQuery = fmt.Errorf("expected error")
 
-	postgresqlPersister, errorFromPostgresql :=
-		persister.NewInPostgresqlWithInitialStatements(
-			context.Background(),
+	ignoredConnectionString := "does not matter as the mock executor is provided"
+	postgresqlPersister :=
+		persister.NewInPostgresqlWithGivenLimitedExecutor(
+			ignoredConnectionString,
 			mockExecutor)
-	if errorFromPostgresql != nil {
-		unitTest.Fatalf(
-			"Produced error %v when trying to create persister using mock",
-			errorFromPostgresql)
-	}
 
 	playerState, errorFromGet :=
 		postgresqlPersister.Get(context.Background(), playerName)
@@ -132,15 +173,11 @@ func TestReturnErrorFromScanDuringGet(unitTest *testing.T) {
 	mockExecutor.ReturnForExecuteQuery = mockResult
 	mockExecutor.ReturnedErrorForExecuteQuery = nil
 
-	postgresqlPersister, errorFromPostgresql :=
-		persister.NewInPostgresqlWithInitialStatements(
-			context.Background(),
+	ignoredConnectionString := "does not matter as the mock executor is provided"
+	postgresqlPersister :=
+		persister.NewInPostgresqlWithGivenLimitedExecutor(
+			ignoredConnectionString,
 			mockExecutor)
-	if errorFromPostgresql != nil {
-		unitTest.Fatalf(
-			"Produced error %v when trying to create persister using mock",
-			errorFromPostgresql)
-	}
 
 	playerState, errorFromGet :=
 		postgresqlPersister.Get(context.Background(), playerName)
@@ -163,15 +200,11 @@ func TestReturnErrorWhenMultipleRowsFromGet(unitTest *testing.T) {
 	mockExecutor.ReturnForExecuteQuery = mockResult
 	mockExecutor.ReturnedErrorForExecuteQuery = nil
 
-	postgresqlPersister, errorFromPostgresql :=
-		persister.NewInPostgresqlWithInitialStatements(
-			context.Background(),
+	ignoredConnectionString := "does not matter as the mock executor is provided"
+	postgresqlPersister :=
+		persister.NewInPostgresqlWithGivenLimitedExecutor(
+			ignoredConnectionString,
 			mockExecutor)
-	if errorFromPostgresql != nil {
-		unitTest.Fatalf(
-			"Produced error %v when trying to create persister using mock",
-			errorFromPostgresql)
-	}
 
 	playerState, errorFromGet :=
 		postgresqlPersister.Get(context.Background(), playerName)
@@ -188,15 +221,11 @@ func TestReturnErrorFromQueryDuringAll(unitTest *testing.T) {
 	mockExecutor.ReturnForExecuteQuery = nil
 	mockExecutor.ReturnedErrorForExecuteQuery = fmt.Errorf("expected error")
 
-	postgresqlPersister, errorFromPostgresql :=
-		persister.NewInPostgresqlWithInitialStatements(
-			context.Background(),
+	ignoredConnectionString := "does not matter as the mock executor is provided"
+	postgresqlPersister :=
+		persister.NewInPostgresqlWithGivenLimitedExecutor(
+			ignoredConnectionString,
 			mockExecutor)
-	if errorFromPostgresql != nil {
-		unitTest.Fatalf(
-			"Produced error %v when trying to create persister using mock",
-			errorFromPostgresql)
-	}
 
 	playerStates, errorFromAll :=
 		postgresqlPersister.All(context.Background())
@@ -216,15 +245,11 @@ func TestReturnErrorFromScanDuringAll(unitTest *testing.T) {
 	mockExecutor.ReturnForExecuteQuery = mockResult
 	mockExecutor.ReturnedErrorForExecuteQuery = nil
 
-	postgresqlPersister, errorFromPostgresql :=
-		persister.NewInPostgresqlWithInitialStatements(
-			context.Background(),
+	ignoredConnectionString := "does not matter as the mock executor is provided"
+	postgresqlPersister :=
+		persister.NewInPostgresqlWithGivenLimitedExecutor(
+			ignoredConnectionString,
 			mockExecutor)
-	if errorFromPostgresql != nil {
-		unitTest.Fatalf(
-			"Produced error %v when trying to create persister using mock",
-			errorFromPostgresql)
-	}
 
 	playerStates, errorFromAll :=
 		postgresqlPersister.All(context.Background())
@@ -242,15 +267,11 @@ func TestReturnErrorFromQueryDuringDelete(unitTest *testing.T) {
 	mockExecutor.ReturnForExecuteStatement = nil
 	mockExecutor.ReturnedErrorForExecuteStatement = fmt.Errorf("expected error")
 
-	postgresqlPersister, errorFromPostgresql :=
-		persister.NewInPostgresqlWithInitialStatements(
-			context.Background(),
+	ignoredConnectionString := "does not matter as the mock executor is provided"
+	postgresqlPersister :=
+		persister.NewInPostgresqlWithGivenLimitedExecutor(
+			ignoredConnectionString,
 			mockExecutor)
-	if errorFromPostgresql != nil {
-		unitTest.Fatalf(
-			"Produced error %v when trying to create persister using mock",
-			errorFromPostgresql)
-	}
 
 	errorFromDelete :=
 		postgresqlPersister.Delete(context.Background(), playerName)
@@ -272,15 +293,11 @@ func TestReturnErrorWhenErrorParsingDeletionResult(unitTest *testing.T) {
 	mockExecutor.ReturnForExecuteStatement = mockResult
 	mockExecutor.ReturnedErrorForExecuteStatement = nil
 
-	postgresqlPersister, errorFromPostgresql :=
-		persister.NewInPostgresqlWithInitialStatements(
-			context.Background(),
+	ignoredConnectionString := "does not matter as the mock executor is provided"
+	postgresqlPersister :=
+		persister.NewInPostgresqlWithGivenLimitedExecutor(
+			ignoredConnectionString,
 			mockExecutor)
-	if errorFromPostgresql != nil {
-		unitTest.Fatalf(
-			"Produced error %v when trying to create persister using mock",
-			errorFromPostgresql)
-	}
 
 	errorFromDelete :=
 		postgresqlPersister.Delete(context.Background(), playerName)
@@ -302,15 +319,11 @@ func TestReturnErrorWhenMultipleRowsDeleted(unitTest *testing.T) {
 	mockExecutor.ReturnForExecuteStatement = mockResult
 	mockExecutor.ReturnedErrorForExecuteStatement = nil
 
-	postgresqlPersister, errorFromPostgresql :=
-		persister.NewInPostgresqlWithInitialStatements(
-			context.Background(),
+	ignoredConnectionString := "does not matter as the mock executor is provided"
+	postgresqlPersister :=
+		persister.NewInPostgresqlWithGivenLimitedExecutor(
+			ignoredConnectionString,
 			mockExecutor)
-	if errorFromPostgresql != nil {
-		unitTest.Fatalf(
-			"Produced error %v when trying to create persister using mock",
-			errorFromPostgresql)
-	}
 
 	errorFromDelete :=
 		postgresqlPersister.Delete(context.Background(), playerName)

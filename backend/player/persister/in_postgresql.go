@@ -68,62 +68,28 @@ func (wrappingExecutor *wrappingLimitedExecutor) ExecuteStatement(
 
 // inPostgresqlPersister stores players in a PostgreSQL database.
 type inPostgresqlPersister struct {
+	connectionArguments  string
 	connectionToDatabase LimitedExecutor
 }
 
 // NewInPostgresql creates a player state persister which connects to a
 // PostgreSQL database by the given connection string.
-func NewInPostgresql(
-	executionContext context.Context,
-	connectionArguments string) (player.StatePersister, error) {
-	postgresqlDatabase, errorFromConnection :=
-		sql.Open("postgres", connectionArguments)
-
-	// Even if the connection string is junk, sql.Open(...) might not return an
-	// error because it might not yet have opened any connection. In this case,
-	// the appropriate thing to do is to check the connection with a ping.
-	if errorFromConnection == nil {
-		errorFromConnection = postgresqlDatabase.Ping()
-	}
-
-	if errorFromConnection != nil {
-		return nil, errorFromConnection
-	}
-
-	// This is PostgreSQL-specific (IF NOT EXISTS), and would not work for another
-	// dialect of SQL.
-	tableCreationStatement :=
-		`CREATE TABLE IF NOT EXISTS player (
-			name VARCHAR(255) PRIMARY KEY NOT NULL UNIQUE,
-			color VARCHAR(255)
-		)`
-
-	return NewInPostgresqlWithInitialStatements(
-		executionContext,
-		&wrappingLimitedExecutor{wrappedInterface: postgresqlDatabase},
-		tableCreationStatement)
+func NewInPostgresql(connectionArguments string) player.StatePersister {
+	return NewInPostgresqlWithGivenLimitedExecutor(
+		connectionArguments,
+		nil)
 }
 
-// NewInPostgresqlWithInitialStatements runs the given SQL statements on the
-// given executor, then wraps it into an inPostgresqlPersister.
-func NewInPostgresqlWithInitialStatements(
-	executionContext context.Context,
-	connectionToDatabase LimitedExecutor,
-	initialStatements ...string) (player.StatePersister, error) {
-	for _, initialStatement := range initialStatements {
-		_, errorFromExecution :=
-			connectionToDatabase.ExecuteStatement(executionContext, initialStatement)
-		if errorFromExecution != nil {
-			return nil, errorFromExecution
-		}
+// NewInPostgresqlWithGivenLimitedExecutor creates a player state persister
+// which connects to a PostgreSQL database by the given connection string,
+// initialized with the given LimitedExecutor.
+func NewInPostgresqlWithGivenLimitedExecutor(
+	connectionArguments string,
+	connectionToDatabase LimitedExecutor) player.StatePersister {
+	return &inPostgresqlPersister{
+		connectionArguments:  connectionArguments,
+		connectionToDatabase: connectionToDatabase,
 	}
-
-	playerPersister :=
-		&inPostgresqlPersister{
-			connectionToDatabase: connectionToDatabase,
-		}
-
-	return playerPersister, nil
 }
 
 // Add inserts the given name and color as a row in the database.
@@ -131,9 +97,16 @@ func (playerPersister *inPostgresqlPersister) Add(
 	executionContext context.Context,
 	playerName string,
 	chatColor string) error {
+	initializedExecutor, errorFromAcquiral :=
+		playerPersister.acquireExecutor(executionContext)
+
+	if errorFromAcquiral != nil {
+		return errorFromAcquiral
+	}
+
 	playerCreationStatement := "INSERT INTO player (name, color) VALUES ($1, $2)"
 	_, errorFromExecution :=
-		playerPersister.connectionToDatabase.ExecuteStatement(
+		initializedExecutor.ExecuteStatement(
 			executionContext,
 			playerCreationStatement,
 			playerName,
@@ -148,9 +121,16 @@ func (playerPersister *inPostgresqlPersister) UpdateColor(
 	executionContext context.Context,
 	playerName string,
 	chatColor string) error {
+	initializedExecutor, errorFromAcquiral :=
+		playerPersister.acquireExecutor(executionContext)
+
+	if errorFromAcquiral != nil {
+		return errorFromAcquiral
+	}
+
 	playerUpdateStatement := "UPDATE player SET color = $1 WHERE name = $2"
 	resultFromExecution, errorFromExecution :=
-		playerPersister.connectionToDatabase.ExecuteStatement(
+		initializedExecutor.ExecuteStatement(
 			executionContext,
 			playerUpdateStatement,
 			chatColor,
@@ -166,10 +146,17 @@ func (playerPersister *inPostgresqlPersister) UpdateColor(
 func (playerPersister *inPostgresqlPersister) Get(
 	executionContext context.Context,
 	playerName string) (player.ReadonlyState, error) {
+	initializedExecutor, errorFromAcquiral :=
+		playerPersister.acquireExecutor(executionContext)
+
+	if errorFromAcquiral != nil {
+		return nil, errorFromAcquiral
+	}
+
 	playerSelectStatement :=
 		"SELECT color FROM player WHERE name = $1"
 	playerRows, errorFromExecution :=
-		playerPersister.connectionToDatabase.ExecuteQuery(
+		initializedExecutor.ExecuteQuery(
 			executionContext,
 			playerSelectStatement,
 			playerName)
@@ -215,9 +202,16 @@ func (playerPersister *inPostgresqlPersister) Get(
 // instances, ordered as given by the database.
 func (playerPersister *inPostgresqlPersister) All(
 	executionContext context.Context) ([]player.ReadonlyState, error) {
+	initializedExecutor, errorFromAcquiral :=
+		playerPersister.acquireExecutor(executionContext)
+
+	if errorFromAcquiral != nil {
+		return nil, errorFromAcquiral
+	}
+
 	playerSelectStatement := "SELECT name, color FROM player"
 	playerRows, errorFromExecution :=
-		playerPersister.connectionToDatabase.ExecuteQuery(
+		initializedExecutor.ExecuteQuery(
 			executionContext,
 			playerSelectStatement)
 	if errorFromExecution != nil {
@@ -246,9 +240,16 @@ func (playerPersister *inPostgresqlPersister) All(
 func (playerPersister *inPostgresqlPersister) Delete(
 	executionContext context.Context,
 	playerName string) error {
+	initializedExecutor, errorFromAcquiral :=
+		playerPersister.acquireExecutor(executionContext)
+
+	if errorFromAcquiral != nil {
+		return errorFromAcquiral
+	}
+
 	playerDeletionStatement := "DELETE FROM player WHERE name = $1"
 	resultFromExecution, errorFromExecution :=
-		playerPersister.connectionToDatabase.ExecuteStatement(
+		initializedExecutor.ExecuteStatement(
 			executionContext,
 			playerDeletionStatement,
 			playerName)
@@ -257,6 +258,60 @@ func (playerPersister *inPostgresqlPersister) Delete(
 		playerName,
 		resultFromExecution,
 		errorFromExecution)
+}
+
+// acquireExecutor returns the connection to the PostgreSQL database,
+// initializing it if it has not already been initialized.
+func (playerPersister *inPostgresqlPersister) acquireExecutor(
+	executionContext context.Context) (LimitedExecutor, error) {
+	if playerPersister.connectionToDatabase == nil {
+		errorFromInitialization :=
+			playerPersister.initializeExecutor(executionContext)
+		if errorFromInitialization != nil {
+			return nil, errorFromInitialization
+		}
+	}
+
+	return playerPersister.connectionToDatabase, nil
+}
+
+// initializeExecutor initializes the connection to the PostgreSQL
+// database using the given context along with the stored connection
+// string, and then creates the player table if it does not yet
+// exist in the database.
+func (playerPersister *inPostgresqlPersister) initializeExecutor(
+	executionContext context.Context) error {
+	postgresqlDatabase, errorFromConnection :=
+		sql.Open("postgres", playerPersister.connectionArguments)
+
+	// Even if the connection string is junk, sql.Open(...) might not return an
+	// error because it might not yet have opened any connection. In this case,
+	// the appropriate thing to do is to check the connection with a ping.
+	if errorFromConnection == nil {
+		errorFromConnection = postgresqlDatabase.Ping()
+	}
+
+	if errorFromConnection != nil {
+		return errorFromConnection
+	}
+
+	// This is PostgreSQL-specific (IF NOT EXISTS), and would not work for another
+	// dialect of SQL.
+	tableCreationStatement :=
+		`CREATE TABLE IF NOT EXISTS player (
+			name VARCHAR(255) PRIMARY KEY NOT NULL UNIQUE,
+			color VARCHAR(255)
+		)`
+
+	playerPersister.connectionToDatabase =
+		&wrappingLimitedExecutor{wrappedInterface: postgresqlDatabase}
+
+	_, errorFromExecution :=
+		playerPersister.connectionToDatabase.ExecuteStatement(
+			executionContext,
+			tableCreationStatement)
+
+	return errorFromExecution
 }
 
 func errorUnlessExactlyOneRowAffected(

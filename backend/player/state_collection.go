@@ -10,20 +10,17 @@ import (
 // list of chat colors which are available to players, and providing default colors if
 // player definitions do not contain specific colors.
 type StateCollection struct {
-	statePersister     StatePersister
-	initialPlayerNames []string
-	chatColorSlice     []string
-	chatColorMap       map[string]bool
-	numberOfColors     int
+	statePersister StatePersister
+	chatColorSlice []string
+	chatColorMap   map[string]bool
+	numberOfColors int
 }
 
 // NewCollection creates a new StateCollection around the given StatePersister and list
 // of chat colors, giving default colors to the initial players. It returns nil and an
 // error if given no chat colors.
 func NewCollection(
-	executionContext context.Context,
 	statePersister StatePersister,
-	initialPlayerNames []string,
 	availableColors []string) (*StateCollection, error) {
 	if len(availableColors) <= 0 {
 		return nil, fmt.Errorf("Chat color list must have at least one color")
@@ -46,19 +43,11 @@ func NewCollection(
 
 	newCollection :=
 		&StateCollection{
-			statePersister:     statePersister,
-			initialPlayerNames: initialPlayerNames,
-			chatColorSlice:     uniqueColors,
-			chatColorMap:       colorMap,
-			numberOfColors:     len(uniqueColors),
+			statePersister: statePersister,
+			chatColorSlice: uniqueColors,
+			chatColorMap:   colorMap,
+			numberOfColors: len(uniqueColors),
 		}
-
-	errorFromInitialPlayers :=
-		newCollection.addInitialPlayers(executionContext)
-
-	if errorFromInitialPlayers != nil {
-		return nil, errorFromInitialPlayers
-	}
 
 	return newCollection, nil
 }
@@ -146,34 +135,4 @@ func (stateCollection *StateCollection) Delete(
 	return stateCollection.statePersister.Delete(
 		executionContext,
 		playerName)
-}
-
-func (stateCollection *StateCollection) addInitialPlayers(
-	executionContext context.Context) error {
-	// First we get the players in the persistence store so that we don't
-	// try to add a player who is already in the system.
-	existingPlayers, errorFromAll := stateCollection.All(executionContext)
-	if errorFromAll != nil {
-		return errorFromAll
-	}
-
-	existingPlayerSet := make(map[string]bool, len(existingPlayers))
-	for _, existingPlayer := range existingPlayers {
-		existingPlayerSet[existingPlayer.Name()] = true
-	}
-
-	for _, initialPlayerName := range stateCollection.initialPlayerNames {
-		if existingPlayerSet[initialPlayerName] {
-			continue
-		}
-
-		errorFromAdd :=
-			stateCollection.Add(executionContext, initialPlayerName, "")
-
-		if errorFromAdd != nil {
-			return errorFromAdd
-		}
-	}
-
-	return nil
 }

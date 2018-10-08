@@ -163,16 +163,29 @@ func prepareCollectionWithoutAdjustingMock(
 	availableColors []string,
 	mockImplementation *mockPersister) (*player.StateCollection, map[string]bool) {
 	stateCollection, errorFromCreation :=
-		player.NewCollection(
-			context.Background(),
-			mockImplementation,
-			initialPlayerNames,
-			colorsAvailableInTest)
+		player.NewCollection(mockImplementation, colorsAvailableInTest)
 
 	if errorFromCreation != nil {
 		unitTest.Fatalf(
 			"Error when preparing collection: %v",
 			errorFromCreation)
+	}
+
+	numberOfColors := len(availableColors)
+
+	for playerCount, initialPlayerName := range initialPlayerNames {
+		colorToAdd :=
+			availableColors[playerCount%numberOfColors]
+		errorFromAdd :=
+			stateCollection.Add(context.Background(), initialPlayerName, colorToAdd)
+
+		if errorFromAdd != nil {
+			unitTest.Fatalf(
+				"Error when preparing collection by adding player %v with color %v: %v",
+				initialPlayerName,
+				colorToAdd,
+				errorFromAdd)
+		}
 	}
 
 	colorSet := make(map[string]bool, 0)
@@ -204,9 +217,7 @@ func TestFactoryMethodRejectsInvalidColorLists(unitTest *testing.T) {
 				NewMockPersister(unitTest, fmt.Errorf("No functions should be called"))
 			stateCollection, errorFromCreation :=
 				player.NewCollection(
-					context.Background(),
 					mockImplementation,
-					defaultTestPlayerNames,
 					testCase.chatColors)
 
 			if errorFromCreation == nil {
@@ -217,157 +228,6 @@ func TestFactoryMethodRejectsInvalidColorLists(unitTest *testing.T) {
 					testCase.chatColors,
 					stateCollection)
 			}
-		})
-	}
-}
-
-func TestFactoryMethodPropagatesErrorFromPersisterAll(unitTest *testing.T) {
-	mockImplementation :=
-		NewMockPersister(unitTest, fmt.Errorf("Only Add(...) and All() should be called"))
-	mockImplementation.TestErrorForAdd = nil
-	mockImplementation.TestErrorForAll = nil
-	mockImplementation.ReturnForAll = nil
-	mockImplementation.ReturnForNontestError = fmt.Errorf("expected error")
-	stateCollection, errorFromCreation :=
-		player.NewCollection(
-			context.Background(),
-			mockImplementation,
-			defaultTestPlayerNames,
-			colorsAvailableInTest)
-
-	if errorFromCreation == nil {
-		unitTest.Fatalf(
-			"player.NewCollection(%v, %v, %v) produced nil error, instead produced %v",
-			mockImplementation,
-			defaultTestPlayerNames,
-			colorsAvailableInTest,
-			stateCollection)
-	}
-}
-
-func TestFactoryMethodPropagatesErrorFromPersisterAdd(unitTest *testing.T) {
-	mockImplementation :=
-		NewMockPersister(unitTest, fmt.Errorf("Only Add(...) and All() should be called"))
-	mockImplementation.TestErrorForAdd = nil
-	mockImplementation.TestErrorForAll = nil
-	mockImplementation.ReturnForAdd = fmt.Errorf("expected error")
-	stateCollection, errorFromCreation :=
-		player.NewCollection(
-			context.Background(),
-			mockImplementation,
-			defaultTestPlayerNames,
-			colorsAvailableInTest)
-
-	if errorFromCreation == nil {
-		unitTest.Fatalf(
-			"player.NewCollection(%v, %v, %v) produced nil error, instead produced %v",
-			mockImplementation,
-			defaultTestPlayerNames,
-			colorsAvailableInTest,
-			stateCollection)
-	}
-}
-
-func TestFactoryFunctionAddsCorrectlyWhenNoPreexistingPlayers(unitTest *testing.T) {
-	testCases := []struct {
-		testName           string
-		initialPlayerNames []string
-	}{
-		{
-			testName:           "Nil initial player list",
-			initialPlayerNames: nil,
-		},
-		{
-			testName:           "Empty initial player list",
-			initialPlayerNames: []string{},
-		},
-		{
-			testName:           "Default initial player list",
-			initialPlayerNames: defaultTestPlayerNames,
-		},
-	}
-
-	for _, testCase := range testCases {
-		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
-			mockImplementation :=
-				NewMockPersister(unitTest, fmt.Errorf("Only Add(...) and All() should be called"))
-			mockImplementation.TestErrorForAdd = nil
-			mockImplementation.TestErrorForAll = nil
-
-			_, validColors :=
-				prepareCollectionWithoutAdjustingMock(
-					unitTest,
-					testCase.initialPlayerNames,
-					colorsAvailableInTest,
-					mockImplementation)
-
-			assertPersisterAddCalledCorrectly(
-				testCase.testName,
-				unitTest,
-				testCase.initialPlayerNames,
-				validColors,
-				mockImplementation.ArgumentsForAdd)
-		})
-	}
-}
-
-func TestFactoryFunctionAddsCorrectlyWhenTwoPreexistingPlayers(unitTest *testing.T) {
-	testCases := []struct {
-		testName           string
-		initialPlayerNames []string
-		expectedAddedNames []string
-	}{
-		{
-			testName:           "Nil initial player list",
-			initialPlayerNames: nil,
-			expectedAddedNames: []string{},
-		},
-		{
-			testName:           "Empty initial player list",
-			initialPlayerNames: []string{},
-			expectedAddedNames: []string{},
-		},
-		{
-			testName:           "Default initial player list",
-			initialPlayerNames: defaultTestPlayerNames,
-			expectedAddedNames: []string{
-				defaultTestPlayerNames[2],
-				defaultTestPlayerNames[3],
-			},
-		},
-	}
-
-	for _, testCase := range testCases {
-		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
-			mockImplementation :=
-				NewMockPersister(unitTest, fmt.Errorf("Only Add(...) and All() should be called"))
-			mockImplementation.TestErrorForAdd = nil
-			mockImplementation.TestErrorForAll = nil
-			mockImplementation.ReturnForAll =
-				[]player.ReadonlyState{
-					&player.ReadAndWriteState{
-						PlayerName: defaultTestPlayerNames[0],
-						ChatColor:  colorsAvailableInTest[0],
-					},
-					&player.ReadAndWriteState{
-						PlayerName: defaultTestPlayerNames[1],
-						ChatColor:  colorsAvailableInTest[1],
-					},
-				}
-
-			_, validColors :=
-				prepareCollectionWithoutAdjustingMock(
-					unitTest,
-					testCase.initialPlayerNames,
-					colorsAvailableInTest,
-					mockImplementation)
-
-			assertPersisterAddCalledCorrectly(
-				testCase.testName,
-				unitTest,
-				testCase.expectedAddedNames,
-				validColors,
-				mockImplementation.ArgumentsForAdd)
 		})
 	}
 }

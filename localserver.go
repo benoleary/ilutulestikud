@@ -36,22 +36,11 @@ func main() {
 			postgresqlPlayerdb,
 			postgresqlLocation)
 
-	playerPersister, errorFromPersister :=
-		player_persister.NewInPostgresql(
-			setupContext,
-			connectionString)
-
-	if errorFromPersister != nil {
-		log.Fatalf(
-			"error when creating PostgreSQL persister: %v",
-			errorFromPersister)
-	}
+	playerPersister := player_persister.NewInPostgresql(connectionString)
 
 	playerCollection, errorCreatingPlayerCollection :=
 		player.NewCollection(
-			setupContext,
 			playerPersister,
-			defaults.InitialPlayerNames(),
 			defaults.AvailableColors())
 
 	datastoreClient, errorFromCloudDatastore :=

@@ -48,24 +48,13 @@ func preparePersisters(unitTest *testing.T) []persisterAndDescription {
 			postgresqlPlayerdb,
 			postgresqlLocation)
 
-	postgresqlPersister, errorFromPostgresql :=
-		persister.NewInPostgresql(
-			context.Background(),
-			connectionString)
-
-	if errorFromPostgresql != nil {
-		unitTest.Fatalf(
-			"error when creating PostgreSQL persister: %v",
-			errorFromPostgresql)
-	}
-
 	return []persisterAndDescription{
 		persisterAndDescription{
 			PlayerPersister:      persister.NewInMemory(),
 			PersisterDescription: "in-memory persister",
 		},
 		persisterAndDescription{
-			PlayerPersister:      postgresqlPersister,
+			PlayerPersister:      persister.NewInPostgresql(connectionString),
 			PersisterDescription: "in-PostgreSQL persister",
 		},
 	}
