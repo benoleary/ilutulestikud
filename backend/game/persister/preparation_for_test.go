@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"cloud.google.com/go/datastore"
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/game/card"
 	"github.com/benoleary/ilutulestikud/backend/game/message"
@@ -251,22 +250,13 @@ type persisterAndDescription struct {
 func preparePersisters(
 	unitTest *testing.T,
 	gamesToEnsureDoNotExist []string) []persisterAndDescription {
-	datastoreClient, errorFromCloudDatastore :=
-		datastore.NewClient(context.Background(), persister.IlutulestikudIdentifier)
-
-	if errorFromCloudDatastore != nil {
-		unitTest.Fatalf(
-			"Error when creating client for Cloud Datastore: %v",
-			errorFromCloudDatastore)
-	}
-
 	persistersAndDescriptions := []persisterAndDescription{
 		persisterAndDescription{
 			GamePersister:        persister.NewInMemory(),
 			PersisterDescription: "in-memory persister",
 		},
 		persisterAndDescription{
-			GamePersister:        persister.NewInCloudDatastore(datastoreClient),
+			GamePersister:        persister.NewInCloudDatastore(persister.IlutulestikudIdentifier),
 			PersisterDescription: "in-Cloud-Datastore persister",
 		},
 	}

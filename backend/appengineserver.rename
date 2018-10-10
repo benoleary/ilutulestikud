@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"google.golang.org/appengine"
-	"google.golang.org/appengine/log"
 
 	"cloud.google.com/go/datastore"
 
@@ -33,7 +32,6 @@ func (appEngineContextProvider *AppEngineContextProvider) FromRequest(
 
 func main() {
 	// This main function just injects hard-coded dependencies.
-	setupContext := context.Background()
 	contextProvider := &AppEngineContextProvider{}
 
 	postgresqlUsername := os.Getenv("POSTGRESQL_USERNAME")
@@ -48,43 +46,14 @@ func main() {
 			postgresqlPlayerdb,
 			postgresqlLocation)
 
-	playerPersister, errorFromPersister :=
-		player_persister.NewInPostgresql(
-			setupContext,
-			connectionString)
-
-	if errorFromPersister != nil {
-		log.Errorf(
-			setupContext,
-			"error when creating PostgreSQL persister: %v",
-			errorFromPersister)
-	}
-
-	playerCollection, errorCreatingPlayerCollection :=
+	playerPersister := player_persister.NewInPostgresql(connectionString)
+	playerCollection :=
 		player.NewCollection(
-			setupContext,
 			playerPersister,
-			defaults.InitialPlayerNames(),
 			defaults.AvailableColors())
 
-	if errorCreatingPlayerCollection != nil {
-		log.Fatalf(
-			"Error when creating player collection: %v",
-			errorCreatingPlayerCollection)
-	}
-
-	datastoreClient, errorFromCloudDatastore :=
-		datastore.NewClient(
-			setupContext,
-			game_persister.IlutulestikudIdentifier)
-
-	if errorFromCloudDatastore != nil {
-		log.Fatalf(
-			"Error when creating client for Cloud Datastore: %v",
-			errorFromCloudDatastore)
-	}
-
-	gamePersister := game_persister.NewInCloudDatastore(datastoreClient)
+	gamePersister :=
+		game_persister.NewInCloudDatastore(game_persister.IlutulestikudIdentifier)
 	gameCollection :=
 		game.NewCollection(
 			gamePersister,

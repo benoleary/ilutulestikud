@@ -76,7 +76,7 @@ func TestReturnErrorFromInvalidConnectionString(unitTest *testing.T) {
 	if errorFromAddRequest == nil {
 		unitTest.Fatalf(
 			"Successfully created PostgreSQL persister %+v from connection"+
-				" string %v, and got nil err from .Add(%v, %v, %v)",
+				" string %v, and got nil error from .Add(%v, %v, %v)",
 			postgresqlPersister,
 			invalidConnectionString,
 			executionContext,

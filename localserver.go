@@ -1,13 +1,9 @@
 package main
 
 import (
-	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
-
-	"cloud.google.com/go/datastore"
 
 	"github.com/benoleary/ilutulestikud/backend/defaults"
 	"github.com/benoleary/ilutulestikud/backend/game"
@@ -21,7 +17,6 @@ import (
 // This main function just injects hard-coded dependencies.
 func main() {
 	fmt.Printf("Local server started.\n")
-	setupContext := context.Background()
 	contextProvider := &server.BackgroundContextProvider{}
 
 	postgresqlUsername := os.Getenv("POSTGRESQL_USERNAME")
@@ -37,30 +32,13 @@ func main() {
 			postgresqlLocation)
 
 	playerPersister := player_persister.NewInPostgresql(connectionString)
-
-	playerCollection, errorCreatingPlayerCollection :=
+	playerCollection :=
 		player.NewCollection(
 			playerPersister,
 			defaults.AvailableColors())
 
-	datastoreClient, errorFromCloudDatastore :=
-		datastore.NewClient(
-			setupContext,
-			game_persister.IlutulestikudIdentifier)
-
-	if errorFromCloudDatastore != nil {
-		log.Fatalf(
-			"Error when creating client for Cloud Datastore: %v",
-			errorFromCloudDatastore)
-	}
-
-	if errorCreatingPlayerCollection != nil {
-		log.Fatalf(
-			"Error when creating player collection: %v",
-			errorCreatingPlayerCollection)
-	}
-
-	gamePersister := game_persister.NewInCloudDatastore(datastoreClient)
+	gamePersister :=
+		game_persister.NewInCloudDatastore(game_persister.IlutulestikudIdentifier)
 	gameCollection :=
 		game.NewCollection(
 			gamePersister,

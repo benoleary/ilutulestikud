@@ -21,11 +21,7 @@ type StateCollection struct {
 // error if given no chat colors.
 func NewCollection(
 	statePersister StatePersister,
-	availableColors []string) (*StateCollection, error) {
-	if len(availableColors) <= 0 {
-		return nil, fmt.Errorf("Chat color list must have at least one color")
-	}
-
+	availableColors []string) *StateCollection {
 	// We keep a map of colors to validity to both remove duplicate colors and
 	// to make it easy to check if a color is valid when updating players.
 	colorMap := make(map[string]bool, 0)
@@ -49,7 +45,7 @@ func NewCollection(
 			numberOfColors: len(uniqueColors),
 		}
 
-	return newCollection, nil
+	return newCollection
 }
 
 // All just wraps around the All function of the internal persistence store.

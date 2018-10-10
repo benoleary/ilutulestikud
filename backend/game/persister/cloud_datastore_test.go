@@ -9,6 +9,8 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/game/persister"
 )
 
+const testProject = "Test-Project"
+
 type mockLimitedIterator struct {
 	KeyToReturn   *datastore.Key
 	ErrorToReturn error
@@ -61,11 +63,90 @@ func (mockClient *mockLimitedClient) Delete(
 	return mockClient.ErrorToReturn
 }
 
-func TestConstructorDoesNotCausePanic(unitTest *testing.T) {
-	cloudDatastorePersister := persister.NewInCloudDatastore(nil)
+func TestReturnErrorFromInvalidProjectIdentifier(unitTest *testing.T) {
+	invalidProjectIdentifier := ""
+	cloudDatastorePersister :=
+		persister.NewInCloudDatastore(invalidProjectIdentifier)
 
-	if cloudDatastorePersister == nil {
-		unitTest.Fatalf("Created nil persister")
+	executionContext := context.Background()
+
+	// We test that every kind of request generates an error.
+	gameName := "Should not matter"
+	unexpectedGame, errorFromReadAndWriteGameRequest :=
+		cloudDatastorePersister.ReadAndWriteGame(executionContext, gameName)
+
+	if errorFromReadAndWriteGameRequest == nil {
+		unitTest.Fatalf(
+			"Successfully created Cloud Datastore persister %+v from"+
+				" project identifier %v, and got %v from"+
+				" .ReadAndWriteGame(%v, %v) instead of producing error",
+			cloudDatastorePersister,
+			invalidProjectIdentifier,
+			unexpectedGame,
+			executionContext,
+			gameName)
+	}
+
+	playerName := "Should Not Matter"
+	unexpectedGamesWithPlayer, errorFromReadAllWithPlayerRequest :=
+		cloudDatastorePersister.ReadAllWithPlayer(executionContext, playerName)
+
+	if errorFromReadAllWithPlayerRequest == nil {
+		unitTest.Fatalf(
+			"Successfully created Cloud Datastore persister %+v from"+
+				" project identifier %v, and got %v from"+
+				" .ReadAllWithPlayer(%v, %v) instead of producing error",
+			cloudDatastorePersister,
+			invalidProjectIdentifier,
+			unexpectedGamesWithPlayer,
+			executionContext,
+			playerName)
+	}
+
+	errorFromAddGameRequest :=
+		cloudDatastorePersister.AddGame(executionContext, gameName, 0, nil, nil, nil, nil)
+
+	if errorFromAddGameRequest == nil {
+		unitTest.Fatalf(
+			"Successfully created Cloud Datastore persister %+v from"+
+				" project identifier %v, and got got nil error from"+
+				" .AddGame(%v, %v, 0, nil, nil, nil, nil)",
+			cloudDatastorePersister,
+			invalidProjectIdentifier,
+			executionContext,
+			gameName)
+	}
+
+	errorFromRemoveGameFromListForPlayerRequest :=
+		cloudDatastorePersister.RemoveGameFromListForPlayer(
+			executionContext,
+			gameName,
+			playerName)
+
+	if errorFromRemoveGameFromListForPlayerRequest == nil {
+		unitTest.Fatalf(
+			"Successfully created Cloud Datastore persister %+v from"+
+				" project identifier %v, and got got nil error from"+
+				" .RemoveGameFromListForPlayer(%v, %v, %v)",
+			cloudDatastorePersister,
+			invalidProjectIdentifier,
+			executionContext,
+			gameName,
+			playerName)
+	}
+
+	errorFromDeleteRequest :=
+		cloudDatastorePersister.Delete(executionContext, gameName)
+
+	if errorFromDeleteRequest == nil {
+		unitTest.Fatalf(
+			"Successfully created Cloud Datastore persister %+v from"+
+				" project identifier %v, and got got nil error from"+
+				" .Delete(%v, %v)",
+			cloudDatastorePersister,
+			invalidProjectIdentifier,
+			executionContext,
+			gameName)
 	}
 }
 
@@ -83,7 +164,9 @@ func TestReadAllWithPlayerPropagatesIteratorError(unitTest *testing.T) {
 		}
 
 	cloudDatastorePersister :=
-		persister.NewInCloudDatastoreAroundLimitedClient(mockClient)
+		persister.NewInCloudDatastoreWithGivenLimitedClient(
+			testProject,
+			mockClient)
 
 	playerName := "Does Not Matter"
 	gamesWithPlayer, errorFromReadAll :=
@@ -111,7 +194,9 @@ func TestAddGamePropagatesIteratorError(unitTest *testing.T) {
 		}
 
 	cloudDatastorePersister :=
-		persister.NewInCloudDatastoreAroundLimitedClient(mockClient)
+		persister.NewInCloudDatastoreWithGivenLimitedClient(
+			testProject,
+			mockClient)
 
 	gameName := "does not matter"
 	errorFromAddGame :=
@@ -138,7 +223,9 @@ func TestReadAllWithPlayerPropagatesDeserializationError(unitTest *testing.T) {
 		}
 
 	cloudDatastorePersister :=
-		persister.NewInCloudDatastoreAroundLimitedClient(mockClient)
+		persister.NewInCloudDatastoreWithGivenLimitedClient(
+			testProject,
+			mockClient)
 
 	playerName := "Does Not Matter"
 	gamesWithPlayer, errorFromReadAllWithPlayer :=

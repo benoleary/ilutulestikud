@@ -162,14 +162,8 @@ func prepareCollectionWithoutAdjustingMock(
 	initialPlayerNames []string,
 	availableColors []string,
 	mockImplementation *mockPersister) (*player.StateCollection, map[string]bool) {
-	stateCollection, errorFromCreation :=
+	stateCollection :=
 		player.NewCollection(mockImplementation, colorsAvailableInTest)
-
-	if errorFromCreation != nil {
-		unitTest.Fatalf(
-			"Error when preparing collection: %v",
-			errorFromCreation)
-	}
 
 	numberOfColors := len(availableColors)
 
@@ -194,42 +188,6 @@ func prepareCollectionWithoutAdjustingMock(
 	}
 
 	return stateCollection, colorSet
-}
-
-func TestFactoryMethodRejectsInvalidColorLists(unitTest *testing.T) {
-	testCases := []struct {
-		testName   string
-		chatColors []string
-	}{
-		{
-			testName:   "Nil color list",
-			chatColors: nil,
-		},
-		{
-			testName:   "Empty color list",
-			chatColors: []string{},
-		},
-	}
-
-	for _, testCase := range testCases {
-		unitTest.Run(testCase.testName, func(unitTest *testing.T) {
-			mockImplementation :=
-				NewMockPersister(unitTest, fmt.Errorf("No functions should be called"))
-			stateCollection, errorFromCreation :=
-				player.NewCollection(
-					mockImplementation,
-					testCase.chatColors)
-
-			if errorFromCreation == nil {
-				unitTest.Fatalf(
-					"player.NewCollection(%v, %v, %v) produced nil error, instead produced %v",
-					mockImplementation,
-					defaultTestPlayerNames,
-					testCase.chatColors,
-					stateCollection)
-			}
-		})
-	}
 }
 
 func TestReturnFromAllIsCorrect(unitTest *testing.T) {
