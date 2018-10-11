@@ -7,8 +7,6 @@ import (
 
 	"google.golang.org/appengine"
 
-	"cloud.google.com/go/datastore"
-
 	"github.com/benoleary/ilutulestikud/backend/defaults"
 	"github.com/benoleary/ilutulestikud/backend/game"
 	game_persister "github.com/benoleary/ilutulestikud/backend/game/persister"
