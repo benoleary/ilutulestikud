@@ -2,6 +2,10 @@ package parsing
 
 // Types emitted by server.State:
 
+type VersionForBody struct {
+	Version string
+}
+
 // ErrorForBody allows a string to be expressed as JSON stating that it is an error.
 type ErrorForBody struct {
 	Error string

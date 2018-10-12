@@ -14,6 +14,7 @@ import (
 type State struct {
 	contextProvider            ContextProvider
 	accessControlAllowedOrigin string
+	backendVersion             string
 	playerHandler              httpGetAndPostHandler
 	gameHandler                httpGetAndPostHandler
 }
@@ -23,12 +24,14 @@ type State struct {
 func New(
 	contextProvider ContextProvider,
 	accessControlAllowedOrigin string,
+	backendVersion string,
 	segmentTranslator parsing.SegmentTranslator,
 	playerStateCollection player.StateCollection,
 	gameStateCollection game.StateCollection) *State {
 	return NewWithGivenHandlers(
 		contextProvider,
 		accessControlAllowedOrigin,
+		backendVersion,
 		segmentTranslator,
 		player.New(playerStateCollection, segmentTranslator),
 		game.New(gameStateCollection, segmentTranslator))
@@ -39,12 +42,14 @@ func New(
 func NewWithGivenHandlers(
 	contextProvider ContextProvider,
 	accessControlAllowedOrigin string,
+	backendVersion string,
 	segmentTranslator parsing.SegmentTranslator,
 	handlerForPlayer httpGetAndPostHandler,
 	handlerForGame httpGetAndPostHandler) *State {
 	return &State{
 		contextProvider:            contextProvider,
 		accessControlAllowedOrigin: accessControlAllowedOrigin,
+		backendVersion:             backendVersion,
 		playerHandler:              handlerForPlayer,
 		gameHandler:                handlerForGame,
 	}
@@ -83,6 +88,12 @@ func (state *State) HandleBackend(
 	// first segment of the URI after "backend".
 	var requestHandler httpGetAndPostHandler
 	switch pathSegments[1] {
+	case "version":
+		{
+			versionForBody := &parsing.VersionForBody{Version: state.backendVersion}
+			json.NewEncoder(httpResponseWriter).Encode(versionForBody)
+			return
+		}
 	case "player":
 		requestHandler = state.playerHandler
 	case "game":

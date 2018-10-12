@@ -63,6 +63,7 @@ func main() {
 	    server.New(
 			contextProvider,
 			"https://storage.googleapis.com",
+			"Google App Engine version 0.1",
 			&endpoint_parsing.Base32Translator{},
 			playerCollection,
 			gameCollection)

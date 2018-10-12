@@ -50,6 +50,7 @@ func main() {
 		server.New(
 			contextProvider,
 			"http://localhost:4233",
+			"Local version 0.1",
 			&endpoint_parsing.Base32Translator{},
 			playerCollection,
 			gameCollection)

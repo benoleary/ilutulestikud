@@ -64,6 +64,55 @@ func (mockHandler *mockEndpointHandler) HandlePost(
 	return mockHandler.ReturnInterface, mockHandler.ReturnCode
 }
 
+func TestVersionReturnedCorrectly(unitTest *testing.T) {
+	httpRequest :=
+		httptest.NewRequest(
+			http.MethodGet,
+			"/backend/version",
+			nil)
+
+	expectedVersion := "Expected version string"
+
+	// It is OK to set the player and game handlers to nil as this file just tests
+	// endpoints which are not covered by requests which would get validly redirected
+	// to either of the endpoint handlers.
+	serverState :=
+		server.New(
+			mockContextProvider,
+			"irrelevant to tests",
+			expectedVersion,
+			nil,
+			nil,
+			nil)
+
+	// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
+	responseRecorder := httptest.NewRecorder()
+	serverState.HandleBackend(responseRecorder, httpRequest)
+
+	if responseRecorder.Code != http.StatusOK {
+		unitTest.Errorf(
+			"returned wrong status %v instead of expected %v",
+			responseRecorder.Code,
+			http.StatusOK)
+	}
+
+	var versionForBody parsing.VersionForBody
+	errorFromUnmarshall :=
+		json.Unmarshal(responseRecorder.Body.Bytes(), &versionForBody)
+	if errorFromUnmarshall != nil {
+		unitTest.Errorf(
+			"error when unmarshalling JSON: %v",
+			errorFromUnmarshall)
+	}
+
+	if versionForBody.Version != expectedVersion {
+		unitTest.Errorf(
+			"response body %v did not have expected Version %v",
+			responseRecorder.Body,
+			expectedVersion)
+	}
+}
+
 func TestMockPostReturnsErrorForMalformedBody(unitTest *testing.T) {
 	// The json encoder is quite robust, but one way to trigger an error is to try
 	// to encode a function pointer.
@@ -159,7 +208,7 @@ func TestRejectInvalidRequestsBeforeCallingHandler(unitTest *testing.T) {
 			// endpoints which are not covered by requests which would get validly redirected
 			// to either of the endpoint handlers.
 			serverState :=
-				server.New(mockContextProvider, "irrelevant to tests", nil, nil, nil)
+				server.New(mockContextProvider, "irrelevant to tests", "test", nil, nil, nil)
 
 			// We create a ResponseRecorder (which satisfies http.ResponseWriter) to record the response.
 			responseRecorder := httptest.NewRecorder()
@@ -236,6 +285,7 @@ func TestSelectCorrectHandlerForValidRequest(unitTest *testing.T) {
 				server.NewWithGivenHandlers(
 					mockContextProvider,
 					"irrelevant to tests",
+					"test",
 					nil,
 					testCase.playerHandler,
 					testCase.gameHandler)
@@ -272,6 +322,7 @@ func TestWrapReturnedError(unitTest *testing.T) {
 		server.NewWithGivenHandlers(
 			mockContextProvider,
 			"irrelevant to tests",
+			"test",
 			nil,
 			testHandler,
 			nil)
@@ -288,7 +339,8 @@ func TestWrapReturnedError(unitTest *testing.T) {
 	}
 
 	var errorForBody parsing.ErrorForBody
-	errorFromUnmarshall := json.Unmarshal(responseRecorder.Body.Bytes(), &errorForBody)
+	errorFromUnmarshall :=
+		json.Unmarshal(responseRecorder.Body.Bytes(), &errorForBody)
 	if errorFromUnmarshall != nil {
 		unitTest.Errorf(
 			"error when unmarshalling JSON: %v",
@@ -298,7 +350,7 @@ func TestWrapReturnedError(unitTest *testing.T) {
 	if errorForBody.Error != expectedError.Error() {
 		unitTest.Errorf(
 			"response body %v did not have expected Error %v",
-			testHandler.ReturnInterface,
+			responseRecorder.Body,
 			expectedError)
 	}
 }
