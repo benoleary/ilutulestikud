@@ -7,14 +7,10 @@ handlers:
 
 #[START env]
 env_variables:
-  # See https://godoc.org/github.com/lib/pq
-  POSTGRESQL_CONNECTION: "user=USERNAME password=PASSWORD dbname=DATABASE host=/cloudsql/ilutulestikud-191419:europe-west3:ilutulestikud-postgresql"
-  # Having lots of problems with above, might try keeping each thing separate:
   POSTGRESQL_USERNAME: "USERNAME"
   POSTGRESQL_PASSWORD: "PASSWORD"
   POSTGRESQL_PLAYERDATABASE: "DATABASE"
   POSTGRESQL_LOCATION: "host=/cloudsql/ilutulestikud-191419:europe-west3:ilutulestikud-postgresql"
-  # POSTGRESQL_LOCATION: "port=5233 sslmode=disable"
 #[END env]
 
 #[START cloudsql_settings]
