@@ -124,9 +124,7 @@ func (gamePersister *inMemoryPersister) RemoveGameFromListForPlayer(
 	return gameToUpdate.RemovePlayerFromParticipantList(playerName)
 }
 
-// Delete deletes the given game from the collection. It returns an error
-// if the game does not exist before the deletion attempt, or if there is
-// an error while trying to remove the game from the list for any player.
+// Delete deletes the given game from the collection. It returns no error.
 // The context is ignored.
 func (gamePersister *inMemoryPersister) Delete(
 	executionContext context.Context,

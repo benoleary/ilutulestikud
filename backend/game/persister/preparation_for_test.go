@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/benoleary/ilutulestikud/backend/cloud"
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/game/card"
 	"github.com/benoleary/ilutulestikud/backend/game/message"
@@ -256,7 +257,7 @@ func preparePersisters(
 			PersisterDescription: "in-memory persister",
 		},
 		persisterAndDescription{
-			GamePersister:        persister.NewInCloudDatastore(persister.IlutulestikudIdentifier),
+			GamePersister:        persister.NewInCloudDatastore(cloud.IlutulestikudIdentifier),
 			PersisterDescription: "in-Cloud-Datastore persister",
 		},
 	}

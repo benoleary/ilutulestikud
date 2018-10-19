@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/datastore"
+	"github.com/benoleary/ilutulestikud/backend/cloud"
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/game/card"
 	"github.com/benoleary/ilutulestikud/backend/game/message"
@@ -15,94 +16,15 @@ import (
 	"google.golang.org/api/iterator"
 )
 
-// LimitedIterator defines the subset of the functions of the
-// datastore.Iterator struct used by the inCloudDatastorePersister
-// struct.
-type LimitedIterator interface {
-	Next(deserializationDestination interface{}) (*datastore.Key, error)
-}
-
-// LimitedClient defines the subset of the functions of the
-// datastore.Client struct used by the inCloudDatastorePersister
-// struct.
-type LimitedClient interface {
-	Run(
-		executionContext context.Context,
-		queryToRun *datastore.Query) LimitedIterator
-
-	Get(
-		executionContext context.Context,
-		searchKey *datastore.Key,
-		deserializationDestination interface{}) (err error)
-
-	Put(
-		executionContext context.Context,
-		searchKey *datastore.Key,
-		deserializationSource interface{}) (*datastore.Key, error)
-
-	Delete(
-		executionContext context.Context,
-		searchKey *datastore.Key) error
-}
-
-type wrappingLimitedClient struct {
-	wrappedInterface *datastore.Client
-}
-
-func (wrappingClient *wrappingLimitedClient) Run(
-	executionContext context.Context,
-	queryToRun *datastore.Query) LimitedIterator {
-	return wrappingClient.wrappedInterface.Run(
-		executionContext,
-		queryToRun)
-}
-
-func (wrappingClient *wrappingLimitedClient) Get(
-	executionContext context.Context,
-	searchKey *datastore.Key,
-	deserializationDestination interface{}) (err error) {
-	return wrappingClient.wrappedInterface.Get(
-		executionContext,
-		searchKey,
-		deserializationDestination)
-}
-
-func (wrappingClient *wrappingLimitedClient) Put(
-	executionContext context.Context,
-	searchKey *datastore.Key,
-	deserializationSource interface{}) (*datastore.Key, error) {
-	return wrappingClient.wrappedInterface.Put(
-		executionContext,
-		searchKey,
-		deserializationSource)
-}
-
-func (wrappingClient *wrappingLimitedClient) Delete(
-	executionContext context.Context,
-	searchKey *datastore.Key) error {
-	return wrappingClient.wrappedInterface.Delete(
-		executionContext,
-		searchKey)
-}
-
-// IlutulestikudIdentifier is the string which identifies the project to the
-// Google App Engine.
-const IlutulestikudIdentifier = "ilutulestikud-191419"
-
 const keyKind = "Game"
-
-func keyForGame(gameName string) *datastore.Key {
-	return datastore.NameKey(keyKind, gameName, nil)
-}
 
 // inCloudDatastorePersister stores game states by creating
 // inCloudDatastoreStates and saving them as game.ReadAndWriteStates
 // in Google Cloud Datastore.
 type inCloudDatastorePersister struct {
-	mutualExclusion       sync.Mutex
 	randomNumberGenerator *rand.Rand
 	projectIdentifier     string
-	datastoreClient       LimitedClient
+	datastoreClient       cloud.LimitedClient
 }
 
 // NewInCloudDatastore creates a game state persister.
@@ -114,9 +36,8 @@ func NewInCloudDatastore(projectIdentifier string) game.StatePersister {
 // persister using a given LimitedClient implementation.
 func NewInCloudDatastoreWithGivenLimitedClient(
 	projectIdentifier string,
-	datastoreClient LimitedClient) game.StatePersister {
+	datastoreClient cloud.LimitedClient) game.StatePersister {
 	return &inCloudDatastorePersister{
-		mutualExclusion:       sync.Mutex{},
 		randomNumberGenerator: rand.New(rand.NewSource(time.Now().Unix())),
 		projectIdentifier:     projectIdentifier,
 		datastoreClient:       datastoreClient,
@@ -142,12 +63,8 @@ func (gamePersister *inCloudDatastorePersister) ReadAndWriteGame(
 func (gamePersister *inCloudDatastorePersister) ReadAllWithPlayer(
 	executionContext context.Context,
 	playerName string) ([]game.ReadonlyState, error) {
-	gamePersister.mutualExclusion.Lock()
-	defer gamePersister.mutualExclusion.Unlock()
-
 	initializedClient, errorFromAcquiral :=
 		gamePersister.acquireClient(executionContext)
-
 	if errorFromAcquiral != nil {
 		return nil, errorFromAcquiral
 	}
@@ -191,7 +108,7 @@ func (gamePersister *inCloudDatastorePersister) ReadAllWithPlayer(
 			deserializedState, errorFromDeserialization :=
 				newInCloudDatastoreState(
 					initializedClient,
-					keyForGame(matchedGame.GameName),
+					initializedClient.KeyFor(matchedGame.GameName),
 					matchedGame)
 
 			if errorFromDeserialization != nil {
@@ -229,30 +146,18 @@ func (gamePersister *inCloudDatastorePersister) AddGame(
 		return errorFromAcquiral
 	}
 
-	gameKey := keyForGame(gameName)
-
-	queryForGameNameAlreadyExists :=
-		datastore.NewQuery("").Filter("__key__ =", gameKey).KeysOnly()
-
-	resultIterator :=
-		initializedClient.Run(
+	gameKey, isAlreadyInDatastore, errorFromCheck :=
+		cloud.KeyWithIfNameExists(
 			executionContext,
-			queryForGameNameAlreadyExists)
+			initializedClient,
+			gameName)
 
-	// If there is no game already with the given name, the iterator
-	// should immediately return an iterator.Done "error".
-	var keyOfExistingGame datastore.Key
-	_, errorFromNext := resultIterator.Next(&keyOfExistingGame)
-
-	if errorFromNext == nil {
-		return fmt.Errorf("Game with name %v already exists", gameName)
+	if errorFromCheck != nil {
+		return errorFromCheck
 	}
 
-	if errorFromNext != iterator.Done {
-		return fmt.Errorf(
-			"Trying to check for existing game with name %v produced error: %v",
-			gameName,
-			errorFromNext)
+	if isAlreadyInDatastore {
+		return fmt.Errorf("Game with name %v already exists", gameName)
 	}
 
 	serializableState :=
@@ -308,7 +213,7 @@ func (gamePersister *inCloudDatastorePersister) Delete(
 
 	return initializedClient.Delete(
 		executionContext,
-		datastore.NameKey(keyKind, gameName, nil))
+		initializedClient.KeyFor(gameName))
 }
 
 // GetInCloudDatastoreState returns a pointer to an inCloudDatastoreState
@@ -323,7 +228,7 @@ func (gamePersister *inCloudDatastorePersister) GetInCloudDatastoreState(
 		return nil, errorFromAcquiral
 	}
 
-	gameKey := keyForGame(gameName)
+	gameKey := initializedClient.KeyFor(gameName)
 	serializablePart := SerializableState{}
 
 	errorFromGet :=
@@ -345,7 +250,7 @@ func (gamePersister *inCloudDatastorePersister) GetInCloudDatastoreState(
 // acquireClient returns the connection to the Cloud Datastore,
 // initializing it if it has not already been initialized.
 func (gamePersister *inCloudDatastorePersister) acquireClient(
-	executionContext context.Context) (LimitedClient, error) {
+	executionContext context.Context) (cloud.LimitedClient, error) {
 	if gamePersister.datastoreClient == nil {
 		cloudDatastoreClient, errorFromCloudDatastore :=
 			datastore.NewClient(
@@ -356,7 +261,7 @@ func (gamePersister *inCloudDatastorePersister) acquireClient(
 		}
 
 		gamePersister.datastoreClient =
-			&wrappingLimitedClient{wrappedInterface: cloudDatastoreClient}
+			cloud.WrapDatastoreClient(cloudDatastoreClient, keyKind)
 	}
 
 	return gamePersister.datastoreClient, nil
@@ -367,7 +272,7 @@ func (gamePersister *inCloudDatastorePersister) acquireClient(
 // Google Cloud Datastore.
 type inCloudDatastoreState struct {
 	mutualExclusion sync.Mutex
-	datastoreClient LimitedClient
+	datastoreClient cloud.LimitedClient
 	keyInDatastore  *datastore.Key
 	DeserializedState
 }
@@ -375,7 +280,7 @@ type inCloudDatastoreState struct {
 // newInCloudDatastoreState creates a new game given the required information,
 // using the given shuffled deck.
 func newInCloudDatastoreState(
-	datastoreClient LimitedClient,
+	datastoreClient cloud.LimitedClient,
 	keyInDatastore *datastore.Key,
 	serializablePart SerializableState) (*inCloudDatastoreState, error) {
 	deserializedRuleset, errorFromRuleset :=

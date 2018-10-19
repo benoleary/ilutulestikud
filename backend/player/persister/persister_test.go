@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/benoleary/ilutulestikud/backend/cloud"
 	"github.com/benoleary/ilutulestikud/backend/defaults"
 	"github.com/benoleary/ilutulestikud/backend/player"
 	"github.com/benoleary/ilutulestikud/backend/player/persister"
@@ -48,7 +49,7 @@ func preparePersisters(unitTest *testing.T) []persisterAndDescription {
 			postgresqlPlayerdb,
 			postgresqlLocation)
 
-	return []persisterAndDescription{
+	persistersAndDescriptions := []persisterAndDescription{
 		persisterAndDescription{
 			PlayerPersister:      persister.NewInMemory(),
 			PersisterDescription: "in-memory persister",
@@ -57,7 +58,24 @@ func preparePersisters(unitTest *testing.T) []persisterAndDescription {
 			PlayerPersister:      persister.NewInPostgresql(connectionString),
 			PersisterDescription: "in-PostgreSQL persister",
 		},
+		persisterAndDescription{
+			PlayerPersister:      persister.NewInCloudDatastore(cloud.IlutulestikudIdentifier),
+			PersisterDescription: "in-Cloud-Datastore persister",
+		},
 	}
+
+	for _, playerPersister := range persistersAndDescriptions {
+		errorFromDeletionOfExisting :=
+			playerPersister.PlayerPersister.Delete(context.Background(), invalidName)
+		unitTest.Logf(
+			"Error from persister %v deleting %v when setting up"+
+				" (to ensure that it does not exist before the test) was %v",
+			playerPersister.PersisterDescription,
+			invalidName,
+			errorFromDeletionOfExisting)
+	}
+
+	return persistersAndDescriptions
 }
 
 func TestReturnErrorWhenPlayerNotFoundWithGet(unitTest *testing.T) {
@@ -77,27 +95,6 @@ func TestReturnErrorWhenPlayerNotFoundWithGet(unitTest *testing.T) {
 					"Get(unknown player name %v) did not return an error, did return player state %v",
 					invalidName,
 					playerState)
-			}
-		})
-	}
-}
-
-func TestReturnErrorWhenPlayerNotFoundForDelete(unitTest *testing.T) {
-	statePersisters := preparePersisters(unitTest)
-
-	for _, statePersister := range statePersisters {
-		testIdentifier := "Delete(unknown player)/" + statePersister.PersisterDescription
-
-		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			errorFromDelete :=
-				statePersister.PlayerPersister.Delete(
-					context.Background(),
-					invalidName)
-
-			if errorFromDelete == nil {
-				unitTest.Fatalf(
-					"Delete(unknown player name %v) did not return an error",
-					invalidName)
 			}
 		})
 	}

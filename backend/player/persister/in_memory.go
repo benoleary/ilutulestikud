@@ -107,19 +107,13 @@ func (playerPersister *inMemoryPersister) All(
 	return playerList, nil
 }
 
-// Delete deletes the given player from the collection. It returns an error
-// if the player does not exist before the deletion attempt. The context is
-// ignored.
+// Delete deletes the given player from the collection. It returns no error.
+// The context is ignored.
 func (playerPersister *inMemoryPersister) Delete(
 	executionContext context.Context,
 	playerName string) error {
-	_, playerExists := playerPersister.playerStates[playerName]
-
-	if !playerExists {
-		return fmt.Errorf("No player %v exists to delete", playerName)
-	}
-
+	playerPersister.mutualExclusion.Lock()
 	delete(playerPersister.playerStates, playerName)
-
+	playerPersister.mutualExclusion.Unlock()
 	return nil
 }

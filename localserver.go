@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/benoleary/ilutulestikud/backend/cloud"
 	"github.com/benoleary/ilutulestikud/backend/defaults"
 	"github.com/benoleary/ilutulestikud/backend/game"
 	game_persister "github.com/benoleary/ilutulestikud/backend/game/persister"
@@ -38,7 +39,7 @@ func main() {
 			defaults.AvailableColors())
 
 	gamePersister :=
-		game_persister.NewInCloudDatastore(game_persister.IlutulestikudIdentifier)
+		game_persister.NewInCloudDatastore(cloud.IlutulestikudIdentifier)
 	gameCollection :=
 		game.NewCollection(
 			gamePersister,

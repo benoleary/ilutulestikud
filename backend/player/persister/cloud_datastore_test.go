@@ -7,7 +7,7 @@ import (
 
 	"cloud.google.com/go/datastore"
 	"github.com/benoleary/ilutulestikud/backend/cloud"
-	"github.com/benoleary/ilutulestikud/backend/game/persister"
+	"github.com/benoleary/ilutulestikud/backend/player/persister"
 )
 
 const testProject = "Test-Project"
@@ -18,17 +18,6 @@ type mockLimitedIterator struct {
 
 func (mockIterator *mockLimitedIterator) Next(
 	deserializationDestination interface{}) (*datastore.Key, error) {
-	serializableState, isSerializableState :=
-		deserializationDestination.(persister.SerializableState)
-
-	if isSerializableState {
-		// The only use case for this is in the test which gives back a
-		// de-serialization error, which can conveniently cover the case
-		// of being unable to de-serialize the ruleset. Hence we use -1,
-		// which should not be a valid ruleset identifier.
-		serializableState.RulesetIdentifier = -1
-	}
-
 	return nil, mockIterator.ErrorToReturn
 }
 
@@ -76,72 +65,55 @@ func TestReturnErrorFromInvalidProjectIdentifier(unitTest *testing.T) {
 	executionContext := context.Background()
 
 	// We test that every kind of request generates an error.
-	gameName := "Should not matter"
-	unexpectedGame, errorFromReadAndWriteGameRequest :=
-		cloudDatastorePersister.ReadAndWriteGame(executionContext, gameName)
-
-	if errorFromReadAndWriteGameRequest == nil {
-		unitTest.Fatalf(
-			"Successfully created Cloud Datastore persister %+v from"+
-				" project identifier %v, and got %v from"+
-				" .ReadAndWriteGame(%v, %v) instead of producing error",
-			cloudDatastorePersister,
-			invalidProjectIdentifier,
-			unexpectedGame,
-			executionContext,
-			gameName)
-	}
-
 	playerName := "Should Not Matter"
-	unexpectedGamesWithPlayer, errorFromReadAllWithPlayerRequest :=
-		cloudDatastorePersister.ReadAllWithPlayer(executionContext, playerName)
+	playerColor := "Should not matter"
+	errorFromAdd :=
+		cloudDatastorePersister.Add(executionContext, playerName, playerColor)
 
-	if errorFromReadAllWithPlayerRequest == nil {
+	if errorFromAdd == nil {
+		unitTest.Fatalf(
+			"Successfully created Cloud Datastore persister %+v from"+
+				" project identifier %v, and got got nil error from"+
+				" .Add(%v, %v,%v)",
+			cloudDatastorePersister,
+			invalidProjectIdentifier,
+			executionContext,
+			playerName,
+			playerColor)
+	}
+
+	errorFromUpdateColor :=
+		cloudDatastorePersister.UpdateColor(executionContext, playerName, playerColor)
+
+	if errorFromUpdateColor == nil {
+		unitTest.Fatalf(
+			"Successfully created Cloud Datastore persister %+v from"+
+				" project identifier %v, and got got nil error from"+
+				" .UpdateColor(%v, %v,%v)",
+			cloudDatastorePersister,
+			invalidProjectIdentifier,
+			executionContext,
+			playerName,
+			playerColor)
+	}
+
+	unexpectedPlayer, errorFromGet :=
+		cloudDatastorePersister.Get(executionContext, playerName)
+
+	if errorFromGet == nil {
 		unitTest.Fatalf(
 			"Successfully created Cloud Datastore persister %+v from"+
 				" project identifier %v, and got %v from"+
-				" .ReadAllWithPlayer(%v, %v) instead of producing error",
+				" .Get(%v, %v) instead of producing error",
 			cloudDatastorePersister,
 			invalidProjectIdentifier,
-			unexpectedGamesWithPlayer,
+			unexpectedPlayer,
 			executionContext,
-			playerName)
-	}
-
-	errorFromAddGameRequest :=
-		cloudDatastorePersister.AddGame(executionContext, gameName, 0, nil, nil, nil, nil)
-
-	if errorFromAddGameRequest == nil {
-		unitTest.Fatalf(
-			"Successfully created Cloud Datastore persister %+v from"+
-				" project identifier %v, and got got nil error from"+
-				" .AddGame(%v, %v, 0, nil, nil, nil, nil)",
-			cloudDatastorePersister,
-			invalidProjectIdentifier,
-			executionContext,
-			gameName)
-	}
-
-	errorFromRemoveGameFromListForPlayerRequest :=
-		cloudDatastorePersister.RemoveGameFromListForPlayer(
-			executionContext,
-			gameName,
-			playerName)
-
-	if errorFromRemoveGameFromListForPlayerRequest == nil {
-		unitTest.Fatalf(
-			"Successfully created Cloud Datastore persister %+v from"+
-				" project identifier %v, and got got nil error from"+
-				" .RemoveGameFromListForPlayer(%v, %v, %v)",
-			cloudDatastorePersister,
-			invalidProjectIdentifier,
-			executionContext,
-			gameName,
 			playerName)
 	}
 
 	errorFromDeleteRequest :=
-		cloudDatastorePersister.Delete(executionContext, gameName)
+		cloudDatastorePersister.Delete(executionContext, playerName)
 
 	if errorFromDeleteRequest == nil {
 		unitTest.Fatalf(
@@ -151,11 +123,25 @@ func TestReturnErrorFromInvalidProjectIdentifier(unitTest *testing.T) {
 			cloudDatastorePersister,
 			invalidProjectIdentifier,
 			executionContext,
-			gameName)
+			playerName)
 	}
 }
 
-func TestReadAllWithPlayerPropagatesIteratorError(unitTest *testing.T) {
+func TestAllPropagatesAcquiralError(unitTest *testing.T) {
+	cloudDatastorePersister :=
+		persister.NewInCloudDatastore("")
+
+	playerList, errorFromAll :=
+		cloudDatastorePersister.All(nil)
+
+	if errorFromAll == nil {
+		unitTest.Fatalf(
+			"All(nil) produced %v with nil error",
+			playerList)
+	}
+}
+
+func TestAllPropagatesIteratorError(unitTest *testing.T) {
 	mockIterator :=
 		&mockLimitedIterator{
 			ErrorToReturn: fmt.Errorf("Expected error"),
@@ -172,19 +158,19 @@ func TestReadAllWithPlayerPropagatesIteratorError(unitTest *testing.T) {
 			testProject,
 			mockClient)
 
-	playerName := "Does Not Matter"
-	gamesWithPlayer, errorFromReadAll :=
-		cloudDatastorePersister.ReadAllWithPlayer(nil, playerName)
+	playerList, errorFromAll :=
+		cloudDatastorePersister.All(context.Background())
 
-	if errorFromReadAll == nil {
+	if errorFromAll == nil {
 		unitTest.Fatalf(
-			"ReadAllWithPlayer(nil, %v) produced %v with nil error",
-			playerName,
-			gamesWithPlayer)
+			"All([background context]) produced %v with nil error",
+			playerList)
 	}
 }
 
-func TestAddGamePropagatesIteratorError(unitTest *testing.T) {
+func TestGetInvalidPlayerProducesError(unitTest *testing.T) {
+	invalidName := ""
+
 	mockIterator :=
 		&mockLimitedIterator{
 			ErrorToReturn: fmt.Errorf("Expected error"),
@@ -201,21 +187,23 @@ func TestAddGamePropagatesIteratorError(unitTest *testing.T) {
 			testProject,
 			mockClient)
 
-	gameName := "does not matter"
-	errorFromAddGame :=
-		cloudDatastorePersister.AddGame(nil, gameName, 0, nil, nil, nil, nil)
+	executionContext := context.Background()
+	unexpectedPlayer, errorFromGet :=
+		cloudDatastorePersister.Get(executionContext, invalidName)
 
-	if errorFromAddGame == nil {
+	if errorFromGet == nil {
 		unitTest.Fatalf(
-			"AddGame(nil, %v, 0, nil, nil, nil, nil) produced nil error",
-			gameName)
+			"Get(%v, %v) produced %+v instead of producing error",
+			executionContext,
+			invalidName,
+			unexpectedPlayer)
 	}
 }
 
-func TestReadAllWithPlayerPropagatesDeserializationError(unitTest *testing.T) {
+func TestUpdatePropagatesKeyCheckError(unitTest *testing.T) {
 	mockIterator :=
 		&mockLimitedIterator{
-			ErrorToReturn: nil,
+			ErrorToReturn: fmt.Errorf("Expected error"),
 		}
 
 	mockClient :=
@@ -229,14 +217,17 @@ func TestReadAllWithPlayerPropagatesDeserializationError(unitTest *testing.T) {
 			testProject,
 			mockClient)
 
-	playerName := "Does Not Matter"
-	gamesWithPlayer, errorFromReadAllWithPlayer :=
-		cloudDatastorePersister.ReadAllWithPlayer(nil, playerName)
+	executionContext := context.Background()
+	playerName := "Should Not Matter"
+	playerColor := "Should not matter"
 
-	if errorFromReadAllWithPlayer == nil {
+	errorFromUpdateColor :=
+		cloudDatastorePersister.UpdateColor(executionContext, playerName, playerColor)
+
+	if errorFromUpdateColor == nil {
 		unitTest.Fatalf(
-			"ReadAllWithPlayer(nil, %v) produced %v with nil error",
+			"UpdateColor([background context], %v, %v) produced nil error",
 			playerName,
-			gamesWithPlayer)
+			playerColor)
 	}
 }
