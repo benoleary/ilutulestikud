@@ -29,14 +29,22 @@ type mockLimitedIterator struct {
 	ErrorsToReturn []error
 }
 
-func (mockIterator *mockLimitedIterator) Next(
-	deserializationDestination interface{}) (*datastore.Key, error) {
+func (mockIterator *mockLimitedIterator) nextError() error {
 	errorToReturn := mockIterator.ErrorsToReturn[0]
 	if len(mockIterator.ErrorsToReturn) > 1 {
 		mockIterator.ErrorsToReturn = mockIterator.ErrorsToReturn[1:]
 	}
 
-	return nil, errorToReturn
+	return errorToReturn
+}
+
+func (mockIterator *mockLimitedIterator) DeserializeNext(
+	deserializationDestination interface{}) error {
+	return mockIterator.nextError()
+}
+
+func (mockIterator *mockLimitedIterator) NextKey() error {
+	return mockIterator.nextError()
 }
 
 type mockLimitedClient struct {
@@ -44,34 +52,49 @@ type mockLimitedClient struct {
 	ErrorToReturn    error
 }
 
-func (mockClient *mockLimitedClient) KeyFor(
-	nameForKey string) *datastore.Key {
-	return nil
+// AllOfKind returns an iterator to the set of all entities of the
+// kind known to the client.
+func (mockClient *mockLimitedClient) AllOfKind(
+	executionContext context.Context) cloud.LimitedIterator {
+	return mockClient.IteratorToReturn
 }
 
-func (mockClient *mockLimitedClient) Run(
+// AllKeysMatching returns an iterator to the set of all keys of the
+// kind known to the client which match the given name.
+func (mockClient *mockLimitedClient) AllKeysMatching(
 	executionContext context.Context,
-	queryToRun *datastore.Query) cloud.LimitedIterator {
+	keyName string) cloud.LimitedIterator {
+	return mockClient.IteratorToReturn
+}
+
+// AllMatching returns an iterator to the set of entities which are
+// selected by the given filter, according the rules of the Google
+// Cloud Datastore (which can have surprising results when searching
+// through entities which have arrays).
+func (mockClient *mockLimitedClient) AllMatching(
+	executionContext context.Context,
+	filterExpression string,
+	valueToMatch interface{}) cloud.LimitedIterator {
 	return mockClient.IteratorToReturn
 }
 
 func (mockClient *mockLimitedClient) Get(
 	executionContext context.Context,
-	searchKey *datastore.Key,
-	deserializationDestination interface{}) (err error) {
+	keyName string,
+	deserializationDestination interface{}) error {
 	return mockClient.ErrorToReturn
 }
 
 func (mockClient *mockLimitedClient) Put(
 	executionContext context.Context,
-	searchKey *datastore.Key,
-	deserializationSource interface{}) (*datastore.Key, error) {
-	return nil, mockClient.ErrorToReturn
+	keyName string,
+	deserializationSource interface{}) error {
+	return mockClient.ErrorToReturn
 }
 
 func (mockClient *mockLimitedClient) Delete(
 	executionContext context.Context,
-	searchKey *datastore.Key) error {
+	keyName string) error {
 	return mockClient.ErrorToReturn
 }
 
@@ -90,18 +113,17 @@ func TestInvalidNameDoesNotGetKey(unitTest *testing.T) {
 			ErrorToReturn:    nil,
 		}
 
-	actualKey, isAlreadyInDatastore, errorFromCheck :=
-		cloud.KeyWithIfNameExists(
+	isAlreadyInDatastore, errorFromCheck :=
+		cloud.DoesNameExist(
 			context.Background(),
 			mockClient,
 			invalidName)
 
 	if isAlreadyInDatastore || (errorFromCheck != nil) {
 		unitTest.Fatalf(
-			"KeyWithIfNameExists([background context], %+v, %v) produced %+v, %v, %+v",
+			"DoesNameExist([background context], %+v, %v) produced %v, %+v",
 			mockClient,
 			invalidName,
-			actualKey,
 			isAlreadyInDatastore,
 			errorFromCheck)
 	}
@@ -122,18 +144,17 @@ func TestKeyWithIfNameExistsPropagatesIteratorError(unitTest *testing.T) {
 			ErrorToReturn:    nil,
 		}
 
-	actualKey, isAlreadyInDatastore, errorFromCheck :=
-		cloud.KeyWithIfNameExists(
+	isAlreadyInDatastore, errorFromCheck :=
+		cloud.DoesNameExist(
 			context.Background(),
 			mockClient,
 			invalidName)
 
 	if errorFromCheck == nil {
 		unitTest.Fatalf(
-			"KeyWithIfNameExists([background context], %+v, %v) produced %+v, %v, %+v",
+			"DoesNameExist([background context], %+v, %v) produced %v, %+v",
 			mockClient,
 			invalidName,
-			actualKey,
 			isAlreadyInDatastore,
 			errorFromCheck)
 	}
@@ -155,18 +176,17 @@ func TestKeyWithIfNameExistsGivesErrorIfIteratorNotDoneAfterValidName(unitTest *
 			ErrorToReturn:    nil,
 		}
 
-	actualKey, isAlreadyInDatastore, errorFromCheck :=
-		cloud.KeyWithIfNameExists(
+	isAlreadyInDatastore, errorFromCheck :=
+		cloud.DoesNameExist(
 			context.Background(),
 			mockClient,
 			invalidName)
 
 	if errorFromCheck == nil {
 		unitTest.Fatalf(
-			"KeyWithIfNameExists([background context], %+v, %v) produced %+v, %v, %+v",
+			"DoesNameExist([background context], %+v, %v) produced %v, %+v",
 			mockClient,
 			invalidName,
-			actualKey,
 			isAlreadyInDatastore,
 			errorFromCheck)
 	}
@@ -188,18 +208,17 @@ func TestValidNameDoesGetKey(unitTest *testing.T) {
 			ErrorToReturn:    nil,
 		}
 
-	actualKey, isAlreadyInDatastore, errorFromCheck :=
-		cloud.KeyWithIfNameExists(
+	isAlreadyInDatastore, errorFromCheck :=
+		cloud.DoesNameExist(
 			context.Background(),
 			mockClient,
 			testValidName)
 
 	if !isAlreadyInDatastore || (errorFromCheck != nil) {
 		unitTest.Fatalf(
-			"KeyWithIfNameExists([background context], %+v, %v) produced %+v, %v, %+v",
+			"DoesNameExist([background context], %+v, %v) produced %v, %+v",
 			mockClient,
 			invalidName,
-			actualKey,
 			isAlreadyInDatastore,
 			errorFromCheck)
 	}
@@ -213,43 +232,31 @@ func TestCreateThenGetThenDeleteThenRun(unitTest *testing.T) {
 		Comment: "Test comment",
 	}
 
-	expectedKey := wrappedClient.KeyFor(testValidName)
-
-	keyFromPut, errorFromPut :=
+	errorFromPut :=
 		wrappedClient.Put(
 			context.Background(),
-			expectedKey,
+			testValidName,
 			&objectToPersist)
 
 	if errorFromPut != nil {
 		unitTest.Fatalf(
 			"Put([background context], %+v, [pointer to %+v]) produced error %+v",
-			expectedKey,
+			testValidName,
 			objectToPersist,
 			errorFromPut)
-	}
-
-	if keyFromPut != expectedKey {
-		unitTest.Fatalf(
-			"Put([background context], %+v, [pointer to %+v]) produced key %+v"+
-				" which does not match expected key %+v",
-			expectedKey,
-			objectToPersist,
-			keyFromPut,
-			expectedKey)
 	}
 
 	var retrievedObject testObject
 	errorFromGet :=
 		wrappedClient.Get(
 			context.Background(),
-			expectedKey,
+			testValidName,
 			&retrievedObject)
 
 	if errorFromGet != nil {
 		unitTest.Fatalf(
 			"Get([background context], %+v, [pointer to %+v]) produced error %+v",
-			expectedKey,
+			testValidName,
 			retrievedObject,
 			errorFromGet)
 	}
@@ -264,34 +271,27 @@ func TestCreateThenGetThenDeleteThenRun(unitTest *testing.T) {
 	errorFromDelete :=
 		wrappedClient.Delete(
 			context.Background(),
-			expectedKey)
+			testValidName)
 
 	if errorFromDelete != nil {
 		unitTest.Fatalf(
 			"Delete([background context], %+v) produced error %+v",
-			expectedKey,
+			testValidName,
 			errorFromDelete)
 	}
 
 	// We run a query that just fetches all the test objects
 	// - and there should be none now.
-	queryOnName := datastore.NewQuery(testKind)
-
-	resultIterator :=
-		wrappedClient.Run(context.Background(), queryOnName)
+	resultIterator := wrappedClient.AllOfKind(context.Background())
 
 	if resultIterator == nil {
-		unitTest.Fatalf(
-			"Run([background context], %+v) produced nil iterator",
-			queryOnName)
+		unitTest.Fatalf("AllOfKind([background context]) produced nil iterator")
 	}
 
-	var keyOfExistingObject datastore.Key
-	_, errorFromNext := resultIterator.Next(&keyOfExistingObject)
+	errorFromNext := resultIterator.NextKey()
 	if errorFromNext != iterator.Done {
 		unitTest.Fatalf(
-			"Next([pointer to %+v]) produced error %v",
-			keyOfExistingObject,
+			"NextKey() produced error %v",
 			errorFromNext)
 	}
 }
@@ -313,7 +313,7 @@ func createClient(unitTest *testing.T) cloud.LimitedClient {
 		errorFromInitialDelete :=
 			wrappedClient.Delete(
 				context.Background(),
-				wrappedClient.KeyFor(testName))
+				testName)
 		unitTest.Logf(
 			"Error from delete of %v when wrapping client: %v",
 			testName,

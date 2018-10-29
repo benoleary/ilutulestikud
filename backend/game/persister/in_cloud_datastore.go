@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"cloud.google.com/go/datastore"
 	"github.com/benoleary/ilutulestikud/backend/cloud"
 	"github.com/benoleary/ilutulestikud/backend/game"
 	"github.com/benoleary/ilutulestikud/backend/game/card"
@@ -23,23 +22,24 @@ const keyKind = "Game"
 // in Google Cloud Datastore.
 type inCloudDatastorePersister struct {
 	randomNumberGenerator *rand.Rand
-	projectIdentifier     string
+	clientProvider        cloud.ClientProvider
 	datastoreClient       cloud.LimitedClient
 }
 
 // NewInCloudDatastore creates a game state persister.
-func NewInCloudDatastore(projectIdentifier string) game.StatePersister {
-	return NewInCloudDatastoreWithGivenLimitedClient(projectIdentifier, nil)
+func NewInCloudDatastore(
+	clientProvider cloud.ClientProvider) game.StatePersister {
+	return NewInCloudDatastoreWithGivenLimitedClient(clientProvider, nil)
 }
 
 // NewInCloudDatastoreWithGivenLimitedClient creates a game state
 // persister using a given LimitedClient implementation.
 func NewInCloudDatastoreWithGivenLimitedClient(
-	projectIdentifier string,
+	clientProvider cloud.ClientProvider,
 	datastoreClient cloud.LimitedClient) game.StatePersister {
 	return &inCloudDatastorePersister{
 		randomNumberGenerator: rand.New(rand.NewSource(time.Now().Unix())),
-		projectIdentifier:     projectIdentifier,
+		clientProvider:        clientProvider,
 		datastoreClient:       datastoreClient,
 	}
 }
@@ -74,19 +74,17 @@ func (gamePersister *inCloudDatastorePersister) ReadAllWithPlayer(
 	// => we just search for the player's name by equality with
 	// ParticipantNamesInTurnOrder, as the equality filter on arrays selects
 	// the entity if any of the elements match the sought value.
-	queryOnPlayerName :=
-		datastore.NewQuery(keyKind).Filter(
+	resultIterator :=
+		initializedClient.AllMatching(
+			executionContext,
 			"ParticipantNamesInTurnOrder =",
 			playerName)
-
-	resultIterator :=
-		initializedClient.Run(executionContext, queryOnPlayerName)
 
 	gameStates := []game.ReadonlyState{}
 
 	for {
 		var matchedGame SerializableState
-		_, errorFromNext := resultIterator.Next(&matchedGame)
+		errorFromNext := resultIterator.DeserializeNext(&matchedGame)
 
 		if errorFromNext == iterator.Done {
 			break
@@ -108,7 +106,7 @@ func (gamePersister *inCloudDatastorePersister) ReadAllWithPlayer(
 			deserializedState, errorFromDeserialization :=
 				newInCloudDatastoreState(
 					initializedClient,
-					initializedClient.KeyFor(matchedGame.GameName),
+					matchedGame.GameName,
 					matchedGame)
 
 			if errorFromDeserialization != nil {
@@ -146,8 +144,8 @@ func (gamePersister *inCloudDatastorePersister) AddGame(
 		return errorFromAcquiral
 	}
 
-	gameKey, isAlreadyInDatastore, errorFromCheck :=
-		cloud.KeyWithIfNameExists(
+	isAlreadyInDatastore, errorFromCheck :=
+		cloud.DoesNameExist(
 			executionContext,
 			initializedClient,
 			gameName)
@@ -169,10 +167,10 @@ func (gamePersister *inCloudDatastorePersister) AddGame(
 			playersInTurnOrderWithInitialHands,
 			initialDeck)
 
-	_, errorFromPut :=
+	errorFromPut :=
 		initializedClient.Put(
 			executionContext,
-			gameKey,
+			gameName,
 			&serializableState)
 
 	return errorFromPut
@@ -213,7 +211,7 @@ func (gamePersister *inCloudDatastorePersister) Delete(
 
 	return initializedClient.Delete(
 		executionContext,
-		initializedClient.KeyFor(gameName))
+		gameName)
 }
 
 // GetInCloudDatastoreState returns a pointer to an inCloudDatastoreState
@@ -228,13 +226,12 @@ func (gamePersister *inCloudDatastorePersister) GetInCloudDatastoreState(
 		return nil, errorFromAcquiral
 	}
 
-	gameKey := initializedClient.KeyFor(gameName)
 	serializablePart := SerializableState{}
 
 	errorFromGet :=
 		initializedClient.Get(
 			executionContext,
-			gameKey,
+			gameName,
 			&serializablePart)
 
 	if errorFromGet != nil {
@@ -243,7 +240,7 @@ func (gamePersister *inCloudDatastorePersister) GetInCloudDatastoreState(
 
 	return newInCloudDatastoreState(
 		initializedClient,
-		gameKey,
+		gameName,
 		serializablePart)
 }
 
@@ -253,15 +250,12 @@ func (gamePersister *inCloudDatastorePersister) acquireClient(
 	executionContext context.Context) (cloud.LimitedClient, error) {
 	if gamePersister.datastoreClient == nil {
 		cloudDatastoreClient, errorFromCloudDatastore :=
-			datastore.NewClient(
-				executionContext,
-				gamePersister.projectIdentifier)
+			gamePersister.clientProvider.NewClient(executionContext)
 		if errorFromCloudDatastore != nil {
 			return nil, errorFromCloudDatastore
 		}
 
-		gamePersister.datastoreClient =
-			cloud.WrapDatastoreClient(cloudDatastoreClient, keyKind)
+		gamePersister.datastoreClient = cloudDatastoreClient
 	}
 
 	return gamePersister.datastoreClient, nil
@@ -273,7 +267,7 @@ func (gamePersister *inCloudDatastorePersister) acquireClient(
 type inCloudDatastoreState struct {
 	mutualExclusion sync.Mutex
 	datastoreClient cloud.LimitedClient
-	keyInDatastore  *datastore.Key
+	keyName         string
 	DeserializedState
 }
 
@@ -281,7 +275,7 @@ type inCloudDatastoreState struct {
 // using the given shuffled deck.
 func newInCloudDatastoreState(
 	datastoreClient cloud.LimitedClient,
-	keyInDatastore *datastore.Key,
+	keyName string,
 	serializablePart SerializableState) (*inCloudDatastoreState, error) {
 	deserializedRuleset, errorFromRuleset :=
 		game.RulesetFromIdentifier(serializablePart.RulesetIdentifier)
@@ -292,7 +286,7 @@ func newInCloudDatastoreState(
 	newState := &inCloudDatastoreState{
 		mutualExclusion:   sync.Mutex{},
 		datastoreClient:   datastoreClient,
-		keyInDatastore:    keyInDatastore,
+		keyName:           keyName,
 		DeserializedState: CreateDeserializedState(serializablePart, deserializedRuleset),
 	}
 
@@ -434,11 +428,8 @@ func (gameState *inCloudDatastoreState) uploadSerializablePartIfNoError(
 
 func (gameState *inCloudDatastoreState) uploadSerializablePart(
 	executionContext context.Context) error {
-	_, errorFromPut :=
-		gameState.datastoreClient.Put(
-			executionContext,
-			gameState.keyInDatastore,
-			&gameState.SerializableState)
-
-	return errorFromPut
+	return gameState.datastoreClient.Put(
+		executionContext,
+		gameState.keyName,
+		&gameState.SerializableState)
 }

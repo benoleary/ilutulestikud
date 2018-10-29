@@ -3,10 +3,7 @@ package persister
 import (
 	"context"
 	"fmt"
-	"math/rand"
-	"time"
 
-	"cloud.google.com/go/datastore"
 	"github.com/benoleary/ilutulestikud/backend/cloud"
 	"github.com/benoleary/ilutulestikud/backend/player"
 	"google.golang.org/api/iterator"
@@ -18,25 +15,24 @@ const keyKind = "Player"
 // inCloudDatastoreStates and saving them as game.ReadAndWriteStates
 // in Google Cloud Datastore.
 type inCloudDatastorePersister struct {
-	randomNumberGenerator *rand.Rand
-	projectIdentifier     string
-	datastoreClient       cloud.LimitedClient
+	clientProvider  cloud.ClientProvider
+	datastoreClient cloud.LimitedClient
 }
 
 // NewInCloudDatastore creates a game state persister.
-func NewInCloudDatastore(projectIdentifier string) player.StatePersister {
-	return NewInCloudDatastoreWithGivenLimitedClient(projectIdentifier, nil)
+func NewInCloudDatastore(
+	clientProvider cloud.ClientProvider) player.StatePersister {
+	return NewInCloudDatastoreWithGivenLimitedClient(clientProvider, nil)
 }
 
 // NewInCloudDatastoreWithGivenLimitedClient creates a game state
 // persister using a given LimitedClient implementation.
 func NewInCloudDatastoreWithGivenLimitedClient(
-	projectIdentifier string,
+	clientProvider cloud.ClientProvider,
 	datastoreClient cloud.LimitedClient) player.StatePersister {
 	return &inCloudDatastorePersister{
-		randomNumberGenerator: rand.New(rand.NewSource(time.Now().Unix())),
-		projectIdentifier:     projectIdentifier,
-		datastoreClient:       datastoreClient,
+		clientProvider:  clientProvider,
+		datastoreClient: datastoreClient,
 	}
 }
 
@@ -76,13 +72,12 @@ func (playerPersister *inCloudDatastorePersister) Get(
 		return nil, errorFromAcquiral
 	}
 
-	playerKey := initializedClient.KeyFor(playerName)
 	serializableState := player.ReadAndWriteState{}
 
 	errorFromGet :=
 		initializedClient.Get(
 			executionContext,
-			playerKey,
+			playerName,
 			&serializableState)
 
 	return &serializableState, errorFromGet
@@ -101,16 +96,13 @@ func (playerPersister *inCloudDatastorePersister) All(
 
 	// We do not want to filter anything from the query for entities
 	// of the player type.
-	queryOnKind := datastore.NewQuery(keyKind)
-
-	resultIterator :=
-		initializedClient.Run(executionContext, queryOnKind)
+	resultIterator := initializedClient.AllOfKeyKind(executionContext)
 
 	playerStates := []player.ReadonlyState{}
 
 	for {
 		var retrievedPlayer player.ReadAndWriteState
-		_, errorFromNext := resultIterator.Next(&retrievedPlayer)
+		errorFromNext := resultIterator.Next(&retrievedPlayer)
 
 		if errorFromNext == iterator.Done {
 			break
@@ -140,7 +132,7 @@ func (playerPersister *inCloudDatastorePersister) Delete(
 
 	return initializedClient.Delete(
 		executionContext,
-		initializedClient.KeyFor(playerName))
+		playerName)
 }
 
 // acquireClient returns the connection to the Cloud Datastore,
@@ -149,15 +141,12 @@ func (playerPersister *inCloudDatastorePersister) acquireClient(
 	executionContext context.Context) (cloud.LimitedClient, error) {
 	if playerPersister.datastoreClient == nil {
 		cloudDatastoreClient, errorFromCloudDatastore :=
-			datastore.NewClient(
-				executionContext,
-				playerPersister.projectIdentifier)
+			playerPersister.clientProvider.NewClient(executionContext)
 		if errorFromCloudDatastore != nil {
 			return nil, errorFromCloudDatastore
 		}
 
-		playerPersister.datastoreClient =
-			cloud.WrapDatastoreClient(cloudDatastoreClient, keyKind)
+		playerPersister.datastoreClient = cloudDatastoreClient
 	}
 
 	return playerPersister.datastoreClient, nil
@@ -185,8 +174,8 @@ func (playerPersister *inCloudDatastorePersister) insertOrOverwrite(
 		return errorFromAcquiral
 	}
 
-	playerKey, isAlreadyInDatastore, errorFromCheck :=
-		cloud.KeyWithIfNameExists(
+	isAlreadyInDatastore, errorFromCheck :=
+		cloud.DoesNameExist(
 			executionContext,
 			initializedClient,
 			playerName)
@@ -212,7 +201,7 @@ func (playerPersister *inCloudDatastorePersister) insertOrOverwrite(
 	_, errorFromPut :=
 		initializedClient.Put(
 			executionContext,
-			playerKey,
+			playerName,
 			&serializableState)
 
 	return errorFromPut

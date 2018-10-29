@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"cloud.google.com/go/datastore"
 	"google.golang.org/api/iterator"
 )
 
@@ -12,62 +11,78 @@ import (
 // Google App Engine.
 const IlutulestikudIdentifier = "ilutulestikud-191419"
 
-// LimitedIterator defines the subset of the functions of the
-// datastore.Iterator struct used by the inCloudDatastorePersister
-// struct.
+// LimitedIterator defines wrappers around the subset of the functions of the
+// datastore.Iterator struct used by the inCloudDatastorePersister struct.
 type LimitedIterator interface {
-	Next(deserializationDestination interface{}) (*datastore.Key, error)
+	// DeserializeNext should deserialize the next element in the iterator
+	// into the given interface.
+	DeserializeNext(deserializationDestination interface{}) error
+
+	// NextKey should simply move onto the next element, discarding whatever
+	// the iterator was pointing at.
+	NextKey() error
 }
 
 // LimitedClient defines the subset of the functions of the
 // datastore.Client struct used by the inCloudDatastorePersister
 // struct.
 type LimitedClient interface {
-	KeyFor(nameForKey string) *datastore.Key
+	// AllOfKind should return an iterator to the set of all entities
+	// of the kind known to the client.
+	AllOfKind(executionContext context.Context) LimitedIterator
 
-	Run(
+	// AllKeysMatching should return an iterator to the set of all keys
+	// of the kind known to the client which match the given name.
+	AllKeysMatching(
 		executionContext context.Context,
-		queryToRun *datastore.Query) LimitedIterator
+		keyName string) LimitedIterator
+
+	AllMatching(
+		executionContext context.Context,
+		filterExpression string,
+		valueToMatch interface{}) LimitedIterator
 
 	Get(
 		executionContext context.Context,
-		keyForEntity *datastore.Key,
-		deserializationDestination interface{}) (err error)
+		keyName string,
+		deserializationDestination interface{}) error
 
 	Put(
 		executionContext context.Context,
-		keyForEntity *datastore.Key,
-		deserializationSource interface{}) (*datastore.Key, error)
+		keyName string,
+		deserializationSource interface{}) error
 
 	Delete(
 		executionContext context.Context,
-		keyForEntity *datastore.Key) error
+		keyName string) error
 }
 
-// KeyWithIfNameExists returns a key for the given name along with
-// whether that name already in the datastore for the kind belonging
-// to the client, along with an error if any problem was encountered.
-func KeyWithIfNameExists(
+// ClientProvider defines a factory interface which should provide
+// implementations of the LimitedClient interface.
+type ClientProvider interface {
+	// NewClient should provide a new instance of an implementation
+	// of the LimitedClient interface.
+	NewClient(executionContext context.Context) (LimitedClient, error)
+}
+
+// DoesNameExist returns whether that name already in the datastore
+// for the kind belonging to the client, along with an error if any
+// problem was encountered.
+func DoesNameExist(
 	executionContext context.Context,
 	limitedClient LimitedClient,
-	nameToCheck string) (*datastore.Key, bool, error) {
-	keyForName := limitedClient.KeyFor(nameToCheck)
-
-	queryForNameAlreadyExists :=
-		datastore.NewQuery("").Filter("__key__ =", keyForName).KeysOnly()
-
+	nameToCheck string) (bool, error) {
 	resultIterator :=
-		limitedClient.Run(
+		limitedClient.AllKeysMatching(
 			executionContext,
-			queryForNameAlreadyExists)
+			nameToCheck)
 
 	// If there is nothing already with the given name, the iterator
 	// should immediately return an iterator.Done "error".
-	var keyOfExistingName datastore.Key
-	_, errorFromInitialNext := resultIterator.Next(&keyOfExistingName)
+	errorFromInitialNext := resultIterator.NextKey()
 
 	if errorFromInitialNext == iterator.Done {
-		return keyForName, false, nil
+		return false, nil
 	}
 
 	// Otherwise any error means that there was an actual error.
@@ -77,12 +92,12 @@ func KeyWithIfNameExists(
 				"Trying to check for existing name %v produced error: %v",
 				nameToCheck,
 				errorFromInitialNext)
-		return nil, false, errorFromInitialNextWithContext
+		return false, errorFromInitialNextWithContext
 	}
 
 	// If the first .Next(...) had no error, we check that the next
 	// invocation gives iterator.Done - otherwise we report an error.
-	_, errorFromSecondNext := resultIterator.Next(&keyOfExistingName)
+	errorFromSecondNext := resultIterator.NextKey()
 
 	if errorFromSecondNext != iterator.Done {
 		errorFromSecondNextWithContext :=
@@ -92,78 +107,8 @@ func KeyWithIfNameExists(
 				nameToCheck,
 				errorFromSecondNext)
 
-		return nil, true, errorFromSecondNextWithContext
+		return true, errorFromSecondNextWithContext
 	}
 
-	return keyForName, true, nil
-}
-
-// WrappingLimitedClient wraps a Google Cloud Datastore client in order
-// to implement an interface which uses a subset of the possible functions
-// from a datastore.Client, in order to make it easier to abstract.
-type WrappingLimitedClient struct {
-	wrappedInterface *datastore.Client
-	keyKind          string
-}
-
-// WrapDatastoreClient returns a pointer to a WrappingLimitedClient
-// wrapped around the given datastore client.
-func WrapDatastoreClient(
-	wrappedInterface *datastore.Client,
-	keyKind string) *WrappingLimitedClient {
-	return &WrappingLimitedClient{
-		wrappedInterface: wrappedInterface,
-		keyKind:          keyKind,
-	}
-}
-
-// KeyFor creates a key out of the given entity name with the stored key
-// kind, without specifying an ancestor.
-func (wrappingClient *WrappingLimitedClient) KeyFor(
-	nameForKey string) *datastore.Key {
-	return datastore.NameKey(wrappingClient.keyKind, nameForKey, nil)
-}
-
-// Run implements a wrapper for the Google Cloud Datastore client's Run
-// function.
-func (wrappingClient *WrappingLimitedClient) Run(
-	executionContext context.Context,
-	queryToRun *datastore.Query) LimitedIterator {
-	return wrappingClient.wrappedInterface.Run(
-		executionContext,
-		queryToRun)
-}
-
-// Get implements a wrapper for the Google Cloud Datastore client's Get
-// function.
-func (wrappingClient *WrappingLimitedClient) Get(
-	executionContext context.Context,
-	keyForEntity *datastore.Key,
-	deserializationDestination interface{}) (err error) {
-	return wrappingClient.wrappedInterface.Get(
-		executionContext,
-		keyForEntity,
-		deserializationDestination)
-}
-
-// Put implements a wrapper for the Google Cloud Datastore client's Put
-// function.
-func (wrappingClient *WrappingLimitedClient) Put(
-	executionContext context.Context,
-	keyForEntity *datastore.Key,
-	deserializationSource interface{}) (*datastore.Key, error) {
-	return wrappingClient.wrappedInterface.Put(
-		executionContext,
-		keyForEntity,
-		deserializationSource)
-}
-
-// Delete implements a wrapper for the Google Cloud Datastore client's Delete
-// (taking a string and making a key out of it).
-func (wrappingClient *WrappingLimitedClient) Delete(
-	executionContext context.Context,
-	keyForEntity *datastore.Key) error {
-	return wrappingClient.wrappedInterface.Delete(
-		executionContext,
-		keyForEntity)
+	return true, nil
 }

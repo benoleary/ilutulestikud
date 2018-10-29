@@ -16,8 +16,8 @@ type mockLimitedIterator struct {
 	ErrorToReturn error
 }
 
-func (mockIterator *mockLimitedIterator) Next(
-	deserializationDestination interface{}) (*datastore.Key, error) {
+func (mockIterator *mockLimitedIterator) DeserializeNext(
+	deserializationDestination interface{}) error {
 	serializableState, isSerializableState :=
 		deserializationDestination.(persister.SerializableState)
 
@@ -29,7 +29,11 @@ func (mockIterator *mockLimitedIterator) Next(
 		serializableState.RulesetIdentifier = -1
 	}
 
-	return nil, mockIterator.ErrorToReturn
+	return mockIterator.ErrorToReturn
+}
+
+func (mockIterator *mockLimitedIterator) NextKey() error {
+	return mockIterator.ErrorToReturn
 }
 
 type mockLimitedClient struct {
