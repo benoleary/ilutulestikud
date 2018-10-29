@@ -1,9 +1,7 @@
 package main
 import (
 	"context"
-	"fmt"
 	"net/http"
-	"os"
 
 	"google.golang.org/appengine"
 
@@ -33,19 +31,8 @@ func main() {
 	// This main function just injects hard-coded dependencies.
 	contextProvider := &AppEngineContextProvider{}
 
-	postgresqlUsername := os.Getenv("POSTGRESQL_USERNAME")
-	postgresqlPassword := os.Getenv("POSTGRESQL_PASSWORD")
-	postgresqlPlayerdb := os.Getenv("POSTGRESQL_PLAYERDB")
-	postgresqlLocation := os.Getenv("POSTGRESQL_LOCATION")
-	connectionString :=
-		fmt.Sprintf(
-			"user=%v password=%v dbname=%v %v",
-			postgresqlUsername,
-			postgresqlPassword,
-			postgresqlPlayerdb,
-			postgresqlLocation)
-
-	playerPersister := player_persister.NewInPostgresql(connectionString)
+	playerPersister :=
+		player_persister.NewInCloudDatastore(cloud.IlutulestikudIdentifier)
 	playerCollection :=
 		player.NewCollection(
 			playerPersister,

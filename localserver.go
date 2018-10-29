@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"os"
 
 	"github.com/benoleary/ilutulestikud/backend/cloud"
 	"github.com/benoleary/ilutulestikud/backend/defaults"
@@ -20,19 +19,8 @@ func main() {
 	fmt.Printf("Local server started.\n")
 	contextProvider := &server.BackgroundContextProvider{}
 
-	postgresqlUsername := os.Getenv("POSTGRESQL_USERNAME")
-	postgresqlPassword := os.Getenv("POSTGRESQL_PASSWORD")
-	postgresqlPlayerdb := os.Getenv("POSTGRESQL_PLAYERDB")
-	postgresqlLocation := os.Getenv("POSTGRESQL_LOCATION")
-	connectionString :=
-		fmt.Sprintf(
-			"user=%v password=%v dbname=%v %v",
-			postgresqlUsername,
-			postgresqlPassword,
-			postgresqlPlayerdb,
-			postgresqlLocation)
-
-	playerPersister := player_persister.NewInPostgresql(connectionString)
+	playerPersister :=
+		player_persister.NewInCloudDatastore(cloud.IlutulestikudIdentifier)
 	playerCollection :=
 		player.NewCollection(
 			playerPersister,
