@@ -1,9 +1,11 @@
 package main
+
 import (
 	"context"
 	"net/http"
 
 	"google.golang.org/appengine"
+	"google.golang.org/appengine/datastore"
 
 	"github.com/benoleary/ilutulestikud/backend/cloud"
 	"github.com/benoleary/ilutulestikud/backend/defaults"
@@ -27,19 +29,171 @@ func (appEngineContextProvider *AppEngineContextProvider) FromRequest(
 	return appengine.NewContext(httpRequest)
 }
 
+// WrappingLimitedIterator wraps an iterator in order to make it more portable.
+type WrappingLimitedIterator struct {
+	wrappedInterface *datastore.Iterator
+}
+
+// DeserializeNext deserializes the next element in the iterator
+// into the given interface.
+func (wrappingIterator *WrappingLimitedIterator) DeserializeNext(
+	deserializationDestination interface{}) error {
+	_, errorFromDeserialization :=
+		wrappingIterator.wrappedInterface.Next(deserializationDestination)
+
+	return errorFromDeserialization
+}
+
+// NextKey simply moves onto the next element, discarding whatever
+// the iterator was pointing at.
+func (wrappingIterator *WrappingLimitedIterator) NextKey() error {
+	var keyToBeIgnored datastore.Key
+	_, errorFromDeserialization :=
+		wrappingIterator.wrappedInterface.Next(&keyToBeIgnored)
+
+	return errorFromDeserialization
+}
+
+// IsDone returns true if the given error matches the error used
+// to denote that the iterator is done.
+func (wrappingIterator *WrappingLimitedIterator) IsDone(
+	errorFromLastNext error) bool {
+	return errorFromLastNext == datastore.Done
+}
+
+// inAppEngineDatastoreClient acts as a Google Cloud Datastore client
+// within the App Engine.
+type inAppEngineDatastoreClient struct {
+	keyKind string
+}
+
+// AllOfKind returns an iterator to the set of all entities of the
+// kind known to the client.
+func (datastoreClient *inAppEngineDatastoreClient) AllOfKind(
+	executionContext context.Context) cloud.LimitedIterator {
+	queryForAllOfKind := datastore.NewQuery(datastoreClient.keyKind)
+
+	resultIterator := queryForAllOfKind.Run(executionContext)
+
+	return &WrappingLimitedIterator{wrappedInterface: resultIterator}
+}
+
+// AllKeysMatching returns an iterator to the set of all keys of the
+// kind known to the client which match the given name.
+func (datastoreClient *inAppEngineDatastoreClient) AllKeysMatching(
+	executionContext context.Context,
+	keyName string) cloud.LimitedIterator {
+	keyForName := datastoreClient.keyForKind(executionContext, keyName)
+	queryForNameAlreadyExists :=
+		datastore.NewQuery("").Filter("__key__ =", keyForName).KeysOnly()
+
+	resultIterator := queryForNameAlreadyExists.Run(executionContext)
+
+	return &WrappingLimitedIterator{wrappedInterface: resultIterator}
+}
+
+// AllMatching returns an iterator to the set of entities which are
+// selected by the given filter, according the rules of the Google
+// Cloud Datastore (which can have surprising results when searching
+// through entities which have arrays).
+func (datastoreClient *inAppEngineDatastoreClient) AllMatching(
+	executionContext context.Context,
+	filterExpression string,
+	valueToMatch interface{}) cloud.LimitedIterator {
+	queryOnMatchingValue :=
+		datastore.NewQuery(datastoreClient.keyKind).Filter(
+			filterExpression,
+			valueToMatch)
+
+	resultIterator := queryOnMatchingValue.Run(executionContext)
+
+	return &WrappingLimitedIterator{wrappedInterface: resultIterator}
+}
+
+// Get implements a wrapper for the Google Cloud Datastore implementation
+// of Get within the App Engine (taking a string and making a key out of it).
+func (datastoreClient *inAppEngineDatastoreClient) Get(
+	executionContext context.Context,
+	nameForKey string,
+	deserializationDestination interface{}) error {
+	return datastore.Get(
+		executionContext,
+		datastoreClient.keyForKind(executionContext, nameForKey),
+		deserializationDestination)
+}
+
+// Put implements a wrapper for the Google Cloud Datastore implementation
+// of Put within the App Engine (taking a string and making a key out of it).
+func (datastoreClient *inAppEngineDatastoreClient) Put(
+	executionContext context.Context,
+	nameForKey string,
+	deserializationSource interface{}) error {
+	_, errorFromPut := datastore.Put(
+		executionContext,
+		datastoreClient.keyForKind(executionContext, nameForKey),
+		deserializationSource)
+
+	return errorFromPut
+}
+
+// Delete implements a wrapper for the Google Cloud Datastore implementation
+// of Delete within the App Engine (taking a string and making a key out of it).
+func (datastoreClient *inAppEngineDatastoreClient) Delete(
+	executionContext context.Context,
+	nameForKey string) error {
+	return datastore.Delete(
+		executionContext,
+		datastoreClient.keyForKind(executionContext, nameForKey))
+}
+
+// keyForKind makes a basic key for the given name, for the client's kind.
+func (datastoreClient *inAppEngineDatastoreClient) keyForKind(
+	executionContext context.Context,
+	nameForKey string) *datastore.Key {
+	return datastore.NewKey(
+		executionContext,
+		datastoreClient.keyKind,
+		nameForKey,
+		0,
+		nil)
+}
+
+type inAppEngineDatastoreClientProvider struct {
+	projectIdentifier string
+	keyKind           string
+}
+
+// NewClient wraps a WrappingLimitedClient around a new datastore.Client object.
+func (clientProvider *inAppEngineDatastoreClientProvider) NewClient(
+	executionContext context.Context) (cloud.LimitedClient, error) {
+	return &inAppEngineDatastoreClient{keyKind: clientProvider.keyKind}, nil
+}
+
 func main() {
 	// This main function just injects hard-coded dependencies.
 	contextProvider := &AppEngineContextProvider{}
 
+	playerDatastoreClientProvider :=
+		&inAppEngineDatastoreClientProvider{
+			projectIdentifier: cloud.IlutulestikudIdentifier,
+			keyKind:           player_persister.CloudDatastoreKeyKind,
+		}
+
 	playerPersister :=
-		player_persister.NewInCloudDatastore(cloud.IlutulestikudIdentifier)
+		player_persister.NewInCloudDatastore(playerDatastoreClientProvider)
 	playerCollection :=
 		player.NewCollection(
 			playerPersister,
 			defaults.AvailableColors())
 
+	gameDatastoreClientProvider :=
+		&inAppEngineDatastoreClientProvider{
+			projectIdentifier: cloud.IlutulestikudIdentifier,
+			keyKind:           game_persister.CloudDatastoreKeyKind,
+		}
+
 	gamePersister :=
-		game_persister.NewInCloudDatastore(cloud.IlutulestikudIdentifier)
+		game_persister.NewInCloudDatastore(gameDatastoreClientProvider)
 	gameCollection :=
 		game.NewCollection(
 			gamePersister,
@@ -48,10 +202,10 @@ func main() {
 
 	// We could load the allowed origin from a file, but this app is very specific to a set of fixed addresses.
 	serverState :=
-	    server.New(
+		server.New(
 			contextProvider,
 			"https://storage.googleapis.com",
-			"Google App Engine version 0.1",
+			"Google App Engine version 2.0",
 			&endpoint_parsing.Base32Translator{},
 			playerCollection,
 			gameCollection)

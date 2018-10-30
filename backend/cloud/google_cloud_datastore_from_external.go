@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"cloud.google.com/go/datastore"
+	"google.golang.org/api/iterator"
 )
 
 // WrappingLimitedIterator wraps an iterator in order to make it more portable.
@@ -31,55 +32,19 @@ func (wrappingIterator *WrappingLimitedIterator) NextKey() error {
 	return errorFromDeserialization
 }
 
+// IsDone returns true if the given error matches the error used
+// to denote that the iterator is done.
+func (wrappingIterator *WrappingLimitedIterator) IsDone(
+	errorFromLastNext error) bool {
+	return errorFromLastNext == iterator.Done
+}
+
 // WrappingLimitedClient wraps a Google Cloud Datastore client in order
 // to implement an interface which uses a subset of the possible functions
 // from a datastore.Client, in order to make it easier to abstract.
 type WrappingLimitedClient struct {
 	wrappedInterface *datastore.Client
 	keyKind          string
-}
-
-// FixedProjectAndKeyDatastoreClientProvider creates new datastore.Client objects.
-type FixedProjectAndKeyDatastoreClientProvider struct {
-	projectIdentifier string
-	keyKind           string
-}
-
-// NewFixedProjectAndKeyDatastoreClientProvider returns a ClientProvider which
-// creates clients for the given project in the Google Cloud Datastore.
-func NewFixedProjectAndKeyDatastoreClientProvider(
-	projectIdentifier string,
-	keyKind string) DatastoreClientProvider {
-	return &FixedProjectAndKeyDatastoreClientProvider{
-		projectIdentifier: projectIdentifier,
-		keyKind:           keyKind,
-	}
-}
-
-// NewIlutulestikudDatastoreClientProvider returns a ClientProvider which
-// creates clients for the Ilutulestikud project in the Google Cloud Datastore.
-func NewIlutulestikudDatastoreClientProvider(keyKind string) DatastoreClientProvider {
-	return NewFixedProjectAndKeyDatastoreClientProvider(
-		IlutulestikudIdentifier,
-		keyKind)
-}
-
-// NewClient wraps a WrappingLimitedClient around a new datastore.Client object.
-func (clientProvider *FixedProjectAndKeyDatastoreClientProvider) NewClient(
-	executionContext context.Context) (LimitedClient, error) {
-	cloudDatastoreClient, errorFromCloudDatastore :=
-		datastore.NewClient(executionContext, clientProvider.projectIdentifier)
-
-	if errorFromCloudDatastore != nil {
-		return nil, errorFromCloudDatastore
-	}
-
-	wrappedClient := &WrappingLimitedClient{
-		wrappedInterface: cloudDatastoreClient,
-		keyKind:          clientProvider.keyKind,
-	}
-
-	return wrappedClient, nil
 }
 
 // AllOfKind returns an iterator to the set of all entities of the
@@ -119,7 +84,7 @@ func (wrappingClient *WrappingLimitedClient) AllMatching(
 	executionContext context.Context,
 	filterExpression string,
 	valueToMatch interface{}) LimitedIterator {
-	queryOnmatchingValue :=
+	queryOnMatchingValue :=
 		datastore.NewQuery(wrappingClient.keyKind).Filter(
 			filterExpression,
 			valueToMatch)
@@ -127,7 +92,7 @@ func (wrappingClient *WrappingLimitedClient) AllMatching(
 	resultIterator :=
 		wrappingClient.wrappedInterface.Run(
 			executionContext,
-			queryOnmatchingValue)
+			queryOnMatchingValue)
 
 	return &WrappingLimitedIterator{wrappedInterface: resultIterator}
 }
@@ -172,4 +137,47 @@ func (wrappingClient *WrappingLimitedClient) Delete(
 func (wrappingClient *WrappingLimitedClient) keyForKind(
 	nameForKey string) *datastore.Key {
 	return datastore.NameKey(wrappingClient.keyKind, nameForKey, nil)
+}
+
+// FixedProjectAndKeyDatastoreClientProvider creates new datastore.Client objects.
+type FixedProjectAndKeyDatastoreClientProvider struct {
+	projectIdentifier string
+	keyKind           string
+}
+
+// NewFixedProjectAndKeyDatastoreClientProvider returns a ClientProvider which
+// creates clients for the given project in the Google Cloud Datastore.
+func NewFixedProjectAndKeyDatastoreClientProvider(
+	projectIdentifier string,
+	keyKind string) DatastoreClientProvider {
+	return &FixedProjectAndKeyDatastoreClientProvider{
+		projectIdentifier: projectIdentifier,
+		keyKind:           keyKind,
+	}
+}
+
+// NewIlutulestikudDatastoreClientProvider returns a ClientProvider which
+// creates clients for the Ilutulestikud project in the Google Cloud Datastore.
+func NewIlutulestikudDatastoreClientProvider(keyKind string) DatastoreClientProvider {
+	return NewFixedProjectAndKeyDatastoreClientProvider(
+		IlutulestikudIdentifier,
+		keyKind)
+}
+
+// NewClient wraps a WrappingLimitedClient around a new datastore.Client object.
+func (clientProvider *FixedProjectAndKeyDatastoreClientProvider) NewClient(
+	executionContext context.Context) (LimitedClient, error) {
+	cloudDatastoreClient, errorFromCloudDatastore :=
+		datastore.NewClient(executionContext, clientProvider.projectIdentifier)
+
+	if errorFromCloudDatastore != nil {
+		return nil, errorFromCloudDatastore
+	}
+
+	wrappedClient := &WrappingLimitedClient{
+		wrappedInterface: cloudDatastoreClient,
+		keyKind:          clientProvider.keyKind,
+	}
+
+	return wrappedClient, nil
 }

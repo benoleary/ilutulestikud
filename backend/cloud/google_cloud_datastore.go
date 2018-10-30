@@ -3,8 +3,6 @@ package cloud
 import (
 	"context"
 	"fmt"
-
-	"google.golang.org/api/iterator"
 )
 
 // IlutulestikudIdentifier is the string which identifies the project to the
@@ -21,6 +19,10 @@ type LimitedIterator interface {
 	// NextKey should simply move onto the next element, discarding whatever
 	// the iterator was pointing at.
 	NextKey() error
+
+	// IsDone should return true if the given error matches the error used
+	// to denote that the iterator is done.
+	IsDone(errorFromLastNext error) bool
 }
 
 // LimitedClient defines the subset of the functions of the
@@ -81,7 +83,7 @@ func DoesNameExist(
 	// should immediately return an iterator.Done "error".
 	errorFromInitialNext := resultIterator.NextKey()
 
-	if errorFromInitialNext == iterator.Done {
+	if resultIterator.IsDone(errorFromInitialNext) {
 		return false, nil
 	}
 
@@ -99,7 +101,7 @@ func DoesNameExist(
 	// invocation gives iterator.Done - otherwise we report an error.
 	errorFromSecondNext := resultIterator.NextKey()
 
-	if errorFromSecondNext != iterator.Done {
+	if !resultIterator.IsDone(errorFromSecondNext) {
 		errorFromSecondNextWithContext :=
 			fmt.Errorf(
 				"Existing name %v was found but then checking for iterator.Done"+

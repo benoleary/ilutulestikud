@@ -12,7 +12,6 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/game/card"
 	"github.com/benoleary/ilutulestikud/backend/game/message"
 	"github.com/benoleary/ilutulestikud/backend/player"
-	"google.golang.org/api/iterator"
 )
 
 // CloudDatastoreKeyKind denotes the kind for the entities which will store
@@ -80,7 +79,7 @@ func (gamePersister *inCloudDatastorePersister) ReadAllWithPlayer(
 		var matchedGame SerializableState
 		errorFromNext := resultIterator.DeserializeNext(&matchedGame)
 
-		if errorFromNext == iterator.Done {
+		if resultIterator.IsDone(errorFromNext) {
 			break
 		}
 

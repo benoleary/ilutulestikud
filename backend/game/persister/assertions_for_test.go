@@ -339,8 +339,10 @@ func assertGameStateAsExpected(
 		for indexInHand := 0; indexInHand < handSize; indexInHand++ {
 			if visibleHand[indexInHand] != expectedVisibleHand[indexInHand] {
 				unitTest.Fatalf(
-					testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin visible hands\n"+
+					testIdentifier+"/player %v %v/actual\n  %+v\ndid not match expected\n  %+v\nin visible hands\n"+
 						"actual:\n%+v\n\nexpected:\n%v\n\n",
+					playerIndex,
+					playerName,
 					actualGame,
 					expectedGame,
 					visibleHand,
@@ -356,8 +358,10 @@ func assertGameStateAsExpected(
 			if (len(inferredCard.PossibleColors) != len(expectedColors)) ||
 				(len(inferredCard.PossibleIndices) != len(expectedIndices)) {
 				unitTest.Fatalf(
-					testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin inferred hands\n"+
+					testIdentifier+"/player %v %v/actual\n  %+v\ndid not match expected\n  %+v\nin inferred hands\n"+
 						"actual:\n%+v\n\nexpected:\n%v\n\n",
+					playerIndex,
+					playerName,
 					actualGame,
 					expectedGame,
 					inferredHand,
@@ -367,8 +371,10 @@ func assertGameStateAsExpected(
 			for colorIndex, actualColor := range inferredCard.PossibleColors {
 				if actualColor != expectedColors[colorIndex] {
 					unitTest.Fatalf(
-						"actual\n  %+v\ndid not match expected\n  %+v\nin inferred hand colors\n"+
-							"actual:\n%+v\n\nexpected:\n%v\n\n",
+						testIdentifier+"/player %v %v/actual\n  %+v\ndid not match expected\n  %+v\n"+
+							"in inferred hand colors\nactual:\n%+v\n\nexpected:\n%v\n\n",
+						playerIndex,
+						playerName,
 						actualGame,
 						expectedGame,
 						inferredCard.PossibleColors,
@@ -379,8 +385,10 @@ func assertGameStateAsExpected(
 			for indexIndex, actualIndex := range inferredCard.PossibleIndices {
 				if actualIndex != expectedIndices[indexIndex] {
 					unitTest.Fatalf(
-						testIdentifier+"/actual\n  %+v\ndid not match expected\n  %+v\nin inferred hand indices\n"+
-							"actual:\n%+v\n\nexpected:\n%v\n\n",
+						testIdentifier+"/player %v %v/actual\n  %+v\ndid not match expected\n  %+v\n"+
+							"in inferred hand indices\nactual:\n%+v\n\nexpected:\n%v\n\n",
+						playerIndex,
+						playerName,
 						actualGame,
 						expectedGame,
 						inferredCard.PossibleIndices,

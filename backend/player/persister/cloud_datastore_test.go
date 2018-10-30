@@ -7,6 +7,7 @@ import (
 
 	"github.com/benoleary/ilutulestikud/backend/cloud"
 	"github.com/benoleary/ilutulestikud/backend/player/persister"
+	"google.golang.org/api/iterator"
 )
 
 const testProject = "Test-Project"
@@ -22,6 +23,11 @@ func (mockIterator *mockLimitedIterator) DeserializeNext(
 
 func (mockIterator *mockLimitedIterator) NextKey() error {
 	return mockIterator.ErrorToReturn
+}
+
+func (mockIterator *mockLimitedIterator) IsDone(
+	errorFromLastNext error) bool {
+	return errorFromLastNext == iterator.Done
 }
 
 type mockLimitedClient struct {
