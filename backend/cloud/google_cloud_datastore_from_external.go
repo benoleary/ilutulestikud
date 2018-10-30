@@ -39,14 +39,33 @@ type WrappingLimitedClient struct {
 	keyKind          string
 }
 
-// DatastoreClientProvider creates new datastore.Client objects.
-type DatastoreClientProvider struct {
+// FixedProjectAndKeyDatastoreClientProvider creates new datastore.Client objects.
+type FixedProjectAndKeyDatastoreClientProvider struct {
 	projectIdentifier string
 	keyKind           string
 }
 
+// NewFixedProjectAndKeyDatastoreClientProvider returns a ClientProvider which
+// creates clients for the given project in the Google Cloud Datastore.
+func NewFixedProjectAndKeyDatastoreClientProvider(
+	projectIdentifier string,
+	keyKind string) DatastoreClientProvider {
+	return &FixedProjectAndKeyDatastoreClientProvider{
+		projectIdentifier: projectIdentifier,
+		keyKind:           keyKind,
+	}
+}
+
+// NewIlutulestikudDatastoreClientProvider returns a ClientProvider which
+// creates clients for the Ilutulestikud project in the Google Cloud Datastore.
+func NewIlutulestikudDatastoreClientProvider(keyKind string) DatastoreClientProvider {
+	return NewFixedProjectAndKeyDatastoreClientProvider(
+		IlutulestikudIdentifier,
+		keyKind)
+}
+
 // NewClient wraps a WrappingLimitedClient around a new datastore.Client object.
-func (clientProvider DatastoreClientProvider) NewClient(
+func (clientProvider *FixedProjectAndKeyDatastoreClientProvider) NewClient(
 	executionContext context.Context) (LimitedClient, error) {
 	cloudDatastoreClient, errorFromCloudDatastore :=
 		datastore.NewClient(executionContext, clientProvider.projectIdentifier)

@@ -57,9 +57,9 @@ type LimitedClient interface {
 		keyName string) error
 }
 
-// ClientProvider defines a factory interface which should provide
+// DatastoreClientProvider defines a factory interface which should provide
 // implementations of the LimitedClient interface.
-type ClientProvider interface {
+type DatastoreClientProvider interface {
 	// NewClient should provide a new instance of an implementation
 	// of the LimitedClient interface.
 	NewClient(executionContext context.Context) (LimitedClient, error)

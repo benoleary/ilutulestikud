@@ -19,15 +19,20 @@ func main() {
 	fmt.Printf("Local server started.\n")
 	contextProvider := &server.BackgroundContextProvider{}
 
+	playerDatastoreClientProvider :=
+		cloud.NewIlutulestikudDatastoreClientProvider(player_persister.CloudDatastoreKeyKind)
+
 	playerPersister :=
-		player_persister.NewInCloudDatastore(cloud.IlutulestikudIdentifier)
+		player_persister.NewInCloudDatastore(playerDatastoreClientProvider)
 	playerCollection :=
 		player.NewCollection(
 			playerPersister,
 			defaults.AvailableColors())
 
+	gameDatastoreClientProvider :=
+		cloud.NewIlutulestikudDatastoreClientProvider(game_persister.CloudDatastoreKeyKind)
 	gamePersister :=
-		game_persister.NewInCloudDatastore(cloud.IlutulestikudIdentifier)
+		game_persister.NewInCloudDatastore(gameDatastoreClientProvider)
 	gameCollection :=
 		game.NewCollection(
 			gamePersister,

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"testing"
 
-	"cloud.google.com/go/datastore"
 	"github.com/benoleary/ilutulestikud/backend/cloud"
 	"google.golang.org/api/iterator"
 )
@@ -297,21 +296,21 @@ func TestCreateThenGetThenDeleteThenRun(unitTest *testing.T) {
 }
 
 func createClient(unitTest *testing.T) cloud.LimitedClient {
+	clientProvider :=
+		cloud.NewIlutulestikudDatastoreClientProvider(testKind)
+
 	cloudDatastoreClient, errorFromCloudDatastore :=
-		datastore.NewClient(
-			context.Background(),
-			cloud.IlutulestikudIdentifier)
+		clientProvider.NewClient(
+			context.Background())
 	if errorFromCloudDatastore != nil {
 		unitTest.Fatalf(
 			"Error when trying to create client: %v",
 			errorFromCloudDatastore)
 	}
 
-	wrappedClient := cloud.WrapDatastoreClient(cloudDatastoreClient, testKind)
-
 	for _, testName := range testNames {
 		errorFromInitialDelete :=
-			wrappedClient.Delete(
+			cloudDatastoreClient.Delete(
 				context.Background(),
 				testName)
 		unitTest.Logf(
@@ -320,5 +319,5 @@ func createClient(unitTest *testing.T) cloud.LimitedClient {
 			errorFromInitialDelete)
 	}
 
-	return wrappedClient
+	return cloudDatastoreClient
 }

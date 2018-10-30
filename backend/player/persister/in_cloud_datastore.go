@@ -9,26 +9,28 @@ import (
 	"google.golang.org/api/iterator"
 )
 
-const keyKind = "Player"
+// CloudDatastoreKeyKind denotes the kind for the entities which will store
+// players in the Google Cloud Datastore.
+const CloudDatastoreKeyKind = "Player"
 
 // inCloudDatastorePersister stores game states by creating
 // inCloudDatastoreStates and saving them as game.ReadAndWriteStates
 // in Google Cloud Datastore.
 type inCloudDatastorePersister struct {
-	clientProvider  cloud.ClientProvider
+	clientProvider  cloud.DatastoreClientProvider
 	datastoreClient cloud.LimitedClient
 }
 
 // NewInCloudDatastore creates a game state persister.
 func NewInCloudDatastore(
-	clientProvider cloud.ClientProvider) player.StatePersister {
+	clientProvider cloud.DatastoreClientProvider) player.StatePersister {
 	return NewInCloudDatastoreWithGivenLimitedClient(clientProvider, nil)
 }
 
 // NewInCloudDatastoreWithGivenLimitedClient creates a game state
 // persister using a given LimitedClient implementation.
 func NewInCloudDatastoreWithGivenLimitedClient(
-	clientProvider cloud.ClientProvider,
+	clientProvider cloud.DatastoreClientProvider,
 	datastoreClient cloud.LimitedClient) player.StatePersister {
 	return &inCloudDatastorePersister{
 		clientProvider:  clientProvider,
@@ -96,13 +98,13 @@ func (playerPersister *inCloudDatastorePersister) All(
 
 	// We do not want to filter anything from the query for entities
 	// of the player type.
-	resultIterator := initializedClient.AllOfKeyKind(executionContext)
+	resultIterator := initializedClient.AllOfKind(executionContext)
 
 	playerStates := []player.ReadonlyState{}
 
 	for {
 		var retrievedPlayer player.ReadAndWriteState
-		errorFromNext := resultIterator.Next(&retrievedPlayer)
+		errorFromNext := resultIterator.DeserializeNext(&retrievedPlayer)
 
 		if errorFromNext == iterator.Done {
 			break
@@ -198,11 +200,8 @@ func (playerPersister *inCloudDatastorePersister) insertOrOverwrite(
 			ChatColor:  chatColor,
 		}
 
-	_, errorFromPut :=
-		initializedClient.Put(
-			executionContext,
-			playerName,
-			&serializableState)
-
-	return errorFromPut
+	return initializedClient.Put(
+		executionContext,
+		playerName,
+		&serializableState)
 }

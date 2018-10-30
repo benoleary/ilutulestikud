@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"testing"
 
-	"cloud.google.com/go/datastore"
 	"github.com/benoleary/ilutulestikud/backend/cloud"
 	"github.com/benoleary/ilutulestikud/backend/player/persister"
 )
@@ -16,9 +15,13 @@ type mockLimitedIterator struct {
 	ErrorToReturn error
 }
 
-func (mockIterator *mockLimitedIterator) Next(
-	deserializationDestination interface{}) (*datastore.Key, error) {
-	return nil, mockIterator.ErrorToReturn
+func (mockIterator *mockLimitedIterator) DeserializeNext(
+	deserializationDestination interface{}) error {
+	return mockIterator.ErrorToReturn
+}
+
+func (mockIterator *mockLimitedIterator) NextKey() error {
+	return mockIterator.ErrorToReturn
 }
 
 type mockLimitedClient struct {
@@ -26,41 +29,62 @@ type mockLimitedClient struct {
 	ErrorToReturn    error
 }
 
-func (mockClient *mockLimitedClient) KeyFor(
-	nameForKey string) *datastore.Key {
-	return nil
+func (mockClient *mockLimitedClient) AllOfKind(
+	executionContext context.Context) cloud.LimitedIterator {
+	return mockClient.IteratorToReturn
 }
 
-func (mockClient *mockLimitedClient) Run(
+func (mockClient *mockLimitedClient) AllKeysMatching(
 	executionContext context.Context,
-	queryToRun *datastore.Query) cloud.LimitedIterator {
+	keyName string) cloud.LimitedIterator {
+	return mockClient.IteratorToReturn
+}
+
+func (mockClient *mockLimitedClient) AllMatching(
+	executionContext context.Context,
+	filterExpression string,
+	valueToMatch interface{}) cloud.LimitedIterator {
 	return mockClient.IteratorToReturn
 }
 
 func (mockClient *mockLimitedClient) Get(
 	executionContext context.Context,
-	searchKey *datastore.Key,
-	deserializationDestination interface{}) (err error) {
+	nameForKey string,
+	deserializationDestination interface{}) error {
 	return mockClient.ErrorToReturn
 }
 
 func (mockClient *mockLimitedClient) Put(
 	executionContext context.Context,
-	searchKey *datastore.Key,
-	deserializationSource interface{}) (*datastore.Key, error) {
-	return nil, mockClient.ErrorToReturn
+	nameForKey string,
+	deserializationSource interface{}) error {
+	return mockClient.ErrorToReturn
 }
 
 func (mockClient *mockLimitedClient) Delete(
 	executionContext context.Context,
-	searchKey *datastore.Key) error {
+	nameForKey string) error {
 	return mockClient.ErrorToReturn
+}
+
+type mockClientProvider struct {
+	ClientToReturn *mockLimitedClient
+	ErrorToReturn  error
+}
+
+func (mockProvider *mockClientProvider) NewClient(
+	executionContext context.Context) (cloud.LimitedClient, error) {
+	return mockProvider.ClientToReturn, mockProvider.ErrorToReturn
 }
 
 func TestReturnErrorFromInvalidProjectIdentifier(unitTest *testing.T) {
 	invalidProjectIdentifier := ""
+	invalidDatastoreClientProvider :=
+		cloud.NewFixedProjectAndKeyDatastoreClientProvider(
+			invalidProjectIdentifier,
+			persister.CloudDatastoreKeyKind)
 	cloudDatastorePersister :=
-		persister.NewInCloudDatastore(invalidProjectIdentifier)
+		persister.NewInCloudDatastore(invalidDatastoreClientProvider)
 
 	executionContext := context.Background()
 
@@ -128,8 +152,13 @@ func TestReturnErrorFromInvalidProjectIdentifier(unitTest *testing.T) {
 }
 
 func TestAllPropagatesAcquiralError(unitTest *testing.T) {
+	invalidProjectIdentifier := ""
+	invalidDatastoreClientProvider :=
+		cloud.NewFixedProjectAndKeyDatastoreClientProvider(
+			invalidProjectIdentifier,
+			persister.CloudDatastoreKeyKind)
 	cloudDatastorePersister :=
-		persister.NewInCloudDatastore("")
+		persister.NewInCloudDatastore(invalidDatastoreClientProvider)
 
 	playerList, errorFromAll :=
 		cloudDatastorePersister.All(nil)
@@ -153,10 +182,14 @@ func TestAllPropagatesIteratorError(unitTest *testing.T) {
 			ErrorToReturn:    nil,
 		}
 
+	mockProvider :=
+		&mockClientProvider{
+			ClientToReturn: mockClient,
+			ErrorToReturn:  nil,
+		}
+
 	cloudDatastorePersister :=
-		persister.NewInCloudDatastoreWithGivenLimitedClient(
-			testProject,
-			mockClient)
+		persister.NewInCloudDatastore(mockProvider)
 
 	playerList, errorFromAll :=
 		cloudDatastorePersister.All(context.Background())
@@ -182,10 +215,14 @@ func TestGetInvalidPlayerProducesError(unitTest *testing.T) {
 			ErrorToReturn:    nil,
 		}
 
+	mockProvider :=
+		&mockClientProvider{
+			ClientToReturn: mockClient,
+			ErrorToReturn:  nil,
+		}
+
 	cloudDatastorePersister :=
-		persister.NewInCloudDatastoreWithGivenLimitedClient(
-			testProject,
-			mockClient)
+		persister.NewInCloudDatastore(mockProvider)
 
 	executionContext := context.Background()
 	unexpectedPlayer, errorFromGet :=
@@ -212,10 +249,14 @@ func TestUpdatePropagatesKeyCheckError(unitTest *testing.T) {
 			ErrorToReturn:    nil,
 		}
 
+	mockProvider :=
+		&mockClientProvider{
+			ClientToReturn: mockClient,
+			ErrorToReturn:  nil,
+		}
+
 	cloudDatastorePersister :=
-		persister.NewInCloudDatastoreWithGivenLimitedClient(
-			testProject,
-			mockClient)
+		persister.NewInCloudDatastore(mockProvider)
 
 	executionContext := context.Background()
 	playerName := "Should Not Matter"

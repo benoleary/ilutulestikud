@@ -15,32 +15,26 @@ import (
 	"google.golang.org/api/iterator"
 )
 
-const keyKind = "Game"
+// CloudDatastoreKeyKind denotes the kind for the entities which will store
+// games in the Google Cloud Datastore.
+const CloudDatastoreKeyKind = "Game"
 
 // inCloudDatastorePersister stores game states by creating
 // inCloudDatastoreStates and saving them as game.ReadAndWriteStates
 // in Google Cloud Datastore.
 type inCloudDatastorePersister struct {
 	randomNumberGenerator *rand.Rand
-	clientProvider        cloud.ClientProvider
+	clientProvider        cloud.DatastoreClientProvider
 	datastoreClient       cloud.LimitedClient
 }
 
 // NewInCloudDatastore creates a game state persister.
 func NewInCloudDatastore(
-	clientProvider cloud.ClientProvider) game.StatePersister {
-	return NewInCloudDatastoreWithGivenLimitedClient(clientProvider, nil)
-}
-
-// NewInCloudDatastoreWithGivenLimitedClient creates a game state
-// persister using a given LimitedClient implementation.
-func NewInCloudDatastoreWithGivenLimitedClient(
-	clientProvider cloud.ClientProvider,
-	datastoreClient cloud.LimitedClient) game.StatePersister {
+	clientProvider cloud.DatastoreClientProvider) game.StatePersister {
 	return &inCloudDatastorePersister{
 		randomNumberGenerator: rand.New(rand.NewSource(time.Now().Unix())),
 		clientProvider:        clientProvider,
-		datastoreClient:       datastoreClient,
+		datastoreClient:       nil,
 	}
 }
 

@@ -49,6 +49,9 @@ func preparePersisters(unitTest *testing.T) []persisterAndDescription {
 			postgresqlPlayerdb,
 			postgresqlLocation)
 
+	playerDatastoreClientProvider :=
+		cloud.NewIlutulestikudDatastoreClientProvider(persister.CloudDatastoreKeyKind)
+
 	persistersAndDescriptions := []persisterAndDescription{
 		persisterAndDescription{
 			PlayerPersister:      persister.NewInMemory(),
@@ -59,7 +62,7 @@ func preparePersisters(unitTest *testing.T) []persisterAndDescription {
 			PersisterDescription: "in-PostgreSQL persister",
 		},
 		persisterAndDescription{
-			PlayerPersister:      persister.NewInCloudDatastore(cloud.IlutulestikudIdentifier),
+			PlayerPersister:      persister.NewInCloudDatastore(playerDatastoreClientProvider),
 			PersisterDescription: "in-Cloud-Datastore persister",
 		},
 	}

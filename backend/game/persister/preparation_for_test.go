@@ -251,13 +251,16 @@ type persisterAndDescription struct {
 func preparePersisters(
 	unitTest *testing.T,
 	gamesToEnsureDoNotExist []string) []persisterAndDescription {
+	gameDatastoreClientProvider :=
+		cloud.NewIlutulestikudDatastoreClientProvider(persister.CloudDatastoreKeyKind)
+
 	persistersAndDescriptions := []persisterAndDescription{
 		persisterAndDescription{
 			GamePersister:        persister.NewInMemory(),
 			PersisterDescription: "in-memory persister",
 		},
 		persisterAndDescription{
-			GamePersister:        persister.NewInCloudDatastore(cloud.IlutulestikudIdentifier),
+			GamePersister:        persister.NewInCloudDatastore(gameDatastoreClientProvider),
 			PersisterDescription: "in-Cloud-Datastore persister",
 		},
 	}
