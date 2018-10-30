@@ -46,6 +46,11 @@ func (mockIterator *mockLimitedIterator) NextKey() error {
 	return mockIterator.nextError()
 }
 
+func (mockIterator *mockLimitedIterator) IsDone(
+	errorFromLastNext error) bool {
+	return errorFromLastNext == iterator.Done
+}
+
 type mockLimitedClient struct {
 	IteratorToReturn *mockLimitedIterator
 	ErrorToReturn    error
@@ -396,7 +401,7 @@ func assertIteratorHasSingleObject(
 	}
 
 	errorFromSecondNext := resultIterator.NextKey()
-	if errorFromSecondNext != iterator.Done {
+	if !resultIterator.IsDone(errorFromSecondNext) {
 		unitTest.Fatalf(
 			testIdentifier+"/second next through NextKey() produced error %v",
 			errorFromSecondNext)

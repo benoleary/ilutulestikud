@@ -21,7 +21,6 @@ func main() {
 
 	playerDatastoreClientProvider :=
 		cloud.NewIlutulestikudDatastoreClientProvider(player_persister.CloudDatastoreKeyKind)
-
 	playerPersister :=
 		player_persister.NewInCloudDatastore(playerDatastoreClientProvider)
 	playerCollection :=
@@ -44,7 +43,7 @@ func main() {
 		server.New(
 			contextProvider,
 			"http://localhost:4233",
-			"Local version 0.1",
+			"Local version 2.0",
 			&endpoint_parsing.Base32Translator{},
 			playerCollection,
 			gameCollection)

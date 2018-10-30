@@ -6,7 +6,6 @@ import (
 
 	"github.com/benoleary/ilutulestikud/backend/cloud"
 	"github.com/benoleary/ilutulestikud/backend/player"
-	"google.golang.org/api/iterator"
 )
 
 // CloudDatastoreKeyKind denotes the kind for the entities which will store
@@ -106,7 +105,7 @@ func (playerPersister *inCloudDatastorePersister) All(
 		var retrievedPlayer player.ReadAndWriteState
 		errorFromNext := resultIterator.DeserializeNext(&retrievedPlayer)
 
-		if errorFromNext == iterator.Done {
+		if resultIterator.IsDone(errorFromNext) {
 			break
 		}
 
