@@ -1247,7 +1247,7 @@ func TestValidHintWhenDeckNotYetEmpty(unitTest *testing.T) {
 		defaultTestColor,
 	}
 
-	receivingPlayerWithHand := threePlayersWithHands[1]
+	receivingPlayerWithHand := threePlayersWithHands[2]
 	receivingPlayerName := receivingPlayerWithHand.PlayerName
 
 	numberOfHintsToSubtract := 2

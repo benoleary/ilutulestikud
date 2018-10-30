@@ -229,6 +229,15 @@ func TestAddPlayerWithValidColorAndTestGet(unitTest *testing.T) {
 					"/Add(" + testCase.playerName + ", with valid color) and Get(same player)"
 
 			unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+				errorFromDeletionOfExisting :=
+					statePersister.PlayerPersister.Delete(context.Background(), testCase.playerName)
+				unitTest.Logf(
+					"Error from persister %v deleting %v when setting up"+
+						" (to ensure that it does not exist before the test) was %v",
+					statePersister.PersisterDescription,
+					testCase.playerName,
+					errorFromDeletionOfExisting)
+
 				errorFromAdd :=
 					statePersister.PlayerPersister.Add(
 						context.Background(),

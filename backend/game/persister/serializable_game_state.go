@@ -10,12 +10,14 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/player"
 )
 
-// PlayerNameAndHand is a struct to contain a player's name and current
-// hand, mainly to get around Google Cloud Datastore not allowing lists
-// of lists directly.
-type PlayerNameAndHand struct {
-	Name string
-	Hand []card.InHand
+// InferredCardFromFlattenedIndices is a struct to allow the
+// reconstruction of an inferred card by indicating slices of
+// flattened arrays, because Google App Engine is borderline
+// unusable with its restrictions on the entities it stores in
+// its Cloud Datastore.
+type InferredCardFromFlattenedIndices struct {
+	StartIndexOfColors  int
+	StartIndexOfIndices int
 }
 
 // SerializableState is a struct meant to encapsulate all the state required
@@ -28,21 +30,25 @@ type PlayerNameAndHand struct {
 // the players in the same order as the players appear in the list of
 // participant names in turn order.
 type SerializableState struct {
-	GameName                        string
-	RulesetIdentifier               int
-	TimeOfCreation                  time.Time
-	ParticipantNamesInTurnOrder     []string
-	ParticipantsWhoHaveLeft         []string
-	ChatMessageLog                  []message.FromPlayer
-	ActionMessageLog                []message.FromPlayer
-	TurnNumber                      int
-	NumberOfTurnsTakenWithEmptyDeck int
-	NumberOfHintsAvailable          int
-	NumberOfMistakesMadeSoFar       int
-	UndrawnDeck                     []card.Defined
-	PlayedCards                     []card.Defined
-	DiscardedCards                  []card.Defined
-	PlayerHandsInTurnOrder          []PlayerNameAndHand
+	GameName                          string
+	RulesetIdentifier                 int
+	TimeOfCreation                    time.Time
+	ParticipantNamesInTurnOrder       []string
+	ParticipantsWhoHaveLeft           []string
+	ChatMessageLog                    []message.FromPlayer
+	ActionMessageLog                  []message.FromPlayer
+	TurnNumber                        int
+	NumberOfTurnsTakenWithEmptyDeck   int
+	NumberOfHintsAvailable            int
+	NumberOfMistakesMadeSoFar         int
+	UndrawnDeck                       []card.Defined
+	PlayedCards                       []card.Defined
+	DiscardedCards                    []card.Defined
+	PlayerHandStartIndicesInTurnOrder []int
+	FlattenedDefinedCardsInHands      []card.Defined
+	FlattenedInferredCardsInHands     []InferredCardFromFlattenedIndices
+	FlattenedInferredColors           []string
+	FlattenedInferredIndices          []int
 }
 
 // NewSerializableState creates a new game given the required information, using the
@@ -56,15 +62,50 @@ func NewSerializableState(
 	shuffledDeck []card.Defined) SerializableState {
 	numberOfParticipants := len(playersInTurnOrderWithInitialHands)
 	participantNamesInTurnOrder := make([]string, numberOfParticipants)
-	playerHands := make([]PlayerNameAndHand, numberOfParticipants)
+
+	participantHandsInTurnOrder := make([]int, numberOfParticipants)
+
+	nextCardIndex := 0
+	flattenedDefinedCards := make([]card.Defined, 0)
+	flattenedInferredCards := make([]InferredCardFromFlattenedIndices, 0)
+	nextInferredColorIndex := 0
+	flattenedInferredColors := make([]string, 0)
+	nextInferredIndexIndex := 0
+	flattenedInferredIndices := make([]int, 0)
+
 	for playerIndex := 0; playerIndex < numberOfParticipants; playerIndex++ {
-		playerName := playersInTurnOrderWithInitialHands[playerIndex].PlayerName
+		playerNameAndHand := playersInTurnOrderWithInitialHands[playerIndex]
+		playerName := playerNameAndHand.PlayerName
 		participantNamesInTurnOrder[playerIndex] = playerName
-		playerHands[playerIndex] =
-			PlayerNameAndHand{
-				Name: playerName,
-				Hand: playersInTurnOrderWithInitialHands[playerIndex].InitialHand,
+
+		playerHand := playerNameAndHand.InitialHand
+		handSize := len(playerHand)
+
+		participantHandsInTurnOrder[playerIndex] = nextCardIndex
+
+		for indexInHand := 0; indexInHand < handSize; indexInHand++ {
+			flattenedDefinedCards =
+				append(flattenedDefinedCards, playerHand[indexInHand].Defined)
+
+			inferredCardInHand := playerHand[indexInHand].Inferred
+			inferredCardIndices := InferredCardFromFlattenedIndices{
+				StartIndexOfColors:  nextInferredColorIndex,
+				StartIndexOfIndices: nextInferredIndexIndex,
 			}
+
+			nextInferredColorIndex += len(inferredCardInHand.PossibleColors)
+			nextInferredIndexIndex += len(inferredCardInHand.PossibleIndices)
+
+			flattenedInferredColors =
+				append(flattenedInferredColors, inferredCardInHand.PossibleColors...)
+			flattenedInferredIndices =
+				append(flattenedInferredIndices, inferredCardInHand.PossibleIndices...)
+
+			flattenedInferredCards =
+				append(flattenedInferredCards, inferredCardIndices)
+
+			nextCardIndex++
+		}
 	}
 
 	initialChatLog := make([]message.FromPlayer, chatLogLength)
@@ -76,21 +117,25 @@ func NewSerializableState(
 	// We could already set up the capacity for the maps by getting slices from
 	// the ruleset and counting, but that is a lot of effort for very little gain.
 	return SerializableState{
-		GameName:                        gameName,
-		RulesetIdentifier:               gameRuleset.BackendIdentifier(),
-		TimeOfCreation:                  time.Now(),
-		ParticipantNamesInTurnOrder:     participantNamesInTurnOrder,
-		ParticipantsWhoHaveLeft:         []string{},
-		ChatMessageLog:                  initialChatLog,
-		ActionMessageLog:                initialActionLog,
-		TurnNumber:                      1,
-		NumberOfTurnsTakenWithEmptyDeck: 0,
-		NumberOfHintsAvailable:          gameRuleset.MaximumNumberOfHints(),
-		NumberOfMistakesMadeSoFar:       0,
-		UndrawnDeck:                     shuffledDeck,
-		PlayedCards:                     []card.Defined{},
-		DiscardedCards:                  []card.Defined{},
-		PlayerHandsInTurnOrder:          playerHands,
+		GameName:                          gameName,
+		RulesetIdentifier:                 gameRuleset.BackendIdentifier(),
+		TimeOfCreation:                    time.Now(),
+		ParticipantNamesInTurnOrder:       participantNamesInTurnOrder,
+		ParticipantsWhoHaveLeft:           []string{},
+		ChatMessageLog:                    initialChatLog,
+		ActionMessageLog:                  initialActionLog,
+		TurnNumber:                        1,
+		NumberOfTurnsTakenWithEmptyDeck:   0,
+		NumberOfHintsAvailable:            gameRuleset.MaximumNumberOfHints(),
+		NumberOfMistakesMadeSoFar:         0,
+		UndrawnDeck:                       shuffledDeck,
+		PlayedCards:                       []card.Defined{},
+		DiscardedCards:                    []card.Defined{},
+		PlayerHandStartIndicesInTurnOrder: participantHandsInTurnOrder,
+		FlattenedDefinedCardsInHands:      flattenedDefinedCards,
+		FlattenedInferredCardsInHands:     flattenedInferredCards,
+		FlattenedInferredColors:           flattenedInferredColors,
+		FlattenedInferredIndices:          flattenedInferredIndices,
 	}
 }
 
