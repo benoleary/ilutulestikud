@@ -88,12 +88,12 @@ func (mockProvider *mockClientProvider) NewClient(
 	return mockProvider.ClientToReturn, mockProvider.ErrorToReturn
 }
 
-func TestReturnErrorFromInvalidProjectIdentifier(unitTest *testing.T) {
-	invalidProjectIdentifier := ""
+func TestPropagateErrorFromClientProvider(unitTest *testing.T) {
 	invalidDatastoreClientProvider :=
-		cloud.NewFixedProjectAndKeyDatastoreClientProvider(
-			invalidProjectIdentifier,
-			persister.CloudDatastoreKeyKind)
+		&mockClientProvider{
+			ClientToReturn: nil,
+			ErrorToReturn:  fmt.Errorf("Expected error"),
+		}
 	cloudDatastorePersister :=
 		persister.NewInCloudDatastore(invalidDatastoreClientProvider)
 
@@ -107,10 +107,9 @@ func TestReturnErrorFromInvalidProjectIdentifier(unitTest *testing.T) {
 	if errorFromReadAndWriteGameRequest == nil {
 		unitTest.Fatalf(
 			"Successfully created Cloud Datastore persister %+v from"+
-				" project identifier %v, and got %v from"+
+				" invalid client provider, and got %v from"+
 				" .ReadAndWriteGame(%v, %v) instead of producing error",
 			cloudDatastorePersister,
-			invalidProjectIdentifier,
 			unexpectedGame,
 			executionContext,
 			gameName)
@@ -123,10 +122,9 @@ func TestReturnErrorFromInvalidProjectIdentifier(unitTest *testing.T) {
 	if errorFromReadAllWithPlayerRequest == nil {
 		unitTest.Fatalf(
 			"Successfully created Cloud Datastore persister %+v from"+
-				" project identifier %v, and got %v from"+
+				" invalid client provider, and got %v from"+
 				" .ReadAllWithPlayer(%v, %v) instead of producing error",
 			cloudDatastorePersister,
-			invalidProjectIdentifier,
 			unexpectedGamesWithPlayer,
 			executionContext,
 			playerName)
@@ -138,10 +136,9 @@ func TestReturnErrorFromInvalidProjectIdentifier(unitTest *testing.T) {
 	if errorFromAddGameRequest == nil {
 		unitTest.Fatalf(
 			"Successfully created Cloud Datastore persister %+v from"+
-				" project identifier %v, and got got nil error from"+
+				" invalid client provider, and got got nil error from"+
 				" .AddGame(%v, %v, 0, nil, nil, nil, nil)",
 			cloudDatastorePersister,
-			invalidProjectIdentifier,
 			executionContext,
 			gameName)
 	}
@@ -155,10 +152,9 @@ func TestReturnErrorFromInvalidProjectIdentifier(unitTest *testing.T) {
 	if errorFromRemoveGameFromListForPlayerRequest == nil {
 		unitTest.Fatalf(
 			"Successfully created Cloud Datastore persister %+v from"+
-				" project identifier %v, and got got nil error from"+
+				" invalid client provider, and got got nil error from"+
 				" .RemoveGameFromListForPlayer(%v, %v, %v)",
 			cloudDatastorePersister,
-			invalidProjectIdentifier,
 			executionContext,
 			gameName,
 			playerName)
@@ -170,10 +166,9 @@ func TestReturnErrorFromInvalidProjectIdentifier(unitTest *testing.T) {
 	if errorFromDeleteRequest == nil {
 		unitTest.Fatalf(
 			"Successfully created Cloud Datastore persister %+v from"+
-				" project identifier %v, and got got nil error from"+
+				" invalid client provider, and got got nil error from"+
 				" .Delete(%v, %v)",
 			cloudDatastorePersister,
-			invalidProjectIdentifier,
 			executionContext,
 			gameName)
 	}

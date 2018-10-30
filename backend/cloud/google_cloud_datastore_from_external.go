@@ -119,7 +119,6 @@ func (wrappingClient *WrappingLimitedClient) AllMatching(
 	executionContext context.Context,
 	filterExpression string,
 	valueToMatch interface{}) LimitedIterator {
-
 	queryOnmatchingValue :=
 		datastore.NewQuery(wrappingClient.keyKind).Filter(
 			filterExpression,

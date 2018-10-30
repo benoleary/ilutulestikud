@@ -23,7 +23,7 @@ type testObject struct {
 	Comment string
 }
 
-// We have a mock in order to test the logic of KeyWithIfNameExists
+// We have a mock in order to test the logic of DoesNameExist
 type mockLimitedIterator struct {
 	ErrorsToReturn []error
 }
@@ -97,6 +97,25 @@ func (mockClient *mockLimitedClient) Delete(
 	return mockClient.ErrorToReturn
 }
 
+func TestInvalidProjectNameProducesError(unitTest *testing.T) {
+	invalidProjectIdentifier := ""
+	clientProvider :=
+		cloud.NewFixedProjectAndKeyDatastoreClientProvider(
+			invalidProjectIdentifier,
+			testKind)
+
+	cloudDatastoreClient, errorFromCloudDatastore :=
+		clientProvider.NewClient(
+			context.Background())
+
+	if errorFromCloudDatastore == nil {
+		unitTest.Fatalf(
+			"Successfully created datastore client %+v from invalid project identifier %v",
+			cloudDatastoreClient,
+			invalidProjectIdentifier)
+	}
+}
+
 func TestInvalidNameDoesNotGetKey(unitTest *testing.T) {
 	mockIterator :=
 		mockLimitedIterator{
@@ -128,7 +147,7 @@ func TestInvalidNameDoesNotGetKey(unitTest *testing.T) {
 	}
 }
 
-func TestKeyWithIfNameExistsPropagatesIteratorError(unitTest *testing.T) {
+func TestDoesNameExistPropagatesIteratorError(unitTest *testing.T) {
 	mockIterator :=
 		mockLimitedIterator{
 			ErrorsToReturn: []error{
@@ -159,7 +178,7 @@ func TestKeyWithIfNameExistsPropagatesIteratorError(unitTest *testing.T) {
 	}
 }
 
-func TestKeyWithIfNameExistsGivesErrorIfIteratorNotDoneAfterValidName(unitTest *testing.T) {
+func TestDoesNameExistGivesErrorIfIteratorNotDoneAfterValidName(unitTest *testing.T) {
 	mockIterator :=
 		mockLimitedIterator{
 			ErrorsToReturn: []error{
@@ -191,7 +210,7 @@ func TestKeyWithIfNameExistsGivesErrorIfIteratorNotDoneAfterValidName(unitTest *
 	}
 }
 
-func TestValidNameDoesGetKey(unitTest *testing.T) {
+func TestValidNameIsFoundToExist(unitTest *testing.T) {
 	mockIterator :=
 		mockLimitedIterator{
 			ErrorsToReturn: []error{
@@ -223,7 +242,7 @@ func TestValidNameDoesGetKey(unitTest *testing.T) {
 	}
 }
 
-func TestCreateThenGetThenDeleteThenRun(unitTest *testing.T) {
+func TestCreateThenRetrieveThenDeleteThenEnsureNone(unitTest *testing.T) {
 	wrappedClient := createClient(unitTest)
 
 	objectToPersist := testObject{
@@ -245,27 +264,62 @@ func TestCreateThenGetThenDeleteThenRun(unitTest *testing.T) {
 			errorFromPut)
 	}
 
-	var retrievedObject testObject
+	var retrievedByGet testObject
 	errorFromGet :=
 		wrappedClient.Get(
 			context.Background(),
 			testValidName,
-			&retrievedObject)
+			&retrievedByGet)
 
 	if errorFromGet != nil {
 		unitTest.Fatalf(
 			"Get([background context], %+v, [pointer to %+v]) produced error %+v",
 			testValidName,
-			retrievedObject,
+			retrievedByGet,
 			errorFromGet)
 	}
 
-	if retrievedObject != objectToPersist {
+	if retrievedByGet != objectToPersist {
 		unitTest.Fatalf(
 			"Retrieved %+v instead of expected %+v",
-			retrievedObject,
+			retrievedByGet,
 			objectToPersist)
 	}
+
+	iteratorForAllKeys :=
+		wrappedClient.AllKeysMatching(
+			context.Background(),
+			testValidName)
+
+	identifierForAllKeys :=
+		fmt.Sprintf(
+			"AllKeysMatching([background context], %v)",
+			testValidName)
+
+	assertIteratorHasSingleObject(
+		unitTest,
+		identifierForAllKeys,
+		iteratorForAllKeys,
+		objectToPersist)
+
+	testFilter := "Comment ="
+	iteratorForAllMatching :=
+		wrappedClient.AllMatching(
+			context.Background(),
+			testFilter,
+			objectToPersist.Comment)
+
+	identifierForAllMatching :=
+		fmt.Sprintf(
+			"AllMatching([background context], %v, %+v)",
+			testFilter,
+			objectToPersist.Comment)
+
+	assertIteratorHasSingleObject(
+		unitTest,
+		identifierForAllMatching,
+		iteratorForAllMatching,
+		objectToPersist)
 
 	errorFromDelete :=
 		wrappedClient.Delete(
@@ -320,4 +374,31 @@ func createClient(unitTest *testing.T) cloud.LimitedClient {
 	}
 
 	return cloudDatastoreClient
+}
+
+func assertIteratorHasSingleObject(
+	unitTest *testing.T,
+	testIdentifier string,
+	resultIterator cloud.LimitedIterator,
+	expectedObject testObject) {
+	if resultIterator == nil {
+		unitTest.Fatalf(testIdentifier + "/nil iterator")
+	}
+
+	var actualObject testObject
+	errorFromFirstNext := resultIterator.DeserializeNext(&actualObject)
+	if errorFromFirstNext != nil {
+		unitTest.Fatalf(
+			testIdentifier+
+				"/first next through DeserializeNext([pointer to deserialization destination])"+
+				" produced error %v",
+			errorFromFirstNext)
+	}
+
+	errorFromSecondNext := resultIterator.NextKey()
+	if errorFromSecondNext != iterator.Done {
+		unitTest.Fatalf(
+			testIdentifier+"/second next through NextKey() produced error %v",
+			errorFromSecondNext)
+	}
 }
