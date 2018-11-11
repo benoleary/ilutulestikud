@@ -39,7 +39,7 @@ func assertStringSlicesMatch(
 	expectedSlice []string,
 	actualSlice []string) {
 	numberOfExpected := len(expectedSlice)
-	if len(expectedSlice) != numberOfExpected {
+	if len(actualSlice) != numberOfExpected {
 		unitTest.Fatalf(
 			testIdentifier+"/actual %v did not match expected %v",
 			actualSlice,
