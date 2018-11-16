@@ -100,62 +100,65 @@ func TestRecordAndRetrieveSingleChatMessage(unitTest *testing.T) {
 	// Default message.FromPlayer structs should have empty strings as expected.
 	initialChatLog := make([]message.FromPlayer, logLengthForTest)
 
-	gamesAndDescriptions :=
-		prepareGameStates(
-			unitTest,
-			defaultTestRuleset,
-			threePlayersWithHands,
-			initialDeck,
-			initialActionLogForDefaultThreePlayers)
+	for _, testPlayerWithHand := range threePlayersWithHands {
+		gamesAndDescriptions :=
+			prepareGameStates(
+				unitTest,
+				defaultTestRuleset,
+				threePlayersWithHands,
+				initialDeck,
+				initialActionLogForDefaultThreePlayers)
 
-	testPlayer := &mockPlayerState{
-		threePlayersWithHands[0].PlayerName,
-		defaultTestColor,
-	}
+		testPlayer := &mockPlayerState{
+			testPlayerWithHand.PlayerName,
+			defaultTestColor,
+		}
 
-	testMessage := "test message!"
+		testMessage := "test message!"
 
-	for _, gameAndDescription := range gamesAndDescriptions {
-		testIdentifier :=
-			"single chat message/" + gameAndDescription.PersisterDescription
+		for _, gameAndDescription := range gamesAndDescriptions {
+			testIdentifier :=
+				"single chat message from " + testPlayer.Name() +
+					"/" + gameAndDescription.PersisterDescription
 
-		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
+			unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+				pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
 
-			errorFromChat :=
-				gameAndDescription.GameState.RecordChatMessage(
-					context.Background(),
-					testPlayer,
-					testMessage)
+				errorFromChat :=
+					gameAndDescription.GameState.RecordChatMessage(
+						context.Background(),
+						testPlayer,
+						testMessage)
 
-			if errorFromChat != nil {
-				unitTest.Fatalf(
-					"RecordChatMessage(%+v, %v) produced error %v",
-					testPlayer,
+				if errorFromChat != nil {
+					unitTest.Fatalf(
+						"RecordChatMessage(%+v, %v) produced error %v",
+						testPlayer,
+						testMessage,
+						errorFromChat)
+				}
+
+				assertLogWithSingleMessageIsCorrect(
+					testIdentifier+"/chat log",
+					unitTest,
+					gameAndDescription.GameState.Read().ChatLog(),
+					logLengthForTest,
+					testPlayer.Name(),
+					testPlayer.Color(),
 					testMessage,
-					errorFromChat)
-			}
+					initialChatLog,
+					testStartTime,
+					time.Now())
 
-			assertLogWithSingleMessageIsCorrect(
-				testIdentifier+"/chat log",
-				unitTest,
-				gameAndDescription.GameState.Read().ChatLog(),
-				logLengthForTest,
-				testPlayer.Name(),
-				testPlayer.Color(),
-				testMessage,
-				initialChatLog,
-				testStartTime,
-				time.Now())
-
-			// There should have been no other changes.
-			pristineState.ChatLog = gameAndDescription.GameState.Read().ChatLog()
-			assertGameStateAsExpectedLocallyAndRetrieved(
-				testIdentifier,
-				unitTest,
-				gameAndDescription,
-				pristineState)
-		})
+				// There should have been no other changes.
+				pristineState.ChatLog = gameAndDescription.GameState.Read().ChatLog()
+				assertGameStateAsExpectedLocallyAndRetrieved(
+					testIdentifier,
+					unitTest,
+					gameAndDescription,
+					pristineState)
+			})
+		}
 	}
 }
 
@@ -314,79 +317,82 @@ func TestValidDiscardOfCardWhenDeckNotYetEmpty(unitTest *testing.T) {
 			numberOfCopiedMessages)
 	}
 
-	playerName := threePlayersWithHands[0].PlayerName
+	for _, testPlayerWithHand := range threePlayersWithHands {
+		playerName := testPlayerWithHand.PlayerName
 
-	testPlayer := &mockPlayerState{
-		playerName,
-		defaultTestColor,
-	}
+		testPlayer := &mockPlayerState{
+			playerName,
+			defaultTestColor,
+		}
 
-	indexInHand := 1
-	expectedDiscardedCard := threePlayersWithHands[0].InitialHand[indexInHand]
+		for indexInHand := 0; indexInHand < len(testPlayerWithHand.InitialHand); indexInHand++ {
+			expectedDiscardedCard := testPlayerWithHand.InitialHand[indexInHand]
 
-	gamesAndDescriptions :=
-		prepareGameStates(
-			unitTest,
-			defaultTestRuleset,
-			threePlayersWithHands,
-			initialDeck,
-			initialActionLogForDefaultThreePlayers)
+			gamesAndDescriptions :=
+				prepareGameStates(
+					unitTest,
+					defaultTestRuleset,
+					threePlayersWithHands,
+					initialDeck,
+					initialActionLogForDefaultThreePlayers)
 
-	for _, gameAndDescription := range gamesAndDescriptions {
-		testIdentifier :=
-			"valid play of card when deck not yet empty/" +
-				gameAndDescription.PersisterDescription
+			for _, gameAndDescription := range gamesAndDescriptions {
+				testIdentifier :=
+					"valid play of card when deck not yet empty/" +
+						gameAndDescription.PersisterDescription
 
-		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
+				unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+					pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
 
-			if gameAndDescription.GameState.Read().DeckSize() != initialDeckSize {
-				unitTest.Fatalf(
-					"initial DeckSize() %v did not match expected %v",
-					gameAndDescription.GameState.Read().DeckSize(),
-					initialDeckSize)
+					if gameAndDescription.GameState.Read().DeckSize() != initialDeckSize {
+						unitTest.Fatalf(
+							"initial DeckSize() %v did not match expected %v",
+							gameAndDescription.GameState.Read().DeckSize(),
+							initialDeckSize)
+					}
+
+					errorFromDiscardingCard :=
+						gameAndDescription.GameState.EnactTurnByDiscardingAndReplacing(
+							context.Background(),
+							actionMessage,
+							testPlayer,
+							indexInHand,
+							knowledgeOfNewCard,
+							numberOfHintsToAdd,
+							numberOfMistakesToAdd)
+
+					if errorFromDiscardingCard != nil {
+						unitTest.Fatalf(
+							"EnactTurnByDiscardingAndReplacing(%v, %+v, %v, %+v, %v, %v)"+
+								" produced error %v ",
+							actionMessage,
+							testPlayer,
+							indexInHand,
+							knowledgeOfNewCard,
+							numberOfHintsToAdd,
+							numberOfMistakesToAdd,
+							errorFromDiscardingCard)
+					}
+
+					// There should have been the following changes:
+					pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
+					pristineState.ActionLog[len(pristineState.ActionLog)-1] =
+						message.NewFromPlayer(testPlayer.Name(), testPlayer.Color(), actionMessage)
+					pristineState.DeckSize = initialDeckSize - 1
+					pristineState.NumberOfReadyHints += numberOfHintsToAdd
+					pristineState.NumberOfMistakesMade += numberOfMistakesToAdd
+					pristineState.Turn += 1
+					pristineState.VisibleCardInHand[playerName][indexInHand] = expectedReplacementCard
+					pristineState.InferredCardInHand[playerName][indexInHand] = knowledgeOfNewCard
+					pristineState.NumberOfDiscardedCards[expectedDiscardedCard.Defined] = 1
+					assertGameStateAsExpectedLocallyAndRetrieved(
+						testIdentifier,
+						unitTest,
+						gameAndDescription,
+						pristineState)
+				})
 			}
-
-			errorFromDiscardingCard :=
-				gameAndDescription.GameState.EnactTurnByDiscardingAndReplacing(
-					context.Background(),
-					actionMessage,
-					testPlayer,
-					indexInHand,
-					knowledgeOfNewCard,
-					numberOfHintsToAdd,
-					numberOfMistakesToAdd)
-
-			if errorFromDiscardingCard != nil {
-				unitTest.Fatalf(
-					"EnactTurnByDiscardingAndReplacing(%v, %+v, %v, %+v, %v, %v)"+
-						" produced error %v ",
-					actionMessage,
-					testPlayer,
-					indexInHand,
-					knowledgeOfNewCard,
-					numberOfHintsToAdd,
-					numberOfMistakesToAdd,
-					errorFromDiscardingCard)
-			}
-
-			// There should have been the following changes:
-			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
-			pristineState.ActionLog[len(pristineState.ActionLog)-1] =
-				message.NewFromPlayer(testPlayer.Name(), testPlayer.Color(), actionMessage)
-			pristineState.DeckSize = initialDeckSize - 1
-			pristineState.NumberOfReadyHints += numberOfHintsToAdd
-			pristineState.NumberOfMistakesMade += numberOfMistakesToAdd
-			pristineState.Turn += 1
-			pristineState.VisibleCardInHand[playerName][indexInHand] = expectedReplacementCard
-			pristineState.InferredCardInHand[playerName][indexInHand] = knowledgeOfNewCard
-			pristineState.NumberOfDiscardedCards[expectedDiscardedCard.Defined] = 1
-			assertGameStateAsExpectedLocallyAndRetrieved(
-				testIdentifier,
-				unitTest,
-				gameAndDescription,
-				pristineState)
-		})
+		}
 	}
 }
 
@@ -418,79 +424,82 @@ func TestValidDiscardOfCardWhichEmptiesDeck(unitTest *testing.T) {
 			numberOfCopiedMessages)
 	}
 
-	playerName := threePlayersWithHands[0].PlayerName
+	for _, testPlayerWithHand := range threePlayersWithHands {
+		playerName := testPlayerWithHand.PlayerName
 
-	testPlayer := &mockPlayerState{
-		playerName,
-		defaultTestColor,
-	}
+		testPlayer := &mockPlayerState{
+			playerName,
+			defaultTestColor,
+		}
 
-	indexInHand := 1
-	expectedDiscardedCard := threePlayersWithHands[0].InitialHand[indexInHand]
+		for indexInHand := 0; indexInHand < len(testPlayerWithHand.InitialHand); indexInHand++ {
+			expectedDiscardedCard := testPlayerWithHand.InitialHand[indexInHand]
 
-	gamesAndDescriptions :=
-		prepareGameStates(
-			unitTest,
-			defaultTestRuleset,
-			threePlayersWithHands,
-			initialDeck,
-			initialActionLogForDefaultThreePlayers)
+			gamesAndDescriptions :=
+				prepareGameStates(
+					unitTest,
+					defaultTestRuleset,
+					threePlayersWithHands,
+					initialDeck,
+					initialActionLogForDefaultThreePlayers)
 
-	for _, gameAndDescription := range gamesAndDescriptions {
-		testIdentifier :=
-			"valid play of card when deck not yet empty/" +
-				gameAndDescription.PersisterDescription
+			for _, gameAndDescription := range gamesAndDescriptions {
+				testIdentifier :=
+					"valid play of card when deck not yet empty/" +
+						gameAndDescription.PersisterDescription
 
-		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
+				unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+					pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
 
-			if gameAndDescription.GameState.Read().DeckSize() != initialDeckSize {
-				unitTest.Fatalf(
-					"initial DeckSize() %v did not match expected %v",
-					gameAndDescription.GameState.Read().DeckSize(),
-					initialDeckSize)
+					if gameAndDescription.GameState.Read().DeckSize() != initialDeckSize {
+						unitTest.Fatalf(
+							"initial DeckSize() %v did not match expected %v",
+							gameAndDescription.GameState.Read().DeckSize(),
+							initialDeckSize)
+					}
+
+					errorFromDiscardingCard :=
+						gameAndDescription.GameState.EnactTurnByDiscardingAndReplacing(
+							context.Background(),
+							actionMessage,
+							testPlayer,
+							indexInHand,
+							knowledgeOfNewCard,
+							numberOfHintsToAdd,
+							numberOfMistakesToAdd)
+
+					if errorFromDiscardingCard != nil {
+						unitTest.Fatalf(
+							"EnactTurnByDiscardingAndReplacing(%v, %+v, %v, %+v, %v, %v)"+
+								" produced error %v ",
+							actionMessage,
+							testPlayer,
+							indexInHand,
+							knowledgeOfNewCard,
+							numberOfHintsToAdd,
+							numberOfMistakesToAdd,
+							errorFromDiscardingCard)
+					}
+
+					// There should have been the following changes:
+					pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
+					pristineState.ActionLog[len(pristineState.ActionLog)-1] =
+						message.NewFromPlayer(testPlayer.Name(), testPlayer.Color(), actionMessage)
+					pristineState.DeckSize = initialDeckSize - 1
+					pristineState.NumberOfReadyHints += numberOfHintsToAdd
+					pristineState.NumberOfMistakesMade += numberOfMistakesToAdd
+					pristineState.Turn += 1
+					pristineState.VisibleCardInHand[playerName][indexInHand] = expectedReplacementCard
+					pristineState.InferredCardInHand[playerName][indexInHand] = knowledgeOfNewCard
+					pristineState.NumberOfDiscardedCards[expectedDiscardedCard.Defined] = 1
+					assertGameStateAsExpectedLocallyAndRetrieved(
+						testIdentifier,
+						unitTest,
+						gameAndDescription,
+						pristineState)
+				})
 			}
-
-			errorFromDiscardingCard :=
-				gameAndDescription.GameState.EnactTurnByDiscardingAndReplacing(
-					context.Background(),
-					actionMessage,
-					testPlayer,
-					indexInHand,
-					knowledgeOfNewCard,
-					numberOfHintsToAdd,
-					numberOfMistakesToAdd)
-
-			if errorFromDiscardingCard != nil {
-				unitTest.Fatalf(
-					"EnactTurnByDiscardingAndReplacing(%v, %+v, %v, %+v, %v, %v)"+
-						" produced error %v ",
-					actionMessage,
-					testPlayer,
-					indexInHand,
-					knowledgeOfNewCard,
-					numberOfHintsToAdd,
-					numberOfMistakesToAdd,
-					errorFromDiscardingCard)
-			}
-
-			// There should have been the following changes:
-			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
-			pristineState.ActionLog[len(pristineState.ActionLog)-1] =
-				message.NewFromPlayer(testPlayer.Name(), testPlayer.Color(), actionMessage)
-			pristineState.DeckSize = initialDeckSize - 1
-			pristineState.NumberOfReadyHints += numberOfHintsToAdd
-			pristineState.NumberOfMistakesMade += numberOfMistakesToAdd
-			pristineState.Turn += 1
-			pristineState.VisibleCardInHand[playerName][indexInHand] = expectedReplacementCard
-			pristineState.InferredCardInHand[playerName][indexInHand] = knowledgeOfNewCard
-			pristineState.NumberOfDiscardedCards[expectedDiscardedCard.Defined] = 1
-			assertGameStateAsExpectedLocallyAndRetrieved(
-				testIdentifier,
-				unitTest,
-				gameAndDescription,
-				pristineState)
-		})
+		}
 	}
 }
 
@@ -514,84 +523,87 @@ func TestValidDiscardOfCardWhenDeckAlreadyEmpty(unitTest *testing.T) {
 			numberOfCopiedMessages)
 	}
 
-	playerName := threePlayersWithHands[0].PlayerName
+	for _, testPlayerWithHand := range threePlayersWithHands {
+		playerName := testPlayerWithHand.PlayerName
 
-	testPlayer := &mockPlayerState{
-		playerName,
-		defaultTestColor,
-	}
+		testPlayer := &mockPlayerState{
+			playerName,
+			defaultTestColor,
+		}
 
-	indexInHand := 1
-	expectedDiscardedCard := threePlayersWithHands[0].InitialHand[indexInHand]
+		for indexInHand := 0; indexInHand < len(testPlayerWithHand.InitialHand); indexInHand++ {
+			expectedDiscardedCard := testPlayerWithHand.InitialHand[indexInHand]
 
-	gamesAndDescriptions :=
-		prepareGameStates(
-			unitTest,
-			defaultTestRuleset,
-			threePlayersWithHands,
-			initialDeck,
-			initialActionLogForDefaultThreePlayers)
+			gamesAndDescriptions :=
+				prepareGameStates(
+					unitTest,
+					defaultTestRuleset,
+					threePlayersWithHands,
+					initialDeck,
+					initialActionLogForDefaultThreePlayers)
 
-	for _, gameAndDescription := range gamesAndDescriptions {
-		testIdentifier :=
-			"valid play of card when deck already empty/" +
-				gameAndDescription.PersisterDescription
+			for _, gameAndDescription := range gamesAndDescriptions {
+				testIdentifier :=
+					"valid play of card when deck already empty/" +
+						gameAndDescription.PersisterDescription
 
-		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
+				unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+					pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
 
-			if gameAndDescription.GameState.Read().DeckSize() != initialDeckSize {
-				unitTest.Fatalf(
-					"initial DeckSize() %v did not match expected %v",
-					gameAndDescription.GameState.Read().DeckSize(),
-					initialDeckSize)
+					if gameAndDescription.GameState.Read().DeckSize() != initialDeckSize {
+						unitTest.Fatalf(
+							"initial DeckSize() %v did not match expected %v",
+							gameAndDescription.GameState.Read().DeckSize(),
+							initialDeckSize)
+					}
+
+					errorFromDiscardingCard :=
+						gameAndDescription.GameState.EnactTurnByDiscardingAndReplacing(
+							context.Background(),
+							actionMessage,
+							testPlayer,
+							indexInHand,
+							knowledgeOfNewCard,
+							numberOfHintsToAdd,
+							numberOfMistakesToAdd)
+
+					if errorFromDiscardingCard != nil {
+						unitTest.Fatalf(
+							"EnactTurnByDiscardingAndReplacing(%v, %+v, %v, %+v, %v, %v)"+
+								" produced error %v ",
+							actionMessage,
+							testPlayer,
+							indexInHand,
+							knowledgeOfNewCard,
+							numberOfHintsToAdd,
+							numberOfMistakesToAdd,
+							errorFromDiscardingCard)
+					}
+
+					// There should have been the following changes:
+					pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
+					pristineState.ActionLog[len(pristineState.ActionLog)-1] =
+						message.NewFromPlayer(testPlayer.Name(), testPlayer.Color(), actionMessage)
+					pristineState.DeckSize = initialDeckSize
+					pristineState.NumberOfReadyHints += numberOfHintsToAdd
+					pristineState.NumberOfMistakesMade += numberOfMistakesToAdd
+					pristineState.Turn += 1
+					pristineState.TurnsTakenWithEmptyDeck += 1
+					pristineVisibleHand := pristineState.VisibleCardInHand[playerName]
+					pristineState.VisibleCardInHand[playerName] =
+						append(pristineVisibleHand[:indexInHand], pristineVisibleHand[indexInHand+1:]...)
+					pristineInferredHand := pristineState.InferredCardInHand[playerName]
+					pristineState.InferredCardInHand[playerName] =
+						append(pristineInferredHand[:indexInHand], pristineInferredHand[indexInHand+1:]...)
+					pristineState.NumberOfDiscardedCards[expectedDiscardedCard.Defined] = 1
+					assertGameStateAsExpectedLocallyAndRetrieved(
+						testIdentifier,
+						unitTest,
+						gameAndDescription,
+						pristineState)
+				})
 			}
-
-			errorFromDiscardingCard :=
-				gameAndDescription.GameState.EnactTurnByDiscardingAndReplacing(
-					context.Background(),
-					actionMessage,
-					testPlayer,
-					indexInHand,
-					knowledgeOfNewCard,
-					numberOfHintsToAdd,
-					numberOfMistakesToAdd)
-
-			if errorFromDiscardingCard != nil {
-				unitTest.Fatalf(
-					"EnactTurnByDiscardingAndReplacing(%v, %+v, %v, %+v, %v, %v)"+
-						" produced error %v ",
-					actionMessage,
-					testPlayer,
-					indexInHand,
-					knowledgeOfNewCard,
-					numberOfHintsToAdd,
-					numberOfMistakesToAdd,
-					errorFromDiscardingCard)
-			}
-
-			// There should have been the following changes:
-			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
-			pristineState.ActionLog[len(pristineState.ActionLog)-1] =
-				message.NewFromPlayer(testPlayer.Name(), testPlayer.Color(), actionMessage)
-			pristineState.DeckSize = initialDeckSize
-			pristineState.NumberOfReadyHints += numberOfHintsToAdd
-			pristineState.NumberOfMistakesMade += numberOfMistakesToAdd
-			pristineState.Turn += 1
-			pristineState.TurnsTakenWithEmptyDeck += 1
-			pristineVisibleHand := pristineState.VisibleCardInHand[playerName]
-			pristineState.VisibleCardInHand[playerName] =
-				append(pristineVisibleHand[:indexInHand], pristineVisibleHand[indexInHand+1:]...)
-			pristineInferredHand := pristineState.InferredCardInHand[playerName]
-			pristineState.InferredCardInHand[playerName] =
-				append(pristineInferredHand[:indexInHand], pristineInferredHand[indexInHand+1:]...)
-			pristineState.NumberOfDiscardedCards[expectedDiscardedCard.Defined] = 1
-			assertGameStateAsExpectedLocallyAndRetrieved(
-				testIdentifier,
-				unitTest,
-				gameAndDescription,
-				pristineState)
-		})
+		}
 	}
 }
 
@@ -630,77 +642,80 @@ func TestValidPlayOfCardWhenDeckNotYetEmpty(unitTest *testing.T) {
 			numberOfCopiedMessages)
 	}
 
-	playerName := threePlayersWithHands[0].PlayerName
+	for _, testPlayerWithHand := range threePlayersWithHands {
+		playerName := testPlayerWithHand.PlayerName
 
-	testPlayer := &mockPlayerState{
-		playerName,
-		defaultTestColor,
-	}
+		testPlayer := &mockPlayerState{
+			playerName,
+			defaultTestColor,
+		}
 
-	indexInHand := 1
-	expectedPlayedCard := threePlayersWithHands[0].InitialHand[indexInHand]
+		for indexInHand := 0; indexInHand < len(testPlayerWithHand.InitialHand); indexInHand++ {
+			expectedPlayedCard := testPlayerWithHand.InitialHand[indexInHand]
 
-	gamesAndDescriptions :=
-		prepareGameStates(
-			unitTest,
-			defaultTestRuleset,
-			threePlayersWithHands,
-			initialDeck,
-			initialActionLogForDefaultThreePlayers)
+			gamesAndDescriptions :=
+				prepareGameStates(
+					unitTest,
+					defaultTestRuleset,
+					threePlayersWithHands,
+					initialDeck,
+					initialActionLogForDefaultThreePlayers)
 
-	for _, gameAndDescription := range gamesAndDescriptions {
-		testIdentifier :=
-			"valid play of card when deck not yet empty/" +
-				gameAndDescription.PersisterDescription
+			for _, gameAndDescription := range gamesAndDescriptions {
+				testIdentifier :=
+					"valid play of card when deck not yet empty/" +
+						gameAndDescription.PersisterDescription
 
-		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
+				unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+					pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
 
-			if gameAndDescription.GameState.Read().DeckSize() != initialDeckSize {
-				unitTest.Fatalf(
-					"initial DeckSize() %v did not match expected %v",
-					gameAndDescription.GameState.Read().DeckSize(),
-					initialDeckSize)
+					if gameAndDescription.GameState.Read().DeckSize() != initialDeckSize {
+						unitTest.Fatalf(
+							"initial DeckSize() %v did not match expected %v",
+							gameAndDescription.GameState.Read().DeckSize(),
+							initialDeckSize)
+					}
+
+					errorFromPlayingCard :=
+						gameAndDescription.GameState.EnactTurnByPlayingAndReplacing(
+							context.Background(),
+							actionMessage,
+							testPlayer,
+							indexInHand,
+							knowledgeOfNewCard,
+							numberOfHintsToAdd)
+
+					if errorFromPlayingCard != nil {
+						unitTest.Fatalf(
+							"EnactTurnByPlayingAndReplacing(%v, %+v, %v, %+v, %v)"+
+								" produced error %v ",
+							actionMessage,
+							testPlayer,
+							indexInHand,
+							knowledgeOfNewCard,
+							numberOfHintsToAdd,
+							errorFromPlayingCard)
+					}
+
+					// There should have been no other changes.
+					pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
+					pristineState.ActionLog[len(pristineState.ActionLog)-1] =
+						message.NewFromPlayer(testPlayer.Name(), testPlayer.Color(), actionMessage)
+					pristineState.DeckSize = initialDeckSize - 1
+					pristineState.NumberOfReadyHints += numberOfHintsToAdd
+					pristineState.Turn += 1
+					pristineState.VisibleCardInHand[playerName][indexInHand] = expectedReplacementCard
+					pristineState.InferredCardInHand[playerName][indexInHand] = knowledgeOfNewCard
+					pristineState.PlayedForColor[expectedPlayedCard.ColorSuit] =
+						[]card.Defined{expectedPlayedCard.Defined}
+					assertGameStateAsExpectedLocallyAndRetrieved(
+						testIdentifier,
+						unitTest,
+						gameAndDescription,
+						pristineState)
+				})
 			}
-
-			errorFromPlayingCard :=
-				gameAndDescription.GameState.EnactTurnByPlayingAndReplacing(
-					context.Background(),
-					actionMessage,
-					testPlayer,
-					indexInHand,
-					knowledgeOfNewCard,
-					numberOfHintsToAdd)
-
-			if errorFromPlayingCard != nil {
-				unitTest.Fatalf(
-					"EnactTurnByPlayingAndReplacing(%v, %+v, %v, %+v, %v)"+
-						" produced error %v ",
-					actionMessage,
-					testPlayer,
-					indexInHand,
-					knowledgeOfNewCard,
-					numberOfHintsToAdd,
-					errorFromPlayingCard)
-			}
-
-			// There should have been no other changes.
-			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
-			pristineState.ActionLog[len(pristineState.ActionLog)-1] =
-				message.NewFromPlayer(testPlayer.Name(), testPlayer.Color(), actionMessage)
-			pristineState.DeckSize = initialDeckSize - 1
-			pristineState.NumberOfReadyHints += numberOfHintsToAdd
-			pristineState.Turn += 1
-			pristineState.VisibleCardInHand[playerName][indexInHand] = expectedReplacementCard
-			pristineState.InferredCardInHand[playerName][indexInHand] = knowledgeOfNewCard
-			pristineState.PlayedForColor[expectedPlayedCard.ColorSuit] =
-				[]card.Defined{expectedPlayedCard.Defined}
-			assertGameStateAsExpectedLocallyAndRetrieved(
-				testIdentifier,
-				unitTest,
-				gameAndDescription,
-				pristineState)
-		})
+		}
 	}
 }
 
@@ -731,77 +746,80 @@ func TestValidPlayOfCardWhichEmptiesDeck(unitTest *testing.T) {
 			numberOfCopiedMessages)
 	}
 
-	playerName := threePlayersWithHands[0].PlayerName
+	for _, testPlayerWithHand := range threePlayersWithHands {
+		playerName := testPlayerWithHand.PlayerName
 
-	testPlayer := &mockPlayerState{
-		playerName,
-		defaultTestColor,
-	}
+		testPlayer := &mockPlayerState{
+			playerName,
+			defaultTestColor,
+		}
 
-	indexInHand := 1
-	expectedPlayedCard := threePlayersWithHands[0].InitialHand[indexInHand]
+		for indexInHand := 0; indexInHand < len(testPlayerWithHand.InitialHand); indexInHand++ {
+			expectedPlayedCard := testPlayerWithHand.InitialHand[indexInHand]
 
-	gamesAndDescriptions :=
-		prepareGameStates(
-			unitTest,
-			defaultTestRuleset,
-			threePlayersWithHands,
-			initialDeck,
-			initialActionLogForDefaultThreePlayers)
+			gamesAndDescriptions :=
+				prepareGameStates(
+					unitTest,
+					defaultTestRuleset,
+					threePlayersWithHands,
+					initialDeck,
+					initialActionLogForDefaultThreePlayers)
 
-	for _, gameAndDescription := range gamesAndDescriptions {
-		testIdentifier :=
-			"valid play of card when deck not yet empty/" +
-				gameAndDescription.PersisterDescription
+			for _, gameAndDescription := range gamesAndDescriptions {
+				testIdentifier :=
+					"valid play of card when deck not yet empty/" +
+						gameAndDescription.PersisterDescription
 
-		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
+				unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+					pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
 
-			if gameAndDescription.GameState.Read().DeckSize() != initialDeckSize {
-				unitTest.Fatalf(
-					"initial DeckSize() %v did not match expected %v",
-					gameAndDescription.GameState.Read().DeckSize(),
-					initialDeckSize)
+					if gameAndDescription.GameState.Read().DeckSize() != initialDeckSize {
+						unitTest.Fatalf(
+							"initial DeckSize() %v did not match expected %v",
+							gameAndDescription.GameState.Read().DeckSize(),
+							initialDeckSize)
+					}
+
+					errorFromPlayingCard :=
+						gameAndDescription.GameState.EnactTurnByPlayingAndReplacing(
+							context.Background(),
+							actionMessage,
+							testPlayer,
+							indexInHand,
+							knowledgeOfNewCard,
+							numberOfHintsToAdd)
+
+					if errorFromPlayingCard != nil {
+						unitTest.Fatalf(
+							"EnactTurnByPlayingAndReplacing(%v, %+v, %v, %+v, %v)"+
+								" produced error %v ",
+							actionMessage,
+							testPlayer,
+							indexInHand,
+							knowledgeOfNewCard,
+							numberOfHintsToAdd,
+							errorFromPlayingCard)
+					}
+
+					// There should have been no other changes.
+					pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
+					pristineState.ActionLog[len(pristineState.ActionLog)-1] =
+						message.NewFromPlayer(testPlayer.Name(), testPlayer.Color(), actionMessage)
+					pristineState.DeckSize = initialDeckSize - 1
+					pristineState.NumberOfReadyHints += numberOfHintsToAdd
+					pristineState.Turn += 1
+					pristineState.VisibleCardInHand[playerName][indexInHand] = expectedReplacementCard
+					pristineState.InferredCardInHand[playerName][indexInHand] = knowledgeOfNewCard
+					pristineState.PlayedForColor[expectedPlayedCard.ColorSuit] =
+						[]card.Defined{expectedPlayedCard.Defined}
+					assertGameStateAsExpectedLocallyAndRetrieved(
+						testIdentifier,
+						unitTest,
+						gameAndDescription,
+						pristineState)
+				})
 			}
-
-			errorFromPlayingCard :=
-				gameAndDescription.GameState.EnactTurnByPlayingAndReplacing(
-					context.Background(),
-					actionMessage,
-					testPlayer,
-					indexInHand,
-					knowledgeOfNewCard,
-					numberOfHintsToAdd)
-
-			if errorFromPlayingCard != nil {
-				unitTest.Fatalf(
-					"EnactTurnByPlayingAndReplacing(%v, %+v, %v, %+v, %v)"+
-						" produced error %v ",
-					actionMessage,
-					testPlayer,
-					indexInHand,
-					knowledgeOfNewCard,
-					numberOfHintsToAdd,
-					errorFromPlayingCard)
-			}
-
-			// There should have been no other changes.
-			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
-			pristineState.ActionLog[len(pristineState.ActionLog)-1] =
-				message.NewFromPlayer(testPlayer.Name(), testPlayer.Color(), actionMessage)
-			pristineState.DeckSize = initialDeckSize - 1
-			pristineState.NumberOfReadyHints += numberOfHintsToAdd
-			pristineState.Turn += 1
-			pristineState.VisibleCardInHand[playerName][indexInHand] = expectedReplacementCard
-			pristineState.InferredCardInHand[playerName][indexInHand] = knowledgeOfNewCard
-			pristineState.PlayedForColor[expectedPlayedCard.ColorSuit] =
-				[]card.Defined{expectedPlayedCard.Defined}
-			assertGameStateAsExpectedLocallyAndRetrieved(
-				testIdentifier,
-				unitTest,
-				gameAndDescription,
-				pristineState)
-		})
+		}
 	}
 }
 
@@ -824,82 +842,85 @@ func TestValidPlayOfCardWhenDeckAlreadyEmpty(unitTest *testing.T) {
 			numberOfCopiedMessages)
 	}
 
-	playerName := threePlayersWithHands[0].PlayerName
+	for _, testPlayerWithHand := range threePlayersWithHands {
+		playerName := testPlayerWithHand.PlayerName
 
-	testPlayer := &mockPlayerState{
-		playerName,
-		defaultTestColor,
-	}
+		testPlayer := &mockPlayerState{
+			playerName,
+			defaultTestColor,
+		}
 
-	indexInHand := 1
-	expectedPlayedCard := threePlayersWithHands[0].InitialHand[indexInHand]
+		for indexInHand := 0; indexInHand < len(testPlayerWithHand.InitialHand); indexInHand++ {
+			expectedPlayedCard := testPlayerWithHand.InitialHand[indexInHand]
 
-	gamesAndDescriptions :=
-		prepareGameStates(
-			unitTest,
-			defaultTestRuleset,
-			threePlayersWithHands,
-			initialDeck,
-			initialActionLogForDefaultThreePlayers)
+			gamesAndDescriptions :=
+				prepareGameStates(
+					unitTest,
+					defaultTestRuleset,
+					threePlayersWithHands,
+					initialDeck,
+					initialActionLogForDefaultThreePlayers)
 
-	for _, gameAndDescription := range gamesAndDescriptions {
-		testIdentifier :=
-			"valid play of card when deck already empty/" +
-				gameAndDescription.PersisterDescription
+			for _, gameAndDescription := range gamesAndDescriptions {
+				testIdentifier :=
+					"valid play of card when deck already empty/" +
+						gameAndDescription.PersisterDescription
 
-		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
+				unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+					pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
 
-			if gameAndDescription.GameState.Read().DeckSize() != initialDeckSize {
-				unitTest.Fatalf(
-					"initial DeckSize() %v did not match expected %v",
-					gameAndDescription.GameState.Read().DeckSize(),
-					initialDeckSize)
+					if gameAndDescription.GameState.Read().DeckSize() != initialDeckSize {
+						unitTest.Fatalf(
+							"initial DeckSize() %v did not match expected %v",
+							gameAndDescription.GameState.Read().DeckSize(),
+							initialDeckSize)
+					}
+
+					errorFromPlayingCard :=
+						gameAndDescription.GameState.EnactTurnByPlayingAndReplacing(
+							context.Background(),
+							actionMessage,
+							testPlayer,
+							indexInHand,
+							knowledgeOfNewCard,
+							numberOfHintsToAdd)
+
+					if errorFromPlayingCard != nil {
+						unitTest.Fatalf(
+							"EnactTurnByPlayingAndReplacing(%v, %+v, %v, %+v, %v)"+
+								" produced error %v ",
+							actionMessage,
+							testPlayer,
+							indexInHand,
+							knowledgeOfNewCard,
+							numberOfHintsToAdd,
+							errorFromPlayingCard)
+					}
+
+					// There should have been the following changes:
+					pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
+					pristineState.ActionLog[len(pristineState.ActionLog)-1] =
+						message.NewFromPlayer(testPlayer.Name(), testPlayer.Color(), actionMessage)
+					pristineState.DeckSize = initialDeckSize
+					pristineState.NumberOfReadyHints += numberOfHintsToAdd
+					pristineState.Turn += 1
+					pristineState.TurnsTakenWithEmptyDeck += 1
+					pristineVisibleHand := pristineState.VisibleCardInHand[playerName]
+					pristineState.VisibleCardInHand[playerName] =
+						append(pristineVisibleHand[:indexInHand], pristineVisibleHand[indexInHand+1:]...)
+					pristineInferredHand := pristineState.InferredCardInHand[playerName]
+					pristineState.InferredCardInHand[playerName] =
+						append(pristineInferredHand[:indexInHand], pristineInferredHand[indexInHand+1:]...)
+					pristineState.PlayedForColor[expectedPlayedCard.ColorSuit] =
+						[]card.Defined{expectedPlayedCard.Defined}
+					assertGameStateAsExpectedLocallyAndRetrieved(
+						testIdentifier,
+						unitTest,
+						gameAndDescription,
+						pristineState)
+				})
 			}
-
-			errorFromPlayingCard :=
-				gameAndDescription.GameState.EnactTurnByPlayingAndReplacing(
-					context.Background(),
-					actionMessage,
-					testPlayer,
-					indexInHand,
-					knowledgeOfNewCard,
-					numberOfHintsToAdd)
-
-			if errorFromPlayingCard != nil {
-				unitTest.Fatalf(
-					"EnactTurnByPlayingAndReplacing(%v, %+v, %v, %+v, %v)"+
-						" produced error %v ",
-					actionMessage,
-					testPlayer,
-					indexInHand,
-					knowledgeOfNewCard,
-					numberOfHintsToAdd,
-					errorFromPlayingCard)
-			}
-
-			// There should have been the following changes:
-			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
-			pristineState.ActionLog[len(pristineState.ActionLog)-1] =
-				message.NewFromPlayer(testPlayer.Name(), testPlayer.Color(), actionMessage)
-			pristineState.DeckSize = initialDeckSize
-			pristineState.NumberOfReadyHints += numberOfHintsToAdd
-			pristineState.Turn += 1
-			pristineState.TurnsTakenWithEmptyDeck += 1
-			pristineVisibleHand := pristineState.VisibleCardInHand[playerName]
-			pristineState.VisibleCardInHand[playerName] =
-				append(pristineVisibleHand[:indexInHand], pristineVisibleHand[indexInHand+1:]...)
-			pristineInferredHand := pristineState.InferredCardInHand[playerName]
-			pristineState.InferredCardInHand[playerName] =
-				append(pristineInferredHand[:indexInHand], pristineInferredHand[indexInHand+1:]...)
-			pristineState.PlayedForColor[expectedPlayedCard.ColorSuit] =
-				[]card.Defined{expectedPlayedCard.Defined}
-			assertGameStateAsExpectedLocallyAndRetrieved(
-				testIdentifier,
-				unitTest,
-				gameAndDescription,
-				pristineState)
-		})
+		}
 	}
 }
 
@@ -1123,89 +1144,96 @@ func TestValidHintWhenDeckAlreadyEmpty(unitTest *testing.T) {
 			numberOfCopiedMessages)
 	}
 
-	actingPlayerName := threePlayersWithHands[0].PlayerName
-
-	actingPlayer := &mockPlayerState{
-		actingPlayerName,
-		defaultTestColor,
-	}
-
-	receivingPlayerWithHand := threePlayersWithHands[1]
-	receivingPlayerName := receivingPlayerWithHand.PlayerName
-
 	numberOfHintsToSubtract := 2
-	handSize := len(receivingPlayerWithHand.InitialHand)
 
-	// It is not important to make valid inferred cards for this test.
-	updatedInferredHand := make([]card.Inferred, handSize)
-	testInferredColors := []string{"a test color", "another test color"}
-	for indexInHand := 0; indexInHand < handSize; indexInHand++ {
-		updatedInferredHand[indexInHand] =
-			card.Inferred{
-				PossibleColors:  testInferredColors,
-				PossibleIndices: []int{indexInHand},
-			}
-	}
+	for actingPlayerIndex, actingPlayerWithHand := range threePlayersWithHands {
+		actingPlayerName := actingPlayerWithHand.PlayerName
 
-	gamesAndDescriptions :=
-		prepareGameStates(
-			unitTest,
-			defaultTestRuleset,
-			threePlayersWithHands,
-			initialDeck,
-			initialActionLogForDefaultThreePlayers)
+		actingPlayer := &mockPlayerState{
+			actingPlayerName,
+			defaultTestColor,
+		}
 
-	for _, gameAndDescription := range gamesAndDescriptions {
-		testIdentifier :=
-			"valid hint when deck already empty/" +
-				gameAndDescription.PersisterDescription
-
-		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
-
-			if gameAndDescription.GameState.Read().DeckSize() != initialDeckSize {
-				unitTest.Fatalf(
-					"initial DeckSize() %v did not match expected %v",
-					gameAndDescription.GameState.Read().DeckSize(),
-					initialDeckSize)
+		for receivingPlayerIndex, receivingPlayerWithHand := range threePlayersWithHands {
+			if receivingPlayerIndex == actingPlayerIndex {
+				continue
 			}
 
-			errorFromHint :=
-				gameAndDescription.GameState.EnactTurnByUpdatingHandWithHint(
-					context.Background(),
-					actionMessage,
-					actingPlayer,
-					receivingPlayerName,
-					updatedInferredHand,
-					numberOfHintsToSubtract)
+			receivingPlayerName := receivingPlayerWithHand.PlayerName
+			handSize := len(receivingPlayerWithHand.InitialHand)
 
-			if errorFromHint != nil {
-				unitTest.Fatalf(
-					"EnactTurnByUpdatingHandWithHint(%v, %+v, %v, %+v, %v)"+
-						" produced error %v ",
-					actionMessage,
-					actingPlayer,
-					receivingPlayerName,
-					updatedInferredHand,
-					numberOfHintsToSubtract,
-					errorFromHint)
+			// It is not important to make valid inferred cards for this test.
+			updatedInferredHand := make([]card.Inferred, handSize)
+			testInferredColors := []string{"a test color", "another test color"}
+			for indexInHand := 0; indexInHand < handSize; indexInHand++ {
+				updatedInferredHand[indexInHand] =
+					card.Inferred{
+						PossibleColors:  testInferredColors,
+						PossibleIndices: []int{indexInHand},
+					}
 			}
 
-			// There should have been the following changes:
-			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
-			pristineState.ActionLog[len(pristineState.ActionLog)-1] =
-				message.NewFromPlayer(actingPlayer.Name(), actingPlayer.Color(), actionMessage)
-			pristineState.DeckSize = initialDeckSize
-			pristineState.NumberOfReadyHints -= numberOfHintsToSubtract
-			pristineState.Turn += 1
-			pristineState.TurnsTakenWithEmptyDeck += 1
-			pristineState.InferredCardInHand[receivingPlayerName] = updatedInferredHand
-			assertGameStateAsExpectedLocallyAndRetrieved(
-				testIdentifier,
-				unitTest,
-				gameAndDescription,
-				pristineState)
-		})
+			gamesAndDescriptions :=
+				prepareGameStates(
+					unitTest,
+					defaultTestRuleset,
+					threePlayersWithHands,
+					initialDeck,
+					initialActionLogForDefaultThreePlayers)
+
+			for _, gameAndDescription := range gamesAndDescriptions {
+				testIdentifier :=
+					"valid hint when deck already empty/" +
+						gameAndDescription.PersisterDescription
+
+				unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+					pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
+
+					if gameAndDescription.GameState.Read().DeckSize() != initialDeckSize {
+						unitTest.Fatalf(
+							"initial DeckSize() %v did not match expected %v",
+							gameAndDescription.GameState.Read().DeckSize(),
+							initialDeckSize)
+					}
+
+					errorFromHint :=
+						gameAndDescription.GameState.EnactTurnByUpdatingHandWithHint(
+							context.Background(),
+							actionMessage,
+							actingPlayer,
+							receivingPlayerName,
+							updatedInferredHand,
+							numberOfHintsToSubtract)
+
+					if errorFromHint != nil {
+						unitTest.Fatalf(
+							"EnactTurnByUpdatingHandWithHint(%v, %+v, %v, %+v, %v)"+
+								" produced error %v ",
+							actionMessage,
+							actingPlayer,
+							receivingPlayerName,
+							updatedInferredHand,
+							numberOfHintsToSubtract,
+							errorFromHint)
+					}
+
+					// There should have been the following changes:
+					pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
+					pristineState.ActionLog[len(pristineState.ActionLog)-1] =
+						message.NewFromPlayer(actingPlayer.Name(), actingPlayer.Color(), actionMessage)
+					pristineState.DeckSize = initialDeckSize
+					pristineState.NumberOfReadyHints -= numberOfHintsToSubtract
+					pristineState.Turn += 1
+					pristineState.TurnsTakenWithEmptyDeck += 1
+					pristineState.InferredCardInHand[receivingPlayerName] = updatedInferredHand
+					assertGameStateAsExpectedLocallyAndRetrieved(
+						testIdentifier,
+						unitTest,
+						gameAndDescription,
+						pristineState)
+				})
+			}
+		}
 	}
 }
 
@@ -1240,88 +1268,95 @@ func TestValidHintWhenDeckNotYetEmpty(unitTest *testing.T) {
 			numberOfCopiedMessages)
 	}
 
-	actingPlayerName := threePlayersWithHands[0].PlayerName
+	numberOfHintsToSubtract := 3
 
-	actingPlayer := &mockPlayerState{
-		actingPlayerName,
-		defaultTestColor,
-	}
+	for actingPlayerIndex, actingPlayerWithHand := range threePlayersWithHands {
+		actingPlayerName := actingPlayerWithHand.PlayerName
 
-	receivingPlayerWithHand := threePlayersWithHands[2]
-	receivingPlayerName := receivingPlayerWithHand.PlayerName
+		actingPlayer := &mockPlayerState{
+			actingPlayerName,
+			defaultTestColor,
+		}
 
-	numberOfHintsToSubtract := 2
-	handSize := len(receivingPlayerWithHand.InitialHand)
-
-	// It is not important to make valid inferred cards for this test.
-	updatedInferredHand := make([]card.Inferred, handSize)
-	testInferredColors := []string{"a test color", "another test color"}
-	for indexInHand := 0; indexInHand < handSize; indexInHand++ {
-		updatedInferredHand[indexInHand] =
-			card.Inferred{
-				PossibleColors:  testInferredColors,
-				PossibleIndices: []int{indexInHand},
-			}
-	}
-
-	gamesAndDescriptions :=
-		prepareGameStates(
-			unitTest,
-			defaultTestRuleset,
-			threePlayersWithHands,
-			initialDeck,
-			initialActionLogForDefaultThreePlayers)
-
-	for _, gameAndDescription := range gamesAndDescriptions {
-		testIdentifier :=
-			"valid hint when deck not yet empty/" +
-				gameAndDescription.PersisterDescription
-
-		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
-			pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
-
-			if gameAndDescription.GameState.Read().DeckSize() != initialDeckSize {
-				unitTest.Fatalf(
-					"initial DeckSize() %v did not match expected %v",
-					gameAndDescription.GameState.Read().DeckSize(),
-					initialDeckSize)
+		for receivingPlayerIndex, receivingPlayerWithHand := range threePlayersWithHands {
+			if receivingPlayerIndex == actingPlayerIndex {
+				continue
 			}
 
-			errorFromHint :=
-				gameAndDescription.GameState.EnactTurnByUpdatingHandWithHint(
-					context.Background(),
-					actionMessage,
-					actingPlayer,
-					receivingPlayerName,
-					updatedInferredHand,
-					numberOfHintsToSubtract)
+			receivingPlayerName := receivingPlayerWithHand.PlayerName
+			handSize := len(receivingPlayerWithHand.InitialHand)
 
-			if errorFromHint != nil {
-				unitTest.Fatalf(
-					"EnactTurnByUpdatingHandWithHint(%v, %+v, %v, %+v, %v)"+
-						" produced error %v ",
-					actionMessage,
-					actingPlayer,
-					receivingPlayerName,
-					updatedInferredHand,
-					numberOfHintsToSubtract,
-					errorFromHint)
+			// It is not important to make valid inferred cards for this test.
+			updatedInferredHand := make([]card.Inferred, handSize)
+			testInferredColors := []string{"a test color", "another test color"}
+			for indexInHand := 0; indexInHand < handSize; indexInHand++ {
+				updatedInferredHand[indexInHand] =
+					card.Inferred{
+						PossibleColors:  testInferredColors,
+						PossibleIndices: []int{indexInHand},
+					}
 			}
 
-			// There should have been the following changes:
-			pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
-			pristineState.ActionLog[len(pristineState.ActionLog)-1] =
-				message.NewFromPlayer(actingPlayer.Name(), actingPlayer.Color(), actionMessage)
-			pristineState.DeckSize = initialDeckSize
-			pristineState.NumberOfReadyHints -= numberOfHintsToSubtract
-			pristineState.Turn += 1
-			pristineState.InferredCardInHand[receivingPlayerName] = updatedInferredHand
-			assertGameStateAsExpectedLocallyAndRetrieved(
-				testIdentifier,
-				unitTest,
-				gameAndDescription,
-				pristineState)
-		})
+			gamesAndDescriptions :=
+				prepareGameStates(
+					unitTest,
+					defaultTestRuleset,
+					threePlayersWithHands,
+					initialDeck,
+					initialActionLogForDefaultThreePlayers)
+
+			for _, gameAndDescription := range gamesAndDescriptions {
+				testIdentifier :=
+					"valid hint when deck not yet empty/" +
+						gameAndDescription.PersisterDescription
+
+				unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+					pristineState := prepareExpected(unitTest, gameAndDescription.GameState.Read())
+
+					if gameAndDescription.GameState.Read().DeckSize() != initialDeckSize {
+						unitTest.Fatalf(
+							"initial DeckSize() %v did not match expected %v",
+							gameAndDescription.GameState.Read().DeckSize(),
+							initialDeckSize)
+					}
+
+					errorFromHint :=
+						gameAndDescription.GameState.EnactTurnByUpdatingHandWithHint(
+							context.Background(),
+							actionMessage,
+							actingPlayer,
+							receivingPlayerName,
+							updatedInferredHand,
+							numberOfHintsToSubtract)
+
+					if errorFromHint != nil {
+						unitTest.Fatalf(
+							"EnactTurnByUpdatingHandWithHint(%v, %+v, %v, %+v, %v)"+
+								" produced error %v ",
+							actionMessage,
+							actingPlayer,
+							receivingPlayerName,
+							updatedInferredHand,
+							numberOfHintsToSubtract,
+							errorFromHint)
+					}
+
+					// There should have been the following changes:
+					pristineState.ActionLog = gameAndDescription.GameState.Read().ActionLog()
+					pristineState.ActionLog[len(pristineState.ActionLog)-1] =
+						message.NewFromPlayer(actingPlayer.Name(), actingPlayer.Color(), actionMessage)
+					pristineState.DeckSize = initialDeckSize
+					pristineState.NumberOfReadyHints -= numberOfHintsToSubtract
+					pristineState.Turn += 1
+					pristineState.InferredCardInHand[receivingPlayerName] = updatedInferredHand
+					assertGameStateAsExpectedLocallyAndRetrieved(
+						testIdentifier,
+						unitTest,
+						gameAndDescription,
+						pristineState)
+				})
+			}
+		}
 	}
 }
 
