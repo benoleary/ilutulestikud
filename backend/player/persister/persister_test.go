@@ -112,6 +112,15 @@ func TestRejectAddPlayerWithExistingName(unitTest *testing.T) {
 				"Reject Add(player with existing name)/" + statePersister.PersisterDescription
 
 			unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+				errorFromDeletionOfExisting :=
+					statePersister.PlayerPersister.Delete(context.Background(), playerName)
+				unitTest.Logf(
+					"Error from persister %v deleting %v when setting up"+
+						" (to ensure that it does not exist before the test) was %v",
+					statePersister.PersisterDescription,
+					playerName,
+					errorFromDeletionOfExisting)
+
 				errorFromInitialAdd :=
 					statePersister.PlayerPersister.Add(
 						context.Background(),
@@ -307,6 +316,24 @@ func TestAddNewPlayersThenDeleteThem(unitTest *testing.T) {
 				") then Delete(" + firstPlayer + ") then Delete(" + secondPlayer + ")"
 
 		unitTest.Run(testIdentifier, func(unitTest *testing.T) {
+			errorFromDeletionOfExistingFirst :=
+				statePersister.PlayerPersister.Delete(context.Background(), firstPlayer)
+			unitTest.Logf(
+				"Error from persister %v deleting %v when setting up"+
+					" (to ensure that it does not exist before the test) was %v",
+				statePersister.PersisterDescription,
+				firstPlayer,
+				errorFromDeletionOfExistingFirst)
+
+			errorFromDeletionOfExistingSecond :=
+				statePersister.PlayerPersister.Delete(context.Background(), secondPlayer)
+			unitTest.Logf(
+				"Error from persister %v deleting %v when setting up"+
+					" (to ensure that it does not exist before the test) was %v",
+				statePersister.PersisterDescription,
+				secondPlayer,
+				errorFromDeletionOfExistingSecond)
+
 			preexistingPlayers, errorFromPreexistingAll :=
 				statePersister.PlayerPersister.All(context.Background())
 			if errorFromPreexistingAll != nil {

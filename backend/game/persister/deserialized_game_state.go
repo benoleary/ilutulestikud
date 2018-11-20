@@ -432,14 +432,11 @@ func (gameState *DeserializedState) updateIndicesOfSubsequentHands(
 	// be pointing.
 	flattenedCards := gameState.FlattenedInferredCardsInHands
 	firstFollowingCard := flattenedCards[handEnd]
-	followingColorStart := firstFollowingCard.StartIndexOfColors
-	followingIndexStart := firstFollowingCard.StartIndexOfIndices
+	nextColorStart := firstFollowingCard.StartIndexOfColors
+	nextIndexStart := firstFollowingCard.StartIndexOfIndices
 
-	colorsOffset := updatedColorsEnd - followingColorStart
-	colorsFullLength := updatedColorsEnd + colorsOffset
-
-	indicesOffset := updatedIndicesEnd - followingIndexStart
-	indicesFullLength := updatedIndicesEnd + indicesOffset
+	colorsOffset := updatedColorsEnd - nextColorStart
+	indicesOffset := updatedIndicesEnd - nextIndexStart
 
 	// The first card of the player following the updated player in the
 	// flattened array is the first we update, and we update all cards
@@ -450,7 +447,11 @@ func (gameState *DeserializedState) updateIndicesOfSubsequentHands(
 		flattenedCards[cardIndex].StartIndexOfIndices += indicesOffset
 	}
 
-	return followingColorStart, followingIndexStart, colorsFullLength, indicesFullLength
+	colorsFullLength :=
+		len(gameState.FlattenedInferredColors) + colorsOffset
+	indicesFullLength :=
+		len(gameState.FlattenedInferredIndices) + indicesOffset
+	return nextColorStart, nextIndexStart, colorsFullLength, indicesFullLength
 }
 
 func (gameState *DeserializedState) updateFlattenedInferredArrays(
@@ -559,18 +560,6 @@ func (gameState *DeserializedState) updatePlayerHand(
 	inferredToRemoveOrReplace :=
 		gameState.FlattenedInferredCardsInHands[indexOfCardToReplaceOrRemove]
 
-	fmt.Printf("\n\nupdatePlayerHand(holdingPlayerIndex = %v,"+
-		" indexOfLastPlayer = %v, handStartIndex = %v, indexInHand = %v,"+
-		" knowledgeOfDrawnCard = %+v):\n isEmptyDeck = %v, indexOfCardToReplaceOrRemove = %v, inferredToRemoveOrReplace = %+v\n\n",
-		holdingPlayerIndex,
-		indexOfLastPlayer,
-		handStartIndex,
-		indexInHand,
-		knowledgeOfDrawnCard,
-		isEmptyDeck,
-		indexOfCardToReplaceOrRemove,
-		inferredToRemoveOrReplace)
-
 	originalLastIndex, isLastCard, firstToUpdate :=
 		gameState.determineLastCardAndWhereToUpdate(
 			indexOfCardToReplaceOrRemove,
@@ -621,10 +610,10 @@ func (gameState *DeserializedState) determineLastCardAndWhereToUpdate(
 		len(gameState.FlattenedDefinedCardsInHands) - 1
 
 	isLastCard := indexOfCardToReplaceOrRemove == indexOfLastOriginalCard
-	indexOfFirstCardToUpdate := 0
-	if !isLastCard {
-		indexOfFirstCardToUpdate = indexOfCardToReplaceOrRemove + 1
-	}
+
+	// The calling code should use isLastCard to check to see if
+	// indexOfFirstCardToUpdate can be used validly.
+	indexOfFirstCardToUpdate := indexOfCardToReplaceOrRemove + 1
 
 	return indexOfLastOriginalCard, isLastCard, indexOfFirstCardToUpdate
 }

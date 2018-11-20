@@ -251,6 +251,7 @@ type persisterAndDescription struct {
 func preparePersisters(
 	unitTest *testing.T,
 	gamesToEnsureDoNotExist []string) []persisterAndDescription {
+
 	gameDatastoreClientProvider :=
 		cloud.NewIlutulestikudDatastoreClientProvider(persister.CloudDatastoreKeyKind)
 
@@ -300,6 +301,17 @@ func prepareGameStates(
 
 	for persisterIndex := 0; persisterIndex < numberOfPersisters; persisterIndex++ {
 		statePersister := statePersisters[persisterIndex]
+
+		errorFromDeletionOfExisting :=
+			statePersister.GamePersister.Delete(
+				context.Background(),
+				singleInteractionTestGameName)
+		unitTest.Logf(
+			"Error from persister %v deleting %v when setting up"+
+				" (to ensure that it does not exist before the test) was %v",
+			statePersister.PersisterDescription,
+			singleInteractionTestGameName,
+			errorFromDeletionOfExisting)
 
 		errorFromAdd :=
 			statePersister.GamePersister.AddGame(

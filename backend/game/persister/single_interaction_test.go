@@ -9,10 +9,29 @@ import (
 	"github.com/benoleary/ilutulestikud/backend/game/message"
 )
 
-var testDefaultInferred card.Inferred = card.Inferred{
-	PossibleColors:  []string{"no idea", "not a clue"},
-	PossibleIndices: []int{1, 2, 3},
+// obviousTestInferred creates an inferred card with obvious test
+// inferred knowledge, but the same length arrays as the ruleset
+// gives.
+func obviousTestInferred() card.Inferred {
+	obviousTestColors := []string{}
+	for _, rulesetColor := range testRuleset.ColorSuits() {
+		obviousTestColors =
+			append(obviousTestColors, "test replacement "+rulesetColor)
+	}
+
+	obviousTestIndices := []int{}
+	for _, rulesetIndex := range testRuleset.DistinctPossibleIndices() {
+		obviousTestIndices =
+			append(obviousTestIndices, 100+rulesetIndex)
+	}
+
+	return card.Inferred{
+		PossibleColors:  obviousTestColors,
+		PossibleIndices: obviousTestIndices,
+	}
 }
+
+var testReplacementInferred card.Inferred = obviousTestInferred()
 
 func TestErrorFromInvalidPlayerVisibleHand(unitTest *testing.T) {
 	initialDeck := defaultTestRuleset.CopyOfFullCardset()
@@ -169,7 +188,7 @@ func TestErrorFromActionsInvalidlyTakingCardFromHand(unitTest *testing.T) {
 	testColor := "test color"
 	numberOfHintsToAdd := 2
 	numberOfMistakesToAdd := -1
-	knowledgeOfNewCard := testDefaultInferred
+	knowledgeOfNewCard := testReplacementInferred
 
 	gamesAndDescriptions :=
 		prepareGameStates(
@@ -287,23 +306,10 @@ func TestValidDiscardOfCardWhenDeckNotYetEmpty(unitTest *testing.T) {
 			ColorSuit:     "a",
 			SequenceIndex: 3,
 		}
-	initialDeck :=
-		[]card.Defined{
-			expectedReplacementCard,
-			card.Defined{
-				ColorSuit:     "b",
-				SequenceIndex: 2,
-			},
-			card.Defined{
-				ColorSuit:     "c",
-				SequenceIndex: 1,
-			},
-		}
 
-	initialDeckSize := len(initialDeck)
 	numberOfHintsToAdd := -3
 	numberOfMistakesToAdd := 2
-	knowledgeOfNewCard := testDefaultInferred
+	knowledgeOfNewCard := testReplacementInferred
 
 	actionMessage := "action message"
 	comparisonActionLog := make([]message.FromPlayer, 3)
@@ -326,6 +332,23 @@ func TestValidDiscardOfCardWhenDeckNotYetEmpty(unitTest *testing.T) {
 		}
 
 		for indexInHand := 0; indexInHand < len(testPlayerWithHand.InitialHand); indexInHand++ {
+			// The initial deck has to be created afresh for each test case, or previous test
+			// cases will interfere with subsequent tests.
+			initialDeck :=
+				[]card.Defined{
+					expectedReplacementCard,
+					card.Defined{
+						ColorSuit:     "b",
+						SequenceIndex: 2,
+					},
+					card.Defined{
+						ColorSuit:     "c",
+						SequenceIndex: 1,
+					},
+				}
+
+			initialDeckSize := len(initialDeck)
+
 			expectedDiscardedCard := testPlayerWithHand.InitialHand[indexInHand]
 
 			gamesAndDescriptions :=
@@ -402,15 +425,10 @@ func TestValidDiscardOfCardWhichEmptiesDeck(unitTest *testing.T) {
 			ColorSuit:     "a",
 			SequenceIndex: 3,
 		}
-	initialDeck :=
-		[]card.Defined{
-			expectedReplacementCard,
-		}
 
-	initialDeckSize := len(initialDeck)
 	numberOfHintsToAdd := -3
 	numberOfMistakesToAdd := 2
-	knowledgeOfNewCard := testDefaultInferred
+	knowledgeOfNewCard := testReplacementInferred
 
 	actionMessage := "action message"
 	comparisonActionLog := make([]message.FromPlayer, 3)
@@ -433,6 +451,15 @@ func TestValidDiscardOfCardWhichEmptiesDeck(unitTest *testing.T) {
 		}
 
 		for indexInHand := 0; indexInHand < len(testPlayerWithHand.InitialHand); indexInHand++ {
+			// The initial deck has to be created afresh for each test case, or previous test
+			// cases will interfere with subsequent tests.
+			initialDeck :=
+				[]card.Defined{
+					expectedReplacementCard,
+				}
+
+			initialDeckSize := len(initialDeck)
+
 			expectedDiscardedCard := testPlayerWithHand.InitialHand[indexInHand]
 
 			gamesAndDescriptions :=
@@ -504,12 +531,14 @@ func TestValidDiscardOfCardWhichEmptiesDeck(unitTest *testing.T) {
 }
 
 func TestValidDiscardOfCardWhenDeckAlreadyEmpty(unitTest *testing.T) {
+	// In this case, the initial deck does not have to be created afresh
+	// for each test case, because it starts empty and stays empty.
 	initialDeck := []card.Defined{}
 
 	initialDeckSize := len(initialDeck)
 	numberOfHintsToAdd := -3
 	numberOfMistakesToAdd := 2
-	knowledgeOfNewCard := testDefaultInferred
+	knowledgeOfNewCard := testReplacementInferred
 
 	actionMessage := "action message"
 	comparisonActionLog := make([]message.FromPlayer, 3)
@@ -613,22 +642,9 @@ func TestValidPlayOfCardWhenDeckNotYetEmpty(unitTest *testing.T) {
 			ColorSuit:     "a",
 			SequenceIndex: 3,
 		}
-	initialDeck :=
-		[]card.Defined{
-			expectedReplacementCard,
-			card.Defined{
-				ColorSuit:     "b",
-				SequenceIndex: 2,
-			},
-			card.Defined{
-				ColorSuit:     "c",
-				SequenceIndex: 1,
-			},
-		}
 
-	initialDeckSize := len(initialDeck)
 	numberOfHintsToAdd := -2
-	knowledgeOfNewCard := testDefaultInferred
+	knowledgeOfNewCard := testReplacementInferred
 
 	actionMessage := "action message"
 	comparisonActionLog := make([]message.FromPlayer, 3)
@@ -651,6 +667,23 @@ func TestValidPlayOfCardWhenDeckNotYetEmpty(unitTest *testing.T) {
 		}
 
 		for indexInHand := 0; indexInHand < len(testPlayerWithHand.InitialHand); indexInHand++ {
+			// The initial deck has to be created afresh for each test case, or previous test
+			// cases will interfere with subsequent tests.
+			initialDeck :=
+				[]card.Defined{
+					expectedReplacementCard,
+					card.Defined{
+						ColorSuit:     "b",
+						SequenceIndex: 2,
+					},
+					card.Defined{
+						ColorSuit:     "c",
+						SequenceIndex: 1,
+					},
+				}
+
+			initialDeckSize := len(initialDeck)
+
 			expectedPlayedCard := testPlayerWithHand.InitialHand[indexInHand]
 
 			gamesAndDescriptions :=
@@ -725,14 +758,9 @@ func TestValidPlayOfCardWhichEmptiesDeck(unitTest *testing.T) {
 			ColorSuit:     "a",
 			SequenceIndex: 3,
 		}
-	initialDeck :=
-		[]card.Defined{
-			expectedReplacementCard,
-		}
 
-	initialDeckSize := len(initialDeck)
 	numberOfHintsToAdd := -2
-	knowledgeOfNewCard := testDefaultInferred
+	knowledgeOfNewCard := testReplacementInferred
 
 	actionMessage := "action message"
 	comparisonActionLog := make([]message.FromPlayer, 3)
@@ -755,6 +783,15 @@ func TestValidPlayOfCardWhichEmptiesDeck(unitTest *testing.T) {
 		}
 
 		for indexInHand := 0; indexInHand < len(testPlayerWithHand.InitialHand); indexInHand++ {
+			// The initial deck has to be created afresh for each test case, or previous test
+			// cases will interfere with subsequent tests.
+			initialDeck :=
+				[]card.Defined{
+					expectedReplacementCard,
+				}
+
+			initialDeckSize := len(initialDeck)
+
 			expectedPlayedCard := testPlayerWithHand.InitialHand[indexInHand]
 
 			gamesAndDescriptions :=
@@ -824,11 +861,13 @@ func TestValidPlayOfCardWhichEmptiesDeck(unitTest *testing.T) {
 }
 
 func TestValidPlayOfCardWhenDeckAlreadyEmpty(unitTest *testing.T) {
+	// In this case, the initial deck does not have to be created afresh
+	// for each test case, because it starts empty and stays empty.
 	initialDeck := []card.Defined{}
 
 	initialDeckSize := len(initialDeck)
 	numberOfHintsToAdd := -2
-	knowledgeOfNewCard := testDefaultInferred
+	knowledgeOfNewCard := testReplacementInferred
 
 	actionMessage := "action message"
 	comparisonActionLog := make([]message.FromPlayer, 3)
@@ -1128,6 +1167,8 @@ func TestErrorFromHintWithTooLargeInferredHand(unitTest *testing.T) {
 }
 
 func TestValidHintWhenDeckAlreadyEmpty(unitTest *testing.T) {
+	// In this case, the initial deck does not have to be created afresh
+	// for each test case, because it starts empty and stays empty.
 	initialDeck := []card.Defined{}
 
 	initialDeckSize := len(initialDeck)
@@ -1238,6 +1279,9 @@ func TestValidHintWhenDeckAlreadyEmpty(unitTest *testing.T) {
 }
 
 func TestValidHintWhenDeckNotYetEmpty(unitTest *testing.T) {
+	// In this case, the initial deck does not have to be created afresh
+	// for each test case, because giving a hint does not involve drawing
+	// from the deck.
 	initialDeck :=
 		[]card.Defined{
 			card.Defined{
